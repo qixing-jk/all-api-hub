@@ -1,5 +1,6 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { createBalanceHistoryPreview } from "~/features/BalanceHistory/data/createBalanceHistoryPreview"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
 import { createUsageAnalyticsPreview } from "~/features/UsageAnalytics/data/createUsageAnalyticsPreview"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -15,6 +16,7 @@ import {
 import {
   getPlasmoStorageJsonValue,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
@@ -62,6 +64,11 @@ test("keeps long usage filter names and counts inside narrow panels", async ({
     }
     const count = chips.nth(1).getByText("2", { exact: true })
     await expect(count).toBeInViewport({ ratio: 1 })
+    const countBox = (await count.boundingBox())!
+    expect(countBox.x).toBeGreaterThanOrEqual(panel.x)
+    expect(countBox.x + countBox.width).toBeLessThanOrEqual(
+      panel.x + panel.width,
+    )
     await captureVisualViews({
       page,
       ready: filters,
@@ -121,10 +128,22 @@ for (const fixture of [
           STORAGE_KEYS.USER_PREFERENCES,
         ].map((key) => getPlasmoStorageJsonValue(worker, key)),
       )
-    const before = await readSavedData()
+    const savedName = "Saved report account"
+    const saved =
+      fixture.page === MENU_ITEM_IDS.BALANCE_HISTORY
+        ? createBalanceHistoryPreview("mixed")
+        : createUsageAnalyticsPreview("mixed")
+    saved.accounts[0]!.site_name = savedName
+    await seedStoredAccounts(worker, saved.accounts)
+    await seedUserPreferences(worker, { autoRefresh: false })
+    await setPlasmoStorageValue(worker, fixture.storage, saved.store)
     await page.goto(
       `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${fixture.page}`,
     )
+    await expect(
+      page.getByText(savedName, { exact: true }).first(),
+    ).toBeVisible()
+    const before = await readSavedData()
     await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
     const action = page.getByRole("button", { name: fixture.action })
     await expect(action).toBeVisible()
@@ -142,6 +161,7 @@ for (const fixture of [
       page.getByRole("button", { name: fixture.writeAction, exact: true }),
     ).toBeDisabled()
     await page.mouse.move(3, 3)
+    expect(await readSavedData()).toEqual(before)
     const notice = page.getByRole("alert").filter({ has: preview })
     await captureVisualViews({
       page,
@@ -215,9 +235,15 @@ for (const fixture of [
       await expect(page.getByText("USD 2.45", { exact: true })).toHaveCount(0)
       await expect(charts.locator("canvas")).toHaveCount(1)
       await page.setViewportSize({ width: 390, height: 900 })
-      for (const control of await page
-        .getByRole("group", { name: "Chart type", exact: true })
-        .all()) {
+      const chartTypeControls = page.getByRole("group", {
+        name: "Chart type",
+        exact: true,
+      })
+      await expect(chartTypeControls.first()).toBeVisible()
+      await expect(
+        charts.getByRole("group", { name: "Chart type", exact: true }),
+      ).toBeVisible()
+      for (const control of await chartTypeControls.all()) {
         const pie = await control
           .getByRole("button", { name: "Pie", exact: true })
           .boundingBox()
@@ -723,7 +749,12 @@ for (const fixture of [
     }
     await exitPreview.click()
     await expect(preview).toHaveCount(0)
-    await expect(page.getByText(fixture.sample, { exact: true })).toHaveCount(0)
+    await expect(
+      page.getByText(fixture.standardSample, { exact: true }),
+    ).toHaveCount(0)
+    await expect(
+      page.getByText(savedName, { exact: true }).first(),
+    ).toBeVisible()
     expect(await readSavedData()).toEqual(before)
   })
 }

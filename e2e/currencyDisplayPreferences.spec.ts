@@ -186,7 +186,10 @@ test("persists three currency display choices from settings and preserves a lega
             STORAGE_KEYS.USER_PREFERENCES,
           ),
       )
-      .toMatchObject({ currencyDisplay: mode })
+      .toMatchObject({
+        currencyDisplay: mode,
+        currencyType: mode === "original" ? "CNY" : mode,
+      })
     await page.reload()
     await waitForExtensionRoot(page)
     await expect(

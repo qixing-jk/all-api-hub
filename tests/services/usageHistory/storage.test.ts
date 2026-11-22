@@ -654,6 +654,30 @@ describe("usage history financial persistence boundaries", () => {
     },
   )
 
+  it("surfaces corrupted financial coverage and leaves the saved bytes intact", async () => {
+    const storage = new Storage({ area: "local" })
+    const saved = {
+      schemaVersion: 3,
+      accounts: {
+        a: {
+          daily: {
+            "2026-01-01": { requests: 1, consumptionIncomplete: "partial" },
+          },
+        },
+      },
+    }
+    await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, saved)
+    const mutate = vi.fn()
+    await expect(usageHistoryStorage.getStore()).rejects.toThrow(
+      "Invalid usage history consumption coverage",
+    )
+    await expect(usageHistoryStorage.updateStore(mutate)).rejects.toThrow(
+      "Invalid usage history consumption coverage",
+    )
+    expect(mutate).not.toHaveBeenCalled()
+    expect(await storage.get(USAGE_HISTORY_STORAGE_KEYS.STORE)).toEqual(saved)
+  })
+
   it.each([null, [], 42])(
     "does not replace a malformed accounts container %j with empty data",
     async (accounts) => {

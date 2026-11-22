@@ -10,7 +10,9 @@ import {
 import {
   financialConsumptionFactSchema,
   mergeRecordedConsumption,
+  type FinancialConsumptionFact,
 } from "~/services/amounts/usage"
+import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newApiFamily/financialContractVersions"
 import { getHistoryRetentionCutoffDayKey } from "~/services/history/retention"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
@@ -183,24 +185,82 @@ export function fingerprintLogItem(
   ].join("|")
   const fact = item.consumption
   return fact
-    ? `${legacy}|financial:${JSON.stringify([
-        assetIdentity(fact.asset),
-        usageScopeKey(fact.scope),
-        fact.amount.status,
-        "value" in fact.amount ? fact.amount.value : undefined,
-        fact.amount.source.adapter,
-        fact.amount.source.operation,
-        fact.amount.source.contractVersion,
-        fact.window,
-        fact.settlement,
-      ])}`
+    ? `${legacy}|financial:${JSON.stringify(
+        normalizeFinancialIdentity([
+          assetIdentity(fact.asset),
+          usageScopeKey(fact.scope),
+          fact.amount.status,
+          "value" in fact.amount ? fact.amount.value : undefined,
+          null,
+          fact.amount.source.operation,
+          fact.amount.source.contractVersion,
+          fact.window,
+          fact.settlement,
+        ]),
+      )}`
     : legacy
 }
 
-/**
- * Merge numeric aggregates in-place.
- */
-export function addToAggregate(
+/** Match the source log independently of how its already-recorded charge is displayed. */
+function normalizeFinancialIdentity(parts: unknown[]): unknown[] {
+  const [
+    asset,
+    scope,
+    status,
+    value,
+    ,
+    operation,
+    contract,
+    window,
+    settlement,
+  ] = parts
+  if (
+    operation === "/api/log/self:quota" &&
+    (contract === NEW_API_FINANCIAL_CONTRACT_VERSIONS.NativeQuota ||
+      contract === NEW_API_FINANCIAL_CONTRACT_VERSIONS.StandardUsd)
+  ) {
+    // The legacy prefix holds the original quota used by both representations.
+    return [null, scope, null, null, null, operation, null, window, settlement]
+  }
+  return [
+    asset,
+    scope,
+    status,
+    value,
+    null,
+    operation,
+    contract,
+    window,
+    settlement,
+  ]
+}
+
+/** Match stored cursors created before the financial source key was normalized. */
+function normalizeBoundaryFingerprint(fingerprint: string): string {
+  const marker = "|financial:"
+  for (
+    let index = fingerprint.indexOf(marker);
+    index !== -1;
+    index = fingerprint.indexOf(marker, index + marker.length)
+  ) {
+    const payloadStart = index + marker.length
+    try {
+      const parts: unknown = JSON.parse(fingerprint.slice(payloadStart))
+      if (Array.isArray(parts) && parts.length === 9) {
+        return (
+          fingerprint.slice(0, payloadStart) +
+          JSON.stringify(normalizeFinancialIdentity(parts))
+        )
+      }
+    } catch {
+      // A model name can itself contain the marker.
+    }
+  }
+  return fingerprint
+}
+
+/** Merge counters and coverage in-place before folding recorded charges. */
+function addAggregateCounters(
   target: UsageHistoryAggregate,
   delta: UsageHistoryAggregate,
 ) {
@@ -211,16 +271,25 @@ export function addToAggregate(
   if (delta.referenceCostUsd !== undefined)
     target.referenceCostUsd =
       (target.referenceCostUsd ?? 0) + delta.referenceCostUsd
-  if (delta.consumption?.length)
-    target.consumption = mergeRecordedConsumption(
-      target.consumption ?? [],
-      delta.consumption,
-    )
   if (
     delta.consumptionIncomplete ||
     (delta.requests > 0 && !delta.consumption?.length)
   )
     target.consumptionIncomplete = true
+}
+
+/** Merge counters and recorded charges in-place. */
+export function addToAggregate(
+  target: UsageHistoryAggregate,
+  delta: UsageHistoryAggregate,
+) {
+  addAggregateCounters(target, delta)
+  if (delta.consumption?.length) {
+    target.consumption = mergeRecordedConsumption(
+      target.consumption ?? [],
+      delta.consumption,
+    )
+  }
 }
 
 /** Merge bounded latency aggregates without dropping newer histogram buckets. */
@@ -313,6 +382,7 @@ function ingestConsumeItemToAccountStore(
   item: LogItem,
   dayKey: string,
   hourKey: string,
+  addLogDelta: typeof addToAggregate,
 ) {
   const promptTokens = Number(item.prompt_tokens) || 0
   const completionTokens = Number(item.completion_tokens) || 0
@@ -346,16 +416,13 @@ function ingestConsumeItemToAccountStore(
     ...(!hasRecordedCharge ? { consumptionIncomplete: true } : {}),
   }
 
-  addToAggregate(getOrCreateAggregate(accountStore.daily, dayKey), delta)
+  addLogDelta(getOrCreateAggregate(accountStore.daily, dayKey), delta)
   accountStore.hourly[dayKey] ??= {}
-  addToAggregate(
-    getOrCreateAggregate(accountStore.hourly[dayKey], hourKey),
-    delta,
-  )
+  addLogDelta(getOrCreateAggregate(accountStore.hourly[dayKey], hourKey), delta)
 
   const modelName = getModelNameForLogItem(item)
   accountStore.dailyByModel[modelName] ??= {}
-  addToAggregate(
+  addLogDelta(
     getOrCreateAggregate(accountStore.dailyByModel[modelName], dayKey),
     delta,
   )
@@ -367,21 +434,21 @@ function ingestConsumeItemToAccountStore(
   }
 
   accountStore.dailyByToken[tokenId] ??= {}
-  addToAggregate(
+  addLogDelta(
     getOrCreateAggregate(accountStore.dailyByToken[tokenId], dayKey),
     delta,
   )
 
   accountStore.hourlyByToken[tokenId] ??= {}
   accountStore.hourlyByToken[tokenId][dayKey] ??= {}
-  addToAggregate(
+  addLogDelta(
     getOrCreateAggregate(accountStore.hourlyByToken[tokenId][dayKey], hourKey),
     delta,
   )
 
   accountStore.dailyByTokenByModel[tokenId] ??= {}
   accountStore.dailyByTokenByModel[tokenId][modelName] ??= {}
-  addToAggregate(
+  addLogDelta(
     getOrCreateAggregate(
       accountStore.dailyByTokenByModel[tokenId][modelName],
       dayKey,
@@ -561,6 +628,29 @@ export function ingestConsumeLogItems(params: {
   let cursorCandidate = params.cursorCandidate
 
   let ingestedCount = 0
+  const boundary = new Set(
+    startCursor.fingerprintsAtLastSeenCreatedAt.map(
+      normalizeBoundaryFingerprint,
+    ),
+  )
+  let candidateFingerprints = new Set(
+    cursorCandidate.fingerprintsAtLastSeenCreatedAt,
+  )
+  const pendingCharges = new Map<
+    UsageHistoryAggregate,
+    FinancialConsumptionFact[]
+  >()
+  const addLogDelta: typeof addToAggregate = (target, delta) => {
+    addAggregateCounters(target, delta)
+    if (!delta.consumption?.length) return
+
+    let charges = pendingCharges.get(target)
+    if (!charges) {
+      charges = []
+      pendingCharges.set(target, charges)
+    }
+    charges.push(...delta.consumption)
+  }
 
   for (const item of items) {
     if (item.type !== LogType.Consume) {
@@ -571,9 +661,9 @@ export function ingestConsumeLogItems(params: {
 
     if (
       item.created_at === startCursor.lastSeenCreatedAt &&
-      (startCursor.fingerprintsAtLastSeenCreatedAt.includes(fingerprint) ||
+      (boundary.has(fingerprint) ||
         (item.consumption &&
-          startCursor.fingerprintsAtLastSeenCreatedAt.includes(
+          boundary.has(
             fingerprintLogItem({ ...item, consumption: undefined }),
           )))
     ) {
@@ -582,7 +672,13 @@ export function ingestConsumeLogItems(params: {
 
     const dayKey = getDayKeyFromUnixSeconds(item.created_at, timeZone)
     const hourKey = getHourKeyFromUnixSeconds(item.created_at, timeZone)
-    ingestConsumeItemToAccountStore(accountStore, item, dayKey, hourKey)
+    ingestConsumeItemToAccountStore(
+      accountStore,
+      item,
+      dayKey,
+      hourKey,
+      addLogDelta,
+    )
     ingestedCount += 1
 
     if (item.created_at > cursorCandidate.lastSeenCreatedAt) {
@@ -590,16 +686,24 @@ export function ingestConsumeLogItems(params: {
         lastSeenCreatedAt: item.created_at,
         fingerprintsAtLastSeenCreatedAt: [fingerprint],
       }
+      candidateFingerprints = new Set([fingerprint])
       continue
     }
 
-    if (item.created_at === cursorCandidate.lastSeenCreatedAt) {
-      if (
-        !cursorCandidate.fingerprintsAtLastSeenCreatedAt.includes(fingerprint)
-      ) {
-        cursorCandidate.fingerprintsAtLastSeenCreatedAt.push(fingerprint)
-      }
+    if (
+      item.created_at === cursorCandidate.lastSeenCreatedAt &&
+      !candidateFingerprints.has(fingerprint)
+    ) {
+      candidateFingerprints.add(fingerprint)
+      cursorCandidate.fingerprintsAtLastSeenCreatedAt.push(fingerprint)
     }
+  }
+
+  for (const [aggregate, charges] of pendingCharges) {
+    aggregate.consumption = mergeRecordedConsumption(
+      aggregate.consumption ?? [],
+      charges,
+    )
   }
 
   // Keep the complete boundary for deduplication; a newer timestamp replaces it.

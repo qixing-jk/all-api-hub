@@ -1,6 +1,7 @@
 import type { BrowserContext, Page, Route, Worker } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AutoRefreshMessageTypes } from "~/services/accounts/refresh/autoRefreshMessaging"
@@ -938,7 +939,18 @@ test("runs usage-history sync when its MV3 alarm fires", async ({
   const baseUrl = "https://usage-alarm.example.com"
   const nowSeconds = Math.floor(Date.now() / 1000)
   const logCreatedAt = nowSeconds - 60
-  const usageDayKey = getDayKeyFromUnixSeconds(logCreatedAt)
+  const timeZone = await serviceWorker.evaluate(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+  )
+  const usageDayKey = getDayKeyFromUnixSeconds(logCreatedAt, timeZone)
+  const charge = expect.objectContaining({
+    asset: { kind: "currency", code: "USD" },
+    amount: expect.objectContaining({
+      value: String(321 / QUOTA_PER_USD),
+      source: expect.objectContaining({ contractVersion: "standard-usd/v1" }),
+    }),
+    settlement: "settled",
+  })
   let usageLogRequests = 0
 
   await context.route(`${baseUrl}/**`, async (route) => {
@@ -1050,14 +1062,14 @@ test("runs usage-history sync when its MV3 alarm fires", async ({
             promptTokens: 123,
             completionTokens: 456,
             totalTokens: 579,
-            quotaConsumed: 321,
+            consumption: [charge],
           }),
         }),
         dailyByModel: expect.objectContaining({
           "gpt-4o-mini": expect.objectContaining({
             [usageDayKey]: expect.objectContaining({
               requests: 1,
-              quotaConsumed: 321,
+              consumption: [charge],
             }),
           }),
         }),

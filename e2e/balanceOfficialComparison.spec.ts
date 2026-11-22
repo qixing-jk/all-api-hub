@@ -47,7 +47,7 @@ const samples = [
     id: "xiaoen",
     type: SITE_TYPES.XIAOEN,
     value: "38633",
-    expected: "38,633 Credits",
+    expected: "38.6K Credits",
   },
   {
     id: "grsai",
@@ -196,6 +196,7 @@ test("compares native site amounts in matched account rows and balance details",
   await seedUserPreferences(worker, {
     themeMode: "light",
     currencyType: "USD",
+    currencyDisplay: "original",
     showTodayCashflow: false,
     autoRefresh: false,
   })
@@ -254,9 +255,34 @@ test("compares native site amounts in matched account rows and balance details",
         exact: true,
       })
       await expect(details).toBeVisible()
+      if (sample.id === "relayfor" || sample.id === "cubence") {
+        const positions =
+          sample.id === "relayfor"
+            ? [
+                ["Permanent credit", `USD ${sample.value}`],
+                ["Timed credit", `USD ${sample.extra}`],
+              ]
+            : [
+                ["Normal balance", `USD ${sample.value}`],
+                ["Charity balance", `USD ${sample.extra}`],
+              ]
+        for (const [label, amount] of positions) {
+          await expect(
+            details
+              .getByText(label!, { exact: true })
+              .locator("..")
+              .getByText(amount!, { exact: true }),
+          ).toBeVisible()
+        }
+      }
       if (sample.id === "new-api")
         await expect(details).toContainText("3,671.208938")
       if (sample.id === "sub2api") await expect(details).toContainText("3.9763")
+      if (sample.id === "xiaoen") {
+        await expect(
+          details.getByText("38,633 Credits", { exact: true }),
+        ).toBeVisible()
+      }
       await captureVisualViews({
         page,
         ready: details,
@@ -276,24 +302,23 @@ test("compares native site amounts in matched account rows and balance details",
       const actions = row
         .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyUrlButton)
         .locator("..")
-      const balance = row.getByTitle("Click to refresh balance", {
-        exact: true,
+      const balance = row.getByRole("button").filter({
+        has: page.getByRole("group"),
       })
-      const actionBox = await actions.boundingBox()
-      const balanceBox = await balance.boundingBox()
-      if (!actionBox || !balanceBox)
-        throw new Error("Missing account row controls")
-      expect(
-        actionBox.x + actionBox.width,
-        `${sample.id} actions stay to the left of the balance at ${width}px`,
-      ).toBeLessThanOrEqual(balanceBox.x + 1)
-      expect(
-        Math.min(
-          actionBox.y + actionBox.height,
-          balanceBox.y + balanceBox.height,
-        ) - Math.max(actionBox.y, balanceBox.y),
-        `${sample.id} actions share the balance row at ${width}px`,
-      ).toBeGreaterThan(0)
+      await expect(balance).toBeVisible()
+      const actionBox = (await actions.boundingBox())!
+      const balanceBox = (await balance.boundingBox())!
+      if (width === 1440) {
+        expect(
+          actionBox.x + actionBox.width,
+          `${sample.id} actions stay to the left of the balance on desktop`,
+        ).toBeLessThanOrEqual(balanceBox.x + 1)
+      } else {
+        expect(
+          actionBox.y,
+          `${sample.id} actions remain clear of the balance at ${width}px`,
+        ).toBeGreaterThanOrEqual(balanceBox.y + balanceBox.height - 1)
+      }
     }
   }
 })

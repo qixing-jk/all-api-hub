@@ -1,5 +1,23 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 
+/** Category and amount pairs for rows with distinct inline native positions. */
+export const categorizedNativeBalances: Partial<
+  Record<AccountSiteType, ReadonlyArray<readonly [string, string]>>
+> = {
+  [SITE_TYPES.CUBENCE]: [
+    ["Normal balance", "$12.50"],
+    ["Charity balance", "$9.00"],
+  ],
+  [SITE_TYPES.VO_API_V2]: [
+    ["Basic balance", "$2.00"],
+    ["Bound balance", "$10.00"],
+  ],
+  [SITE_TYPES.RELAYFOR]: [
+    ["Permanent credit", "$1.88"],
+    ["Timed credit", "$3.76"],
+  ],
+}
+
 /** Display expectations independent of the dev generator and its formatters. */
 export const nativeBalanceExpectations: Record<
   AccountSiteType,

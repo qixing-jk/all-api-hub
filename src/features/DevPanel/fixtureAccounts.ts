@@ -156,15 +156,28 @@ class DevFixtureAccountRegistry {
   }
 
   async add(ids: string[]): Promise<string[]> {
-    return await withExtensionStorageWriteLock(
-      STORAGE_LOCKS.DEV_FIXTURE_ACCOUNTS,
-      async () => {
-        const existing = await this.read()
-        const unique = Array.from(new Set([...existing, ...ids]))
-        await this.storage.set(STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS, unique)
-        return unique
-      },
-    )
+    try {
+      return await withExtensionStorageWriteLock(
+        STORAGE_LOCKS.DEV_FIXTURE_ACCOUNTS,
+        async () => {
+          const existing = await this.read()
+          const unique = Array.from(new Set([...existing, ...ids]))
+          await this.storage.set(STORAGE_KEYS.DEV_FIXTURE_ACCOUNT_IDS, unique)
+          return unique
+        },
+      )
+    } catch (error) {
+      try {
+        await accountMutations.deleteAccounts(ids)
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          "Failed to register or remove the newly created fixture accounts",
+          { cause: cleanupError },
+        )
+      }
+      throw error
+    }
   }
 }
 

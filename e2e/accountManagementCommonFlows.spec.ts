@@ -1006,10 +1006,8 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
     coverage: "partial",
   })
   nativeConsumption.scope.authority = "https://duplicate.example.com"
-  await page.clock.setFixedTime(
-    nativeConsumption.window.start + 12 * 60 * 60_000,
-  )
-  const now = Date.now()
+  const now = nativeConsumption.window.start + 12 * 60 * 60_000
+  await page.clock.setFixedTime(now)
   const duplicateScope = accountBalanceScope({
     baseUrl: "https://duplicate.example.com/panel",
     accountId: "dup-keep",
@@ -1047,7 +1045,7 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
               }),
             ],
             now,
-            "complete",
+            "partial",
           ),
         },
       }),
@@ -1114,6 +1112,9 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
   await expect(accountDetails).toContainText("Balance")
   await expect(accountDetails).toContainText("3.25")
   await expect(accountDetails).toContainText("Expired")
+  await expect(
+    accountDetails.getByText("Partial", { exact: true }),
+  ).toBeVisible()
   await expect(accountDetails).toContainText("Older record; refresh to confirm")
   await expect(
     accountDetails.getByText("dup-keep", { exact: true }),
@@ -1152,7 +1153,11 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
   )
   await nativeToggle.click()
   const nativeDetails = dialog.locator("#dedupe-account-details-dup-delete")
-  await expect(nativeDetails).toContainText(/USD\s*0\.123456789123456789/)
+  await expect(
+    nativeDetails.getByRole("definition").filter({
+      hasText: /USD\s*0\.123456789123456789(?=\s*·)/u,
+    }),
+  ).toBeVisible()
   await expect(nativeDetails).toContainText("Partial daily statistic")
   await nativeToggle.click()
 

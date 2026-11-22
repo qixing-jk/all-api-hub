@@ -244,7 +244,7 @@
   "description": "Darstellung, Kontoverwaltung, automatische Aufgaben und Datensicherung anpassen.",
   "display": {
     "cny": "CNY (¥)",
-    "currencyDesc": "Die Originalwährung der Website anzeigen oder USD und CNY zum Wechselkurs des Kontos umrechnen. Token und Punkte behalten ihre Einheiten.",
+    "currencyDesc": "Die Originalwährung der Website anzeigen oder Beträge zum Wechselkurs des jeweiligen Kontos in USD oder CNY umrechnen. Token und Punkte behalten ihre Einheiten.",
     "currencyUnit": "Anzeigewährung",
     "defaultTab": "Standardregisterkarte",
     "defaultTabDesc": "Legen Sie die Standardregisterkarte fest, die beim Start des Plugins angezeigt wird",

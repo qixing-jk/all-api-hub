@@ -113,12 +113,14 @@ test("explains expired and reset plans without presenting their retained amounts
     name: "Balance details",
     exact: true,
   })
-  await expect(details.getByText("Expired", { exact: true })).toBeVisible()
+  const expired = details.getByRole("group", { name: /Expired plan/ })
+  const reset = details.getByRole("group", { name: /Reset plan/ })
+  await expect(expired.getByText("Expired", { exact: true })).toBeVisible()
   await expect(
-    details.getByText("Reset · Last known value", { exact: true }),
+    reset.getByText("Reset · Last known value", { exact: true }),
   ).toBeVisible()
-  await expect(details.getByText("USD 5", { exact: true })).toBeVisible()
-  await expect(details.getByText("USD 21", { exact: true })).toBeVisible()
+  await expect(expired.getByText("USD 5", { exact: true })).toBeVisible()
+  await expect(reset.getByText("USD 21", { exact: true })).toBeVisible()
   await expect(details.getByRole("meter")).toHaveCount(0)
   await captureVisualViews({
     page,

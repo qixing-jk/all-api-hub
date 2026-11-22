@@ -30,7 +30,6 @@ export default function DisplaySettings() {
   } = useUserPreferencesContext()
 
   const handleCurrencyChange = async (currency: CurrencyDisplay) => {
-    if (currency === currencyDisplay) return
     const writeResult = await updateCurrencyDisplay(currency)
     showUpdateToast(writeResult, t("display.currencyUnit"))
   }
@@ -56,6 +55,7 @@ export default function DisplaySettings() {
       resetRequiresConfirmation={false}
       resetDisabled={
         currencyDisplay === DEFAULT_PREFERENCES.currencyDisplay &&
+        currencyType === DEFAULT_PREFERENCES.currencyType &&
         activeTab === DEFAULT_PREFERENCES.activeTab &&
         showTodayCashflow === DEFAULT_PREFERENCES.showTodayCashflow
       }

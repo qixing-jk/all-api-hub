@@ -373,12 +373,14 @@ describe("UsageAnalytics charts", () => {
               "usageAnalytics:charts.modelCostDistribution.title",
             ),
         )
-        const values = modelCharts.flatMap(({ setOption }) =>
-          (setOption.mock.lastCall?.[0]?.series?.[0]?.data ?? []).map(
+        const chart = modelCharts
+          .filter(({ container }) => container.isConnected)
+          .at(-1)
+        const values =
+          chart?.setOption.mock.lastCall?.[0]?.series?.[0]?.data.map(
             ({ value }: { value: number }) => value,
-          ),
-        )
-        expect(values).toEqual(expect.arrayContaining(expected))
+          )
+        expect(values).toEqual(expected)
       })
     await expectSelectedModelCosts([6.5])
     const modelCostsCard = screen

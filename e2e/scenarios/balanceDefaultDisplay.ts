@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises"
 import path from "node:path"
 
 import {
@@ -23,13 +23,10 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
-import { resolveCompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatibleApi"
 import {
-  createLocatorFactory,
-  maybeCheckAgreement,
-  maybeRevealUsernamePasswordLogin,
-  requireVisibleLocator,
-} from "~~/e2e/utils/realSite/shared"
+  loginToCompatibleApiRealSite,
+  resolveCompatibleApiRealSiteConfig,
+} from "~~/e2e/utils/realSite/compatibleApi"
 import {
   loginToRealSub2ApiSite,
   resolveSub2ApiRealSiteConfig,
@@ -45,17 +42,21 @@ const targets = [
 
 // Read the existing CI deployments; only log in and read finance. No resource creation.
 export function registerBalanceDefaultDisplayTests(
-  prefix?: (typeof targets)[number]["prefix"],
+  prefix: (typeof targets)[number]["prefix"],
 ) {
-  for (const target of targets.filter(
-    (target) => !prefix || target.prefix === prefix,
-  )) {
+  const target = targets.find((candidate) => candidate.prefix === prefix)!
+  test.describe("native balance comparison", () => {
+    test.use({ screenshot: "off", trace: "off", video: "off" })
+    test.skip(
+      () => Boolean(process.env.AAH_E2E_USER_DATA_DIR),
+      "The balance comparison seeds accounts and preferences in a disposable profile.",
+    )
     test(`matches ${target.type} CI console default balance`, async ({
       page,
       context,
       extensionId,
       extensionDir,
-    }, testInfo) => {
+    }) => {
       // Opt-in Sub2API capture includes six detail states and both themes.
       test.setTimeout(
         target.prefix === "SUB2API" && process.env.AAH_VISUAL_CAPTURE_DIR
@@ -73,106 +74,46 @@ export function registerBalanceDefaultDisplayTests(
       )
       const config = resolution.config!
       const native = await context.newPage()
-      let authHeaders: Record<string, string> = {}
-      native.on("request", (request) => {
-        if (
-          request
-            .url()
-            .startsWith(new URL("/api/user/self", config.baseUrl).href)
-        ) {
-          const headers = request.headers()
-          authHeaders = {
-            ...authHeaders,
-            ...Object.fromEntries(
-              Object.entries(headers).filter(([key]) =>
-                ["authorization", "new-api-user", "veloera-user"].includes(key),
-              ),
-            ),
-          }
-        }
-      })
+      let cleanupOwnedSession: (() => Promise<void>) | undefined
       try {
-        if (target.prefix === "SUB2API") {
-          await loginToRealSub2ApiSite(native, config)
-        } else {
-          await native.goto(config.loginUrl, { waitUntil: "domcontentloaded" })
-          const locators = createLocatorFactory(`AAH_E2E_${target.prefix}`)
-          await maybeRevealUsernamePasswordLogin(
-            native,
-            () => locators.getUsernameCandidates(config),
-            () => locators.getPasswordCandidates(config),
-          )
-          await (
-            await requireVisibleLocator(
-              native,
-              locators.getUsernameCandidates(config),
-              15_000,
-            )
-          ).fill(config.username)
-          await (
-            await requireVisibleLocator(
-              native,
-              locators.getPasswordCandidates(config),
-              15_000,
-            )
-          ).fill(config.password)
-          await maybeCheckAgreement(native, config.agreeSelector)
-          const loginResponse = native.waitForResponse(
-            (response) =>
-              /\/api\/user\/(?:auth\/)?login(?:\?|$)/.test(response.url()) &&
-              response.request().method() === "POST",
-            { timeout: 30_000 },
-          )
-          await (
-            await requireVisibleLocator(
-              native,
-              locators.getSubmitCandidates(config),
-              15_000,
-            )
-          ).click()
-          const loginBody = await (await loginResponse).json()
-          const token = loginBody.data?.access_token
-          if (typeof token === "string")
-            authHeaders.authorization = `Bearer ${token}`
-          await native.waitForURL((url) => !url.pathname.includes("login"), {
-            timeout: 30_000,
+        if ("login2faApiUrl" in config) {
+          const login = await loginToCompatibleApiRealSite(native, config, {
+            label: target.type,
+            envPrefix: target.prefix,
+            authBundle: target.prefix === "NEW_API",
           })
-          await expect(native.locator("input[type=password]")).toHaveCount(0)
+          cleanupOwnedSession = login.cleanupOwnedSession
+        } else {
+          await loginToRealSub2ApiSite(native, config)
         }
-        await native.goto(new URL(target.route, config.baseUrl).href, {
-          waitUntil: "commit",
-        })
-        const observation = await native.evaluate(
-          async ({ sub2api, capturedHeaders }) => {
-            const headers: Record<string, string> = { ...capturedHeaders }
-            if (sub2api) {
-              const token = localStorage.getItem("auth_token")
-              if (token) headers.Authorization = `Bearer ${token}`
-            } else {
-              const user = JSON.parse(localStorage.getItem("user") ?? "{}")
-              if (user.id) headers["New-Api-User"] = String(user.id)
-              const token = localStorage.getItem("access_token")
-              if (token) headers.Authorization = `Bearer ${token}`
-            }
-            const endpoint = sub2api ? "/api/v1/auth/me" : "/api/user/self"
-            const response = await fetch(endpoint, {
-              credentials: "include",
-              headers,
-            })
-            const body = await response.json()
-            const data = body.data ?? body
-            return {
-              endpoint,
-              status: response.status,
-              raw: sub2api ? data.balance : data.quota,
-            }
-          },
-          {
-            sub2api: target.prefix === "SUB2API",
-            capturedHeaders: authHeaders,
-          },
-        )
-        expect(observation.status).toBe(200)
+
+        const sub2api = target.prefix === "SUB2API"
+        const endpoint = sub2api ? "/api/v1/auth/me" : "/api/user/self"
+        const responseUrl = new URL(endpoint, config.baseUrl)
+        const [balanceResponse] = await Promise.all([
+          native.waitForResponse(
+            (response) => {
+              const url = new URL(response.url())
+              return (
+                url.origin === responseUrl.origin &&
+                url.pathname === responseUrl.pathname &&
+                response.status() === 200 &&
+                response.request().method() === "GET"
+              )
+            },
+            { timeout: 30_000 },
+          ),
+          native.goto(new URL(target.route, config.baseUrl).href, {
+            waitUntil: "domcontentloaded",
+          }),
+        ])
+        const body = await balanceResponse.json()
+        const data = body.data ?? body
+        const observation = {
+          endpoint,
+          status: balanceResponse.status(),
+          raw: sub2api ? data.balance : data.quota,
+        }
         expect(observation.raw).toBeDefined()
         const amount =
           target.prefix === "SUB2API"
@@ -195,33 +136,30 @@ export function registerBalanceDefaultDisplayTests(
                 .first()
             : native.getByText(nativeAmount, { exact: true }).first()
         await expect(nativeValue).toBeVisible({ timeout: 20_000 })
-        const nativeRegion = nativeValue.locator("..")
-        const nativeBox = await nativeRegion.boundingBox()
-        const evidence = path.resolve(
-          process.env.AAH_BALANCE_NATIVE_EVIDENCE_DIR ??
-            testInfo.outputPath("native"),
-        )
-        await mkdir(evidence, { recursive: true })
-        if (nativeBox)
-          await native.screenshot({
-            path: path.join(evidence, `${target.type}.png`),
-            clip: nativeBox,
+        const evidenceDir = process.env.AAH_BALANCE_NATIVE_EVIDENCE_DIR
+        if (evidenceDir) {
+          const root = path.resolve(evidenceDir)
+          await mkdir(root, { recursive: true })
+          const attempt = await mkdtemp(path.join(root, `${target.type}-`))
+          await nativeValue.locator("..").screenshot({
+            path: path.join(attempt, "balance.png"),
             animations: "disabled",
           })
-        await writeFile(
-          path.join(evidence, `${target.type}.json`),
-          JSON.stringify(
-            {
-              type: target.type,
-              url: new URL(target.route, config.baseUrl).href,
-              ...observation,
-              nativeAmount,
-              canonicalUsd: amount.value,
-            },
-            null,
-            2,
-          ),
-        )
+          await writeFile(
+            path.join(attempt, "balance.json"),
+            JSON.stringify(
+              {
+                type: target.type,
+                url: new URL(target.route, config.baseUrl).href,
+                ...observation,
+                nativeAmount,
+                canonicalUsd: amount.value,
+              },
+              null,
+              2,
+            ),
+          )
+        }
 
         await forceExtensionLanguage(page, "en")
         await stubLlmMetadataIndex(context)
@@ -387,8 +325,12 @@ export function registerBalanceDefaultDisplayTests(
           })
         }
       } finally {
-        await native.close()
+        try {
+          await cleanupOwnedSession?.()
+        } finally {
+          await native.close()
+        }
       }
     })
-  }
+  })
 }

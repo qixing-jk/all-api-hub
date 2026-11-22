@@ -27,7 +27,10 @@ import { balancePosition } from "~/services/amounts/balance"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { AccountStorageConfig } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
-import { nativeBalanceExpectations } from "~~/e2e/scenarios/nativeBalanceExpectations"
+import {
+  categorizedNativeBalances,
+  nativeBalanceExpectations,
+} from "~~/e2e/scenarios/nativeBalanceExpectations"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -246,7 +249,10 @@ test("balance tooltip arrows point to the hovered amount rather than its wide co
         await amount.hover()
       }
       const hint = page.getByRole("tooltip")
-      await expect(hint).toBeVisible()
+      await expect(
+        hint,
+        `balance hint at ${width}px for ${step} (${value})`,
+      ).toBeVisible()
       await page.evaluate(
         () =>
           new Promise<void>((resolve) =>
@@ -1056,7 +1062,9 @@ test("currency symbols and native allowance units stay consistent across account
       const row = (id: string) =>
         page.getByTestId(getAccountManagementListItemTestId(id))
       await expect(row("symbol-requests")).toContainText("8 requests")
-      await expect(row("symbol-cny")).toContainText("¥8.00")
+      await expect(row("symbol-cny")).toContainText(
+        currencyType === "USD" ? "$1.11" : "¥8.00",
+      )
       await expect(row("symbol-xno")).toContainText("1.25 XNO")
       const plan = row("symbol-plan")
       await expect(plan).toContainText(
@@ -1180,9 +1188,11 @@ test("account balance rows remain readable across compact extension surfaces", a
     const namedBalance = page.getByTestId(
       getAccountManagementListItemTestId("compact-balance-3"),
     )
-    for (const label of await namedBalance
-      .getByText("Normal balance", { exact: true })
-      .all()) {
+    const normalBalanceLabel = namedBalance.getByText("Normal balance", {
+      exact: true,
+    })
+    await expect(normalBalanceLabel).toBeVisible()
+    for (const label of await normalBalanceLabel.all()) {
       expect(
         await label.evaluate((element) => {
           const word = document.createRange()
@@ -1706,7 +1716,7 @@ test("mixed native balances keep the overview bounded and expose each asset sepa
     const summary = entry.startsWith("options")
       ? page.getByRole("dialog", { name: "Filtered subtotals", exact: true })
       : page.getByRole("region", { name: "Financial totals", exact: true })
-    await expect(summary).toContainText("¥2,845.94")
+    await expect(summary).toContainText("¥2,853.94")
     await captureVisualViews({
       page,
       ready: summary,
@@ -1805,7 +1815,7 @@ test("mixed native balances keep the overview bounded and expose each asset sepa
       "Filtered summary stays within the account panel",
     ).toBe(true)
     await expect(summary.getByRole("combobox")).toHaveCount(0)
-    await expect(summary).toContainText("¥2,845.94")
+    await expect(summary).toContainText("¥2,853.94")
     await captureVisualViews({
       page,
       ready: summary,
@@ -1819,7 +1829,7 @@ test("mixed native balances keep the overview bounded and expose each asset sepa
       name: "Filtered subtotals",
       exact: true,
     })
-    const amount = totals.getByText("¥2,845.94", { exact: true })
+    const amount = totals.getByText("¥2,853.94", { exact: true })
     await expect(amount).toBeVisible()
     expect(
       await amount.evaluate(
@@ -2173,6 +2183,7 @@ test("dev site balance scenarios cover every account type with native units, per
     currencyType: "USD",
     showTodayCashflow: false,
     autoRefresh: false,
+    currencyDisplay: "original",
   })
   await page.goto(`chrome-extension://${extensionId}/options.html#account`)
   await waitForExtensionRoot(page)
@@ -2245,6 +2256,15 @@ test("dev site balance scenarios cover every account type with native units, per
       ]
     expect(expected, account.site_type).toBeDefined()
     for (const text of expected) await expect(visibleRow).toContainText(text)
+    for (const [category, amount] of categorizedNativeBalances[
+      account.site_type as keyof typeof categorizedNativeBalances
+    ] ?? []) {
+      await expect(
+        visibleRow
+          .getByRole("group", { name: new RegExp(category, "u") })
+          .getByText(amount, { exact: true }),
+      ).toBeVisible()
+    }
     await captureVisualViews({
       page,
       ready: visibleRow,
@@ -2533,6 +2553,7 @@ test("dev native observation states persist for every type and distinguish missi
   await seedUserPreferences(worker, {
     themeMode: "light",
     currencyType: "USD",
+    currencyDisplay: "original",
     showTodayCashflow: false,
     autoRefresh: false,
   })
@@ -2577,10 +2598,26 @@ test("dev native observation states persist for every type and distinguish missi
         .account_info.balance!.positions.length === 0
     const zero = await show(`${type} · zero`)
     await expect(zero).not.toContainText("Unavailable")
-    // Budget limits can remain nonzero; remaining values are actual zero.
+    const zeroAccount = fixtures.find(
+      (account) => account.site_name === `Dev Balance: ${type} · zero`,
+    )!
+    const asset =
+      zeroAccount.account_info.balance?.positions[0]?.asset ??
+      zeroAccount.account_info.allowances?.entries[0]?.constraint.asset
+    if (!asset || asset.kind === "unknown") {
+      throw new Error(`Missing native zero fixture for ${type}`)
+    }
+    const expectedZero =
+      asset.kind === "currency"
+        ? asset.code === "CNY"
+          ? "¥0.00"
+          : "$0.00"
+        : asset.kind === "quota"
+          ? `0 ${asset.displayLabel ?? asset.label}`
+          : `0 ${asset.id}`
     await expect(
-      zero.getByRole("button").filter({ has: page.getByRole("group") }),
-    ).toContainText("0")
+      zero.getByText(expectedZero, { exact: true }).first(),
+    ).toBeVisible()
     const missing = await show(`${type} · missing`)
     await expect(
       missing.getByRole("button").filter({ has: page.getByRole("group") }),

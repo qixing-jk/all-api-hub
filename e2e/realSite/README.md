@@ -20,19 +20,17 @@ For current coverage details, inspect the specs in this directory and the shared
 
 ## Native balance display regression
 
-New API, DoneHub, Veloera and Sub2API account specs register the shared [default balance comparison](../scenarios/balanceDefaultDisplay.ts). It logs in through the native UI, reads the authenticated account amount and asserts the settled native display, then renders the same amount in a controlled extension account row. It creates no API keys and closes its own page/profile. This checks native formatting and extension presentation; account detection, saving and refresh remain separate tests. Zero accounts establish zero display only; nonzero scale examples also belong in the owning adapter tests. New API defaults use quota/500000 USD; Sub2API balance is already USD. Display currency does not change either source unit.
+New API, DoneHub, Veloera and Sub2API account specs register the shared [default balance comparison](../scenarios/balanceDefaultDisplay.ts). It uses the site's supported login flow, reads the authenticated dashboard response and asserts the settled native display, then renders the same amount in a controlled extension account row. It creates no API keys and closes its own page/profile. This checks native formatting and extension presentation; account detection, saving and refresh remain separate tests. Zero accounts establish zero display only; nonzero scale examples also belong in the owning adapter tests. New API defaults use quota/500000 USD; Sub2API balance is already USD. Display currency does not change either source unit.
 
 The Sub2API comparison also checks Popup, Side Panel and Options in USD/CNY: the summary follows the controlled account's configured exchange rate while details retain the exact native USD amount. Ordinary details omit absent metadata and the debug entry; after developer unlock, technical details start collapsed and reveal the adapter source only on expansion. Optional screenshots cover both themes.
 
 Run just the four configured comparisons using the existing shared env loader:
 
 ```bash
-pnpm exec playwright test e2e/realSite/balanceDefaultDisplay.spec.ts --workers=1 --retries=0
-# Or the same scenario through an existing account CI spec:
-pnpm exec playwright test e2e/realSite/newApiAccountAdd.spec.ts --grep "CI console default balance" --workers=1
+pnpm exec playwright test e2e/realSite --grep "CI console default balance" --workers=1 --retries=0
 ```
 
-Missing deployment configuration is reported as a skip. Optional `AAH_BALANCE_NATIVE_EVIDENCE_DIR` saves only allowlisted amount fields and focused native images; `AAH_VISUAL_CAPTURE_DIR` saves extension images/build metadata. Use a new directory per run, outside Playwright's cleaned output directory. Screenshots are opt-in local evidence for review; keep authenticated captures outside Git. Never export Cookies, browser storage, login response bodies or credentials. Wait for the authenticated response and its actual displayed amount; a zero loading placeholder is insufficient.
+Missing deployment configuration or a reusable profile selected through `AAH_E2E_USER_DATA_DIR` skips these comparisons. Optional `AAH_BALANCE_NATIVE_EVIDENCE_DIR` saves only allowlisted amount fields and focused native images; `AAH_VISUAL_CAPTURE_DIR` saves extension images/build metadata. Use a new directory per run, outside Playwright's cleaned output directory. Screenshots are opt-in local evidence for review; keep authenticated captures outside Git. Never export Cookies, browser storage, login response bodies or credentials. Wait for the authenticated response and its actual displayed amount; a zero loading placeholder is insufficient.
 
 The dev panel's **Add native site balance scenarios** covers every registered account type with its default asset shape. **Add native zero, missing and stale scenarios** adds those three states per type plus SharedChat's separate request-count mode. These saved fixtures can be inspected in Options, Popup and Side Panel, then removed with **Clear fixture accounts**, which preserves unregistered accounts. Example amounts and snapshot source scopes are controlled data, not live-provider evidence. Browser fixture tests disable automatic refresh; do the same for manual offline previews, since provider URL normalization can select a real origin.
 

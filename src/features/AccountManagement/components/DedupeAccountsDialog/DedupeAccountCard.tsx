@@ -18,7 +18,10 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { resolveAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStatsResolver"
 import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import { balancePositionKey } from "~/services/amounts/balance"
-import { ASSET_KINDS } from "~/services/amounts/financialConstants"
+import {
+  ASSET_KINDS,
+  FINANCIAL_COVERAGE,
+} from "~/services/amounts/financialConstants"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type { AccountTodayStatsAvailability, SiteAccount } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
@@ -305,6 +308,11 @@ export function DedupeAccountCard({
                 </FinancialMetricLabel>
               </dt>
               <dd className="break-all text-secondary-foreground">
+                {balance?.coverage === FINANCIAL_COVERAGE.Partial && (
+                  <div className="text-xs text-muted-foreground">
+                    {t("keyManagement:financial.partial")}
+                  </div>
+                )}
                 {balance?.positions.length ? (
                   <dl>
                     {balance.positions.map((position) => (

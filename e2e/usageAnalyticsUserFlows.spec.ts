@@ -430,6 +430,11 @@ test("shows native settled charges and migrated reference costs", async ({
   await expect(
     zeroCostModelChart.getByRole("button", { name: "Histogram" }),
   ).toHaveAttribute("aria-pressed", "true")
+  await expect(
+    page
+      .getByRole("region", { name: "Recorded costs" })
+      .getByText(/^USD\s+0$/u),
+  ).toBeVisible()
   await captureVisualViews({
     page,
     extensionDir,
@@ -454,9 +459,9 @@ test("shows native settled charges and migrated reference costs", async ({
   await waitForExtensionRoot(page)
   await expect(
     page
-      .locator('[data-slot="card"]')
-      .filter({ has: page.getByText("Recorded costs", { exact: true }) }),
-  ).toContainText("11")
+      .getByRole("region", { name: "Recorded costs" })
+      .getByText(/^USD\s+11$/u),
+  ).toBeVisible()
   await expect(
     zeroCostModelChart.getByRole("button", { name: "Pie" }),
   ).toBeDisabled()

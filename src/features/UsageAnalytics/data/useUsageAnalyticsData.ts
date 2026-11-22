@@ -100,7 +100,7 @@ export const useUsageAnalyticsData = () => {
         })
         if (isCurrent()) {
           logger.error("Failed to load data", error)
-          setLoadError(getErrorMessage(error))
+          setLoadError(getErrorMessage(error, "Failed to load usage history"))
         }
       } finally {
         if (isCurrent()) setIsLoading(false)

@@ -376,6 +376,11 @@ test("updates usage-history sync settings and syncs only the selected account", 
     has: page.getByText("Model consumption", { exact: true }),
   })
   await expect(modelCosts.locator("canvas")).toBeVisible()
+  await expect(
+    page
+      .getByRole("region", { name: "Recorded costs" })
+      .getByText(/^USD\s+0\.001308$/u),
+  ).toBeVisible()
   await expect(page.getByText("Reference costs", { exact: true })).toHaveCount(
     0,
   )

@@ -291,7 +291,13 @@ test("preserves original award assets and fulfillment alongside partial check-in
     })
     await page.reload()
     await waitForExtensionRoot(page)
-    await expect(row("Partial campaigns")).toContainText(monetary)
+    const campaigns = row("Partial campaigns")
+    if (mode === "original") {
+      await expect(campaigns.getByText("+USD 2", { exact: true })).toBeVisible()
+      await expect(campaigns.getByText("+CNY 0", { exact: true })).toBeVisible()
+    } else {
+      await expect(campaigns).toContainText(monetary)
+    }
     await expect(row("Legacy reward")).toContainText(legacy)
     await expect(row("Welfare wallet")).toContainText("+42 credits")
     await table.screenshot({

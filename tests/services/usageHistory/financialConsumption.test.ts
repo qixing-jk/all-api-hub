@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
 import { CURRENCIES } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import { observeAmount } from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
@@ -13,6 +14,8 @@ import {
   SCOPE_SELECTION_KINDS,
 } from "~/services/amounts/financialConstants"
 import type { FinancialConsumptionFact } from "~/services/amounts/usage"
+import * as usageAmounts from "~/services/amounts/usage"
+import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
 import {
@@ -144,6 +147,70 @@ describe("native consumption in usage history", () => {
       exported.fused.daily["2026-01-01"]?.consumption?.[0]?.amount,
     ).toMatchObject({ value: "0.1" })
   })
+  it("folds each bucket once and retains every unavailable charge", () => {
+    const merge = vi.spyOn(usageAmounts, "mergeRecordedConsumption")
+    const accountStore = createEmptyUsageHistoryAccountStore()
+    const known = consumption("2.5")
+    const overflow = consumption("9".repeat(256))
+    const unknown = {
+      ...known,
+      amount: observeAmount(undefined, known.amount.source, at),
+    }
+    const charges = [
+      ...Array<FinancialConsumptionFact>(500).fill(unknown),
+      known,
+      known,
+      {
+        ...overflow,
+        amount: {
+          ...overflow.amount,
+          source: { ...overflow.amount.source, operation: "overflow" },
+        },
+      },
+      {
+        ...overflow,
+        amount: {
+          ...overflow.amount,
+          source: { ...overflow.amount.source, operation: "overflow" },
+        },
+      },
+    ]
+    try {
+      ingestConsumeLogItems({
+        accountStore,
+        items: charges.map(
+          (charge, index) =>
+            ({
+              type: LogType.Consume,
+              created_at: at / 1000,
+              model_name: "model",
+              token_id: 1,
+              prompt_tokens: index,
+              quota: 0,
+              consumption: charge,
+            }) as LogItem,
+        ),
+        startCursor: accountStore.cursor,
+        cursorCandidate: accountStore.cursor,
+        timeZone: "UTC",
+      })
+      expect(merge).toHaveBeenCalledTimes(6)
+      const day = accountStore.daily["2026-01-01"]
+      expect(day).toMatchObject({
+        requests: charges.length,
+        consumptionIncomplete: true,
+      })
+      expect(day?.consumption?.[0]?.amount).toMatchObject({ value: "5" })
+      expect(day?.consumption?.slice(1, -1)).toEqual(Array(500).fill(unknown))
+      expect(day?.consumption?.at(-1)?.amount).toMatchObject({
+        status: "unavailable",
+        reason: "amount-out-of-range",
+      })
+    } finally {
+      merge.mockRestore()
+    }
+  })
+
   it("keeps legacy quota unpriced even with successful complete request ingestion", () => {
     const accountStore = createEmptyUsageHistoryAccountStore()
     const item = {
@@ -192,6 +259,25 @@ it("keeps asset identity in incremental cursor deduplication while preserving ol
     },
     timeZone: "UTC",
   })
+  const storedCursor = {
+    ...initial.cursorCandidate,
+    fingerprintsAtLastSeenCreatedAt:
+      initial.cursorCandidate.fingerprintsAtLastSeenCreatedAt.map((key) =>
+        key.replace(',null,"logs"', ',"fixture","logs"'),
+      ),
+  }
+  const reclassified = structuredClone(first)
+  reclassified.consumption!.amount.source.adapter = "recognized-site-type"
+  expect(
+    ingestConsumeLogItems({
+      accountStore,
+      items: [reclassified],
+      startCursor: storedCursor,
+      cursorCandidate: initial.cursorCandidate,
+      timeZone: "UTC",
+    }).ingestedCount,
+  ).toBe(0)
+
   const second = structuredClone(first)
   second.consumption!.asset = {
     kind: ASSET_KINDS.Currency,
@@ -221,6 +307,55 @@ it("keeps asset identity in incremental cursor deduplication while preserving ol
       timeZone: "UTC",
     }).ingestedCount,
   ).toBe(0)
+})
+
+it("recognizes a refetched New API charge after identifying its site type", () => {
+  const account = createEmptyUsageHistoryAccountStore()
+  const scope = consumption("1").scope
+  const makeItem = (
+    siteType: typeof SITE_TYPES.UNKNOWN | typeof SITE_TYPES.NEW_API,
+  ) => {
+    const charge = newApiFinancialAmount(500_000, scope.authority, siteType)
+    return {
+      type: LogType.Consume,
+      created_at: at / 1000,
+      quota: 500_000,
+      prompt_tokens: 4,
+      completion_tokens: 8,
+      consumption: usageAmounts.recordedLogCharge(
+        charge.asset,
+        charge.value,
+        scope,
+        {
+          adapter: siteType,
+          operation: "/api/log/self:quota",
+          contractVersion: charge.contractVersion,
+          kind: EVIDENCE_KINDS.Reported,
+        },
+        at,
+      ),
+    } as LogItem
+  }
+  const initial = ingestConsumeLogItems({
+    accountStore: account,
+    items: [makeItem(SITE_TYPES.UNKNOWN)],
+    startCursor: account.cursor,
+    cursorCandidate: account.cursor,
+    timeZone: "UTC",
+  })
+  expect(initial.ingestedCount).toBe(1)
+  const refreshed = ingestConsumeLogItems({
+    accountStore: account,
+    items: [makeItem(SITE_TYPES.NEW_API)],
+    startCursor: initial.cursorCandidate,
+    cursorCandidate: initial.cursorCandidate,
+    timeZone: "UTC",
+  })
+  expect(refreshed.ingestedCount).toBe(0)
+  expect(account.daily["2026-01-01"]).toMatchObject({
+    requests: 1,
+    totalTokens: 12,
+  })
 })
 
 it("persists the v1 quota as a USD reference amount and keeps later native charges independently", async () => {

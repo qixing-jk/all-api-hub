@@ -246,6 +246,15 @@ describe("useUsageAnalyticsData", () => {
     expect(result.current.hasLoadedData).toBe(true)
   })
 
+  it("exposes a failure even when the rejection has no message", async () => {
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([])
+    vi.mocked(usageHistoryStorage.getStore).mockRejectedValueOnce(null)
+    const { result } = renderHook(() => useUsageAnalyticsData())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.loadError).toBeTruthy()
+    expect(result.current.hasLoadedData).toBe(false)
+  })
+
   it("retains the initial read error until a successful reload", async () => {
     vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([])
     vi.mocked(usageHistoryStorage.getStore)

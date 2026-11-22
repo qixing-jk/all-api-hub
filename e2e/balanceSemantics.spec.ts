@@ -127,6 +127,7 @@ for (const lastKnown of [false, true]) {
     const row = page.getByTestId(
       getAccountManagementListItemTestId("credit-share"),
     )
+    await row.hover()
     await row
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
       .click()
@@ -213,6 +214,7 @@ for (const [surface, path, width, themeMode] of [
     await waitForExtensionRoot(page)
     const row = page.getByTestId(getAccountManagementListItemTestId(id))
     await expect(row).toBeVisible()
+    await row.hover()
     await row
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
       .click()
@@ -221,6 +223,7 @@ for (const [surface, path, width, themeMode] of [
       .click()
     await expect(row.getByRole("group", { name: /\$12\.00/ })).toBeVisible()
     partial = true
+    await row.hover()
     await row
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
       .click()
@@ -602,6 +605,7 @@ test("keeps multi-asset net inflow separate from confirmed income across account
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }
   })
+  await page.clock.setFixedTime(clock.end)
   const worker = await getServiceWorker(context)
   const scope = accountBalanceScope(
     {
@@ -749,7 +753,11 @@ test("keeps multi-asset net inflow separate from confirmed income across account
       getAccountManagementListItemTestId("multi-ledger"),
     )
     await expect(row).toContainText(/CNY\s*-5|-[^0-9]*CNY\s*5/)
-    await expect(row).toContainText("2 XNO")
+    await expect(
+      row.getByRole("button", {
+        name: /Estimated net inflow.*Ledger balance · 2 XNO(?:\.|$)/u,
+      }),
+    ).toBeVisible()
     await row.screenshot({
       path: testInfo.outputPath(`${name}-net-inflow-row.png`),
       animations: "disabled",
@@ -760,7 +768,7 @@ test("keeps multi-asset net inflow separate from confirmed income across account
         exact: true,
       })
       await expect(net).toContainText(/CNY\s*-5|-[^0-9]*CNY\s*5/)
-      await expect(net).toContainText("2 XNO")
+      await expect(net.getByText("2 XNO", { exact: true })).toBeVisible()
       await net.screenshot({
         path: testInfo.outputPath(`${name}-net-inflow-summary.png`),
         animations: "disabled",

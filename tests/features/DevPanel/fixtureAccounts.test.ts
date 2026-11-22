@@ -38,6 +38,7 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
 /** In-memory stand-in for the extension `local` storage area. */
 const storageBacking = new Map<string, unknown>()
 let storageGetShouldThrow = false
+let storageSetShouldThrow = false
 
 vi.mock("@plasmohq/storage", () => ({
   Storage: class {
@@ -49,6 +50,7 @@ vi.mock("@plasmohq/storage", () => ({
     }
 
     async set(key: string, value: unknown) {
+      if (storageSetShouldThrow) throw new Error("registry write failed")
       storageBacking.set(key, value)
     }
 
@@ -136,9 +138,24 @@ describe("dev fixture accounts", () => {
     vi.clearAllMocks()
     storageBacking.clear()
     storageGetShouldThrow = false
+    storageSetShouldThrow = false
     addAccountMock.mockImplementation(async () => `fixture-${Date.now()}`)
     deleteAccountsMock.mockResolvedValue({ deletedCount: 0, deletedIds: [] })
     getAllAccountsMock.mockResolvedValue([realAccount])
+  })
+
+  it("removes only the just-created accounts when registry persistence fails", async () => {
+    seedRegistry(["existing-fixture"])
+    let serial = 0
+    addAccountMock.mockImplementation(async () => `new-fixture-${++serial}`)
+    storageSetShouldThrow = true
+    await expect(addDevFinancialFixtureAccounts()).rejects.toThrow(
+      "registry write failed",
+    )
+    expect(deleteAccountsMock).toHaveBeenCalledExactlyOnceWith(
+      Array.from({ length: 9 }, (_, index) => `new-fixture-${index + 1}`),
+    )
+    expect(readRegistry()).toEqual(["existing-fixture"])
   })
 
   it("generates distinguishable balance and plan scenarios without legacy cashflow or automatic check-in", async () => {

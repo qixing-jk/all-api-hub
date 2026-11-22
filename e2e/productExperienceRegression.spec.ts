@@ -67,6 +67,17 @@ for (const { path, width } of [
       }),
     )
     const worker = await getServiceWorker(context)
+    const window = await page.evaluate(() => {
+      const date = new Date()
+      const start = date.setHours(0, 0, 0, 0)
+      const end = date.setHours(12, 0, 0, 0)
+      return {
+        start,
+        end,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }
+    })
+    await page.clock.setFixedTime(window.end)
     const accounts = (
       [
         {
@@ -92,6 +103,16 @@ for (const { path, width } of [
         value: cost,
         asset: { kind: "currency", code: currency },
       })
+      fact.window = window
+      if ("observedAt" in fact.amount) fact.amount.observedAt = window.end
+      const incomeFact = buildFinancialIncomeFact({
+        accountId: id,
+        value: income,
+        asset: fact.asset,
+      })
+      incomeFact.window = window
+      if ("observedAt" in incomeFact.amount)
+        incomeFact.amount.observedAt = window.end
       return createStoredAccount({
         id,
         site_name: id,
@@ -114,13 +135,7 @@ for (const { path, width } of [
             Date.now(),
             "complete",
           ),
-          reportedIncome: [
-            buildFinancialIncomeFact({
-              accountId: id,
-              value: income,
-              asset: fact.asset,
-            }),
-          ],
+          reportedIncome: [incomeFact],
           settledConsumption: [fact],
           usage: {
             scope: "site_today",
@@ -195,12 +210,16 @@ for (const { path, width } of [
         name: "Usage by site day",
         exact: true,
       })
-      await expect(day.getByText("rate-fourteen").locator("..")).toContainText(
-        dayFourteen,
-      )
-      await expect(day.getByText("rate-seven").locator("..")).toContainText(
-        daySeven,
-      )
+      for (const [name, amount] of [
+        ["rate-fourteen", dayFourteen],
+        ["rate-seven", daySeven],
+      ] as const) {
+        const reportedDay = day
+          .getByText(name, { exact: true })
+          .locator("..")
+          .filter({ hasText: "Requests" })
+        await expect(reportedDay).toContainText(amount)
+      }
       await expect(day).toContainText("2026-11-17")
       if (cost && income) {
         const consumption = summary.getByRole("region", {
@@ -262,8 +281,11 @@ for (const { path, width } of [
         .getByRole("button", { name: "Close", exact: true })
         .click()
       await expect(caption).toHaveCount(0)
-      await page
-        .getByTestId(getAccountManagementListItemTestId("rate-fourteen"))
+      const accountRow = page.getByTestId(
+        getAccountManagementListItemTestId("rate-fourteen"),
+      )
+      await accountRow.hover()
+      await accountRow
         .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
         .click()
       await page
@@ -378,8 +400,16 @@ for (const { path, width } of [
       name: "2 accounts",
       exact: true,
     })
-    await expect(filtered).toContainText(/USD\s*2(?:\.00)?\b/)
-    await expect(filtered).toContainText(/USD\s*4(?:\.00)?\b/)
+    await expect(
+      filtered
+        .getByRole("group", { name: "Today's consumption" })
+        .getByText(/^USD\s+2(?:\.00)?$/u),
+    ).toBeVisible()
+    await expect(
+      filtered
+        .getByRole("group", { name: "Today's income" })
+        .getByText(/^USD\s+4(?:\.00)?$/u),
+    ).toBeVisible()
     await expect(filtered).not.toContainText("Partial daily statistic")
     await filtered.screenshot({
       path: testInfo.outputPath("filtered-converted-cashflow.png"),

@@ -54,6 +54,16 @@ const {
   useProductAnnouncementsMock: vi.fn(),
 }))
 
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/contexts/UserPreferencesContext")
+  >()),
+  useUserPreferencesContext: () => ({
+    currencyType: "USD",
+    currencyDisplay: "original",
+  }),
+}))
+
 vi.mock("~/features/OptionsOverview/workspace/useOptionsOverviewData", () => ({
   useOptionsOverviewData: useOptionsOverviewDataMock,
 }))

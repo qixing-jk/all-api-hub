@@ -146,6 +146,29 @@ describe("UsageHistorySyncTab", () => {
     expect(screen.getByRole("row", { name: /Account 1/ })).toBeVisible()
   })
 
+  it("preserves the last loaded accounts and history when refreshing fails", async () => {
+    const user = userEvent.setup()
+    renderSubject()
+    await screen.findByRole("row", { name: /Account 1/ })
+    vi.mocked(accountQueries.getEnabledAccounts).mockRejectedValueOnce(
+      new Error("accounts unavailable"),
+    )
+    vi.mocked(usageHistoryStorage.getStore).mockRejectedValueOnce(
+      new Error("history unavailable"),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "usageAnalytics:syncTab.actions.refreshStatus",
+      }),
+    )
+    expect(
+      await screen.findByText(
+        "usageAnalytics:messages.error.lastLoadedDescription",
+      ),
+    ).toBeVisible()
+    expect(screen.getByRole("row", { name: /Account 1/ })).toBeVisible()
+  })
+
   it("confirms a shorter retention reset and restores canonical settings", async () => {
     const user = userEvent.setup()
     renderSubject()

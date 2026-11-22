@@ -186,6 +186,58 @@ describe("UsageAnalytics echartsOptions", () => {
     ).toMatchObject({ yAxisIndex: 2, data: [2.5, null] })
   })
 
+  it("keeps provider quotas with the same unit label on separate cost series", () => {
+    const day = "2026-01-01"
+    const record = (id: string, value: string) =>
+      buildFinancialPeriodFact({
+        accountId: id,
+        value,
+        asset: {
+          kind: "quota",
+          id,
+          label: "Token",
+          displayScale: 1000,
+          displayLabel: "K Token",
+        },
+      })
+    const manual = record("provider-a", "8000")
+    manual.amount.source.kind = "manual"
+    const option = buildDailyOverviewOption({
+      dayKeys: [day],
+      daily: {
+        [day]: {
+          requests: 3,
+          promptTokens: 1,
+          completionTokens: 2,
+          totalTokens: 3,
+          consumption: [
+            record("provider-a", "2000"),
+            record("provider-b", "3000"),
+            manual,
+          ],
+        },
+      },
+      requestsAxisLabel: "Requests",
+      tokensAxisLabel: "Tokens",
+      requestsSeriesLabel: "Requests",
+      promptTokensSeriesLabel: "Prompt",
+      completionTokensSeriesLabel: "Completion",
+      totalTokensSeriesLabel: "Total",
+      recordedCostSeriesLabel: "Recorded",
+    })
+    const series = option.series as {
+      name: string
+      yAxisIndex: number
+      data: number[]
+    }[]
+    expect(
+      series.filter(({ name }) => name.startsWith("Recorded")),
+    ).toMatchObject([
+      { name: "Recorded (K Token) #1", yAxisIndex: 2, data: [2] },
+      { name: "Recorded (K Token) #2", yAxisIndex: 3, data: [3] },
+    ])
+  })
+
   it("buildPieOption creates a pie series for distribution views", () => {
     const option = buildPieOption({
       categories: ["A", "B"],

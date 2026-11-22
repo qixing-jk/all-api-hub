@@ -221,6 +221,7 @@ export function OverviewUsageSnapshot({
                       <AvailabilityAwareValue
                         value={formatAssetAmount(
                           displayCashflowAmount(group, displayCurrency),
+                          i18n.language,
                         )}
                         coverage={group.coverage}
                         t={t}
