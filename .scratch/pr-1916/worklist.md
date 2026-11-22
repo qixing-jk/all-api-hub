@@ -79,3 +79,9 @@ CI on the source head had two failures. Shard 2 initially remained at Loading sc
 Coverage decisions for all previously implicated file groups are retained in artifacts/coverage-dispositions-4f94e82e18.md and the 47-file provider line inventory. The current provider report must be checked after publication. Outstanding remote acceptance includes the completed review of the new head, inline acceptance for still-open handled findings, all required checks, coverage and mergeability.
 
 Task artifacts, including interrupted dependency-install backup packages, remain local pending review or unresolved diagnosis. They are not tracked and must not be deleted while evidence remains needed. This report is the retained reviewer entry point; the behavior regressions remain in tests.
+
+## Absent consumption on reload
+
+CodeRabbit's post-reply inspection found a remaining legacy-only case: normalization defaulted a missing stored consumption counter to zero while retaining Complete coverage. The component regression runs the stored account through normalizeSiteAccount and verifies that absent evidence renders unavailable while an explicit zero stays visible. The absent case failed on 02b56673b5; both cases and the full DedupeAccountCard/accountDefaults suites passed (70 tests) after normalization classified the missing evidence as unavailable/invalid payload. Native consumption retains its independent exact amount and coverage. No numeric storage shape changed.
+
+Remote validation on 02b56673b5 passed all 30 checks and Codecov at 94.33% (11 misses, 132 partials in 47 source files). This is source-head evidence for the final repair; the next published head still needs its own CI, coverage, review and thread acceptance. The original density/shard-timeout traces remain local because their cause is unresolved despite all three repeated density passes and successful source-head CI.

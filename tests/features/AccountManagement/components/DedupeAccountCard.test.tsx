@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { DedupeAccountCard } from "~/features/AccountManagement/components/DedupeAccountsDialog/DedupeAccountCard"
+import { normalizeSiteAccount } from "~/services/accounts/editing/accountDefaults"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -102,6 +103,57 @@ describe("DedupeAccountCard today statistics", () => {
       expect(
         screen.getAllByText("common:labels.notAvailable").length,
       ).toBeGreaterThanOrEqual(3)
+    },
+  )
+
+  it.each(["absent", "zero"] as const)(
+    "renders the %s legacy consumption counter after reload normalization",
+    async (counter) => {
+      const stored = buildSiteAccount({
+        account_info: {
+          ...buildSiteAccount().account_info,
+          today_quota_consumption: 0,
+          settledConsumption: undefined,
+          todayStatsAvailability: {
+            consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          },
+        },
+      })
+      if (counter === "absent") {
+        Reflect.deleteProperty(stored.account_info, "today_quota_consumption")
+      }
+      const account = normalizeSiteAccount(stored)
+      render(
+        <DedupeAccountCard
+          account={account}
+          group={{
+            groupId: "group-1",
+            keepAccountId: account.id,
+            recommendedKeepAccountId: account.id,
+            hasManualOverride: false,
+            reason: "same_origin_user",
+          }}
+          accountLabelById={new Map([[account.id, "Account"]])}
+          pinnedAccountIds={[]}
+          detailsOpenByAccountId={{ [account.id]: true }}
+          isWorking={false}
+          t={t}
+          onKeepChange={vi.fn()}
+          onToggleDetails={vi.fn()}
+        />,
+      )
+      const label = await screen.findByText(
+        "ui:dialog.dedupeAccounts.details.todayConsumption",
+      )
+      expect(label.nextElementSibling).toHaveTextContent(
+        counter === "zero" ? "0" : "—",
+      )
+      if (counter === "absent") {
+        expect(label.nextElementSibling).not.toHaveTextContent("0")
+      }
     },
   )
 
