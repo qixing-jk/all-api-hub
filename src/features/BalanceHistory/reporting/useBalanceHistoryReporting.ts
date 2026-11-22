@@ -352,10 +352,17 @@ export function useBalanceHistoryReporting({
                   snapshots[subtractDaysFromDayKey(day, 1)]?.capturedAt
                 const to = snapshots[day]?.capturedAt
                 if (!from || !to || from >= to) return text
+                const start = new Date(from)
+                const end = new Date(to)
+                if (
+                  !Number.isFinite(start.getTime()) ||
+                  !Number.isFinite(end.getTime())
+                )
+                  return text
                 const dates = new Intl.DateTimeFormat(i18n.language, {
                   dateStyle: "medium",
                   timeStyle: "short",
-                }).formatRange(new Date(from), new Date(to))
+                }).formatRange(start, end)
                 return `${text} · ${dates}`
               },
             }

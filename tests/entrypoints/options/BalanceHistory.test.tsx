@@ -4,11 +4,16 @@ import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { echarts } from "~/components/charts/echarts"
 import { CURRENCIES } from "~/constants/money"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
 import { BALANCE_HISTORY_TREND_CHART_TYPES } from "~/features/BalanceHistory/contracts"
 import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
+import {
+  DevPanelProvider,
+  useDevPanelSections,
+} from "~/features/DevPanel/DevPanelSectionsContext"
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
@@ -66,6 +71,17 @@ const getMetricDropdownButtonName = (
   new RegExp(
     `balanceHistory:${section}\\.title:\\s*${metric.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
   )
+
+function PreviewActions() {
+  const section = useDevPanelSections().find(
+    ({ id }) => id === `${MENU_ITEM_IDS.BALANCE_HISTORY}-preview`,
+  )
+  return section?.actions?.map(({ id, label, run, disabled }) => (
+    <button key={id} disabled={disabled} onClick={() => void run()}>
+      {label}
+    </button>
+  ))
+}
 
 function renderDesktopHistory() {
   const matchMedia = window.matchMedia
@@ -342,10 +358,34 @@ describe("BalanceHistory options page", () => {
         ],
       },
     })
-    render(<BalanceHistory />)
     const user = userEvent.setup()
+    render(<BalanceHistory />)
+    const amounts = await screen.findByRole("region", {
+      name: "balanceHistory:native.amountsTitle",
+    })
     await user.click(
-      await screen.findByRole("button", { name: /4,?500 Token/ }),
+      within(amounts).getByRole("button", {
+        name: /balanceHistory:overview.viewTrend/,
+      }),
+    )
+    expect(
+      within(
+        screen.getByRole("region", {
+          name: "balanceHistory:trend.title",
+        }),
+      ).getByText(/^4,?500 Token$/),
+    ).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: /balanceHistory:trend.title:.*Token/,
+        }),
+      ).toHaveFocus(),
+    )
+    await user.click(
+      within(screen.getByRole("table")).getByRole("button", {
+        name: /4,?500 Token/,
+      }),
     )
     const records = within(screen.getByRole("dialog"))
     const sourceDetails = screen.getByText(/fixture\/console@1/)
@@ -371,6 +411,98 @@ describe("BalanceHistory options page", () => {
     expect(
       await screen.findByRole("button", { name: "Token Wallet" }),
     ).toBeEnabled()
+  })
+
+  it.each([
+    ["Dev: Preview USD balances", "balanceHistory:native.amountsTitle"],
+    ["Dev: Preview mixed balances", "balanceHistory:native.amountsTitle"],
+    ["Dev: Preview empty history", EMPTY_TITLE],
+  ])(
+    "shows isolated data for %s and restores storage after exit",
+    async (action, expected) => {
+      if (!isDevUnlocked()) {
+        toggleDevUnlocked()
+        onTestFinished(() => {
+          toggleDevUnlocked()
+        })
+      }
+      const user = userEvent.setup()
+      render(
+        <DevPanelProvider
+          surface="options"
+          page={MENU_ITEM_IDS.BALANCE_HISTORY}
+        >
+          <BalanceHistory />
+          <PreviewActions />
+        </DevPanelProvider>,
+      )
+      expect(await screen.findByText(EMPTY_TITLE)).toBeVisible()
+      const reads = vi.mocked(dailyBalanceHistoryStorage.getStore).mock.calls
+        .length
+
+      await user.click(await screen.findByRole("button", { name: action }))
+      expect(await screen.findByText(/Dev preview/)).toBeVisible()
+      if (expected === EMPTY_TITLE) {
+        expect(screen.getByText(expected)).toBeVisible()
+      } else {
+        expect(screen.getByRole("region", { name: expected })).toBeVisible()
+        expect(
+          screen.getByRole("img", { name: /balanceHistory:trend.scopes/ }),
+        ).toBeVisible()
+      }
+      expect(dailyBalanceHistoryStorage.getStore).toHaveBeenCalledTimes(reads)
+
+      await user.click(screen.getByRole("button", { name: "Exit preview" }))
+      expect(await screen.findByText(EMPTY_TITLE)).toBeVisible()
+      expect(screen.queryByText(/Dev preview/)).not.toBeInTheDocument()
+    },
+  )
+
+  it("shows the configured exchange rate next to the converted reference history", async () => {
+    const now = Date.now()
+    const today = getDayKeyFromUnixSeconds(now / 1000)
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createMockUserPreferencesContext({
+        enabled: true,
+        currencyType: CURRENCIES.CNY,
+      }),
+    )
+    vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValue([
+      {
+        id: "archived",
+        site_name: "Archived Wallet",
+        site_url: "https://archive.invalid",
+        site_type: SITE_TYPES.ONE_API,
+        account_info: { username: "archive" },
+        exchange_rate: 7,
+      },
+    ] as any)
+    vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 4,
+      referenceSnapshotsByAccountId: {
+        archived: {
+          [today]: {
+            balanceUsd: 2,
+            incomeUsd: 0,
+            consumptionUsd: 0,
+            capturedAt: now,
+            source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
+          },
+        },
+      },
+    })
+    const user = userEvent.setup()
+    render(<BalanceHistory />)
+    const details = await screen.findByRole("button", {
+      name: "balanceHistory:legacy.referenceRates",
+    })
+    await user.click(details)
+    const rates = await screen.findByLabelText(
+      "balanceHistory:legacy.referenceRates",
+    )
+    expect(within(rates).getByRole("listitem")).toHaveTextContent(
+      "balanceHistory:legacy.referenceRate",
+    )
   })
 
   it.each(["account", "date"])(

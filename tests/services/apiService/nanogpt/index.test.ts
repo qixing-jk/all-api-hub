@@ -444,7 +444,7 @@ describe("NanoGPT response parsing", () => {
     ).toEqual({ active: true, state: "active" })
   })
 
-  it("drops negative allowance counters while keeping an independently reported zero", () => {
+  it("drops negative allowance counters while keeping independently reported zero and reset time", () => {
     expect(
       parseNanoGptSubscription(
         {
@@ -461,6 +461,7 @@ describe("NanoGPT response parsing", () => {
     ).toEqual({
       active: true,
       dailyInputTokens: { remaining: "0" },
+      weeklyInputTokens: { resetAt: "2030-03-17T17:46:40.000Z" },
     })
   })
 
@@ -829,6 +830,11 @@ it("refreshes management-only subscription without presenting unavailable cash a
       HttpResponse.json({
         active: true,
         dailyInputTokens: { used: 1, remaining: 500, resetAt: 1893456000000 },
+        weeklyInputTokens: {
+          used: null,
+          remaining: null,
+          resetAt: 1893456000000,
+        },
       }),
     ),
   )
@@ -843,6 +849,16 @@ it("refreshes management-only subscription without presenting unavailable cash a
   })
   expect(data.allowances?.entries[0]?.constraint.remaining).toMatchObject({
     value: "500",
+  })
+  expect(
+    data.allowances?.entries.find(({ id }) => id === "weeklyInputTokens"),
+  ).toMatchObject({
+    constraint: {
+      limitState: "unknown",
+      used: { status: "unknown" },
+      remaining: { status: "unknown" },
+      window: { kind: "periodic", period: "week", resetsAt: 1893456000000 },
+    },
   })
   expect(data.usage).toBeUndefined()
 })

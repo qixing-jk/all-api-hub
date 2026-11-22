@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, onTestFinished } from "vitest"
 
 import { CURRENCIES } from "~/constants/money"
 import {
@@ -9,6 +9,7 @@ import {
 import { BalanceHistoryBreakdown } from "~/features/BalanceHistory/reporting/BalanceHistoryBreakdown"
 import { buildNativeHistoryEstimates } from "~/features/BalanceHistory/reporting/nativeHistoryActivity"
 import { useBalanceHistoryReporting } from "~/features/BalanceHistory/reporting/useBalanceHistoryReporting"
+import balanceHistoryLocale from "~/locales/en/balanceHistory.json"
 import {
   accountBalanceScope,
   accountBalanceSnapshot,
@@ -26,6 +27,7 @@ import {
 import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newApiFamily/financialContractVersions"
 import { DAILY_BALANCE_HISTORY_METRICS } from "~/services/history/dailyBalanceHistory/constants"
 import { DAILY_BALANCE_HISTORY_CAPTURE_SOURCES } from "~/types/dailyBalanceHistory"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, renderHook, screen, waitFor } from "~~/tests/test-utils/render"
 
 type ReportingOptions = Parameters<typeof useBalanceHistoryReporting>[0]
@@ -82,6 +84,61 @@ function buildOptions(
 }
 
 describe("useBalanceHistoryReporting", () => {
+  it.each([
+    ["valid", new Date(2026, 9, 2, 15).getTime(), true],
+    ["out-of-range", 9_000_000_000_000_000, false],
+  ])(
+    "formats an archived estimate with a %s capture timestamp",
+    async (_, capturedAt, showsInterval) => {
+      const from = new Date(2026, 9, 1, 15).getTime()
+      const source = DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh
+      const options = buildOptions({
+        store: {
+          schemaVersion: 4,
+          referenceSnapshotsByAccountId: {
+            alpha: {
+              "2026-10-01": {
+                balanceUsd: 10,
+                incomeUsd: 0,
+                consumptionUsd: 0,
+                capturedAt: from,
+                source,
+              },
+              "2026-10-02": {
+                balanceUsd: 12,
+                incomeUsd: 0.5,
+                consumptionUsd: 1,
+                capturedAt,
+                source,
+              },
+            },
+          },
+        },
+        effectiveAccountIds: ["alpha"],
+        estimatedTodayIncomeEnabled: true,
+        trendScope: BALANCE_HISTORY_TREND_SERIES_SCOPES.Accounts,
+        effectiveTrendMetric: DAILY_BALANCE_HISTORY_METRICS.EstimatedIncome,
+        trendBalanceKey: "reference:estimatedIncome",
+      })
+
+      const { result } = renderHook(() => useBalanceHistoryReporting(options))
+      await waitFor(() =>
+        expect(result.current?.trendOption.series).toHaveLength(1),
+      )
+      const [series] = result.current.trendOption.series as Array<{
+        data: Array<number | null>
+        tooltip: { valueFormatter: (value: number, index: number) => string }
+      }>
+      expect(series?.data).toEqual([null, 3])
+      const tooltip = series?.tooltip.valueFormatter(3, 1)
+      if (showsInterval) {
+        expect(tooltip).toMatch(/^3 \u00b7 .+2026/)
+      } else {
+        expect(tooltip).toBe("3")
+      }
+    },
+  )
+
   it("counts a cumulative estimate once when its revised observation ends on another local date", () => {
     const boundary = new Date(2026, 9, 2).getTime()
     const hour = 3600_000
@@ -628,11 +685,18 @@ describe("useBalanceHistoryReporting", () => {
     })
     const options = buildOptions()
     const { result, rerender } = renderHook(
-      ({ trendBalanceKey }: { trendBalanceKey?: string }) =>
+      ({
+        trendBalanceKey,
+        trendMetric,
+      }: {
+        trendBalanceKey?: string
+        trendMetric?: ReportingOptions["effectiveTrendMetric"]
+      }) =>
         useBalanceHistoryReporting({
           ...options,
           asOf: end + 60_000,
           trendBalanceKey,
+          effectiveTrendMetric: trendMetric ?? options.effectiveTrendMetric,
           store: {
             ...options.store!,
             financialSnapshotsByAccountId: {
@@ -659,6 +723,7 @@ describe("useBalanceHistoryReporting", () => {
                     {
                       ...spending("5", end + 60_000),
                       window: { start: end, end: end + 60_000, timeZone },
+                      coverage: FINANCIAL_COVERAGE.Partial,
                       scope: {
                         ...scope,
                         authority: "https://beta.invalid",
@@ -708,6 +773,26 @@ describe("useBalanceHistoryReporting", () => {
         name: "balanceHistory:trend.scopes.total",
         data: [3.45, 5],
       }),
+    ])
+    const [spendingSeries] = result.current.trendOption.series as Array<{
+      tooltip: { valueFormatter: (value: number, index: number) => string }
+    }>
+    expect(spendingSeries?.tooltip.valueFormatter(3.45, 0)).toContain(
+      "3.45 USD",
+    )
+    expect(spendingSeries?.tooltip.valueFormatter(3.45, 0)).not.toContain(
+      "financial.partial",
+    )
+    expect(spendingSeries?.tooltip.valueFormatter(5, 1)).toContain(
+      "financial.partial",
+    )
+
+    rerender({ trendMetric: DAILY_BALANCE_HISTORY_METRICS.Net })
+    expect(result.current.nativeTrend?.label).toContain(
+      "balanceHistory:metrics.net",
+    )
+    expect(result.current.trendOption.series).toEqual([
+      expect.objectContaining({ data: [-2.16] }),
     ])
   })
 
@@ -877,6 +962,14 @@ describe("useBalanceHistoryReporting", () => {
   })
 
   it("keeps the selected source after another wallet is filtered out", async () => {
+    testI18n.addResourceBundle("en", "balanceHistory", {
+      native: {
+        sources: { numbered: balanceHistoryLocale.native.sources.numbered },
+      },
+    })
+    onTestFinished(() => {
+      testI18n.removeResourceBundle("en", "balanceHistory")
+    })
     const scope = accountBalanceScope({
       baseUrl: "https://kimi.example",
       accountId: "alpha",
@@ -888,9 +981,10 @@ describe("useBalanceHistoryReporting", () => {
       value: string,
       observedAt: number,
       code: "USD" | "CNY" = "USD",
+      id = operation,
     ) =>
       balancePosition({
-        id: operation,
+        id,
         scope,
         asset: { kind: ASSET_KINDS.Currency, code },
         value,
@@ -926,6 +1020,8 @@ describe("useBalanceHistoryReporting", () => {
                 [
                   wallet("extra", "13", lastDay, "CNY"),
                   wallet("inference", "7", lastDay),
+                  wallet("other-console", "3", lastDay, "USD", "fallback-a"),
+                  wallet("other-console", "5", lastDay, "USD", "fallback-b"),
                 ],
                 lastDay,
                 "complete",
@@ -950,7 +1046,7 @@ describe("useBalanceHistoryReporting", () => {
       },
     )
 
-    await waitFor(() => expect(result.current?.nativeMetrics).toHaveLength(3))
+    await waitFor(() => expect(result.current?.nativeMetrics).toHaveLength(5))
     const sources = result.current.nativeMetrics.filter(
       ({ currencyCode }) => currencyCode === "USD",
     )
@@ -958,6 +1054,8 @@ describe("useBalanceHistoryReporting", () => {
       expect.arrayContaining([
         expect.stringContaining("balanceHistory:native.sources.console"),
         expect.stringContaining("balanceHistory:native.sources.inference"),
+        expect.stringContaining("Source 1"),
+        expect.stringContaining("Source 2"),
       ]),
     )
     const selected = sources.find(({ label }) =>

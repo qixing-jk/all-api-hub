@@ -3779,55 +3779,72 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     expect(mockGetAllAccounts).toHaveBeenCalledTimes(3)
   })
 
-  it("keeps the newer full load when a targeted update is still reading history", async () => {
-    mockUserPreferencesContext.current = {
-      ...mockUserPreferencesContext.current,
-      preferences: {
-        balanceHistory: { estimatedTodayIncome: { enabled: true } },
-      },
-    }
-    const initial = { id: "a", name: "initial", disabled: false }
-    const targeted = { ...initial, name: "targeted" }
-    const latest = { ...initial, name: "latest" }
-    mockResetExpiredCheckIns.mockResolvedValue(undefined)
-    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
-    mockGetAllAccounts.mockResolvedValue([initial])
-    mockGetAllBookmarks.mockResolvedValue([])
-    mockGetOrderedList.mockResolvedValue(["a"])
-    mockGetPinnedList.mockResolvedValue([])
-    mockGetAccountStats.mockResolvedValue(createEmptyStats())
-    mockConvertToDisplayData.mockImplementation((accounts) => accounts)
-    const store = {
-      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
-      referenceSnapshotsByAccountId: {},
-    }
-    mockGetDailyBalanceHistoryStore.mockResolvedValue(store)
-    mockGetAccountById.mockResolvedValue(targeted)
-    const getContext = await renderAccountDataProvider()
-    await waitFor(() =>
-      expect(getContext().displayData[0]?.name).toBe("initial"),
-    )
+  it.each(["account", "history"])(
+    "keeps the newer full load while a targeted update is reading %s",
+    async (pendingRead) => {
+      mockUserPreferencesContext.current = {
+        ...mockUserPreferencesContext.current,
+        preferences: {
+          balanceHistory: { estimatedTodayIncome: { enabled: true } },
+        },
+      }
+      const initial = { id: "a", name: "initial", disabled: false }
+      const targeted = { ...initial, name: "targeted" }
+      const latest = { ...initial, name: "latest" }
+      mockResetExpiredCheckIns.mockResolvedValue(undefined)
+      mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+      mockGetAllAccounts.mockResolvedValue([initial])
+      mockGetAllBookmarks.mockResolvedValue([])
+      mockGetOrderedList.mockResolvedValue(["a"])
+      mockGetPinnedList.mockResolvedValue([])
+      mockGetAccountStats.mockResolvedValue(createEmptyStats())
+      mockConvertToDisplayData.mockImplementation((accounts) => accounts)
+      const store = {
+        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        referenceSnapshotsByAccountId: {},
+      }
+      mockGetDailyBalanceHistoryStore.mockResolvedValue(store)
+      mockGetAccountById.mockResolvedValue(targeted)
+      const getContext = await renderAccountDataProvider()
+      await waitFor(() =>
+        expect(getContext().displayData[0]?.name).toBe("initial"),
+      )
 
-    const pendingHistory = createDeferred<typeof store>()
-    mockGetDailyBalanceHistoryStore.mockReturnValueOnce(pendingHistory.promise)
-    let pendingReload: Promise<void>
-    act(() => {
-      pendingReload = getContext().reloadAccountsById(["a"])
-    })
-    await waitFor(() =>
-      expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2),
-    )
-    mockGetAllAccounts.mockResolvedValue([latest])
-    await act(async () => getContext().loadAccountData())
-    expect(getContext().displayData[0]?.name).toBe("latest")
+      const pendingAccount = createDeferred<typeof targeted>()
+      const pendingHistory = createDeferred<typeof store>()
+      if (pendingRead === "account") {
+        mockGetAccountById.mockReturnValueOnce(pendingAccount.promise)
+      } else {
+        mockGetDailyBalanceHistoryStore.mockReturnValueOnce(
+          pendingHistory.promise,
+        )
+      }
+      let pendingReload: Promise<void>
+      act(() => {
+        pendingReload = getContext().reloadAccountsById(["a"])
+      })
+      if (pendingRead === "account") {
+        await waitFor(() =>
+          expect(mockGetAccountById).toHaveBeenCalledWith("a"),
+        )
+      } else {
+        await waitFor(() =>
+          expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2),
+        )
+      }
+      mockGetAllAccounts.mockResolvedValue([latest])
+      await act(async () => getContext().loadAccountData())
+      expect(getContext().displayData[0]?.name).toBe("latest")
 
-    await act(async () => {
-      pendingHistory.resolve(store)
-      await pendingReload
-    })
-    expect(getContext().displayData[0]?.name).toBe("latest")
-    expect(getContext().accounts[0]).toMatchObject({ name: "latest" })
-  })
+      await act(async () => {
+        pendingAccount.resolve(targeted)
+        pendingHistory.resolve(store)
+        await pendingReload
+      })
+      expect(getContext().displayData[0]?.name).toBe("latest")
+      expect(getContext().accounts[0]).toMatchObject({ name: "latest" })
+    },
+  )
 
   it("falls back to loadAccountData() when a targeted reload fails", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)

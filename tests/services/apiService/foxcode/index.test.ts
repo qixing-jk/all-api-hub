@@ -550,77 +550,86 @@ describe("FoxCode console account contract", () => {
     })
   })
 
-  it("keeps non-resetting and periodic plans separate and excludes historical rows", async () => {
-    server.use(
-      http.get(`${origin}/api/auth/me`, () =>
-        HttpResponse.json({ success: true, data: { user } }),
-      ),
-      http.get(`${origin}/api/user/dashboard`, () =>
-        HttpResponse.json({
-          success: true,
-          data: {
-            user,
-            quota: { quotaRemaining: 9500000 },
-            subscription: {
-              active: [
-                {
-                  id: "credit",
-                  plan: {
-                    name: "Credit",
-                    resetType: "NEVER",
-                    quotaLimit: 10000000,
+  it.each([
+    ["DAILY", "day"],
+    ["WEEKLY", "week"],
+    ["MONTHLY", "month"],
+  ])(
+    "keeps non-resetting and %s plans separate and excludes historical rows",
+    async (resetType, period) => {
+      server.use(
+        http.get(`${origin}/api/auth/me`, () =>
+          HttpResponse.json({ success: true, data: { user } }),
+        ),
+        http.get(`${origin}/api/user/dashboard`, () =>
+          HttpResponse.json({
+            success: true,
+            data: {
+              user,
+              quota: { quotaRemaining: 9500000 },
+              subscription: {
+                active: [
+                  {
+                    id: "credit",
+                    plan: {
+                      name: "Credit",
+                      resetType: "NEVER",
+                      quotaLimit: 10000000,
+                    },
+                    quotaUsed: 2000000,
+                    quotaRemaining: 8000000,
+                    status: "ACTIVE",
+                    endDate: "2099-01-01T00:00:00Z",
                   },
-                  quotaUsed: 2000000,
-                  quotaRemaining: 8000000,
-                  status: "ACTIVE",
-                  endDate: "2099-01-01T00:00:00Z",
-                },
-                {
-                  id: "monthly",
-                  plan: {
-                    name: "Monthly",
-                    resetType: "DAILY",
-                    quotaLimit: 2000000,
+                  {
+                    id: 23,
+                    plan: {
+                      name: "Monthly",
+                      resetType,
+                      quotaLimit: 2000000,
+                    },
+                    quotaUsed: 500000,
+                    quotaRemaining: 1500000,
+                    status: "ACTIVE",
+                    endDate: "2026-11-01T00:00:00Z",
                   },
-                  quotaUsed: 500000,
-                  quotaRemaining: 1500000,
-                  status: "ACTIVE",
-                  endDate: "2026-11-01T00:00:00Z",
-                },
-              ],
-              history: [{ quotaRemaining: 5000000, status: "EXPIRED" }],
+                ],
+                history: [{ quotaRemaining: 5000000, status: "EXPIRED" }],
+              },
             },
+          }),
+        ),
+      )
+      const data = await fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig("unknown"),
+        includeTodayCashflow: false,
+      })
+      expect(data.balance).toBeUndefined()
+      expect(data.allowances?.entries).toMatchObject([
+        {
+          id: "credit",
+          constraint: {
+            limit: { value: "10" },
+            remaining: { value: "8" },
+            window: { kind: "lifetime" },
           },
-        }),
-      ),
-    )
-    const data = await fetchAccountData({
-      ...request,
-      checkIn: createCheckInConfig("unknown"),
-      includeTodayCashflow: false,
-    })
-    expect(data.balance).toBeUndefined()
-    expect(data.allowances?.entries).toMatchObject([
-      {
-        id: "credit",
-        constraint: {
-          limit: { value: "10" },
-          remaining: { value: "8" },
-          window: { kind: "lifetime" },
         },
-      },
-      {
-        id: "monthly",
-        constraint: {
-          limit: { value: "2" },
-          remaining: { value: "1.5" },
-          window: { kind: "periodic", period: "day" },
+        {
+          id: "23",
+          constraint: {
+            limit: { value: "2" },
+            remaining: { value: "1.5" },
+            window: { kind: "periodic", period },
+          },
         },
-      },
-    ])
-    expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
-    expect(data.usage).toBeUndefined()
-  })
+      ])
+      expect(data.todayStatsAvailability?.consumption.status).toBe(
+        "unavailable",
+      )
+      expect(data.usage).toBeUndefined()
+    },
+  )
 
   it("completes normal FoxCode onboarding with the verified Cookie identity and no invented access token", async () => {
     server.use(

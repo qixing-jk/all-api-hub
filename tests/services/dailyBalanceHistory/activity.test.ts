@@ -167,6 +167,83 @@ describe("recorded financial history activity", () => {
     ])
   })
 
+  it("retains recorded income and spending when an exact net is outside the decimal range", () => {
+    const end = day + 3_600_000
+    const max = "9".repeat(255)
+    const credit = spend(day, end, `-${max}`, "credit-adjustment")
+    const charge = spend(day, end, max, "settled-spending")
+    const entries = buildFinancialHistoryActivity({
+      store: {
+        schemaVersion: 4,
+        referenceSnapshotsByAccountId: {},
+        financialSnapshotsByAccountId: {
+          alpha: [
+            {
+              source: "refresh",
+              reportedIncome: [
+                {
+                  ...credit,
+                  classification: INCOME_CLASSIFICATIONS.Unclassified,
+                },
+              ],
+              settledConsumption: [charge],
+            },
+          ],
+        },
+      },
+      accountIds: ["alpha"],
+      dayKeys: ["2026-11-01"],
+      asOf: end,
+    })
+    expect(entries.map(({ kind, total }) => [kind, total])).toEqual([
+      ["income", `-${max}`],
+      ["consumption", max],
+    ])
+  })
+
+  it("ignores unknown and future provider-day amounts and preserves the verified reading", () => {
+    const end = day + 3_600_000
+    const { asset, scope, amount } = spend(day, end, "3", "provider-day")
+    const entries = buildFinancialHistoryActivity({
+      store: {
+        schemaVersion: 4,
+        referenceSnapshotsByAccountId: {},
+        financialSnapshotsByAccountId: {
+          alpha: [
+            {
+              source: "refresh",
+              reportedDayCosts: [
+                { asset, scope, amount, dayKey: "2026-11-01" },
+                {
+                  asset,
+                  scope,
+                  amount: {
+                    status: "unknown",
+                    reason: "not-reported",
+                    source: amount.source,
+                  },
+                  dayKey: "2026-11-01",
+                },
+                {
+                  asset,
+                  scope,
+                  amount: observeAmount("8", amount.source, end + 1),
+                  dayKey: "2026-11-01",
+                },
+              ],
+            },
+          ],
+        },
+      },
+      accountIds: ["alpha"],
+      dayKeys: ["2026-11-01"],
+      asOf: end,
+    })
+    expect(entries).toMatchObject([
+      { siteDay: true, total: "3", values: ["3"] },
+    ])
+  })
+
   it("keeps the latest compatible New API spend when statistics switch to logs", () => {
     const charge = (value: string, operation: string, hour: number) => {
       const fact = spend(day, dayAfter, value, operation)

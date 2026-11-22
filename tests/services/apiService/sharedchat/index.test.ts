@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  accountBalanceScope,
+  readAccountBalance,
+} from "~/services/accounts/balanceSnapshot"
+import { acceptBalanceRefresh } from "~/services/accounts/refresh/balanceAcceptance"
+import {
   fetchAccountData,
   fetchCodexServiceCredential,
   fetchCodexServiceModels,
@@ -81,6 +86,20 @@ describe("apiService SharedChat", () => {
     )
     const result = await fetchAccountData(accountRequest)
     expect(result).not.toHaveProperty("quota")
+    const prior = readAccountBalance(
+      { quota: 44_000_000 },
+      accountBalanceScope({ ...accountRequest, accountId: "fixture" }),
+      100,
+    )
+    expect(prior.positions).toHaveLength(1)
+    expect(
+      acceptBalanceRefresh(
+        prior,
+        result.balanceRefreshParts ?? [],
+        prior.subject,
+        200,
+      ).positions,
+    ).toEqual([])
     expect(result).toMatchObject({
       allowances: {
         entries: [
@@ -569,6 +588,41 @@ describe("apiService SharedChat", () => {
         isActive: undefined,
       },
     })
+  })
+
+  it("keeps a subscription count separate from its monetary fields", async () => {
+    const sample = sharedChatCodexQuotaSample
+    server.use(
+      http.get("https://new.sharedchat.cc/frontend-api/vibe-code/quota", () =>
+        HttpResponse.json({
+          ...sample,
+          data: {
+            codex: {
+              ...sample.data.codex,
+              subscriptions: {
+                ...sample.data.codex.subscriptions,
+                billingType: "count",
+                limit: 120,
+                usedCount: 25,
+                remainingCount: 95,
+              },
+            },
+          },
+        }),
+      ),
+    )
+    const data = await fetchAccountData(accountRequest)
+    expect(data.allowances?.entries).toMatchObject([
+      {
+        id: "subscription-redacted:count",
+        constraint: {
+          asset: { kind: "quota" },
+          limit: { status: "known", value: "120" },
+          used: { status: "known", value: "25" },
+          remaining: { status: "known", value: "95" },
+        },
+      },
+    ])
   })
 
   it.each([true, "active", []])(

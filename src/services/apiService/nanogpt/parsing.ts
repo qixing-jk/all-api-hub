@@ -112,7 +112,6 @@ const readQuotaWindow = (value: unknown): NanoGptQuotaWindow | undefined => {
   }
   const used = nonnegative(value.used)
   const remaining = nonnegative(value.remaining)
-  if (used === undefined && remaining === undefined) return undefined
   const resetAtMs = readNanoGptAmount(value.resetAt)
   // Documented as UNIX epoch milliseconds; an unusable instant is dropped
   // rather than surfaced as an invalid date.
@@ -121,12 +120,13 @@ const readQuotaWindow = (value: unknown): NanoGptQuotaWindow | undefined => {
     const instant = new Date(resetAtMs)
     if (Number.isFinite(instant.getTime())) resetAt = instant.toISOString()
   }
-  const window: NanoGptQuotaWindow = {
+  if (used === undefined && remaining === undefined && resetAt === undefined)
+    return undefined
+  return {
     ...(used === undefined ? {} : { used }),
     ...(remaining === undefined ? {} : { remaining }),
     ...(resetAt === undefined ? {} : { resetAt }),
   }
-  return window
 }
 
 /**

@@ -2,7 +2,11 @@ import userEvent from "@testing-library/user-event"
 import { expect, it } from "vitest"
 
 import { NetInflowTotalsDisplay } from "~/features/AccountManagement/components/NetInflowTotalsDisplay"
-import type { NetInflowTotals } from "~/services/accounts/metrics/netInflowTotals"
+import {
+  NET_INFLOW_EXCLUSION_REASONS,
+  type NetInflowTotals,
+} from "~/services/accounts/metrics/netInflowTotals"
+import { NET_INFLOW_REASONS } from "~/services/history/dailyBalanceHistory/netInflow"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import {
   buildNetInflow,
@@ -115,4 +119,57 @@ it("explains missing usage, identity and interval evidence without treating them
   expect(screen.getByText(/Wallet changed/)).toHaveTextContent(
     "account:netInflow.reasons.identity",
   )
+})
+
+it("explains exclusions and potential duplicates without dropping quota units", async () => {
+  const reasons = [
+    [NET_INFLOW_EXCLUSION_REASONS.DuplicateWallet, "duplicate"],
+    [NET_INFLOW_EXCLUSION_REASONS.WalletConflict, "conflict"],
+    [NET_INFLOW_REASONS.Precision, "precision"],
+    ["unknown-fixture-reason", "unverified"],
+  ] as const
+  const { position } = buildNetInflowItem()
+  render(
+    <NetInflowTotalsDisplay
+      sites={[]}
+      totals={{
+        coverage: "partial",
+        availableAccounts: 0,
+        totalAccounts: reasons.length,
+        groups: [],
+        excluded: reasons.map(([reason, accountId], index) => ({
+          accountId,
+          reason,
+          position: {
+            ...position,
+            asset:
+              index === 0
+                ? {
+                    kind: "quota",
+                    id: "fixture:points",
+                    label: "Points",
+                    displayLabel: "Points",
+                    displayScale: 1,
+                  }
+                : { kind: "unknown" },
+          },
+        })),
+        duplicateCount: 1,
+        potentialDuplicateCount: 2,
+      }}
+    />,
+  )
+  const user = userEvent.setup()
+  await user.click(
+    await screen.findByText("account:netInflow.details", { exact: true }),
+  )
+  expect(screen.getByText(/^duplicate/)).toHaveTextContent("Points")
+  for (const [, label] of reasons) {
+    expect(screen.getByText(new RegExp(`^${label}`))).toHaveTextContent(
+      `account:netInflow.reasons.${label}`,
+    )
+  }
+  expect(
+    screen.getByText(/account:financial.potentialDuplicates/),
+  ).toBeVisible()
 })

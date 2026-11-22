@@ -9,7 +9,10 @@ import {
   ALLOWANCE_IDENTITY_KINDS,
   parseAllowanceInstant,
 } from "~/services/accounts/allowances"
-import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import {
+  accountBalanceScope,
+  LEGACY_STORED_ACCOUNT_BALANCE_COLLECTION,
+} from "~/services/accounts/balanceSnapshot"
 import { SHAREDCHAT_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import { observeAmount } from "~/services/amounts/balance"
@@ -364,6 +367,14 @@ export async function fetchAccountData(
 
   return {
     ...allowances,
+    // The scalar contract treated subscription headroom as balance.
+    balanceRefreshParts: [
+      {
+        ...LEGACY_STORED_ACCOUNT_BALANCE_COLLECTION,
+        enumeration: FINANCIAL_ENUMERATION.Complete,
+        positions: [],
+      },
+    ],
     today_quota_consumption: 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,

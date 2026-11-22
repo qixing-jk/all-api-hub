@@ -326,6 +326,18 @@ describe("Grsai protocol operations", () => {
     expect(data.usage?.cost?.amount).toMatchObject({ status: "unavailable" })
   })
 
+  it("rejects an expired dashboard session even when the wallet read returns credits", async () => {
+    server.use(
+      handle(GRSAI_ENDPOINTS.userInfo, { id: "user", credits: 5000 }),
+      http.post(`${origin}${GRSAI_ENDPOINTS.dashboard}`, () =>
+        HttpResponse.json({}, { status: 401 }),
+      ),
+    )
+    await expect(fetchAccountData(request)).rejects.toMatchObject({
+      statusCode: 401,
+    })
+  })
+
   it("falls back to dashboard credits and marks missing consumption unavailable", async () => {
     server.use(
       handle(GRSAI_ENDPOINTS.userInfo, { id: "user" }),

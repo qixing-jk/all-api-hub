@@ -133,6 +133,17 @@ export function bindAccountBalance(
   }
 }
 
+/** The collection used for balance observations migrated from stored scalars. */
+export const LEGACY_STORED_ACCOUNT_BALANCE_COLLECTION = {
+  collectionKey: "legacy",
+  source: {
+    adapter: "legacy",
+    operation: "stored-account",
+    contractVersion: "1",
+    kind: EVIDENCE_KINDS.Legacy,
+  },
+} as const
+
 /**
  * The old product quota encoded a USD display amount; keep its semantics stale.
  * Native legacy assets retain their recorded units, without consulting today's site type.
@@ -151,17 +162,14 @@ export function readAccountBalance(
     return balanceSnapshotSchema.parse(data.balance)
   const native = data.nativeBalance
   const source = {
-    adapter: "legacy",
-    operation: "stored-account",
-    contractVersion: "1",
-    kind: EVIDENCE_KINDS.Legacy,
+    ...LEGACY_STORED_ACCOUNT_BALANCE_COLLECTION.source,
     ...(!native && parseDecimal(data.quota) !== undefined
       ? { amountInputs: { quota: parseDecimal(data.quota)! } }
       : {}),
   } as const
   const position = balancePosition({
     id: "legacy",
-    collectionKey: "legacy",
+    collectionKey: LEGACY_STORED_ACCOUNT_BALANCE_COLLECTION.collectionKey,
     scope,
     asset:
       native?.unit === "quota"

@@ -11,7 +11,7 @@ import { ACCOUNT_TODAY_METRIC_STATUSES, type SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 
 /** Preserve data from adapters still returning the release wire format. */
-function readLegacyAdapterFinancialPatch(
+export function readLegacyAdapterFinancialPatch(
   data: AccountData,
   context: Parameters<typeof migrateAccountFinancialInfo>[1],
   previous: LegacyAccountFinancialEvidence | undefined,

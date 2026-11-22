@@ -32,6 +32,7 @@ import {
 } from "~/services/accounts/balanceSnapshot"
 import { withManualAccountDataFetchTimeout } from "~/services/accounts/editing/accountCreationTimeout"
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
+import { readLegacyAdapterFinancialPatch } from "~/services/accounts/refresh/accountRefreshUpdate"
 import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -300,6 +301,7 @@ export async function validateAndSaveAccount(
         },
       },
     )
+    const capturedAt = Date.now()
     const accountData: Omit<
       SiteAccount,
       "id" | "created_at" | "updated_at" | "user_updated_at"
@@ -324,8 +326,18 @@ export async function validateAndSaveAccount(
         usageObservations: freshAccountData.usageObservations,
         subscription: freshAccountData.subscription,
         recentUsageRecords: freshAccountData.recentUsageRecords,
+        ...readLegacyAdapterFinancialPatch(
+          freshAccountData,
+          {
+            accountId: "",
+            siteUrl: requestBaseUrl,
+            siteType: normalizedSiteType,
+            capturedAt,
+          },
+          undefined,
+        ),
       },
-      last_sync_time: Date.now(),
+      last_sync_time: capturedAt,
     }
 
     const accountId = await accountMutations.addAccount(accountData, {

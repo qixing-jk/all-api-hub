@@ -292,6 +292,8 @@ export function useAccountSnapshot({
 
         // Each single-account query reads the complete storage envelope. Read
         // batches once to avoid repeating that work for every updated account.
+        const fullLoadBeforeQuery = appliedFullLoadRef.current
+        const accountsBeforeQuery = accountsRef.current
         const [singleId] = uniqueIds
         const storedAccounts =
           uniqueIds.length === 1 && singleId !== undefined
@@ -309,11 +311,24 @@ export function useAccountSnapshot({
           }
           return account
         })
-        const activeReloadedAccounts = reloadedAccounts.filter(
-          (account) =>
-            targetedReloadGenerationByAccountIdRef.current[account.id] ===
-            reloadGeneration,
-        )
+        const fullLoadAdvanced =
+          appliedFullLoadRef.current !== fullLoadBeforeQuery
+        const activeReloadedAccounts = reloadedAccounts.filter(({ id }) => {
+          if (
+            targetedReloadGenerationByAccountIdRef.current[id] !==
+            reloadGeneration
+          )
+            return false
+          if (
+            fullLoadAdvanced &&
+            (accountsBeforeQuery.some((account) => account.id === id) ||
+              accountsRef.current.some((account) => account.id === id))
+          ) {
+            delete targetedReloadGenerationByAccountIdRef.current[id]
+            return false
+          }
+          return true
+        })
         if (activeReloadedAccounts.length === 0) {
           return
         }

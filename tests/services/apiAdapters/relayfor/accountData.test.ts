@@ -265,6 +265,52 @@ describe("relayForAccountData", () => {
     )
   })
 
+  it("preserves verified grant identifiers and keeps uncertain plan timing as reported", async () => {
+    const expiry = "2099-02-01T10:00:00Z"
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, quota: 0 },
+      timed_quota: 1000000,
+      active_subscriptions: [
+        null,
+        { id: "plan-1", plan_code: "weekly", expires_at: "2099-02-01" },
+        { id: "", status: 2, quota_total: 500000 },
+      ],
+    } as never)
+    vi.mocked(fetchRelayForTimedQuotas).mockResolvedValueOnce([
+      { id: "grant-a", status: 1, quota_remaining: 500000, expires_at: expiry },
+      { id: 27, status: 1, quota_remaining: 500000 },
+    ])
+
+    const result = await relayForAccountData.fetchData(createRequest())
+
+    expect(
+      result.balance?.positions.filter(
+        ({ collectionKey }) => collectionKey === "timed-grants",
+      ),
+    ).toMatchObject([
+      {
+        id: "timed-grant:grant-a",
+        validity: { kind: "expires", at: Date.parse(expiry) },
+      },
+      { id: "timed-grant:27", validity: { kind: "unknown" } },
+    ])
+    expect(result.allowances?.entries).toMatchObject([
+      {
+        id: "plan-1",
+        label: "weekly",
+        validity: { kind: "unknown" },
+        reportedTiming: { expiresAt: "2099-02-01" },
+      },
+      {
+        identityKind: "observation-only",
+        constraint: { enabled: { status: "known", value: false } },
+      },
+    ])
+    expect(result.allowances?.entries[0]?.constraint.enabled).toMatchObject({
+      status: "unknown",
+    })
+  })
+
   it("retains the lifetime token total and reconstructs the missing daily input split", async () => {
     vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
       user: { id: 1, username: "alice", quota: "500000" },

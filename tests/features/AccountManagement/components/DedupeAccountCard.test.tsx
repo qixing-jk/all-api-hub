@@ -7,6 +7,7 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
+import { buildFinancialPeriodFact } from "~~/tests/test-utils/accountTodayStats"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { render, screen, within } from "~~/tests/test-utils/render"
 
@@ -104,53 +105,69 @@ describe("DedupeAccountCard today statistics", () => {
     },
   )
 
-  it("renders explicitly complete today values", async () => {
-    const account = buildSiteAccount({
-      account_info: {
-        ...buildSiteAccount().account_info,
-        today_quota_consumption: 987654321,
-        today_requests_count: 876543210,
-        today_prompt_tokens: 765432109,
-        today_completion_tokens: 654321098,
-        todayStatsAvailability: {
-          consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-          requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-          tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-          income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+  it.each([false, true])(
+    "renders complete today values (native charge: %s)",
+    async (native) => {
+      const id = "dedupe-account"
+      const account = buildSiteAccount({
+        id,
+        account_info: {
+          ...buildSiteAccount().account_info,
+          today_quota_consumption: native ? 0 : 987654321,
+          settledConsumption: native
+            ? [
+                buildFinancialPeriodFact({
+                  accountId: id,
+                  value: "0.123456789123456789",
+                }),
+              ]
+            : undefined,
+          today_requests_count: 876543210,
+          today_prompt_tokens: 765432109,
+          today_completion_tokens: 654321098,
+          todayStatsAvailability: {
+            consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+            income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          },
         },
-      },
-    })
+      })
 
-    render(
-      <DedupeAccountCard
-        account={account}
-        group={{
-          groupId: "group-1",
-          keepAccountId: account.id,
-          recommendedKeepAccountId: account.id,
-          hasManualOverride: false,
-          reason: "same_origin_user",
-        }}
-        accountLabelById={new Map([[account.id, "Account"]])}
-        pinnedAccountIds={[]}
-        detailsOpenByAccountId={{ [account.id]: true }}
-        isWorking={false}
-        t={t}
-        onKeepChange={vi.fn()}
-        onToggleDetails={vi.fn()}
-      />,
-    )
+      render(
+        <DedupeAccountCard
+          account={account}
+          group={{
+            groupId: "group-1",
+            keepAccountId: account.id,
+            recommendedKeepAccountId: account.id,
+            hasManualOverride: false,
+            reason: "same_origin_user",
+          }}
+          accountLabelById={new Map([[account.id, "Account"]])}
+          pinnedAccountIds={[]}
+          detailsOpenByAccountId={{ [account.id]: true }}
+          isWorking={false}
+          t={t}
+          onKeepChange={vi.fn()}
+          onToggleDetails={vi.fn()}
+        />,
+      )
 
-    await screen.findByText("ui:dialog.dedupeAccounts.details.todayConsumption")
-
-    expect(screen.getByText("987654321")).toBeInTheDocument()
-    expect(screen.getByText("876543210")).toBeInTheDocument()
-    const tokensDetail = screen.getByText(
-      "ui:dialog.dedupeAccounts.details.todayTokens",
-    ).parentElement
-    expect(tokensDetail).toHaveTextContent("765432109")
-    expect(tokensDetail).toHaveTextContent("654321098")
-  })
+      const consumptionLabel = await screen.findByText(
+        "ui:dialog.dedupeAccounts.details.todayConsumption",
+      )
+      expect(consumptionLabel.nextElementSibling).toHaveTextContent(
+        native ? "0.123456789123456789" : "987654321",
+      )
+      expect(screen.getByText("876543210")).toBeInTheDocument()
+      const tokensDetail = screen.getByText(
+        "ui:dialog.dedupeAccounts.details.todayTokens",
+      ).parentElement
+      expect(tokensDetail).toHaveTextContent("765432109")
+      expect(tokensDetail).toHaveTextContent("654321098")
+    },
+  )
 
   it("keeps the summed token value when token coverage is partial", async () => {
     const account = buildSiteAccount({

@@ -2,15 +2,18 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import type { TFunction } from "i18next"
 import { Info } from "lucide-react"
 import type { ReactNode } from "react"
+import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { Badge, Button } from "~/components/ui"
 import { CHECK_IN_SELECTION_STATUSES } from "~/constants/checkIn"
 import { resolveAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStatsResolver"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type { AccountTodayStatsAvailability, SiteAccount } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { getTodayMetricPresentation } from "~/utils/core/formatters"
+import { formatAssetAmount } from "~/utils/core/money"
 import { getHealthStatusDisplay } from "~/utils/healthStatus"
 
 import type {
@@ -52,6 +55,7 @@ export function DedupeAccountCard({
   onKeepChange,
   onToggleDetails,
 }: DedupeAccountCardProps) {
+  const { i18n } = useTranslation()
   const pinned = pinnedAccountIds.includes(account.id)
   const disabled = account.disabled === true
   const isKeep = account.id === group.keepAccountId
@@ -85,7 +89,7 @@ export function DedupeAccountCard({
         aria-label={helpLabel}
         className={
           requiresRefresh
-            ? "focus-visible:ring-ring cursor-help rounded-sm outline-none focus-visible:ring-2"
+            ? "cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             : undefined
         }
         tabIndex={requiresRefresh ? 0 : undefined}
@@ -113,7 +117,7 @@ export function DedupeAccountCard({
       todayStatsAvailability[metric],
     )
 
-    if (presentation.value === null) {
+    if (presentation.value === null || value === undefined) {
       return renderUnavailableTodayMetric(presentation.requiresRefresh)
     }
 
@@ -126,6 +130,23 @@ export function DedupeAccountCard({
       presentation.value
     )
   }
+  const settledConsumption = account.account_info?.settledConsumption
+  const nativeConsumption =
+    detailsOpen && settledConsumption?.length
+      ? getDisplayConsumptionProjection([
+          { id: account.id, settledConsumption },
+        ])
+      : undefined
+  const consumptionValue = nativeConsumption
+    ? nativeConsumption.groups.length
+      ? nativeConsumption.groups
+          .map(({ amount }) => formatAssetAmount(amount, i18n.language))
+          .join(" / ")
+      : renderUnavailableTodayMetric(false)
+    : resolveTodayMetricValue(
+        "consumption",
+        account.account_info?.today_quota_consumption,
+      )
   const tokenPresentation = getTodayMetricPresentation(
     (account.account_info?.today_prompt_tokens ?? 0) +
       (account.account_info?.today_completion_tokens ?? 0),
@@ -134,14 +155,14 @@ export function DedupeAccountCard({
 
   return (
     <div
-      className={`dark:border-border focus-within:border-ring focus-within:ring-ring/50 border-border-subtle gap-y-density-2 py-density-3 flex flex-col gap-x-2 rounded-md border px-3 transition-[color,box-shadow] focus-within:ring-[3px] ${
+      className={`flex flex-col gap-x-2 gap-y-density-2 rounded-md border border-border-subtle px-3 py-density-3 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:border-border ${
         isWorking
           ? "cursor-not-allowed opacity-70"
-          : "hover:bg-surface-subtle dark:hover:bg-foreground/5 cursor-pointer"
+          : "cursor-pointer hover:bg-surface-subtle dark:hover:bg-foreground/5"
       }`}
     >
-      <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
-        <label className="gap-y-density-3 flex min-w-0 items-start gap-x-3">
+      <div className="flex flex-col gap-x-2 gap-y-density-2 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex min-w-0 items-start gap-x-3 gap-y-density-3">
           <input
             type="radio"
             name={`dedupe-keep-${encodeURIComponent(group.groupId)}`}
@@ -158,16 +179,16 @@ export function DedupeAccountCard({
           />
 
           <div className="min-w-0">
-            <div className="text-foreground truncate text-sm font-medium">
+            <div className="truncate text-sm font-medium text-foreground">
               {accountLabel}
             </div>
-            <div className="text-muted-foreground truncate text-xs">
+            <div className="truncate text-xs text-muted-foreground">
               {account.site_url}
             </div>
           </div>
         </label>
 
-        <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-density-2">
           {pinned && (
             <Badge size="sm" variant="secondary">
               {t("account:actions.pinned")}
@@ -212,40 +233,40 @@ export function DedupeAccountCard({
       </div>
 
       <AnimatedDetails open={detailsOpen} id={detailsId}>
-        <div className="dark:border-border dark:bg-secondary/40 border-border-subtle bg-surface-subtle text-secondary-foreground py-density-3 rounded-md border px-3 text-xs">
-          <dl className="gap-y-density-2 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+        <div className="rounded-md border border-border-subtle bg-surface-subtle px-3 py-density-3 text-xs text-secondary-foreground dark:border-border dark:bg-secondary/40">
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-density-2 sm:grid-cols-2">
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.accountId")}
               </dt>
-              <dd className="text-secondary-foreground font-mono break-all">
+              <dd className="font-mono break-all text-secondary-foreground">
                 {account.id}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.siteType")}
               </dt>
-              <dd className="text-secondary-foreground break-all">
+              <dd className="break-all text-secondary-foreground">
                 {account.site_type || t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.authType")}
               </dt>
-              <dd className="text-secondary-foreground break-all">
+              <dd className="break-all text-secondary-foreground">
                 {account.authType || t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.health")}
               </dt>
-              <dd className="text-secondary-foreground gap-y-density-2 flex items-center gap-x-2">
+              <dd className="flex items-center gap-x-2 gap-y-density-2 text-secondary-foreground">
                 <span
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${healthDisplay.color}`}
                   aria-hidden="true"
@@ -255,16 +276,16 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.healthReason")}
               </dt>
-              <dd className="text-secondary-foreground break-words">
+              <dd className="break-words text-secondary-foreground">
                 {account.health?.reason || t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.lastSync")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -273,7 +294,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.updatedAt")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -282,7 +303,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.createdAt")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -291,7 +312,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.userId")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -300,31 +321,28 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.quota")}
               </dt>
-              <dd className="text-secondary-foreground break-all">
+              <dd className="break-all text-secondary-foreground">
                 {account.account_info?.quota ?? t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayConsumption")}
               </dt>
-              <dd className="text-secondary-foreground break-all">
-                {resolveTodayMetricValue(
-                  "consumption",
-                  account.account_info?.today_quota_consumption,
-                )}
+              <dd className="break-all text-secondary-foreground">
+                {consumptionValue}
               </dd>
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayRequests")}
               </dt>
-              <dd className="text-secondary-foreground break-all">
+              <dd className="break-all text-secondary-foreground">
                 {resolveTodayMetricValue(
                   "requests",
                   account.account_info?.today_requests_count,
@@ -333,10 +351,10 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.todayTokens")}
               </dt>
-              <dd className="text-secondary-foreground break-all">
+              <dd className="break-all text-secondary-foreground">
                 {tokenPresentation.value === null ? (
                   renderUnavailableTodayMetric(
                     tokenPresentation.requiresRefresh,
@@ -363,7 +381,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.checkinDetection")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -374,7 +392,7 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.autoCheckin")}
               </dt>
               <dd className="text-secondary-foreground">
@@ -385,26 +403,26 @@ export function DedupeAccountCard({
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.customCheckinUrl")}
               </dt>
-              <dd className="text-secondary-foreground font-mono break-all">
+              <dd className="font-mono break-all text-secondary-foreground">
                 {account.checkIn?.customCheckIn?.url ||
                   t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.notes")}
               </dt>
-              <dd className="text-secondary-foreground break-words">
+              <dd className="break-words text-secondary-foreground">
                 {account.notes || t("common:labels.notAvailable")}
               </dd>
             </div>
 
             <div className="space-y-0.5 sm:col-span-2">
-              <dt className="text-muted-foreground text-3xs font-medium tracking-wide uppercase">
+              <dt className="text-3xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("ui:dialog.dedupeAccounts.details.excludeFromTotalBalance")}
               </dt>
               <dd className="text-secondary-foreground">

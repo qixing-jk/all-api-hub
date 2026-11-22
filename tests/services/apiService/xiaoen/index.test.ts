@@ -261,27 +261,33 @@ describe("肖恩 AI console", () => {
       },
     })
   })
-  it("keeps known credit components without accepting a contradictory total", async () => {
-    server.use(
-      http.get(`${origin}/api/auth/me`, () =>
-        HttpResponse.json({
-          success: true,
-          data: { ...user, quota: "36000.000000000000001" },
-        }),
-      ),
-    )
-    const data = await getSiteTypeCapabilities(
-      "xiaoen",
-    ).account!.data!.fetchData({
-      ...request,
-      checkIn: createCheckInConfig("xiaoen"),
-    })
-    expect(data.balance?.positions).toMatchObject([
-      { id: "available", amount: { status: "unavailable" } },
-      { id: "permanent", amount: { status: "known", value: "34000" } },
-      { id: "daily", amount: { status: "known", value: "2000" } },
-    ])
-  })
+  it.each([
+    ["36000.000000000000001", "34000", "2000"],
+    ["9".repeat(256), "9".repeat(256), "1"],
+  ])(
+    "keeps credit components when the provider total cannot be verified",
+    async (quota, permanentQuota, dailyQuota) => {
+      server.use(
+        http.get(`${origin}/api/auth/me`, () =>
+          HttpResponse.json({
+            success: true,
+            data: { ...user, quota, permanentQuota, dailyQuota },
+          }),
+        ),
+      )
+      const data = await getSiteTypeCapabilities(
+        "xiaoen",
+      ).account!.data!.fetchData({
+        ...request,
+        checkIn: createCheckInConfig("xiaoen"),
+      })
+      expect(data.balance?.positions).toMatchObject([
+        { id: "available", amount: { status: "unavailable" } },
+        { id: "permanent", amount: { status: "known", value: permanentQuota } },
+        { id: "daily", amount: { status: "known", value: dailyQuota } },
+      ])
+    },
+  )
 
   it("does not export a masked inference key", async () => {
     server.use(

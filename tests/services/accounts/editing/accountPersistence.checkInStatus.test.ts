@@ -37,34 +37,45 @@ describe("account saving through the shared check-in update", () => {
     vi.restoreAllMocks()
   })
 
-  it.each([false, true])(
-    "retains fetched account data when a separate status phase is slow (stuck: %s)",
-    async (stuck) => {
+  it.each([
+    [false, false],
+    [true, false],
+    [false, true],
+  ])(
+    "retains fetched account data when status and balance evidence arrive separately (stuck: %s, legacy: %s)",
+    async (stuck, legacy) => {
       vi.useFakeTimers()
       const fetchData = vi.fn(async (request: ApiServiceAccountRequest) => {
         await new Promise((resolve) => setTimeout(resolve, 18_000))
         const scope = accountBalanceScope(request)
         return {
-          balance: accountBalanceSnapshot(
-            scope,
-            [
-              balancePosition({
-                id: "wallet",
-                scope,
-                value: "0.000246",
-                asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
-                observedAt: 100,
-                source: {
-                  adapter: "fixture",
-                  operation: "wallet",
-                  contractVersion: "1",
-                  kind: EVIDENCE_KINDS.Reported,
-                },
+          ...(legacy
+            ? { quota: 123 }
+            : {
+                balance: accountBalanceSnapshot(
+                  scope,
+                  [
+                    balancePosition({
+                      id: "wallet",
+                      scope,
+                      value: "0.000246",
+                      asset: {
+                        kind: ASSET_KINDS.Currency,
+                        code: CURRENCIES.USD,
+                      },
+                      observedAt: 100,
+                      source: {
+                        adapter: "fixture",
+                        operation: "wallet",
+                        contractVersion: "1",
+                        kind: EVIDENCE_KINDS.Reported,
+                      },
+                    }),
+                  ],
+                  100,
+                  FINANCIAL_COVERAGE.Complete,
+                ),
               }),
-            ],
-            100,
-            FINANCIAL_COVERAGE.Complete,
-          ),
           today_prompt_tokens: 7,
           today_completion_tokens: 8,
           today_quota_consumption: 9,
@@ -130,7 +141,7 @@ describe("account saving through the shared check-in update", () => {
           positions: [
             expect.objectContaining({
               amount: expect.objectContaining({
-                status: "known",
+                status: legacy ? "stale" : "known",
                 value: "0.000246",
               }),
             }),

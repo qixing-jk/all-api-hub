@@ -211,28 +211,44 @@ describe("Balance History native metric workflow", () => {
     },
   )
 
-  it("keeps income selected when account filtering changes the available asset group", async () => {
-    const preview = activityPreview()
-    const { result } = renderHook(() => useBalanceHistoryViewModel(preview))
-    await waitFor(() =>
-      expect(result.current?.nativeMetrics?.length).toBeGreaterThan(0),
-    )
-    const income = result.current.nativeMetrics.find(
-      ({ kind, currencyCode }) =>
-        kind === "income" && currencyCode === CURRENCIES.USD,
-    )!
-    act(() => {
-      result.current.selectTrendMetric(income.key)
-      result.current.selectBreakdownMetric(income.key)
-    })
-    expect(result.current.breakdownData.values).toEqual([4])
-    act(() => result.current.setSelectedAccountIds([preview.accounts[1]!.id]))
-    expect(result.current.nativeTrend?.currencyCode).toBe("CNY")
-    expect(result.current.trendOption.series).toContainEqual(
-      expect.objectContaining({ data: [31] }),
-    )
-    expect(result.current.breakdownData.values).toEqual([31])
-  })
+  it.each([
+    ["income", 4, 31],
+    ["consumption", 2, 3],
+    ["change", 2, 28],
+  ])(
+    "keeps %s selected when account filtering changes the available asset group",
+    async (kind, usd, cny) => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date(2026, 10, 2, 12))
+      try {
+        const preview = activityPreview()
+        const { result } = renderHook(() => useBalanceHistoryViewModel(preview))
+        await waitFor(() =>
+          expect(result.current?.nativeMetrics?.length).toBeGreaterThan(0),
+        )
+        const metric = result.current.nativeMetrics.find(
+          (metric) =>
+            metric.kind === kind && metric.currencyCode === CURRENCIES.USD,
+        )!
+        act(() => {
+          result.current.selectTrendMetric(metric.key)
+          result.current.selectBreakdownMetric(metric.key)
+        })
+        expect(result.current.breakdownData.values).toEqual([usd])
+        act(() =>
+          result.current.setSelectedAccountIds([preview.accounts[1]!.id]),
+        )
+        expect(result.current.nativeTrend?.currencyCode).toBe("CNY")
+        expect(result.current.nativeTrend?.kind).toBe(kind)
+        expect(result.current.trendOption.series).toContainEqual(
+          expect.objectContaining({ data: [cny] }),
+        )
+        expect(result.current.breakdownData.values).toEqual([cny])
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it("routes common metrics by the selected currency and preserves explicit archive access", async () => {
     const preview = activityPreview()

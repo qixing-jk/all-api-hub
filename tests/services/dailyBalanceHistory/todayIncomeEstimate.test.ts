@@ -388,6 +388,27 @@ describe("today net inflow", () => {
     )
   })
 
+  it.each([startAt - 60_000, 9_000_000_000_000_000])(
+    "keeps an observed wallet available for display while refusing to estimate from invalid current date %s",
+    (observedAt) => {
+      const history = store()
+      const balance =
+        history.financialSnapshotsByAccountId!.account![1]!.balance!
+      balance.positions = [position("65", observedAt)]
+      expect(estimate(history, "UTC", balance)).toMatchObject({
+        status: "missing_current_snapshot",
+        estimates: [
+          {
+            status: "missing_current_snapshot",
+            position: {
+              amount: { status: OBSERVATION_STATUSES.Known, value: "65" },
+            },
+          },
+        ],
+      })
+    },
+  )
+
   it("accepts equivalent time-zone identifiers", () => {
     expect(estimate(store(), "Etc/UTC").status).toBe("available")
   })
