@@ -284,7 +284,10 @@ describe("requestyAccountRefresh", () => {
     const result = await requestyAccountRefresh.refreshAccount(request)
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.quota).toBe(3_625_000)
+      expect(result.data.balance?.positions[0]?.amount).toMatchObject({
+        status: "known",
+        value: "7.25",
+      })
       expect(result.data.nativeBalance).toBeUndefined()
     }
   })

@@ -7,18 +7,12 @@ import type {
   RelayForToken,
   RelayForUser,
 } from "~/services/apiService/relayfor/type"
+import { toOptionalFiniteNumber } from "~/utils/core/number"
+
+export { toOptionalFiniteNumber } from "~/utils/core/number"
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
-
-export const toOptionalFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return undefined
-}
 
 export const toFiniteNumber = (value: unknown, fallback = 0): number =>
   toOptionalFiniteNumber(value) ?? fallback
@@ -51,12 +45,7 @@ export const isRelayForOverview = (
   value: unknown,
 ): value is RelayForOverview => {
   if (!isRecord(value)) return false
-  return (
-    isRelayForUser(value.user) &&
-    typeof value.user.quota === "number" &&
-    Number.isFinite(value.user.quota) &&
-    isRecord(value.today)
-  )
+  return isRelayForUser(value.user)
 }
 
 export const isRelayForToken = (value: unknown): value is RelayForToken => {

@@ -141,7 +141,7 @@ describe("rightCodeAccountRefresh", () => {
 
   it("rejects token resync when the recovered session belongs to a different user", async () => {
     stubDeployment((_url, init) => {
-      const auth = (init?.headers as Record<string, string>)?.Authorization
+      const auth = new Headers(init?.headers).get("Authorization")
       if (auth === "Bearer stale-token") {
         return jsonResponse(
           { error: "Unauthorized", message: "Invalid userToken" },
@@ -168,7 +168,7 @@ describe("rightCodeAccountRefresh", () => {
 
   it("rejects retry when the retry auth/me returns a different user than expected", async () => {
     stubDeployment((url, init) => {
-      const auth = (init?.headers as Record<string, string>)?.Authorization
+      const auth = new Headers(init?.headers).get("Authorization")
       if (auth === "Bearer stale-token") {
         return jsonResponse(
           { error: "Unauthorized", message: "Invalid userToken" },

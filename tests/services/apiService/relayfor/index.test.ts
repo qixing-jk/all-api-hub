@@ -259,3 +259,18 @@ describe("relayfor api service", () => {
     )
   })
 })
+
+it.each(["9007199254740993000", undefined])(
+  "preserves overview identity with an exact or absent financial value %s",
+  async (quota) => {
+    vi.mocked(transport.fetchRelayForData)
+      .mockReset()
+      .mockResolvedValueOnce({
+        user: { id: 1, username: "relayuser", quota },
+        active_subscriptions: [],
+      })
+    await expect(fetchRelayForOverview(request)).resolves.toMatchObject({
+      user: { id: 1, username: "relayuser", quota },
+    })
+  },
+)

@@ -1,8 +1,16 @@
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import { observeAmount } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+} from "~/services/amounts/financialConstants"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
+import { KIMI_FINANCIAL_SOURCES } from "~/services/apiService/kimiOpenPlatform/balance"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { resolveKimiOpenPlatformDeployment } from "~/services/kimiOpenPlatform/deployments"
 import {
@@ -11,11 +19,9 @@ import {
   type AccountTodayMetricAvailability,
 } from "~/types"
 
+import { parseKimiFinancialData } from "./balance"
 import {
-  kimiAmountToQuota,
-  parseKimiAccountInfo,
   parseKimiCreatedKey,
-  parseKimiInferenceBalance,
   parseKimiKeys,
   parseKimiOpenGatewayModels,
   parseKimiProjects,
@@ -35,21 +41,9 @@ import {
 
 export { fetchKimiPricingDoc } from "./pricingDoc"
 
-const COMPLETE: AccountTodayMetricAvailability = {
-  status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
-}
 const UNSUPPORTED: AccountTodayMetricAvailability = {
   status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
   reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-}
-
-const toQuota = (
-  request: { baseUrl: string; exchangeRate?: number },
-  amount: number,
-) => {
-  const deployment = resolveKimiOpenPlatformDeployment(request.baseUrl)
-  if (!deployment) throw new Error("unknown_kimi_deployment")
-  return kimiAmountToQuota(amount, deployment.currency, request.exchangeRate)
 }
 
 /** Reads the signed-in console user. */
@@ -188,31 +182,58 @@ export async function fetchKimiAccountData(
   const accessToken = request.auth.accessToken?.trim() ?? ""
   const usingApiKey =
     accessToken.startsWith("sk-") && !readKimiAuthState(request)
-  let available: number
-  let today = 0
+  let financial: ReturnType<typeof parseKimiFinancialData>
   if (usingApiKey) {
-    available = parseKimiInferenceBalance(
+    financial = parseKimiFinancialData(
       await fetchKimiInference(request, "/v1/users/me/balance", accessToken),
+      accountBalanceScope(request, { authority: deployment.consoleOrigin }),
+      deployment.currency,
+      KIMI_FINANCIAL_SOURCES.Inference,
     )
   } else {
     const organizationId = await resolveKimiOrganizationId(request)
-    const account = parseKimiAccountInfo(
+    financial = parseKimiFinancialData(
       await fetchKimiConsole(request, "organizationAccountInfo", {
         query: { oid: organizationId },
       }),
+      accountBalanceScope(request, {
+        organizationId,
+        authority: deployment.consoleOrigin,
+      }),
+      deployment.currency,
+      KIMI_FINANCIAL_SOURCES.Console,
     )
-    available = account.cur
-    today = account.today_consume
   }
   return {
-    quota: toQuota(request, available),
-    today_quota_consumption: toQuota(request, today),
+    balance: financial.balance,
+    balanceRefreshParts: financial.balanceRefreshParts,
+    today_quota_consumption: 0,
+    usageObservations: usingApiKey
+      ? []
+      : [
+          {
+            scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+            cost: {
+              asset: { kind: ASSET_KINDS.Currency, code: deployment.currency },
+              scope: financial.balance.positions[0]!.scope,
+              amount: observeAmount(
+                financial.today,
+                {
+                  ...financial.balance.positions[0]!.amount.source,
+                  kind: EVIDENCE_KINDS.Reported,
+                  inputs: ["today_consume"],
+                },
+                financial.balance.capturedAt,
+              ),
+            },
+          },
+        ],
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
     today_requests_count: 0,
     today_income: 0,
     todayStatsAvailability: {
-      consumption: usingApiKey ? UNSUPPORTED : COMPLETE,
+      consumption: UNSUPPORTED,
       requests: UNSUPPORTED,
       tokens: UNSUPPORTED,
       income: UNSUPPORTED,

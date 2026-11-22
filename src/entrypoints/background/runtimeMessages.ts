@@ -22,10 +22,7 @@ import {
   dismissCheckInFeedbackTabHint,
   openCheckInFeedbackIssueTab,
 } from "~/services/checkin/feedback/githubTab"
-import {
-  handleDailyBalanceHistoryMessage,
-  setupDailyBalanceHistoryMessagingListeners,
-} from "~/services/history/dailyBalanceHistory/scheduler"
+import { setupDailyBalanceHistoryMessagingListeners } from "~/services/history/dailyBalanceHistory/scheduler"
 import { setupUsageHistoryMessagingListeners } from "~/services/history/usageHistory/scheduler"
 import { setupLdohSiteLookupMessagingListeners } from "~/services/integrations/ldohSiteLookup/background"
 import {
@@ -527,14 +524,6 @@ export function setupRuntimeMessageListeners() {
           .catch((error) => {
             sendResponse({ success: false, error: getErrorMessage(error) })
           })
-        return true
-      }
-
-      if (
-        request.action ===
-        RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots
-      ) {
-        handleDailyBalanceHistoryMessage(request, sendResponse)
         return true
       }
 

@@ -160,7 +160,7 @@ export type RightCodeOverallUsageStats = RightCodeUsageStats & {
 
 /** `GET /subscriptions/list` item. */
 export type RightCodeSubscription = {
-  item_id: number
+  item_id: number | string
   name?: string | null
   remaining_quota?: number | string | null
   total_quota?: number | string | null

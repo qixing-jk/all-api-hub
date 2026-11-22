@@ -1,11 +1,24 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { SiteHealthStatus } from "~/types"
@@ -30,19 +43,9 @@ export * from "./models"
 
 export type VercelCredits = {
   /** Remaining AI Gateway credit in USD. */
-  balanceUsd: number
+  balanceUsd: string | undefined
   /** Lifetime credit spend in USD. */
-  totalUsedUsd: number
-}
-
-const parseUsdAmount = (value: unknown): number | undefined => {
-  if (typeof value === "number")
-    return Number.isFinite(value) ? value : undefined
-  if (typeof value !== "string") return undefined
-  const trimmed = value.trim()
-  if (!/^-?\d+(?:\.\d+)?$/.test(trimmed)) return undefined
-  const parsed = Number(trimmed)
-  return Number.isFinite(parsed) ? parsed : undefined
+  totalUsedUsd: string | undefined
 }
 
 /**
@@ -68,11 +71,11 @@ export async function fetchVercelCredits(
       tempWindowFallback: { statusCodes: [], codes: [] },
     },
   )
-  const balanceUsd = isRecord(body) ? parseUsdAmount(body.balance) : undefined
+  const balanceUsd = isRecord(body) ? parseDecimal(body.balance) : undefined
   const totalUsedUsd = isRecord(body)
-    ? parseUsdAmount(body.total_used)
+    ? parseDecimal(body.total_used)
     : undefined
-  if (balanceUsd === undefined || totalUsedUsd === undefined) {
+  if (!isRecord(body) || !("balance" in body || "total_used" in body)) {
     throw new VercelCreditsError()
   }
   return { balanceUsd, totalUsedUsd }
@@ -98,20 +101,48 @@ function readVercelAccountTeamId(request: ApiServiceRequest): string {
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const credits = await fetchVercelCredits(
-    request,
-    readVercelAccountTeamId(request),
-  )
-  const quota = Math.round(credits.balanceUsd * QUOTA_PER_USD)
-  if (!Number.isFinite(quota)) throw new VercelCreditsError()
+  const teamId = readVercelAccountTeamId(request)
+  const credits = await fetchVercelCredits(request, teamId)
+  const scope = accountBalanceScope(createVercelGatewayRequest(request), {
+    organizationId: teamId,
+  })
+  const now = Date.now()
+  const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
+  const source = {
+    adapter: "vercel-ai-gateway",
+    operation: VERCEL_GATEWAY_ENDPOINTS.Credits,
+    contractVersion: "team-usd/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  }
   return {
-    quota,
-    // AI Gateway credit is purchased and free-tier USD, not a token allowance.
-    nativeBalance: {
-      unit: "USD",
-      total: credits.balanceUsd,
-      permanent: credits.balanceUsd,
-      daily: 0,
+    ...accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "balance",
+          collectionKey: "credits",
+          scope,
+          asset,
+          nature: BALANCE_NATURES.Prepaid,
+          value: credits.balanceUsd,
+          observedAt: now,
+          source: { ...source, inputs: ["balance"] },
+        }),
+      ],
+      now,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
+    usage: {
+      scope: ACCOUNT_USAGE_SCOPES.Lifetime,
+      cost: {
+        asset,
+        scope,
+        amount: observeAmount(
+          credits.totalUsedUsd,
+          { ...source, inputs: ["total_used"] },
+          now,
+        ),
+      },
     },
     today_quota_consumption: 0,
     today_prompt_tokens: 0,

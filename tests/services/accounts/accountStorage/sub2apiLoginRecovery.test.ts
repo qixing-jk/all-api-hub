@@ -52,7 +52,7 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
   },
 }))
 vi.mock("~/services/history/dailyBalanceHistory/capture", () => ({
-  maybeCaptureAccountReferenceBalance: vi.fn(),
+  maybeCaptureDailyBalanceSnapshot: vi.fn(),
 }))
 
 describe("stored Sub2API account login recovery", () => {

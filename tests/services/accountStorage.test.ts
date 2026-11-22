@@ -24,6 +24,7 @@ import {
   EVIDENCE_KINDS,
   FINANCIAL_COVERAGE,
   FINANCIAL_ENUMERATION,
+  FINANCIAL_SETTLEMENT_STATUSES,
   OBSERVATION_STATUSES,
   SCOPE_SELECTION_KINDS,
   WALLET_BALANCE_COLLECTION_KEY,
@@ -62,6 +63,10 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
+import {
+  DAILY_BALANCE_HISTORY_CAPTURE_SOURCES,
+  type DailyBalanceHistoryStore,
+} from "~/types/dailyBalanceHistory"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { server } from "~~/tests/msw/server"
@@ -6475,10 +6480,21 @@ describe("accountStorage core behaviors", () => {
           }),
         },
       })
+      const balance = account.account_info.balance!
+      const subject = { kind: "account" as const, accountId: account.id }
+      account.account_info.balance = {
+        ...balance,
+        subject,
+        positions: balance.positions.map((position) => ({
+          ...position,
+          scope: { ...position.scope, subject },
+        })),
+      }
       seedStorage([account])
       mockRefreshAccountData.mockResolvedValueOnce({
         success: true,
         data: {
+          quota: 100,
           today_prompt_tokens: 10,
           today_completion_tokens: 20,
           today_quota_consumption: 30,
@@ -6838,6 +6854,145 @@ describe("accountStorage core behaviors", () => {
     expect(clearedAccount?.health?.code).toBeUndefined()
   })
 
+  it.each([
+    { initial: undefined, latest: "0", providerQuota: 123, unavailable: true },
+    { initial: undefined, latest: "2", providerQuota: 123, unavailable: false },
+    { initial: "2", latest: "3", providerQuota: 123, unavailable: true },
+    { initial: "2", latest: "", providerQuota: 123, unavailable: false },
+    { initial: "0", latest: "", providerQuota: 0, unavailable: true },
+    { initial: undefined, latest: "0", providerQuota: 123, unavailable: false },
+    { initial: "2", latest: "3", providerQuota: 123, unavailable: false },
+    { initial: "0", latest: "", providerQuota: 123, unavailable: false },
+  ])(
+    "uses the manual balance saved during an in-flight refresh ($initial -> $latest, unavailable=$unavailable)",
+    async ({ initial, latest, providerQuota, unavailable }) => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date("2026-09-04T12:00:00Z"))
+      try {
+        const account = createAccount({ manualBalanceUsd: initial })
+        seedStorage([account])
+        storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+          ...DEFAULT_PREFERENCES,
+          balanceHistory: {
+            ...DEFAULT_PREFERENCES.balanceHistory,
+            enabled: true,
+          },
+        })
+        const deferred = createDeferred<any>()
+        mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
+        const pending = accountStorage.refreshAccount(account.id, true)
+        await vi.waitFor(() =>
+          expect(mockRefreshAccountData).toHaveBeenCalled(),
+        )
+        expect(
+          await accountStorage.updateAccount(
+            account.id,
+            {
+              manualBalanceUsd: latest,
+            },
+            { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+          ),
+        ).toBe(true)
+        const balance = setReportedUsd(
+          createAccount(),
+          String(providerQuota / QUOTA_PER_USD),
+        )
+        if (unavailable) {
+          const position = balance.positions[0]!
+          position.amount = {
+            status: OBSERVATION_STATUSES.Unavailable,
+            source: position.amount.source,
+            reason: "request-failed",
+          }
+          balance.coverage = FINANCIAL_COVERAGE.Partial
+        }
+        deferred.resolve({
+          success: true,
+          data: {
+            balance,
+            today_requests_count: 7,
+          },
+          healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+        })
+        expect((await pending)?.refreshed).toBe(true)
+        const updated = await accountStorage.getAccountById(account.id)
+        expect(updated?.manualBalanceUsd).toBe(latest)
+        const snapshots = getAccountBalanceSnapshots(updated!)
+        if (latest)
+          expect(snapshots.manual?.positions[0]?.amount).toMatchObject({
+            status: "known",
+            value: latest,
+            source: { kind: "manual" },
+          })
+        else expect(snapshots.manual).toBeUndefined()
+        expect(
+          snapshots.reported.positions.find(
+            (position) => position.amount.source.kind === "reported",
+          )?.amount,
+        ).toMatchObject(
+          unavailable
+            ? { status: "unavailable" }
+            : { status: "known", value: String(providerQuota / QUOTA_PER_USD) },
+        )
+        expect(updated?.account_info).not.toHaveProperty("quota")
+        expect(updated?.account_info.today_requests_count).toBe(7)
+        const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+        const history = storageData.get(
+          STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
+        )
+        const snapshot =
+          history?.referenceSnapshotsByAccountId?.[account.id]?.[dayKey]
+        expect(snapshot).toBeUndefined()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("does not infer new history from quota when a legacy native projection is removed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date("2026-09-04T12:00:00Z"))
+    try {
+      const account = createAccount({ site_type: SITE_TYPES.REQUESTY })
+      seedStorage([account])
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        balanceHistory: {
+          ...DEFAULT_PREFERENCES.balanceHistory,
+          enabled: true,
+        },
+      })
+      mockRefreshAccountData.mockResolvedValueOnce({
+        success: true,
+        data: {
+          quota: 123,
+          nativeBalance: {
+            unit: CURRENCIES.USD,
+            total: 2,
+            permanent: 2,
+            daily: 0,
+            components: [],
+          },
+        },
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+      })
+      await accountStorage.refreshAccount(account.id, true)
+      const saved = await accountStorage.getAccountById(account.id)
+      expect(saved?.account_info).not.toHaveProperty("quota")
+      expect(saved?.account_info.legacyFinancial).toEqual(
+        account.account_info.legacyFinancial,
+      )
+      expect(saved?.account_info.nativeBalance).toBeUndefined()
+      const dayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+      const history = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
+      expect(
+        history?.referenceSnapshotsByAccountId?.[account.id]?.[dayKey],
+      ).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it.each(["storage failure", "changed identity"])(
     "does not capture a balance snapshot for an uncommitted refresh (%s)",
     async (reason) => {
@@ -6901,6 +7056,171 @@ describe("accountStorage core behaviors", () => {
     })
   })
 
+  it.each([
+    DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
+    DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Alarm,
+  ] as const)(
+    "captures accepted native observations and matching settled consumption through %s refresh",
+    async (source) => {
+      const account = createAccount({ id: "native-history" })
+      seedStorage([account])
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        balanceHistory: {
+          ...DEFAULT_PREFERENCES.balanceHistory,
+          enabled: true,
+        },
+      })
+      const now = Date.now()
+      const scope = accountBalanceScope({
+        baseUrl: account.site_url,
+        accountId: account.id,
+        auth: { authType: account.authType },
+      })
+      const position = balancePosition({
+        id: "tokens",
+        scope,
+        asset: {
+          kind: ASSET_KINDS.Quota,
+          id: "test:tokens",
+          label: "Token",
+          displayLabel: "Token",
+          displayScale: 1,
+        },
+        value: "12345678901234567890",
+        observedAt: now - 50,
+        source: {
+          adapter: "test",
+          operation: "wallet",
+          contractVersion: "1",
+          kind: EVIDENCE_KINDS.Reported,
+        },
+      })
+      const balance = accountBalanceSnapshot(
+        scope,
+        [position],
+        now,
+        FINANCIAL_COVERAGE.Complete,
+      )
+      const settledConsumption = [
+        {
+          asset: position.asset,
+          amount: {
+            status: OBSERVATION_STATUSES.Known,
+            value: "50",
+            observedAt: now,
+            source: { ...position.amount.source, operation: "usage" },
+          },
+          scope,
+          window: { start: now - 1000, end: now, timeZone: "UTC" },
+          settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+          coverage: FINANCIAL_COVERAGE.Complete,
+        },
+      ]
+      const inputObservations = structuredClone({ balance, settledConsumption })
+      mockRefreshAccountData.mockResolvedValueOnce({
+        success: true,
+        data: {
+          quota: 0,
+          balance,
+          settledConsumption,
+          checkIn: createCanonicalCheckIn(),
+        },
+        healthStatus: { status: SiteHealthStatus.Healthy, message: "ok" },
+      })
+      await accountStorage.refreshAccount(account.id, true, {
+        balanceHistoryCaptureSource: source,
+      })
+      const committed = (await accountStorage.getAccountById(account.id))!
+      expect(
+        committed.account_info.balance?.positions.filter(
+          ({ amount }) => amount.source.kind !== EVIDENCE_KINDS.Legacy,
+        ),
+      ).toEqual(balance.positions)
+      expect({ balance, settledConsumption }).toEqual(inputObservations)
+      const history = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
+      expect(history?.financialSnapshotsByAccountId?.[account.id]).toEqual([
+        {
+          balance: committed.account_info.balance,
+          settledConsumption,
+          source,
+          generation: 1,
+        },
+      ])
+      expect(history?.referenceSnapshotsByAccountId).toEqual({})
+    },
+  )
+
+  it("does not infer canonical history from legacy quota and today counters", async () => {
+    vi.useFakeTimers()
+    const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
+    vi.setSystemTime(fixedNow)
+
+    try {
+      const account = createAccount({ id: "balance-history" })
+      seedStorage([account])
+
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        showTodayCashflow: true,
+        balanceHistory: {
+          enabled: true,
+          endOfDayCapture: { enabled: false },
+          retentionDays: 365,
+        },
+      })
+
+      mockRefreshAccountData.mockResolvedValueOnce({
+        success: true,
+        data: {
+          quota: 123,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 7,
+          today_requests_count: 0,
+          today_income: 5,
+          todayStatsAvailability: buildCompleteTodayStatsAvailability({
+            income: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+            },
+          }),
+          checkIn: createCanonicalCheckIn(),
+        },
+        healthStatus: {
+          status: SiteHealthStatus.Healthy,
+          message: "",
+          code: undefined,
+        },
+      })
+
+      await accountStorage.refreshAccount("balance-history", true)
+
+      const nowUnixSeconds = Math.floor(Date.now() / 1000)
+      const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
+      const stored = storageData.get(
+        STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
+      ) as DailyBalanceHistoryStore | undefined
+
+      expect(
+        stored?.referenceSnapshotsByAccountId?.["balance-history"]?.[dayKey],
+      ).toBeUndefined()
+      for (const receipt of stored?.financialSnapshotsByAccountId?.[
+        "balance-history"
+      ] ?? []) {
+        expect(receipt.settledConsumption ?? []).toEqual([])
+        expect(receipt.reportedIncome ?? []).toEqual([])
+        expect(
+          (receipt.balance?.positions ?? []).every(
+            (position) => position.amount.source.kind === EVIDENCE_KINDS.Legacy,
+          ),
+        ).toBe(true)
+      }
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("refreshAccount succeeds when daily balance snapshot persistence fails", async () => {
     const account = createAccount({ id: "balance-history-write-failure" })
     seedStorage([account])
@@ -6913,7 +7233,7 @@ describe("accountStorage core behaviors", () => {
       },
     })
     const captureSpy = vi
-      .spyOn(dailyBalanceCapture, "maybeCaptureAccountReferenceBalance")
+      .spyOn(dailyBalanceCapture, "maybeCaptureDailyBalanceSnapshot")
       .mockRejectedValueOnce(new Error("history write failed"))
 
     try {
@@ -6926,6 +7246,163 @@ describe("accountStorage core behaviors", () => {
     } finally {
       captureSpy.mockRestore()
     }
+  })
+
+  it("does not write legacy quota history when showTodayCashflow is disabled", async () => {
+    vi.useFakeTimers()
+    const fixedNow = new Date(Date.UTC(2026, 1, 7, 12, 0, 0))
+    vi.setSystemTime(fixedNow)
+
+    try {
+      const account = createAccount({ id: "balance-history-no-cashflow" })
+      seedStorage([account])
+
+      storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+        ...DEFAULT_PREFERENCES,
+        showTodayCashflow: false,
+        balanceHistory: {
+          enabled: true,
+          endOfDayCapture: { enabled: false },
+          retentionDays: 365,
+        },
+      })
+
+      mockRefreshAccountData.mockResolvedValueOnce({
+        success: true,
+        data: {
+          quota: 456,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+          todayStatsAvailability: buildCompleteTodayStatsAvailability({
+            consumption: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+            },
+            income: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
+            },
+          }),
+          checkIn: createCanonicalCheckIn(),
+        },
+        healthStatus: {
+          status: SiteHealthStatus.Healthy,
+          message: "",
+          code: undefined,
+        },
+      })
+
+      await accountStorage.refreshAccount("balance-history-no-cashflow", true)
+
+      const nowUnixSeconds = Math.floor(Date.now() / 1000)
+      const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
+      const stored = storageData.get(
+        STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
+      ) as any
+
+      expect(
+        stored?.referenceSnapshotsByAccountId?.[
+          "balance-history-no-cashflow"
+        ]?.[dayKey],
+      ).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("records an accepted refresh failure as a history gap without retiming the last amount", async () => {
+    const account = createAccount()
+    const now = Date.now()
+    const scope = accountBalanceScope({
+      baseUrl: account.site_url,
+      accountId: account.id,
+      auth: { authType: account.authType },
+    })
+    account.account_info.balance = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "wallet",
+          scope,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          value: "20",
+          observedAt: now - 1000,
+          source: {
+            adapter: "test",
+            operation: "wallet",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      now - 1000,
+      FINANCIAL_COVERAGE.Complete,
+    )
+    seedStorage([account])
+    storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      balanceHistory: { ...DEFAULT_PREFERENCES.balanceHistory, enabled: true },
+    })
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: false,
+      healthStatus: { status: SiteHealthStatus.Error, message: "offline" },
+    })
+    const result = await accountStorage.refreshAccount(account.id, true)
+    expect(result?.balanceHistoryCaptured ?? false).toBe(false)
+    const snapshot = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
+      ?.financialSnapshotsByAccountId?.[account.id]?.[0]
+    expect(snapshot?.balance.positions[0].amount).toMatchObject({
+      status: "stale",
+      value: "20",
+      observedAt: now - 1000,
+    })
+    expect(snapshot.balance.capturedAt).toBeGreaterThanOrEqual(now)
+  })
+
+  it("refreshAccount skips snapshot capture when refresh fails without a canonical balance", async () => {
+    const account = createAccount({
+      id: "balance-history-failed",
+      account_info: {
+        ...createAccount().account_info,
+        todayStatsAvailability: buildCompleteTodayStatsAvailability({
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
+          },
+        }),
+      },
+    })
+    seedStorage([account])
+
+    storageData.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      balanceHistory: {
+        enabled: true,
+        endOfDayCapture: { enabled: false },
+        retentionDays: 365,
+      },
+    })
+
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Error,
+        message: "fail",
+        code: undefined,
+      },
+    })
+
+    await accountStorage.refreshAccount("balance-history-failed", true)
+
+    const stored = storageData.get(STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE)
+    expect(stored).toBeUndefined()
+    expect(
+      (await accountStorage.getAccountById("balance-history-failed"))
+        ?.account_info.todayStatsAvailability,
+    ).toEqual(account.account_info.todayStatsAvailability)
   })
 
   it("refreshAccount marks the account health as unknown when refresh throws", async () => {

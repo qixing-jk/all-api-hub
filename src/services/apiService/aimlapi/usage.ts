@@ -1,4 +1,12 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import { observeAmount } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SETTLEMENT_STATUSES,
+} from "~/services/amounts/financialConstants"
 import type { UsageHistoryPageQuery } from "~/services/apiAdapters/contracts/usageHistory"
 import { AIMLAPI_ENDPOINTS } from "~/services/apiService/aimlapi/constants"
 import {
@@ -34,8 +42,8 @@ export async function fetchAimlApiKeyUsagePage(
   const body = await fetchAimlApiJson<unknown>(request, endpoint, {
     credential: "regular-api-key",
     query: {
-      start: new Date(query.startTimestamp).toISOString(),
-      end: new Date(query.endTimestamp).toISOString(),
+      start: new Date(query.startTimestamp * 1000).toISOString(),
+      end: new Date(query.endTimestamp * 1000).toISOString(),
       limit,
       offset,
     },
@@ -43,6 +51,7 @@ export async function fetchAimlApiKeyUsagePage(
   if (!isRecord(body) || !Array.isArray(body.data))
     invalidAimlApiResponse(endpoint)
 
+  const scope = accountBalanceScope(request)
   const items = body.data.map((value, index): LogItem => {
     if (!isRecord(value)) invalidAimlApiResponse(endpoint)
     const createdAt =
@@ -68,6 +77,23 @@ export async function fetchAimlApiKeyUsagePage(
           : "",
       model_name: typeof value.model === "string" ? value.model : "",
       quota: usd * QUOTA_PER_USD,
+      consumption: {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        amount: observeAmount(
+          usd,
+          {
+            adapter: "aimlapi",
+            operation: endpoint,
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+          createdAt,
+        ),
+        scope,
+        window: { start: createdAt, end: createdAt + 1, timeZone: "UTC" },
+        settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+        coverage: FINANCIAL_COVERAGE.Partial,
+      },
       prompt_tokens: finiteNonNegative(tokens.input) ?? 0,
       completion_tokens: finiteNonNegative(tokens.output) ?? 0,
       use_time: -1,

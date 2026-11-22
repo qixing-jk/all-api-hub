@@ -1,12 +1,27 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
+import { balancePosition } from "~/services/amounts/balance"
+import { parseDecimal, subtractDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_FUNDING,
+  BALANCE_NATURES,
+  BALANCE_RELATIONS,
+  BALANCE_ROLES,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import { ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -145,13 +160,14 @@ const fetchCredits = async (
 
 const normalizeCredits = (
   data: OpenRouterCreditsData,
-): Pick<AccountData, "quota"> => {
+  request: ApiServiceAccountRequest,
+) => {
   const { total_credits: totalCredits, total_usage: totalUsage } = data ?? {}
   if (
-    typeof totalCredits !== "number" ||
-    !Number.isFinite(totalCredits) ||
-    typeof totalUsage !== "number" ||
-    !Number.isFinite(totalUsage)
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data) ||
+    !("total_credits" in data || "total_usage" in data)
   ) {
     throw createInvalidResponseError(OPENROUTER_CREDITS_ENDPOINT)
   }
@@ -159,24 +175,66 @@ const normalizeCredits = (
   // OpenRouter OpenAPI: https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
   // `/credits` requires a Management Key and reports cumulative purchased USD
   // (`total_credits`) and used USD (`total_usage`).
-  const remainingUsd = totalCredits - totalUsage
-  if (!Number.isFinite(remainingUsd)) {
-    throw createInvalidResponseError(OPENROUTER_CREDITS_ENDPOINT)
+  const credits = parseDecimal(totalCredits)
+  const usage = parseDecimal(totalUsage)
+  const scope = accountBalanceScope({
+    ...request,
+    baseUrl: OPENROUTER_API_BASE_URL,
+  })
+  const now = Date.now()
+  let ledger: string | undefined
+  if (credits !== undefined && usage !== undefined) {
+    try {
+      ledger = subtractDecimal(credits, usage)
+    } catch {
+      ledger = undefined
+    }
   }
-
-  const quota = Math.round(remainingUsd * QUOTA_PER_USD)
-  if (!Number.isFinite(quota)) {
-    throw createInvalidResponseError(OPENROUTER_CREDITS_ENDPOINT)
-  }
-
-  return { quota }
+  return accountBalanceObservation(
+    scope,
+    [
+      balancePosition({
+        id: "ledger",
+        collectionKey: "credits",
+        scope,
+        role: BALANCE_ROLES.Ledger,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        nature: BALANCE_NATURES.Prepaid,
+        funding: BALANCE_FUNDING.Purchased,
+        value: ledger,
+        observedAt: now,
+        source: {
+          adapter: "openrouter",
+          operation: OPENROUTER_CREDITS_ENDPOINT,
+          contractVersion: "credits-usd/v1",
+          kind: EVIDENCE_KINDS.Derived,
+          inputs: ["total_credits", "total_usage"],
+          amountInputs: {
+            ...(credits === undefined ? {} : { total_credits: credits }),
+            ...(usage === undefined ? {} : { total_usage: usage }),
+          },
+        },
+      }),
+    ].flatMap((position) => [
+      position,
+      {
+        ...position,
+        id: "available",
+        parentId: position.id,
+        relation: BALANCE_RELATIONS.Summary,
+        role: BALANCE_ROLES.Available,
+      },
+    ]),
+    now,
+    FINANCIAL_ENUMERATION.Complete,
+  )
 }
 
 /** Fetches and normalizes the OpenRouter credits balance. */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const credits = normalizeCredits(await fetchCredits(request))
+  const credits = normalizeCredits(await fetchCredits(request), request)
 
   return {
     ...credits,

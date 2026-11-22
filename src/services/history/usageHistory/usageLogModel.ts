@@ -1,3 +1,5 @@
+import type { FinancialConsumptionFact } from "~/services/amounts/usage"
+
 /**
  * Usage log item types.
  * @see https://github.com/QuantumNous/new-api/blob/8ef99f472875ceeaf20aecb2bb0f2b33ff575feb/model/log.go#L43
@@ -24,6 +26,8 @@ export enum LogType {
  * @see https://github.com/QuantumNous/new-api/blob/aa35d8db69b50d6401550bd34b6f37ef5863acd0/model/log.go#L20
  */
 export interface LogItem {
+  /** Adapter-proven original charge; legacy quota alone does not establish a unit. */
+  consumption?: FinancialConsumptionFact
   id: number
   user_id: number
   created_at: number

@@ -1,11 +1,26 @@
-import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES } from "~/constants/money"
+import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { normalizeDecimalUnits, parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_NATURES,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import type {
   AccessTokenInfo,
   UserInfo,
@@ -258,8 +273,34 @@ export async function fetchAccountData(
     AIHUBMIX_API_USER_SELF_ENDPOINT,
   )
 
+  const observedAt = Date.now()
+  const scope = accountBalanceScope(request, { authority: AIHUBMIX_API_ORIGIN })
+  const quota = parseDecimal(userInfo?.quota)
+  const used = parseDecimal(userInfo?.used_quota)
   return {
-    quota: toFiniteNumber(userInfo.quota),
+    ...accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "quota",
+          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+          scope,
+          observedAt,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          // AIHubMix documents its own 500000 quota/USD divisor; it is not inferred from the family.
+          value: normalizeDecimalUnits(quota, 500_000),
+          nature: BALANCE_NATURES.Prepaid,
+          source: {
+            adapter: SITE_TYPES.AIHUBMIX,
+            operation: "/api/user/self:quota",
+            contractVersion: "usd-quota-500000/v1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      observedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
     // AIHubMix client/API docs expose `used_quota` as cumulative account usage,
     // not a today total, so it must not populate today consumption.
     // Reference: https://docs.aihubmix.com/en/api/Cli
@@ -269,6 +310,23 @@ export async function fetchAccountData(
     today_requests_count: 0,
     today_income: 0,
     todayStatsAvailability: createAIHubMixTodayStatsAvailability(),
+    usage: {
+      scope: ACCOUNT_USAGE_SCOPES.Lifetime,
+      cost: {
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        scope,
+        amount: observeAmount(
+          normalizeDecimalUnits(used, 500_000),
+          {
+            adapter: SITE_TYPES.AIHUBMIX,
+            operation: "/api/user/self:used_quota",
+            contractVersion: "usd-quota-500000/v1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+          observedAt,
+        ),
+      },
+    },
     checkIn: request.checkIn,
   }
 }

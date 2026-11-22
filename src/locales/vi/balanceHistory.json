@@ -6,7 +6,7 @@
   },
   "breakdown": {
     "chartTypes": {
-      "histogram": "Biểu đồ tần suất",
+      "bars": "Biểu đồ thanh",
       "pie": "Biểu đồ tròn"
     },
     "controls": {
@@ -19,6 +19,9 @@
       "pieDisabledForNegative": "Không thể sử dụng biểu đồ tròn khi có giá trị âm."
     },
     "title": "Phân bổ tài khoản"
+  },
+  "charts": {
+    "view": "Chế độ xem biểu đồ"
   },
   "description": "Xem số dư và hạn mức của từng tài khoản thay đổi theo thời gian.",
   "empty": {
@@ -68,8 +71,24 @@
       "title": "Tổng hợp có thể không đầy đủ"
     }
   },
+  "legacy": {
+    "accountDetails": "Chi tiết quy đổi của tài khoản",
+    "columnsHint": "Số tiền dùng đơn vị tiền tệ tham chiếu đã chọn trong bộ lọc. Chọn tiêu đề cột để sắp xếp các tài khoản.",
+    "coverage": "Số ngày có giá trị tham khảo",
+    "currency": "Tiền tệ tham khảo",
+    "currencyHint": "Số tiền bằng CNY dùng tỷ giá hiện tại của tài khoản.",
+    "referenceRate": "{{account}} · Tham khảo ngày {{date}}: 1 USD = {{rate}} CNY",
+    "referenceRates": "Tỷ giá tham chiếu",
+    "showColumns": "Hiện các cột số tiền quy đổi",
+    "title": "Dữ liệu cũ đã quy đổi",
+    "totalsHint": "Dữ liệu cũ được quy đổi theo đơn vị tiền tệ tham chiếu đã chọn."
+  },
   "messages": {
     "error": {
+      "captureResultUnavailable": "Không có kết quả thu thập.",
+      "lastLoadedDescription": "Đang hiển thị lịch sử tải lần trước. Tải lại thất bại; hãy thử lại để cập nhật.",
+      "loadDescription": "Lịch sử đã lưu không bị thay thế. Hãy thử lại hoặc dùng phiên bản ứng dụng hỗ trợ dữ liệu này.",
+      "loadTitle": "Không thể tải lịch sử",
       "pruneFailed": "Dọn dẹp thất bại: {{error}}",
       "refreshFailed": "Làm mới thất bại: {{error}}",
       "settingsSaveFailed": "Lưu cài đặt thất bại: {{error}}"
@@ -84,7 +103,30 @@
       "pruneCompleted": "Dọn dẹp hoàn tất",
       "refreshCompleted": "Làm mới hoàn tất",
       "settingsSaved": "Đã lưu cài đặt"
+    },
+    "warning": {
+      "refreshIncomplete": "Thu thập lịch sử chưa đầy đủ. Đã ghi: {{captured}}; chưa ghi: {{uncaptured}}."
     }
+  },
+  "metricHelp": {
+    "allowanceHint": "Hạn mức còn lại do nhà cung cấp báo cáo. Nhà cung cấp quy định phạm vi sử dụng và thời hạn.",
+    "bonusHint": "Tín dụng do nhà cung cấp tặng, đôi khi có tên Bonus credits. Nhà cung cấp quy định khoản phí được chi trả và thời hạn sử dụng.",
+    "convertedHint": "Số dư trong lịch sử được hiển thị theo đồng tiền tham chiếu đã chọn trong bộ lọc, với tỷ giá hiện tại của tài khoản.",
+    "estimatedHint": "Ước tính tham khảo từ hai số dư đã lưu và mức tiêu thụ được ghi nhận trong ngày. Các khoảng thời gian có thể khác nhau.",
+    "incomeHint": "Khoản tiền ghi có vào tài khoản theo ghi nhận của nhà cung cấp.",
+    "ledgerHint": "Số dư tài khoản do nhà cung cấp báo cáo, hiển thị theo đơn vị gốc.",
+    "nativeHint": "Khoản mục do nhà cung cấp báo cáo, hiển thị theo đơn vị gốc.",
+    "netHint": "Thu nhập đã ghi nhận trừ đi chi phí đã ghi nhận.",
+    "outcomeHint": "Chi tiêu do nhà cung cấp ghi nhận.",
+    "quotaHint": "Số dư hoặc hạn mức còn lại tính bằng {{unit}}. Nhà cung cấp quy định cách khấu trừ.",
+    "title": "Giải thích chỉ số",
+    "trigger": "Giải thích chỉ số của {{chart}}"
+  },
+  "metricMenu": {
+    "allowances": "Hạn mức",
+    "balances": "Số dư",
+    "cashflow": "Thu và chi",
+    "convertedBalance": "Số dư quy đổi"
   },
   "metrics": {
     "balance": "Số dư",
@@ -94,6 +136,11 @@
     "outcome": "Chi phí"
   },
   "native": {
+    "activityCoverage": "{{covered}}/{{total}} ngày có bản ghi",
+    "activityHint": "Thu chi theo đơn vị gốc được tổng hợp theo ngày ghi nhận của nhà cung cấp.",
+    "activityTitle": "Tổng hợp theo kỳ",
+    "amountsTitle": "Số dư và hạn mức",
+    "coverage": "{{covered}} trong số {{total}} tài khoản có bản ghi",
     "dimensions": {
       "groups": "Nhóm",
       "keys": "Khóa",
@@ -101,9 +148,30 @@
       "projects": "Dự án",
       "routes": "Tuyến"
     },
+    "ended": "Đã kết thúc",
     "expired": "Đã hết hạn",
+    "firstRecord": "Bản ghi đầu tiên",
+    "gaps": "Khoảng trống trên biểu đồ cho biết ngày không có số liệu.",
+    "latest": "Bản ghi mới nhất",
+    "netInflow": "Dòng vào ròng ước tính",
+    "netInflowHint": "— nghĩa là chưa đủ dữ liệu để ước tính dòng tiền ròng.",
+    "originalObservation": "Giá trị ghi vào {{date}}",
+    "recordedIncome": "Thu nhập đã ghi nhận",
+    "recordedRange": "Ngày có bản ghi: {{range}}",
+    "recordedSpending": "Chi tiêu đã ghi nhận",
     "reset": "Đã đặt lại",
-    "restrictions": "{{dimension}}: {{value}}"
+    "restrictions": "{{dimension}}: {{value}}",
+    "scope": "Trang web · tổ chức · ví",
+    "sources": {
+      "console": "Bảng điều khiển",
+      "inference": "API suy luận",
+      "numbered": "Nguồn {{number}}"
+    },
+    "status": "Trạng thái",
+    "time": "Thời gian",
+    "unknown": "Chưa rõ",
+    "unknownAsset": "Tài sản chưa rõ",
+    "unsupported": "Không hỗ trợ"
   },
   "overview": {
     "kpis": {
@@ -121,7 +189,7 @@
         "label": "Thay đổi ròng trong kỳ"
       }
     },
-    "title": "Tổng quan"
+    "viewTrend": "Xem xu hướng: {{metric}}, {{amount}}"
   },
   "settings": {
     "alarmUnsupported": "Trình duyệt hiện tại không hỗ trợ Alarms API, không thể bật thu thập cuối ngày.",
@@ -165,6 +233,7 @@
     },
     "emptyMetric": "Không có dữ liệu {{metric}} trong khoảng thời gian này.",
     "gapBridge": "Không có bản ghi",
+    "noRecordForDay": "Không có bản ghi trong ngày",
     "scopes": {
       "accounts": "Theo tài khoản",
       "total": "Tổng hợp"

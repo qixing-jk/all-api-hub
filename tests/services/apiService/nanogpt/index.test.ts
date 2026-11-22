@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { acceptBalanceRefresh } from "~/services/accounts/refresh/balanceAcceptance"
 import {
   fetchAccountData,
@@ -97,22 +97,58 @@ it("retains exact wallet amounts and preserves malformed XNO as last known", asy
 })
 
 it.each([
-  { totals: { totalTokens: 1, costUsd: 1 } },
-  { totals: { requests: 1, costUsd: 1 } },
-  { totals: { requests: 1, totalTokens: 1 } },
-])("rejects incomplete usage totals %j", (body) => {
-  expect(() => parseNanoGptUsageAggregate(body, "/usage")).toThrow()
+  {
+    totals: { totalTokens: 1, costUsd: 1 },
+    expected: { totalTokens: 1, costUsd: "1" },
+  },
+  {
+    totals: { requests: 1, costUsd: 1 },
+    expected: { requests: 1, costUsd: "1" },
+  },
+  {
+    totals: { requests: 1, totalTokens: 1 },
+    expected: { requests: 1, totalTokens: 1 },
+  },
+  {
+    totals: { requests: 0, totalTokens: 0, costUsd: 0 },
+    expected: { requests: 0, totalTokens: 0, costUsd: "0" },
+  },
+  {
+    totals: { requests: "invalid", totalTokens: 1, costUsd: "3.5" },
+    expected: { totalTokens: 1, costUsd: "3.5" },
+  },
+  {
+    totals: { requests: 1, totalTokens: null, costUsd: "3.5" },
+    expected: { requests: 1, costUsd: "3.5" },
+  },
+  {
+    totals: { requests: 1, totalTokens: 1, costUsd: "invalid" },
+    expected: { requests: 1, totalTokens: 1 },
+  },
+  { totals: {}, expected: {} },
+])("preserves independent usage totals $totals", ({ totals, expected }) => {
+  expect(parseNanoGptUsageAggregate({ totals }, "/usage")).toEqual(expected)
 })
+
+it.each([null, {}, { totals: null }, { totals: [] }])(
+  "rejects malformed usage envelopes %j",
+  (body) => {
+    expect(() => parseNanoGptUsageAggregate(body, "/usage")).toThrow()
+  },
+)
 
 it.each([0, 1e20, -1, null])(
   "drops unusable subscription reset timestamp %s",
   (resetAt) => {
     expect(
       parseNanoGptSubscription(
-        { active: true, dailyInputTokens: { used: 0, remaining: 1, resetAt } },
+        {
+          active: true,
+          dailyInputTokens: { used: "0", remaining: "1", resetAt },
+        },
         "/subscription",
       ).dailyInputTokens,
-    ).toEqual({ used: 0, remaining: 1 })
+    ).toEqual({ used: "0", remaining: "1" })
   },
 )
 
@@ -146,11 +182,12 @@ it("falls back to inference subscription after management scope refusal", async 
     },
     checkIn: buildCheckInConfig(),
   })
+  expect(data.allowances?.entries[0]?.constraint).toMatchObject({
+    remaining: { value: "4" },
+    window: { period: "day", resetsAt: 1700000000000 },
+  })
   expect(data.subscription).toMatchObject({
     status: "grace",
-    remainingTokens: 4,
-    period: "day",
-    periodResetTime: "2023-11-14T22:13:20.000Z",
   })
 })
 
@@ -162,9 +199,7 @@ it.each([".", " . "])(
       { ...balanceBody, nano_balance: amount },
       "/balance",
     )
-    expect(parsed.nanoAmount).toBeUndefined()
     expect(parsed.nanoBalance).toBeUndefined()
-    expect(parsed.nanoAmountUnavailable).toBe(true)
   },
 )
 
@@ -176,17 +211,18 @@ it.each([
   (amount, expected) => {
     expect(
       parseNanoGptBalance({ ...balanceBody, nano_balance: amount }, "/balance")
-        .nanoAmount,
+        .nanoBalance,
     ).toBe(expected)
   },
 )
 
 it.each(["0x10", "0b10", "0o10"])(
-  "rejects non-decimal balance %s",
+  "keeps non-decimal balance unavailable: %s",
   (amount) => {
-    expect(() =>
-      parseNanoGptBalance({ ...balanceBody, usd_balance: amount }, "/balance"),
-    ).toThrow()
+    expect(
+      parseNanoGptBalance({ ...balanceBody, usd_balance: amount }, "/balance")
+        .usdBalance,
+    ).toBeUndefined()
   },
 )
 it.each([null, {}, { active: "true" }])(
@@ -198,10 +234,10 @@ it.each([null, {}, { active: "true" }])(
 it("retains independently reported image allowance without requiring token windows", () => {
   expect(
     parseNanoGptSubscription(
-      { active: false, dailyImages: { remaining: 2 } },
+      { active: false, dailyImages: { remaining: "2" } },
       "/subscription",
     ),
-  ).toEqual({ active: false, dailyImages: { remaining: 2 } })
+  ).toEqual({ active: false, dailyImages: { remaining: "2" } })
 })
 it("omits unreported optional Nano amounts", () => {
   expect(
@@ -209,7 +245,7 @@ it("omits unreported optional Nano amounts", () => {
       { usd_balance: 2, nanoDepositAddress: DEPOSIT_ADDRESS },
       "/balance",
     ),
-  ).toEqual({ usdBalance: 2, usdAmount: "2", depositAddress: DEPOSIT_ADDRESS })
+  ).toEqual({ usdBalance: "2", depositAddress: DEPOSIT_ADDRESS })
 })
 
 it("preserves management-only accounts without inventing a cash balance when only key-read is permitted", async () => {
@@ -226,7 +262,7 @@ it("preserves management-only accounts without inventing a cash balance when onl
     auth: { ...tokenRequest.auth, accessToken: "sk-nano-mgmt-fixture" },
     checkIn: buildCheckInConfig(),
   })
-  expect(result.balanceUnavailable).toBe(true)
+  expect(result.balance?.positions[0]?.amount.status).toBe("unavailable")
   expect(result.subscription).toEqual({ status: "unavailable" })
 })
 
@@ -318,15 +354,17 @@ it.each(["2.5", "0", undefined, "invalid"])(
       ...tokenRequest,
       checkIn: buildCheckInConfig(),
     })
-    expect(data.quota).toBe(0)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "0",
+    })
     if (nanoBalance === "2.5" || nanoBalance === "0") {
-      expect(data.nativeBalance).toEqual({
-        unit: "USD_XNO",
-        total: 0,
-        nanoBalance: nanoBalance === "2.5" ? 2.5 : 0,
+      expect(data.balance?.positions[1]).toMatchObject({
+        asset: { kind: "crypto", id: "XNO" },
+        amount: { status: "known", value: nanoBalance },
       })
     } else {
-      expect(data.nativeBalance).toBeUndefined()
+      expect(data.balance?.positions[1]?.amount.status).toBe("unavailable")
     }
   },
 )
@@ -334,18 +372,16 @@ it.each(["2.5", "0", undefined, "invalid"])(
 describe("NanoGPT response parsing", () => {
   it("reads documented string amounts and the deposit address", () => {
     expect(parseNanoGptBalance(balanceBody, "endpoint")).toEqual({
-      usdBalance: 129.46956147,
-      nanoBalance: 26.71801147,
-      usdAmount: "129.46956147",
-      nanoAmount: "26.71801147",
+      usdBalance: "129.46956147",
+      nanoBalance: "26.71801147",
       depositAddress: DEPOSIT_ADDRESS,
     })
   })
 
-  it("rejects a missing amount instead of inventing zero", () => {
-    expect(() =>
+  it("retains identity with a missing amount instead of inventing zero", () => {
+    expect(
       parseNanoGptBalance({ nanoDepositAddress: DEPOSIT_ADDRESS }, "endpoint"),
-    ).toThrow(/Invalid NanoGPT response/)
+    ).toMatchObject({ usdBalance: undefined, depositAddress: DEPOSIT_ADDRESS })
     expect(() =>
       parseNanoGptBalance({ usd_balance: "n/a" }, "endpoint"),
     ).toThrow(/Invalid NanoGPT response/)
@@ -364,19 +400,19 @@ describe("NanoGPT response parsing", () => {
           totals: {
             requests: 3,
             totalTokens: 100,
-            costUsd: 0.5,
+            costUsd: "0.5",
             netCostUsd: 0.25,
           },
         },
         "endpoint",
       ),
-    ).toEqual({ requests: 3, totalTokens: 100, costUsd: 0.25 })
+    ).toEqual({ requests: 3, totalTokens: 100, costUsd: "0.25" })
     expect(
       parseNanoGptUsageAggregate(
-        { totals: { requests: 3, totalTokens: 100, costUsd: 0.5 } },
+        { totals: { requests: 3, totalTokens: 100, costUsd: "0.5" } },
         "endpoint",
       ),
-    ).toEqual({ requests: 3, totalTokens: 100, costUsd: 0.5 })
+    ).toEqual({ requests: 3, totalTokens: 100, costUsd: "0.5" })
   })
 
   it("keeps null subscription counters unknown rather than full", () => {
@@ -389,7 +425,7 @@ describe("NanoGPT response parsing", () => {
         },
         "endpoint",
       ),
-    ).toEqual({ active: true, state: "active" })
+    ).toEqual({ active: true, state: "active", dailyInputTokens: {} })
   })
 
   it("keeps the weekly quota even when the daily one is unconfigured", () => {
@@ -402,8 +438,8 @@ describe("NanoGPT response parsing", () => {
           limits: { weeklyInputTokens: 60_000_000, dailyInputTokens: null },
           dailyInputTokens: null,
           weeklyInputTokens: {
-            used: 0,
-            remaining: 60_000_000,
+            used: "0",
+            remaining: "60000000",
             percentUsed: 0,
             resetAt: 1_792_972_800_000,
           },
@@ -413,8 +449,8 @@ describe("NanoGPT response parsing", () => {
     ).toEqual({
       active: true,
       weeklyInputTokens: {
-        used: 0,
-        remaining: 60_000_000,
+        used: "0",
+        remaining: "60000000",
         resetAt: "2026-10-26T00:00:00.000Z",
       },
     })
@@ -426,27 +462,27 @@ describe("NanoGPT response parsing", () => {
         {
           active: true,
           dailyInputTokens: {
-            used: 100,
-            remaining: 900,
+            used: "100",
+            remaining: "900",
             resetAt: 1_790_000_000_000,
           },
         },
         "endpoint",
       ).dailyInputTokens,
     ).toEqual({
-      used: 100,
-      remaining: 900,
+      used: "100",
+      remaining: "900",
       resetAt: "2026-09-21T14:13:20.000Z",
     })
     expect(
       parseNanoGptSubscription(
         {
           active: true,
-          dailyInputTokens: { used: 100, remaining: 900, resetAt: 0 },
+          dailyInputTokens: { used: "100", remaining: "900", resetAt: 0 },
         },
         "endpoint",
       ).dailyInputTokens,
-    ).toEqual({ used: 100, remaining: 900 })
+    ).toEqual({ used: "100", remaining: "900" })
   })
 })
 
@@ -536,7 +572,7 @@ describe("NanoGPT account reads", () => {
     await expect(fetchNanoGptUsage(tokenRequest)).resolves.toEqual({
       requests: 1284,
       totalTokens: 1_691_356,
-      costUsd: 40.93,
+      costUsd: "40.93",
     })
   })
 
@@ -558,7 +594,7 @@ describe("NanoGPT account reads", () => {
     await expect(fetchNanoGptSubscription(tokenRequest)).resolves.toMatchObject(
       {
         active: true,
-        dailyInputTokens: { remaining: 9000 },
+        dailyInputTokens: { remaining: "9000" },
       },
     )
   })
@@ -591,20 +627,25 @@ describe("NanoGPT account reads", () => {
       checkIn: buildCheckInConfig(),
     })
 
-    expect(data.quota).toBe(Math.round(129.46956147 * QUOTA_PER_USD))
-    expect(data.usage).toEqual({
-      scope: "rolling_window",
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      value: "129.46956147",
+    })
+    expect(data.usage).toMatchObject({
+      scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
       totalRequests: 4,
       totalTokens: 2048,
-      totalCost: 0.5,
+      cost: {
+        asset: { kind: "currency", code: "USD" },
+        amount: { value: "0.5" },
+      },
     })
     expect(data.subscription).toEqual({
       isActive: true,
       status: "active",
-      billingType: "tokens",
-      remainingTokens: 90,
-      period: "day",
-      periodResetTime: "2026-09-21T14:13:20.000Z",
+    })
+    expect(data.allowances?.entries[0]?.constraint).toMatchObject({
+      remaining: { value: "90" },
+      window: { period: "day", resetsAt: 1790000000000 },
     })
     expect(data.todayStatsAvailability).toMatchObject({
       consumption: { status: "unavailable", reason: "unsupported" },
@@ -636,12 +677,13 @@ describe("NanoGPT account reads", () => {
       checkIn: buildCheckInConfig(),
     })
 
-    expect(data.quota).toBeGreaterThan(0)
-    expect(data.nativeBalance).toMatchObject({
-      unit: "USD_XNO",
-      total: 129.46956147,
-      nanoBalance: 26.71801147,
-    })
+    expect(data.balance?.positions).toMatchObject([
+      { amount: { value: "129.46956147" } },
+      {
+        asset: { kind: "crypto", id: "XNO" },
+        amount: { value: "26.71801147" },
+      },
+    ])
     expect(data.subscription).toEqual({ status: "unavailable" })
   })
 
@@ -675,13 +717,13 @@ describe("NanoGPT account reads", () => {
       checkIn: buildCheckInConfig(),
     })
 
+    expect(data.allowances?.entries[0]?.constraint).toMatchObject({
+      remaining: { value: "59999000" },
+      window: { period: "week", resetsAt: 1792972800000 },
+    })
     expect(data.subscription).toEqual({
       isActive: true,
       status: "active",
-      billingType: "tokens",
-      remainingTokens: 59_999_000,
-      period: "week",
-      periodResetTime: "2026-10-26T00:00:00.000Z",
     })
   })
 
@@ -760,8 +802,11 @@ it("refreshes management-only subscription without presenting unavailable cash a
     checkIn: buildCheckInConfig(),
   })
   expect(data).toMatchObject({
-    balanceUnavailable: true,
-    subscription: { isActive: true, status: "active", remainingTokens: 500 },
+    balance: { positions: [{ amount: { status: "unavailable" } }] },
+    subscription: { isActive: true, status: "active" },
+  })
+  expect(data.allowances?.entries[0]?.constraint.remaining).toMatchObject({
+    value: "500",
   })
   expect(data.usage).toBeUndefined()
 })

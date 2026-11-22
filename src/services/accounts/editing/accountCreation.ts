@@ -32,7 +32,6 @@ import {
 } from "~/services/accounts/balanceSnapshot"
 import { withManualAccountDataFetchTimeout } from "~/services/accounts/editing/accountCreationTimeout"
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
-import { readLegacyAdapterFinancialPatch } from "~/services/accounts/refresh/accountRefreshUpdate"
 import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -325,12 +324,6 @@ export async function validateAndSaveAccount(
         usageObservations: freshAccountData.usageObservations,
         subscription: freshAccountData.subscription,
         recentUsageRecords: freshAccountData.recentUsageRecords,
-        ...readLegacyAdapterFinancialPatch(freshAccountData, {
-          accountId: "",
-          siteUrl: requestBaseUrl,
-          siteType: normalizedSiteType,
-          capturedAt: Date.now(),
-        }),
       },
       last_sync_time: Date.now(),
     }

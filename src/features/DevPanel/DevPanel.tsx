@@ -25,7 +25,6 @@ import { useFixtureAccountsDevSection } from "./sections/fixtureAccountsSection"
 import { useFixtureApiCredentialsDevSection } from "./sections/fixtureApiCredentialsSection"
 import { useInstanceIdentityDevSection } from "./sections/instanceIdentitySection"
 import { KeyProvisioningPreviewSection } from "./sections/keyProvisioningPreviewSection"
-import { useBalanceHistoryDevSection } from "./sections/miscSections"
 import { useStarPromotionDevSection } from "./sections/starPromotionSection"
 import { useTempContextDevSection } from "./sections/tempContextSection"
 import { useUninstallSurveyDevSection } from "./sections/uninstallSurveySection"
@@ -80,9 +79,9 @@ function DevPanelInfoRowView({ row }: { row: DevPanelInfoRow }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex items-baseline justify-between gap-x-2">
-        <span className="text-muted-foreground text-xs">{row.label}</span>
+        <span className="text-xs text-muted-foreground">{row.label}</span>
         {row.tone && row.tone !== "stable" ? (
-          <span className="text-muted-foreground shrink-0 text-xs italic">
+          <span className="shrink-0 text-xs text-muted-foreground italic">
             {row.tone}
           </span>
         ) : null}
@@ -101,14 +100,14 @@ function DevPanelInfoRowView({ row }: { row: DevPanelInfoRow }) {
             type="button"
             aria-label={`Copy ${row.label}`}
             onClick={() => void handleCopy()}
-            className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring shrink-0 rounded-md p-1 focus-visible:ring-2 focus-visible:outline-hidden"
+            className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
           >
             <Copy className="size-3.5" />
           </button>
         ) : null}
       </div>
       {row.hint ? (
-        <p className="text-muted-foreground text-xs leading-snug">{row.hint}</p>
+        <p className="text-xs leading-snug text-muted-foreground">{row.hint}</p>
       ) : null}
     </div>
   )
@@ -133,7 +132,7 @@ function DevPanelActionView({
       disabled={sectionBusy || action.disabled || action.loading}
       aria-busy={action.loading || undefined}
       className={cn(
-        "hover:bg-accent text-foreground hover:text-accent-foreground focus-visible:ring-ring flex min-w-0 flex-1 items-start gap-3 rounded-md px-3 py-2 text-left text-xs leading-5 transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50",
+        "flex min-w-0 flex-1 items-start gap-3 rounded-md px-3 py-2 text-left text-xs leading-5 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50",
         standalone && "min-h-11 items-center text-sm font-medium",
       )}
     >
@@ -145,7 +144,7 @@ function DevPanelActionView({
       ) : (
         <ActionIcon
           aria-hidden="true"
-          className="text-muted-foreground mt-0.5 size-4 shrink-0"
+          className="mt-0.5 size-4 shrink-0 text-muted-foreground"
         />
       )}
       <span className="min-w-0 flex-1 wrap-break-word">
@@ -198,7 +197,7 @@ function DevPanelSectionView({
             <button
               type="button"
               aria-label={`About ${section.title}`}
-              className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring mr-1 shrink-0 rounded-md p-2 focus-visible:ring-2 focus-visible:outline-hidden"
+              className="mr-1 shrink-0 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
             >
               <HelpHintIcon aria-hidden="true" className="size-3.5" />
             </button>
@@ -210,16 +209,16 @@ function DevPanelSectionView({
 
   const header = (
     <>
-      <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
+      <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
         <SectionIcon aria-hidden="true" className="size-4" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="text-foreground block text-sm leading-snug font-medium wrap-break-word">
+        <span className="block text-sm leading-snug font-medium wrap-break-word text-foreground">
           {section.title}
         </span>
         {!showsBody && section.summary ? (
           <span
-            className="text-muted-foreground mt-0.5 block truncate text-xs font-normal"
+            className="mt-0.5 block truncate text-xs font-normal text-muted-foreground"
             title={section.summary}
           >
             {section.summary}
@@ -236,13 +235,13 @@ function DevPanelSectionView({
           type="button"
           onClick={() => setIsExpanded((expanded) => !expanded)}
           aria-expanded={isExpanded}
-          className="hover:bg-accent focus-visible:ring-ring flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-inset"
+          className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-inset"
         >
           {header}
           <ChevronRight
             aria-hidden="true"
             className={cn(
-              "text-muted-foreground size-4 shrink-0 transition-transform motion-reduce:transition-none",
+              "size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none",
               isExpanded && "rotate-90",
             )}
           />
@@ -253,9 +252,9 @@ function DevPanelSectionView({
         </div>
       )}
       {showsBody ? (
-        <div className="border-border mr-3 mb-2 ml-5 flex min-w-0 flex-col gap-3 border-l pt-1 pl-3">
+        <div className="mr-3 mb-2 ml-5 flex min-w-0 flex-col gap-3 border-l border-border pt-1 pl-3">
           {section.description ? (
-            <p className="text-muted-foreground px-3 text-xs leading-relaxed">
+            <p className="px-3 text-xs leading-relaxed text-muted-foreground">
               {section.description}
             </p>
           ) : null}
@@ -311,7 +310,6 @@ function DevPanelStaticSections({ isPanelOpen }: { isPanelOpen: boolean }) {
         page === MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
     ),
   )
-  useRegisterDevPanelSection(useBalanceHistoryDevSection())
   useRegisterDevPanelSection(useStarPromotionDevSection(isPanelOpen))
   useRegisterDevPanelSection(useUninstallSurveyDevSection())
   useRegisterDevPanelSection(useTempContextDevSection())
@@ -344,8 +342,7 @@ function DevPanelSectionGroups({
   const belongsToCurrentPage = (section: DevPanelSection) =>
     Boolean(
       page &&
-        (section.pages?.includes(page) ||
-          section.prominentPages?.includes(page)),
+      (section.pages?.includes(page) || section.prominentPages?.includes(page)),
     )
   const currentSections = tools.filter(belongsToCurrentPage)
   const otherSections = tools.filter(
@@ -364,7 +361,7 @@ function DevPanelSectionGroups({
       >
         <TabsList
           aria-label="Dev tools"
-          className="border-border grid shrink-0 grid-cols-2 gap-1 border-b px-3 py-2"
+          className="grid shrink-0 grid-cols-2 gap-1 border-b border-border px-3 py-2"
         >
           {[
             {
@@ -378,7 +375,7 @@ function DevPanelSectionGroups({
               key={tab.id}
               value={tab.id}
               disabled={tab.disabled}
-              className="text-muted-foreground hover:bg-accent data-[state=active]:bg-accent data-[state=active]:text-accent-foreground focus-visible:ring-ring rounded-lg px-3 py-2 text-xs font-medium focus-visible:ring-2 focus-visible:outline-hidden disabled:opacity-40"
+              className="rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden disabled:opacity-40 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
             >
               {tab.label}
             </TabsTrigger>
@@ -387,12 +384,12 @@ function DevPanelSectionGroups({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
           <TabsContent
             value="current"
-            className="focus-visible:ring-ring rounded-lg focus-visible:ring-2 focus-visible:outline-hidden"
+            className="rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
           >
             <div
               role="group"
               aria-label="Current page"
-              className="divide-border flex flex-col divide-y"
+              className="flex flex-col divide-y divide-border"
             >
               {currentSections.map((section) => (
                 <DevPanelSectionView
@@ -405,10 +402,10 @@ function DevPanelSectionGroups({
           </TabsContent>
           <TabsContent
             value="toolbox"
-            className="focus-visible:ring-ring flex flex-col gap-4 rounded-lg focus-visible:ring-2 focus-visible:outline-hidden"
+            className="flex flex-col gap-4 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
           >
             {otherSections.length === 0 ? (
-              <p className="text-muted-foreground py-4 text-center text-xs">
+              <p className="py-4 text-center text-xs text-muted-foreground">
                 No global tools available on this surface.
               </p>
             ) : null}
@@ -425,11 +422,11 @@ function DevPanelSectionGroups({
                   aria-label={category.label}
                   className="flex flex-col"
                 >
-                  <p className="text-muted-foreground mb-1 flex items-center gap-3 px-3 text-xs font-medium">
+                  <p className="mb-1 flex items-center gap-3 px-3 text-xs font-medium text-muted-foreground">
                     <span>{category.label}</span>
                     <span
                       aria-hidden="true"
-                      className="bg-border h-px min-w-4 flex-1"
+                      className="h-px min-w-4 flex-1 bg-border"
                     />
                   </p>
                   {categorySections.map((section) => (
@@ -449,7 +446,7 @@ function DevPanelSectionGroups({
         <div
           role="group"
           aria-label="Build information"
-          className="border-border max-h-[40%] shrink-0 overflow-y-auto border-t px-3 py-2"
+          className="max-h-[40%] shrink-0 overflow-y-auto border-t border-border px-3 py-2"
         >
           {footerSections.map((section) => (
             <DevPanelSectionView
@@ -509,7 +506,7 @@ function DevPanelBall() {
           )}
         >
           <span
-            className="bg-popover text-popover-foreground border-border flex size-8 items-center justify-center rounded-full border-2 shadow-md"
+            className="flex size-8 items-center justify-center rounded-full border-2 border-border bg-popover text-popover-foreground shadow-md"
             style={identity.color ? { borderColor: identity.color } : undefined}
           >
             <Bug className="size-4" />
@@ -521,7 +518,7 @@ function DevPanelBall() {
             <span
               data-testid="dev-panel-identity"
               className={cn(
-                "bg-popover text-foreground border-border pointer-events-none absolute top-full right-0 mt-1 rounded-full border px-1.5 font-mono text-xs leading-none whitespace-nowrap shadow-sm",
+                "pointer-events-none absolute top-full right-0 mt-1 rounded-full border border-border bg-popover px-1.5 font-mono text-xs leading-none whitespace-nowrap text-foreground shadow-sm",
                 "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
               )}
             >
@@ -534,26 +531,26 @@ function DevPanelBall() {
         <div
           className={cn(
             Z_INDEX.modal,
-            "bg-popover text-popover-foreground border-border fixed inset-y-0 right-0 flex w-96 max-w-full flex-col border-l shadow-xl",
+            "fixed inset-y-0 right-0 flex w-96 max-w-full flex-col border-l border-border bg-popover text-popover-foreground shadow-xl",
           )}
           role="dialog"
           aria-label="Dev panel"
           data-testid="dev-panel"
         >
-          <div className="border-border flex shrink-0 items-center gap-3 border-b px-4 py-4">
-            <span className="bg-accent text-accent-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
+          <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-4">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
               <Bug aria-hidden="true" className="size-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-foreground text-sm font-semibold">Dev panel</p>
-              <p className="text-muted-foreground text-xs">{surfaceLabel}</p>
+              <p className="text-sm font-semibold text-foreground">Dev panel</p>
+              <p className="text-xs text-muted-foreground">{surfaceLabel}</p>
             </div>
             <Tooltip content="Dev: Close dev panel">
               <button
                 type="button"
                 aria-label="Close dev panel"
                 onClick={() => setIsOpen(false)}
-                className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring shrink-0 rounded-lg p-2 focus-visible:ring-2 focus-visible:outline-hidden"
+                className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden"
               >
                 <X className="size-4" />
               </button>

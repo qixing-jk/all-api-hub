@@ -2,6 +2,9 @@ import type { LineSeriesOption } from "echarts"
 
 import { CHART_COLORS } from "~/components/charts/chartColors"
 import type { EChartsOption } from "~/components/charts/echarts"
+import { BALANCE_HISTORY_TREND_CHART_TYPES } from "~/features/BalanceHistory/contracts"
+
+import type { BalanceHistoryTrendChartType } from "../contracts"
 
 /**
  * ECharts tooltip value can be a scalar or an array (multi-dimension values).
@@ -20,25 +23,33 @@ function normalizeTooltipValue(value: unknown): number | string {
   return ""
 }
 
-export type BalanceHistoryTrendChartType = "line" | "bar"
+export type { BalanceHistoryTrendChartType } from "../contracts"
 
-/** Build independent bridges using only the recorded points on either side. */
+const MAX_BRIDGED_MISSING_DAYS = 3
+
+/** Use only observed endpoints and leave longer gaps blank. */
 function buildGapBridgeData(dayKeys: string[], values: Array<number | null>) {
   const data: Array<[string, number | null]> = []
+  let hasLongGap = false
   let previous: { index: number; day: string; value: number } | undefined
 
   dayKeys.forEach((day, index) => {
     const value = values[index]
     if (value == null || !Number.isFinite(value)) return
-    if (previous && index > previous.index + 1) {
-      // A null separator stops separate bridges from joining over observed days.
-      if (data.length > 0) data.push([previous.day, null])
-      data.push([previous.day, previous.value], [day, value])
+    if (previous) {
+      const missingDays = index - previous.index - 1
+      if (missingDays > MAX_BRIDGED_MISSING_DAYS) {
+        hasLongGap = true
+      } else if (missingDays > 0) {
+        // Separate each bridge so it cannot join a different pair of observations.
+        if (data.length > 0) data.push([previous.day, null])
+        data.push([previous.day, previous.value], [day, value])
+      }
     }
     previous = { index, day, value }
   })
 
-  return data
+  return { data, hasLongGap }
 }
 
 /**
@@ -50,8 +61,15 @@ function buildGapBridgeData(dayKeys: string[], values: Array<number | null>) {
  */
 export function buildMultiSeriesTrendOption(params: {
   dayKeys: string[]
-  series: Array<{ name: string; values: Array<number | null> }>
+  series: Array<{
+    name: string
+    values: Array<number | null>
+    valueFormatter?: (value: number | string, dataIndex: number) => string
+  }>
   chartType: BalanceHistoryTrendChartType
+  bridgeGaps?: boolean
+  missingValueLabel?: string
+  scaleY?: boolean
   yAxisLabel?: string
   axisLabelFormatter?: (value: number | string, index: number) => string
   valueFormatter?: (value: number | string, dataIndex: number) => string
@@ -62,26 +80,45 @@ export function buildMultiSeriesTrendOption(params: {
     chartType,
     yAxisLabel,
     axisLabelFormatter,
+    missingValueLabel,
     valueFormatter,
   } = params
 
-  const tooltipValueFormatter = valueFormatter
-    ? (value: unknown, dataIndex: number) =>
-        valueFormatter(normalizeTooltipValue(value), dataIndex)
-    : undefined
+  const formatTrendTooltip = (
+    formatValue: typeof valueFormatter,
+    value: unknown,
+    dataIndex: number,
+  ) => {
+    const normalized = normalizeTooltipValue(value)
+    if (missingValueLabel && (normalized === "" || Number.isNaN(normalized))) {
+      return missingValueLabel
+    }
+    return formatValue?.(normalized, dataIndex) ?? String(normalized)
+  }
 
   const legendTextColor = CHART_COLORS.axis
 
   const gapBridges: LineSeriesOption[] = []
   const resolvedSeries = series.map((entry) => {
-    if (chartType === "line") {
-      const bridge = buildGapBridgeData(dayKeys, entry.values)
-      if (bridge.length > 0) {
+    const tooltip = entry.valueFormatter
+      ? {
+          tooltip: {
+            valueFormatter: (value: unknown, dataIndex: number) =>
+              formatTrendTooltip(entry.valueFormatter, value, dataIndex),
+          },
+        }
+      : {}
+    if (chartType === BALANCE_HISTORY_TREND_CHART_TYPES.Line) {
+      const bridge =
+        params.bridgeGaps === false
+          ? undefined
+          : buildGapBridgeData(dayKeys, entry.values)
+      if (bridge?.data.length) {
         gapBridges.push({
           // Sharing the name keeps color and visibility tied to the account legend.
           name: entry.name,
-          type: "line",
-          data: bridge,
+          type: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+          data: bridge.data,
           encode: { x: 0, y: 1 },
           connectNulls: false,
           showSymbol: false,
@@ -94,11 +131,12 @@ export function buildMultiSeriesTrendOption(params: {
       }
       return {
         name: entry.name,
+        ...tooltip,
         type: "line" as const,
         data: entry.values,
         // Keep sparse points visible (single-day snapshots), but avoid heavy clutter.
         showSymbol: true,
-        showAllSymbol: "auto" as const,
+        showAllSymbol: !bridge || bridge.hasLongGap ? true : ("auto" as const),
         symbol: "circle",
         symbolSize: 4,
         smooth: true,
@@ -108,6 +146,7 @@ export function buildMultiSeriesTrendOption(params: {
 
     return {
       name: entry.name,
+      ...tooltip,
       type: "bar" as const,
       data: entry.values,
       barMaxWidth: 18,
@@ -118,8 +157,11 @@ export function buildMultiSeriesTrendOption(params: {
     backgroundColor: "transparent",
     tooltip: {
       trigger: "axis",
-      ...(tooltipValueFormatter
-        ? { valueFormatter: tooltipValueFormatter }
+      ...(valueFormatter || missingValueLabel
+        ? {
+            valueFormatter: (value: unknown, dataIndex: number) =>
+              formatTrendTooltip(valueFormatter, value, dataIndex),
+          }
         : {}),
     },
     legend: {
@@ -146,6 +188,7 @@ export function buildMultiSeriesTrendOption(params: {
     },
     yAxis: {
       type: "value",
+      ...(params.scaleY === undefined ? {} : { scale: params.scaleY }),
       name: yAxisLabel,
       axisLabel: {
         color: CHART_COLORS.axis,
@@ -214,67 +257,6 @@ export function buildAccountBreakdownPieOption(params: {
         emphasis: { label: { show: true, fontSize: 12, fontWeight: "bold" } },
         labelLine: { show: false },
         data,
-      },
-    ],
-  }
-}
-
-/**
- * Build a histogram-style bar option for per-account distribution views.
- *
- * Uses a horizontal bar layout for long account labels.
- */
-export function buildAccountBreakdownBarOption(params: {
-  categories: string[]
-  values: number[]
-  valueLabel?: string
-  axisLabelFormatter?: (value: number | string, index: number) => string
-  valueFormatter?: (value: number | string, dataIndex: number) => string
-}): EChartsOption {
-  const { categories, values, valueLabel, axisLabelFormatter, valueFormatter } =
-    params
-
-  const tooltipValueFormatter = valueFormatter
-    ? (value: unknown, dataIndex: number) =>
-        valueFormatter(normalizeTooltipValue(value), dataIndex)
-    : undefined
-
-  const axisTextColor = CHART_COLORS.axis
-
-  return {
-    backgroundColor: "transparent",
-    tooltip: {
-      trigger: "item",
-      ...(tooltipValueFormatter
-        ? { valueFormatter: tooltipValueFormatter }
-        : {}),
-    },
-    grid: { left: 16, right: 16, top: 16, bottom: 16, containLabel: true },
-    xAxis: {
-      type: "value",
-      axisLabel: {
-        color: axisTextColor,
-        ...(axisLabelFormatter ? { formatter: axisLabelFormatter } : {}),
-      },
-      splitLine: { lineStyle: { color: CHART_COLORS.grid } },
-    },
-    yAxis: {
-      type: "category",
-      data: categories,
-      inverse: true,
-      axisLabel: {
-        color: axisTextColor,
-        width: 140,
-        overflow: "truncate",
-        ellipsis: "…",
-      },
-      axisLine: { lineStyle: { color: CHART_COLORS.border } },
-    },
-    series: [
-      {
-        name: valueLabel ?? "",
-        type: "bar",
-        data: values,
       },
     ],
   }

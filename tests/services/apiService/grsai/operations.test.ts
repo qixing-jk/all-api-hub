@@ -2,6 +2,8 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import { acceptBalanceRefresh } from "~/services/accounts/refresh/balanceAcceptance"
 import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { grsaiAccountBootstrap } from "~/services/apiAdapters/grsai/accountBootstrap"
@@ -58,11 +60,14 @@ describe("Grsai protocol operations", () => {
       status: "known",
       value: "9007199254740993",
     })
-    expect(data.usageObservations?.[0]?.cost?.amount).toMatchObject({
+    expect(
+      data.usageObservations?.find((usage) => usage.scope === "site_today")
+        ?.cost?.amount,
+    ).toMatchObject({
       status: "known",
       value: "9007199254740993",
     })
-    expect(data.todayStatsAvailability?.consumption.status).toBe("complete")
+    expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
   })
   it("replaces one wallet when its balance moves between user-info and dashboard endpoints", async () => {
     const primary = await fetchAccountData(request)
@@ -88,6 +93,27 @@ describe("Grsai protocol operations", () => {
     expect(merged.positions[0]?.amount.source.inputs).toContain(
       `${GRSAI_ENDPOINTS.dashboard}:credits`,
     )
+  })
+  it("keeps native provider-day spending in daily presentation without joining local-day monetary totals", async () => {
+    const data = await fetchAccountData(request)
+    expect(getSiteDayReadings(data)).toMatchObject([
+      {
+        lastKnown: false,
+        observedAt: expect.any(Number),
+        usage: {
+          scope: "site_today",
+          cost: {
+            asset: { kind: "quota", id: "grsai:credits" },
+            amount: { status: "known", value: "10" },
+          },
+        },
+      },
+    ])
+    expect(
+      getDisplayConsumptionProjection([
+        { id: "grsai", settledConsumption: data.settledConsumption },
+      ]).groups,
+    ).toEqual([])
   })
   it("reads all 101 keys across successive inventory pages", async () => {
     const inventory = Array.from({ length: 101 }, (_, index) => ({
@@ -283,7 +309,7 @@ describe("Grsai protocol operations", () => {
     })
   })
 
-  it("rejects invalid identity and dashboard data instead of saving it", async () => {
+  it("rejects invalid identity while keeping wallet when dashboard credits are absent", async () => {
     server.use(handle(GRSAI_ENDPOINTS.userInfo, { id: "" }))
     await expect(fetchUserInfo(request)).rejects.toThrow(
       "invalid_grsai_user_info",
@@ -292,9 +318,12 @@ describe("Grsai protocol operations", () => {
       handle(GRSAI_ENDPOINTS.userInfo, { id: "user", credits: 5000 }),
       handle(GRSAI_ENDPOINTS.dashboard, { credits: null }),
     )
-    await expect(fetchAccountData(request)).rejects.toThrow(
-      "invalid_grsai_dashboard",
-    )
+    const data = await fetchAccountData(request)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "5000",
+    })
+    expect(data.usage?.cost?.amount).toMatchObject({ status: "unavailable" })
   })
 
   it("falls back to dashboard credits and marks missing consumption unavailable", async () => {
@@ -303,11 +332,14 @@ describe("Grsai protocol operations", () => {
       handle(GRSAI_ENDPOINTS.dashboard, { credits: "66600" }),
     )
     const data = await fetchAccountData(request)
-    expect(data.quota).toBe(500000)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "66600",
+    })
     expect(data.today_quota_consumption).toBe(0)
     expect(data.todayStatsAvailability?.consumption).toMatchObject({
       status: "unavailable",
-      reason: "request_failed",
+      reason: "unsupported",
     })
     await expect(fetchUserInfo(request)).resolves.toMatchObject({
       username: "user",

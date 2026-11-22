@@ -1,7 +1,10 @@
 import { http, HttpResponse } from "msw"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
+import { getSiteDayUsages } from "~/services/accounts/metrics/accountTodayStats"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import { AIMLAPI_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import {
   aimlApiAccountData,
@@ -51,6 +54,217 @@ const createRequest = (
 
 const apiOrigin = AIMLAPI_API_BASE_URL
 
+it.each([undefined, null, -1, "4"])(
+  "retains known cost and token counts independently of unavailable requests: %s",
+  async (requests) => {
+    server.use(
+      http.get(`${apiOrigin}${AIMLAPI_BILLING_ENDPOINT}`, () =>
+        HttpResponse.json({
+          currency: CURRENCIES.USD,
+          current_balance: "12.5",
+        }),
+      ),
+      http.get(`${apiOrigin}${AIMLAPI_USAGE_DETAIL_ENDPOINT}`, () =>
+        HttpResponse.json({
+          spend: "2.5",
+          requests,
+          groups: [{ tokens: { input: 100, output: 50 } }],
+        }),
+      ),
+    )
+    const data = await aimlApiAccountData.fetchData(
+      createRequest({ aimlApiKey: apiKey }),
+    )
+    expect(data.settledConsumption?.[0]?.amount).toMatchObject({
+      status: "known",
+      value: "2.5",
+    })
+    expect(data.todayStatsAvailability).toMatchObject({
+      consumption: { status: "complete" },
+      requests: { status: "unavailable", reason: "invalid_payload" },
+      tokens: { status: "complete" },
+    })
+    expect(data.today_prompt_tokens).toBe(100)
+    expect(data.today_completion_tokens).toBe(50)
+  },
+)
+
+it.each([undefined, null, -1, "invalid"])(
+  "retains valid daily counters independently of unavailable billed cost: %s",
+  async (spend) => {
+    server.use(
+      http.get(`${apiOrigin}${AIMLAPI_BILLING_ENDPOINT}`, () =>
+        HttpResponse.json({
+          currency: CURRENCIES.USD,
+          current_balance: "12.5",
+        }),
+      ),
+      http.get(`${apiOrigin}${AIMLAPI_USAGE_DETAIL_ENDPOINT}`, () =>
+        HttpResponse.json({
+          spend,
+          requests: 4,
+          groups: [{ tokens: { input: 100, output: 50 } }],
+        }),
+      ),
+    )
+    const data = await aimlApiAccountData.fetchData(
+      createRequest({ aimlApiKey: apiKey }),
+    )
+    expect(data.settledConsumption?.[0]?.amount.status).toBe("unavailable")
+    expect(data.today_requests_count).toBe(4)
+    expect(data.today_prompt_tokens).toBe(100)
+    expect(data.today_completion_tokens).toBe(50)
+    expect(data.todayStatsAvailability).toMatchObject({
+      consumption: { status: "unavailable", reason: "invalid_payload" },
+      requests: { status: "complete" },
+      tokens: { status: "complete" },
+    })
+  },
+)
+
+it.each([
+  {
+    body: { spend: "2.5", groups: [] },
+    requests: "unavailable",
+    tokens: "complete",
+  },
+  {
+    body: { spend: "2.5", requests: 4, groups: [{ tokens: { input: 100 } }] },
+    requests: "complete",
+    tokens: "unavailable",
+  },
+  {
+    body: { spend: "2.5", requests: 4 },
+    requests: "complete",
+    tokens: "unavailable",
+  },
+])(
+  "retains known billed costs independently of missing daily counters: %j",
+  async ({ body, requests, tokens }) => {
+    server.use(
+      http.get(`${apiOrigin}${AIMLAPI_BILLING_ENDPOINT}`, () =>
+        HttpResponse.json({
+          currency: CURRENCIES.USD,
+          current_balance: "12.5",
+        }),
+      ),
+      http.get(`${apiOrigin}${AIMLAPI_USAGE_DETAIL_ENDPOINT}`, () =>
+        HttpResponse.json(body),
+      ),
+    )
+    const data = await aimlApiAccountData.fetchData(
+      createRequest({ aimlApiKey: apiKey }),
+    )
+    expect(data.settledConsumption?.[0]?.amount).toMatchObject({
+      status: "known",
+      value: "2.5",
+    })
+    expect(data.todayStatsAvailability).toMatchObject({
+      consumption: { status: "complete" },
+      requests: { status: requests },
+      tokens: { status: tokens },
+    })
+    expect(data.today_requests_count).toBe(requests === "complete" ? 4 : 0)
+  },
+)
+
+it("includes unfiltered UTC billed costs in financial reporting without broadening wallet restrictions", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] })
+  vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
+  server.use(
+    http.get(`${apiOrigin}${AIMLAPI_BILLING_ENDPOINT}`, () =>
+      HttpResponse.json({ currency: CURRENCIES.USD, current_balance: "12.5" }),
+    ),
+    http.get(`${apiOrigin}${AIMLAPI_USAGE_DETAIL_ENDPOINT}`, () =>
+      HttpResponse.json({ spend: "2.5", requests: 4, groups: [] }),
+    ),
+  )
+  const data = await aimlApiAccountData.fetchData(
+    createRequest({ aimlApiKey: apiKey }),
+  )
+  const projection = getDisplayConsumptionProjection([
+    { id: "acc-aimlapi", settledConsumption: data.settledConsumption },
+  ])
+  const providerCost = getSiteDayUsages(data)[0]?.cost?.amount
+  expect(
+    projection.groups[0]?.amount.value ??
+      (providerCost?.status === "known" ? providerCost.value : undefined),
+  ).toBe("2.5")
+  expect(data.settledConsumption?.[0]).toMatchObject({
+    cumulative: true,
+    scope: {
+      projects: { kind: "all" },
+      keys: { kind: "all" },
+      models: { kind: "all" },
+      groups: { kind: "all" },
+    },
+    window: {
+      start: Date.parse("2026-11-19T00:00:00Z"),
+      end: Date.parse("2026-11-20T00:00:00Z"),
+      timeZone: "UTC",
+    },
+  })
+  expect(data.balance?.positions[0]?.scope.keys).toEqual({ kind: "unknown" })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+it("keeps a missing billed cost unavailable while retaining known request counts", async () => {
+  server.use(
+    http.get(`${apiOrigin}${AIMLAPI_BILLING_ENDPOINT}`, () =>
+      HttpResponse.json({ currency: CURRENCIES.USD, current_balance: "12.5" }),
+    ),
+    http.get(`${apiOrigin}${AIMLAPI_USAGE_DETAIL_ENDPOINT}`, () =>
+      HttpResponse.json({ spend: null, requests: 4, groups: [] }),
+    ),
+  )
+  const data = await aimlApiAccountData.fetchData(
+    createRequest({ aimlApiKey: apiKey }),
+  )
+  expect(data.settledConsumption?.[0]?.amount.status).toBe("unavailable")
+  expect(
+    getDisplayConsumptionProjection([
+      { id: "acc-aimlapi", settledConsumption: data.settledConsumption },
+    ]).groups,
+  ).toEqual([])
+  expect(data.todayStatsAvailability?.consumption).toMatchObject({
+    status: "unavailable",
+    reason: "invalid_payload",
+  })
+  expect(data.today_requests_count).toBe(4)
+})
+
+it("preserves exact wallet and UTC billed spend without scaling through product quota", async () => {
+  server.use(
+    http.get(`${apiOrigin}${AIMLAPI_BILLING_ENDPOINT}`, () =>
+      HttpResponse.json({
+        currency: CURRENCIES.USD,
+        current_balance: "12.000000000000000017",
+      }),
+    ),
+    http.get(`${apiOrigin}${AIMLAPI_USAGE_DETAIL_ENDPOINT}`, () =>
+      HttpResponse.json({
+        spend: "0.000000000000000017",
+        requests: 1,
+        groups: [],
+      }),
+    ),
+  )
+  const data = await aimlApiAccountData.fetchData(
+    createRequest({ aimlApiKey: apiKey }),
+  )
+  expect(data.balance?.positions[0]?.amount).toMatchObject({
+    value: "12.000000000000000017",
+  })
+  expect(data.settledConsumption?.[0]).toMatchObject({
+    asset: { kind: "currency", code: "USD" },
+    amount: { value: "0.000000000000000017" },
+    window: { timeZone: "UTC" },
+  })
+})
+
 it("keeps public model discovery anonymous even with saved account credentials", async () => {
   let authorization: string | null | undefined
   server.use(
@@ -72,11 +286,64 @@ it("keeps public model discovery anonymous even with saved account credentials",
 })
 
 describe("AI/ML API account data", () => {
+  it("does not redate a balance when the following usage request crosses midnight", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(1740787200000)
+    server.use(
+      http.get(`${apiOrigin}${AIMLAPI_USAGE_DETAIL_ENDPOINT}`, () => {
+        vi.setSystemTime(1740873600000)
+        return HttpResponse.json({ spend: 0, requests: 0, groups: [] })
+      }),
+    )
+    try {
+      const data = await aimlApiAccountData.fetchData(
+        createRequest({ aimlApiKey: apiKey }),
+      )
+      expect(data.balance?.capturedAt).toBe(1740787200000)
+      expect(data.balance?.positions[0]?.amount).toMatchObject({
+        observedAt: 1740787200000,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+  it("preserves native USD and known asset identity when regular credentials are missing", async () => {
+    const known = await aimlApiAccountData.fetchData(
+      createRequest({ aimlApiKey: apiKey }),
+    )
+    expect(known).not.toHaveProperty("quota")
+    expect(known).not.toHaveProperty("nativeBalance")
+    expect(known.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      nature: "prepaid",
+      amount: { status: "known", value: "12.5" },
+    })
+    const unavailable = await aimlApiAccountData.fetchData(createRequest())
+    expect(known.balanceRefreshParts).toEqual([
+      expect.objectContaining({
+        enumeration: "complete",
+        positions: known.balance?.positions,
+      }),
+    ])
+    expect(unavailable.balanceRefreshParts).toEqual([
+      expect.objectContaining({
+        enumeration: "complete",
+        positions: unavailable.balance?.positions,
+      }),
+    ])
+    expect(unavailable.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "unavailable" },
+    })
+  })
   beforeEach(() => {
     server.use(
       http.get(`${apiOrigin}${AIMLAPI_BILLING_ENDPOINT}`, ({ request }) => {
         expect(request.headers.get("authorization")).toBe(`Bearer ${apiKey}`)
-        return HttpResponse.json({ current_balance: 12.5, currency: "USD" })
+        return HttpResponse.json({
+          current_balance: 12.5,
+          currency: CURRENCIES.USD,
+        })
       }),
       http.get(
         `${apiOrigin}${AIMLAPI_BILLING_DETAIL_ENDPOINT}`,
@@ -86,12 +353,12 @@ describe("AI/ML API account data", () => {
             user_id: 123,
             email: "user@example.com",
             current_balance: 12.5,
-            currency: "USD",
+            currency: CURRENCIES.USD,
             autotopup_settings: {
               is_enabled: false,
               threshold: 10,
               amount: 20,
-              currency: "USD",
+              currency: CURRENCIES.USD,
             },
           })
         },
@@ -108,7 +375,7 @@ describe("AI/ML API account data", () => {
             start: "2026-10-24T00:00:00.000Z",
             end: "2026-10-25T00:00:00.000Z",
             spend: 1.25,
-            currency: "USD",
+            currency: CURRENCIES.USD,
             requests: 7,
             models: [],
             groups: [
@@ -134,11 +401,9 @@ describe("AI/ML API account data", () => {
       createRequest({ aimlApiKey: apiKey }),
     )
 
-    expect(data.quota).toBe(12.5 * 500_000)
-    expect(data.nativeBalance).toMatchObject({
-      unit: "USD",
-      permanent: 12.5,
-      total: 12.5,
+    expect(data.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "12.5" },
     })
     expect(data.today_quota_consumption).toBe(625_000)
     expect(data.today_prompt_tokens).toBe(1000)
@@ -156,9 +421,7 @@ describe("AI/ML API account data", () => {
     const data = await aimlApiAccountData.fetchData(createRequest())
 
     // The management key is rejected by the billing route, so no balance is known.
-    expect(data.quota).toBe(0)
-    expect(data.balanceUnavailable).toBe(true)
-    expect(data.nativeBalance).toBeUndefined()
+    expect(data.balance?.positions[0]?.amount.status).toBe("unavailable")
     expect(data.todayStatsAvailability).toMatchObject({
       consumption: { status: "unavailable", reason: "unsupported" },
       requests: { status: "unavailable", reason: "unsupported" },
@@ -195,7 +458,10 @@ describe("AI/ML API account data", () => {
       createRequest({ aimlApiKey: apiKey }),
     )
 
-    expect(data.nativeBalance?.unit).toBe("USD")
+    expect(data.balance?.positions[0]?.asset).toEqual({
+      kind: "currency",
+      code: "USD",
+    })
     expect(data.todayStatsAvailability?.consumption).toMatchObject({
       status: "unavailable",
       reason: "request_failed",
@@ -219,7 +485,12 @@ describe("AI/ML API usage and logs", () => {
       )
       const page = await fetchAimlApiKeyUsagePage(
         createRequest({ aimlApiKey: apiKey }),
-        { page: 2, pageSize, startTimestamp: 0, endTimestamp: Date.now() },
+        {
+          page: 2,
+          pageSize,
+          startTimestamp: 0,
+          endTimestamp: Math.floor(Date.now() / 1000),
+        },
       )
       const expectedOffset = pageSize === 200 ? 100 : 1
       expect(requests[0]!.searchParams.get("limit")).toBe(
@@ -233,11 +504,13 @@ describe("AI/ML API usage and logs", () => {
   )
 
   it("pages request logs into the shared usage history shape", async () => {
+    const endTimestamp = Date.parse("2026-10-25T00:00:00.000Z") / 1000
     server.use(
       http.get(`${apiOrigin}${AIMLAPI_LOGS_ENDPOINT}`, ({ request }) => {
         const url = new URL(request.url)
         expect(url.searchParams.get("limit")).toBe("50")
         expect(url.searchParams.get("offset")).toBe("0")
+        expect(url.searchParams.get("end")).toBe("2026-10-25T00:00:00.000Z")
         return HttpResponse.json({
           data: [
             {
@@ -270,7 +543,7 @@ describe("AI/ML API usage and logs", () => {
 
     const page = await fetchAimlApiKeyUsagePage(
       createRequest({ aimlApiKey: apiKey }),
-      { page: 1, pageSize: 50, startTimestamp: 0, endTimestamp: Date.now() },
+      { page: 1, pageSize: 50, startTimestamp: 0, endTimestamp },
     )
 
     expect(page.total).toBe(2)
@@ -278,6 +551,10 @@ describe("AI/ML API usage and logs", () => {
     expect(page.items[0]).toMatchObject({
       model_name: "openai/gpt-5",
       quota: 0.002 * 500_000,
+      consumption: {
+        asset: { kind: "currency", code: "USD" },
+        amount: { status: "known", value: "0.002" },
+      },
       prompt_tokens: 12,
       completion_tokens: 34,
     })
@@ -296,7 +573,7 @@ describe("AI/ML API usage and logs", () => {
             start: "2026-10-24T00:00:00.000Z",
             end: "2026-10-25T00:00:00.000Z",
             spend: 0,
-            currency: "USD",
+            currency: CURRENCIES.USD,
             requests: 0,
             models: [],
             groups: [],

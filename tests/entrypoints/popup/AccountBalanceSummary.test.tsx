@@ -10,13 +10,17 @@ import {
   accountBalanceScope,
   accountBalanceSnapshot,
 } from "~/services/accounts/balanceSnapshot"
-import { balancePosition } from "~/services/amounts/balance"
+import { buildNetInflowTotals } from "~/services/accounts/metrics/netInflowTotals"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
   BALANCE_NATURES,
   BALANCE_VALIDITY_KINDS,
   EVIDENCE_KINDS,
   FINANCIAL_COVERAGE,
+  FINANCIAL_SETTLEMENT_STATUSES,
+  FINANCIAL_SUBJECT_KINDS,
+  INCOME_CLASSIFICATIONS,
   SCOPE_SELECTION_KINDS,
 } from "~/services/amounts/financialConstants"
 import {
@@ -29,6 +33,10 @@ import {
 } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
+import {
+  buildNetInflow,
+  buildNetInflowItem,
+} from "~~/tests/test-utils/netInflow"
 import { act, render, screen, within } from "~~/tests/test-utils/render"
 
 // Hoisted fixtures load dependency-free runtime values before component imports.
@@ -66,24 +74,6 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 describe("AccountBalanceSummary", () => {
-  it("keeps the released income estimate in the intermediate account summary", () => {
-    netEnabled.value = true
-    context.mockReturnValue({
-      displayData: [],
-      todayIncomeEstimateTotals: { estimated: { USD: 2, CNY: 14 } },
-    })
-    render(<AccountBalanceSummary />)
-    expect(screen.getByText("account:stats.estimatedTodayIncome")).toBeVisible()
-    expect(screen.getByText(/USD\s2(?:\.00)?$/)).toBeVisible()
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-    netEnabled.value = false
-    displayCurrency.value = CURRENCIES.USD
-    displayCurrency.mode = undefined
-  })
-
   it.each([
     [CURRENCIES.USD, /USD\s2\.00/, /USD\s4\.00/],
     [CURRENCIES.CNY, /CNY\s21\.00/, /CNY\s42\.00/],
@@ -607,6 +597,187 @@ describe("AccountBalanceSummary", () => {
       /Personal wallet.*financial\.exclusions\.settings/,
     )
   })
+  it("keeps balance, consumption and income visible even before daily amounts are available", async () => {
+    netEnabled.value = true
+    const example = buildDevSiteFinancialScenarios(Date.now()).find(
+      (item) => item.siteType === "novita",
+    )!
+    const sites = [
+      buildDisplaySiteData({
+        id: "novita",
+        name: "Novita",
+        balanceSnapshot: example.balance,
+      }),
+    ]
+    context.mockReturnValue({
+      displayData: sites,
+      netInflowTotals: buildNetInflowTotals(sites),
+    })
+    const user = userEvent.setup()
+    render(<AccountBalanceSummary />)
+    expect(screen.getByText("$12.30")).toBeVisible()
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: testI18n.t("account:financial.prepaidTotal"),
+      }),
+    ).not.toBeInTheDocument()
+    for (const label of [
+      "account:stats.todayConsumption",
+      "account:filteredTotals.income",
+    ]) {
+      const metric = screen.getByRole("region", { name: testI18n.t(label) })
+      expect(metric).toBeVisible()
+      expect(metric).not.toHaveTextContent(/\$0\.00|USD 0/)
+    }
+    await user.click(
+      screen.getByRole("button", {
+        name: testI18n.t("account:financial.summary"),
+      }),
+    )
+    const details = screen.getByRole("dialog", {
+      name: testI18n.t("account:financial.summary"),
+    })
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    expect(details).not.toHaveTextContent(
+      testI18n.t("account:financial.prepaidSubtotal"),
+    )
+    expect(details).not.toHaveTextContent("$0.00")
+    expect(details).toHaveTextContent("$12.30")
+  })
+  it("keeps one primary balance and reveals separate same-label assets with their site names", async () => {
+    displayCurrency.value = CURRENCIES.CNY
+    const examples = buildDevSiteFinancialScenarios(Date.now()).filter(
+      (example) => ["dahl", "emrank", "aimlapi"].includes(example.siteType),
+    )
+    const sites = examples.map((example) =>
+      buildDisplaySiteData({
+        id: example.siteType,
+        name: example.siteType,
+        balanceSnapshot: example.balance,
+      }),
+    )
+    context.mockReturnValue({
+      displayData: sites,
+      netInflowTotals: buildNetInflowTotals(sites),
+    })
+    const user = userEvent.setup()
+    const view = render(<AccountBalanceSummary />)
+    expect(
+      screen.getByText(testI18n.t("account:financial.convertedToCny")),
+    ).toBeVisible()
+    expect(screen.queryAllByText(/M Token/)).toHaveLength(0)
+    await user.click(
+      screen.getByRole("button", {
+        name: testI18n.t("account:financial.summary"),
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: testI18n.t("account:financial.assetCount"),
+      }),
+    )
+    const details = screen.getByRole("group", {
+      name: testI18n.t("account:financial.details"),
+    })
+    expect(details).toHaveTextContent("dahl")
+    expect(details).toHaveTextContent("emrank")
+    expect(details).toHaveTextContent("USD")
+    expect(screen.getAllByText("2.5 M Token")).toHaveLength(2)
+    await user.keyboard("{Escape}")
+    displayCurrency.value = CURRENCIES.USD
+    displayCurrency.mode = undefined
+    view.rerender(<AccountBalanceSummary />)
+    expect(
+      screen.queryByText(testI18n.t("account:financial.convertedToCny")),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("USD")).toBeVisible()
+  })
+  it("labels quota totals only with accepted live sources after expiry and wallet deduplication", async () => {
+    const now = Date.now()
+    const source = {
+      adapter: "fixture",
+      operation: "balance",
+      contractVersion: "1",
+      kind: EVIDENCE_KINDS.Reported,
+    }
+    const site = (
+      id: string,
+      value: string,
+      observedAt: number,
+      walletId: string,
+      expired = false,
+    ) => {
+      const scope = {
+        ...accountBalanceScope(
+          { baseUrl: "https://quota.example", accountId: id },
+          { walletId },
+        ),
+        projects: { kind: SCOPE_SELECTION_KINDS.All },
+        keys: { kind: SCOPE_SELECTION_KINDS.All },
+        groups: { kind: SCOPE_SELECTION_KINDS.All },
+        models: { kind: SCOPE_SELECTION_KINDS.All },
+      }
+      const position = balancePosition({
+        id: "available",
+        scope,
+        source,
+        value,
+        observedAt,
+        asset: {
+          kind: ASSET_KINDS.Quota,
+          id: "provider:credits",
+          label: "Credits",
+          displayScale: 1,
+          displayLabel: "Credits",
+        },
+        nature: BALANCE_NATURES.Prepaid,
+        validity: expired
+          ? { kind: BALANCE_VALIDITY_KINDS.Expires, at: now - 1 }
+          : { kind: BALANCE_VALIDITY_KINDS.NoExpiry },
+      })
+      return buildDisplaySiteData({
+        id,
+        name: id,
+        balanceSnapshot: accountBalanceSnapshot(
+          scope,
+          [position],
+          observedAt,
+          FINANCIAL_COVERAGE.Complete,
+        ),
+      })
+    }
+    const sites = [
+      buildDisplaySiteData({ id: "missing", name: "Missing source" }),
+      site("Old source", "10", now - 3, "same-wallet"),
+      site("Live source", "20", now - 2, "same-wallet"),
+      site("Expired source", "30", now - 2, "expired-wallet", true),
+    ]
+    context.mockReturnValue({
+      displayData: sites,
+      netInflowTotals: buildNetInflowTotals(sites),
+    })
+    const user = userEvent.setup()
+    render(<AccountBalanceSummary />)
+    expect(screen.getByText("20 Credits")).toBeVisible()
+    await user.click(
+      screen.getByRole("button", {
+        name: testI18n.t("account:financial.summary"),
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: testI18n.t("account:financial.assetCount"),
+      }),
+    )
+    const details = screen.getByRole("group", {
+      name: testI18n.t("account:financial.details"),
+    })
+    expect(details).toHaveTextContent("Live source")
+    expect(details).not.toHaveTextContent("Old source")
+    expect(details).not.toHaveTextContent("Expired source")
+    expect(details).not.toHaveTextContent("Missing source")
+  })
   it("keeps a stable native primary asset when no currency exists and account order changes", () => {
     const sites = buildDevSiteFinancialScenarios(Date.now())
       .filter((example) => ["dahl", "emrank"].includes(example.siteType))
@@ -627,6 +798,163 @@ describe("AccountBalanceSummary", () => {
     expect(screen.getByText("2.5 M Token")).toBeVisible()
     expect(screen.queryByText(/USD|CNY/)).not.toBeInTheDocument()
   })
+  it.each([
+    ["consumption", false],
+    ["income", false],
+    ["consumption", true],
+  ] as const)(
+    "keeps native %s compact and reveals its interval on demand (full day: %s)",
+    async (metric, fullDay) => {
+      displayCurrency.mode = CURRENCY_DISPLAY_MODES.Original
+      vi.useFakeTimers({ toFake: ["Date"] })
+      const user = userEvent.setup()
+      const now = new Date(2026, 10, 11, 12).getTime()
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      vi.setSystemTime(now)
+      netEnabled.value = true
+      const scope = {
+        subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId: "a" },
+        authority: "https://usage.example",
+        projects: { kind: SCOPE_SELECTION_KINDS.All },
+        keys: { kind: SCOPE_SELECTION_KINDS.All },
+        models: { kind: SCOPE_SELECTION_KINDS.All },
+        groups: { kind: SCOPE_SELECTION_KINDS.All },
+      }
+      const sites = [
+        buildDisplaySiteData({
+          id: "a",
+          todayConsumption: { USD: 999, CNY: 6993 },
+          [metric === "income" ? "reportedIncome" : "settledConsumption"]: [
+            {
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+              amount: observeAmount(
+                "1.000000000000000017",
+                {
+                  adapter: "fixture",
+                  operation: "cost",
+                  contractVersion: "1",
+                  kind: EVIDENCE_KINDS.Reported,
+                },
+                now,
+              ),
+              scope,
+              window: {
+                start: new Date(2026, 10, 11).getTime(),
+                end: fullDay ? new Date(2026, 10, 12).getTime() : now,
+                timeZone,
+              },
+              coverage: fullDay ? "complete" : "partial",
+              ...(metric === "income"
+                ? { classification: INCOME_CLASSIFICATIONS.Unclassified }
+                : { settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled }),
+            },
+          ],
+        }),
+      ]
+      context.mockReturnValue({
+        displayData: sites,
+        netInflowTotals: buildNetInflowTotals(sites),
+        prevTotalConsumption: { USD: 0, CNY: 0 },
+      })
+      render(<AccountBalanceSummary />)
+      expect(screen.getByText(/CNY\s*1\.00$/)).toBeVisible()
+      if (!fullDay)
+        expect(
+          screen.getByText(
+            testI18n.t("account:todayMetricAvailability.partial"),
+          ),
+        ).toBeVisible()
+      expect(
+        screen.queryByText(/CNY\s*1\.000000000000000017/),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(timeZone, { exact: false }),
+      ).not.toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", {
+          name: testI18n.t("account:financial.summary"),
+        }),
+      )
+      expect(screen.getByText(/CNY\s*1\.000000000000000017/)).toBeVisible()
+      const interval = screen.getByRole("button", {
+        name: /account:financial\.window/,
+      })
+      expect(interval).toHaveTextContent(
+        testI18n.t(
+          fullDay
+            ? "account:financial.fullDay"
+            : "account:financial.observedThrough",
+        ),
+      )
+      expect(interval).not.toHaveTextContent("00:00")
+      expect(interval).not.toHaveTextContent(timeZone)
+      await user.click(interval)
+      const tooltip = await screen.findByRole("tooltip")
+      expect(tooltip).toHaveTextContent(
+        fullDay ? /11.*00:00:00.*12.*00:00:00/ : /00:00:00.*12:00:00/,
+      )
+      expect(tooltip).toHaveTextContent(timeZone)
+      expect(screen.queryByText(/999/)).not.toBeInTheDocument()
+    },
+  )
+  afterEach(() => {
+    vi.useRealTimers()
+    netEnabled.value = false
+    displayCurrency.value = CURRENCIES.USD
+    displayCurrency.mode = undefined
+  })
+
+  it("shows native net inflow separately and moves estimate coverage to details", async () => {
+    netEnabled.value = true
+    const sites = [
+      buildDisplaySiteData({
+        id: "known",
+        netInflowEstimate: {
+          status: "available",
+          estimates: [
+            buildNetInflowItem(buildNetInflow()),
+            buildNetInflowItem({
+              ...buildNetInflow(),
+              amount: {
+                value: "2",
+                asset: { kind: ASSET_KINDS.Crypto, id: "XNO" },
+              },
+            }),
+          ],
+        },
+        todayIncome: { USD: 2, CNY: 14 },
+      }),
+      buildDisplaySiteData({
+        id: "old",
+        netInflowEstimate: { status: "legacy", estimates: [] },
+        todayIncome: { USD: 0, CNY: 0 },
+      }),
+    ]
+    context.mockReturnValue({
+      displayData: sites,
+      netInflowTotals: buildNetInflowTotals(sites),
+      prevTotalConsumption: { USD: 0, CNY: 0 },
+    })
+    render(<AccountBalanceSummary />)
+    const net = screen.getByRole("region", {
+      name: testI18n.t("account:stats.estimatedNetInflow"),
+    })
+    expect(net).toHaveTextContent(/CNY\s*-5|-[^0-9]*CNY\s*5/)
+    expect(net).toHaveTextContent("2 XNO")
+    const coverage = testI18n.t("account:netInflow.coverage", {
+      included: 1,
+      eligible: 2,
+    })
+    expect(net).not.toHaveTextContent(coverage)
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: testI18n.t("account:financial.summary"),
+      }),
+    )
+    expect(screen.getByRole("dialog")).toHaveTextContent(coverage)
+    expect(net).not.toHaveTextContent("$2")
+  })
+
   it.each(["timer", "focus", "visibility"] as const)(
     "removes expired available credit after %s",
     (wake) => {

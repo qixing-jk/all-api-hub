@@ -1,9 +1,29 @@
+import { CURRENCIES } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+  accountReportingScope,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { addDecimal, parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_LABEL_KEYS,
+  BALANCE_NATURES,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_ENUMERATION,
+  FINANCIAL_SETTLEMENT_STATUSES,
+  OBSERVATION_STATUSES,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import { fetchVoApiV2Data } from "~/services/apiService/voapiV2/dashboardRequest"
 import {
   amountToQuota,
@@ -29,6 +49,12 @@ import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("ApiService.VoAPIV2")
 
+const STATISTICS_RESULTS = {
+  Success: "success",
+  Failed: "failed",
+  Skipped: "skipped",
+} as const
+
 type VoApiV2AccountDataRequest = ApiServiceRequest &
   Partial<
     Pick<
@@ -37,7 +63,7 @@ type VoApiV2AccountDataRequest = ApiServiceRequest &
     >
   >
 
-const buildTodayStatisticsEndpoint = () => {
+const buildTodayStatisticsQuery = () => {
   const frozenNow = new Date()
   const start = new Date(frozenNow.getTime())
   start.setHours(0, 0, 0, 0)
@@ -45,7 +71,14 @@ const buildTodayStatisticsEndpoint = () => {
   const end = new Date(frozenNow.getTime())
   end.setHours(23, 59, 59, 999)
 
-  return `${VOAPI_V2_ENDPOINTS.DashboardStatistics}?t=h&s=${start.getTime()}&e=${end.getTime()}`
+  return {
+    endpoint: `${VOAPI_V2_ENDPOINTS.DashboardStatistics}?t=h&s=${start.getTime()}&e=${end.getTime()}`,
+    window: {
+      start: start.getTime(),
+      end: end.getTime() + 1,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    },
+  }
 }
 
 const completeAvailability = (): AccountTodayMetricAvailability => ({
@@ -57,11 +90,6 @@ const unavailableAvailability = (
 ): AccountTodayMetricAvailability => ({
   status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
   reason,
-})
-
-const partialAvailability = (): AccountTodayMetricAvailability => ({
-  status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-  reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
 })
 
 /**
@@ -86,33 +114,94 @@ export async function fetchVoApiV2AccountData(
   request: VoApiV2AccountDataRequest,
 ): Promise<AccountData> {
   const resolvedCheckIn = normalizeCheckInConfigV7(request.checkIn)
-  const userInfoPromise = fetchVoApiV2UserInfo(request)
+  const statisticsQuery = buildTodayStatisticsQuery()
+  const userInfoPromise = fetchVoApiV2UserInfo(request).then((userInfo) => ({
+    userInfo,
+    observedAt: Date.now(),
+  }))
   // VoAPI v2 dashboard statistics accept one millisecond date range and return
   // requests plus separate basic/bound usage. Source: https://github.com/VoAPI/VoAPI
   const statsPromise =
     request.includeTodayCashflow !== false
       ? fetchVoApiV2Data<VoApiV2DashboardStatistics>(
           request,
-          buildTodayStatisticsEndpoint(),
+          statisticsQuery.endpoint,
           { cache: "no-store" },
         )
-          .then((data) => ({ kind: "success" as const, data }))
+          .then((data) => ({
+            kind: STATISTICS_RESULTS.Success,
+            data,
+            observedAt: Date.now(),
+          }))
           .catch((error: unknown) => {
             logger.warn("Failed to fetch VoAPI v2 dashboard statistics", error)
-            return { kind: "failed" as const }
+            return { kind: STATISTICS_RESULTS.Failed }
           })
-      : Promise.resolve({ kind: "skipped" as const })
+      : Promise.resolve({ kind: STATISTICS_RESULTS.Skipped })
 
-  const [userInfo, statsResult] = await Promise.all([
+  const [{ userInfo, observedAt }, statsResult] = await Promise.all([
     userInfoPromise,
     statsPromise,
   ])
 
-  const quota =
-    amountToQuota(userInfo.basicBalance) + amountToQuota(userInfo.bindBalance)
-  const stats = statsResult.kind === "success" ? statsResult.data : undefined
-  const usedBasicBalance = toOptionalFiniteNumber(stats?.d?.usedBasicBalance)
-  const usedBindBalance = toOptionalFiniteNumber(stats?.d?.usedBindBalance)
+  const scope = accountBalanceScope(request)
+  const balance = accountBalanceObservation(
+    scope,
+    (["basicBalance", "bindBalance"] as const).map((field) =>
+      balancePosition({
+        id: field,
+        labelKey:
+          field === "basicBalance"
+            ? BALANCE_LABEL_KEYS.Basic
+            : BALANCE_LABEL_KEYS.Bound,
+        collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+        scope,
+        observedAt,
+        value: userInfo?.[field],
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        nature:
+          field === "basicBalance"
+            ? BALANCE_NATURES.Prepaid
+            : BALANCE_NATURES.Unknown,
+        source: {
+          adapter: SITE_TYPES.VO_API_V2,
+          operation: VOAPI_V2_ENDPOINTS.UserInfo,
+          inputs: [field],
+          contractVersion: "usd/v1",
+          kind: EVIDENCE_KINDS.Reported,
+        },
+      }),
+    ),
+    observedAt,
+    FINANCIAL_ENUMERATION.Complete,
+  )
+  const stats =
+    statsResult.kind === STATISTICS_RESULTS.Success
+      ? statsResult.data
+      : undefined
+  for (const position of balance.balance.positions) {
+    if (position.amount.status === OBSERVATION_STATUSES.Known)
+      balance.balanceRefreshParts.push({
+        collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+        source: {
+          ...position.amount.source,
+          operation: `${VOAPI_V2_ENDPOINTS.UserInfo}:${position.id}`,
+        },
+        enumeration: FINANCIAL_ENUMERATION.Complete,
+        positions: [],
+      })
+  }
+  const usedBasicBalance = parseDecimal(stats?.d?.usedBasicBalance)
+  const usedBindBalance = parseDecimal(stats?.d?.usedBindBalance)
+  let nativeConsumption: string | undefined
+  try {
+    nativeConsumption =
+      usedBasicBalance !== undefined && usedBindBalance !== undefined
+        ? addDecimal(usedBasicBalance, usedBindBalance)
+        : (usedBasicBalance ?? usedBindBalance)
+  } catch {
+    nativeConsumption = undefined
+  }
   const requests = toOptionalFiniteNumber(stats?.d?.requests)
   const validConsumptionSourceCount =
     Number(usedBasicBalance !== undefined) +
@@ -127,12 +216,12 @@ export async function fetchVoApiV2AccountData(
     ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
   )
   const todayStatsAvailability =
-    statsResult.kind === "skipped"
+    statsResult.kind === STATISTICS_RESULTS.Skipped
       ? {
           consumption: notCollected,
           requests: notCollected,
         }
-      : statsResult.kind === "failed"
+      : statsResult.kind === STATISTICS_RESULTS.Failed
         ? {
             consumption: requestFailure,
             requests: requestFailure,
@@ -141,17 +230,54 @@ export async function fetchVoApiV2AccountData(
             consumption:
               validConsumptionSourceCount === 2
                 ? completeAvailability()
-                : validConsumptionSourceCount === 1
-                  ? partialAvailability()
-                  : invalidPayload,
+                : invalidPayload,
             requests:
               requests === undefined ? invalidPayload : completeAvailability(),
           }
 
   return {
-    quota,
+    ...balance,
+    ...(statsResult.kind === STATISTICS_RESULTS.Success
+      ? {
+          settledConsumption: [
+            {
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+              scope: accountReportingScope(request),
+              window: statisticsQuery.window,
+              settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+              coverage:
+                validConsumptionSourceCount === 2
+                  ? FINANCIAL_COVERAGE.Complete
+                  : FINANCIAL_COVERAGE.Partial,
+              amount: observeAmount(
+                nativeConsumption,
+                {
+                  adapter: SITE_TYPES.VO_API_V2,
+                  operation: `${VOAPI_V2_ENDPOINTS.DashboardStatistics}:consumption`,
+                  contractVersion: "usd/v1",
+                  kind: EVIDENCE_KINDS.Derived,
+                  inputs: ["usedBasicBalance", "usedBindBalance"],
+                  amountInputs: {
+                    ...(usedBasicBalance === undefined
+                      ? {}
+                      : { usedBasicBalance }),
+                    ...(usedBindBalance === undefined
+                      ? {}
+                      : { usedBindBalance }),
+                  },
+                },
+                statsResult.observedAt,
+              ),
+            },
+          ],
+        }
+      : {}),
     today_quota_consumption:
-      amountToQuota(usedBasicBalance) + amountToQuota(usedBindBalance),
+      nativeConsumption !== undefined &&
+      validConsumptionSourceCount === 2 &&
+      parseDecimal(Number(nativeConsumption)) === nativeConsumption
+        ? amountToQuota(Number(nativeConsumption))
+        : 0,
     today_requests_count: Math.max(0, Math.trunc(requests ?? 0)),
     today_prompt_tokens: 0,
     today_completion_tokens: 0,

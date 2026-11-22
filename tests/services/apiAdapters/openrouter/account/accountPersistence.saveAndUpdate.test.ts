@@ -1,13 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { EMPTY_ACCOUNT_INFO_METRICS } from "~/services/accounts/accountPersistence/constants"
 import { prepareAccountPersistenceIdentity } from "~/services/accounts/accountPersistence/shared"
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+  getAccountBalanceSnapshots,
+} from "~/services/accounts/balanceSnapshot"
 import { validateAndSaveAccount } from "~/services/accounts/editing/accountCreation"
 import { MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS } from "~/services/accounts/editing/accountCreationTimeout"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
+import { balancePosition } from "~/services/amounts/balance"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+} from "~/services/amounts/financialConstants"
 import { aimlApiAccountPersistence } from "~/services/apiAdapters/aimlapi/accountPersistence"
 import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/account/accountPersistence"
@@ -1977,8 +1989,29 @@ describe("accountPersistence save and update", () => {
   })
 
   it("persists normalized cookie auth, tag ids, and refreshed metrics on success", async () => {
+    const scope = accountBalanceScope({ baseUrl: "https://cookie.example.com" })
+    const balance = accountBalanceSnapshot(
+      scope,
+      [
+        balancePosition({
+          id: "wallet",
+          scope,
+          value: "0.000642",
+          observedAt: 100,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          source: {
+            adapter: "fixture",
+            operation: "wallet",
+            contractVersion: "1",
+            kind: EVIDENCE_KINDS.Reported,
+          },
+        }),
+      ],
+      100,
+      FINANCIAL_COVERAGE.Complete,
+    )
     fetchAccountDataMock.mockResolvedValueOnce({
-      quota: 321,
+      balance,
       today_prompt_tokens: 11,
       today_completion_tokens: 22,
       today_quota_consumption: 33,
@@ -2028,9 +2061,8 @@ describe("accountPersistence save and update", () => {
           positions: expect.arrayContaining([
             expect.objectContaining({
               amount: expect.objectContaining({
-                source: expect.objectContaining({
-                  amountInputs: { quota: "321" },
-                }),
+                status: "known",
+                value: "0.000642",
               }),
             }),
           ]),
@@ -2526,6 +2558,13 @@ describe("accountPersistence save and update", () => {
     expect(fetchAccountDataMock).not.toHaveBeenCalled()
 
     const updated = await accountStorage.getAccountById(accountId)
+    expect(
+      getAccountBalanceSnapshots(updated!).manual?.positions[0]?.amount,
+    ).toMatchObject({
+      status: "known",
+      value: "2.5",
+      source: { kind: "manual" },
+    })
     expect(updated).toMatchObject({
       site_name: "Example",
       site_type: SITE_TYPES.NEW_API,

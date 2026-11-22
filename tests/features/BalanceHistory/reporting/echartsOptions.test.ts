@@ -1,17 +1,50 @@
 import { describe, expect, it } from "vitest"
 
+import { BALANCE_HISTORY_TREND_CHART_TYPES } from "~/features/BalanceHistory/contracts"
 import {
-  buildAccountBreakdownBarOption,
   buildAccountBreakdownPieOption,
   buildMultiSeriesTrendOption,
 } from "~/features/BalanceHistory/reporting/echartsOptions"
 
 describe("BalanceHistory echartsOptions", () => {
+  it.each([
+    [76.583, null, -2],
+    [null, 4500, null],
+  ])(
+    "keeps isolated native observations visible without bridging gaps: %j",
+    (...values) => {
+      const option = buildMultiSeriesTrendOption({
+        dayKeys: ["first", "gap", "last"],
+        series: [{ name: "Native", values }],
+        chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+        bridgeGaps: false,
+      }) as any
+      expect(option.series).toHaveLength(1)
+      expect(option.series[0]).toMatchObject({
+        showSymbol: true,
+        showAllSymbol: true,
+        symbol: "circle",
+        connectNulls: false,
+        data: values,
+      })
+      expect(option.series[0].symbolSize).toBeGreaterThan(0)
+    },
+  )
+  it("can preserve native unknown days as unbridged gaps", () => {
+    const option = buildMultiSeriesTrendOption({
+      dayKeys: ["a", "b", "c"],
+      series: [{ name: "Token", values: [5, null, 3] }],
+      chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+      bridgeGaps: false,
+    }) as any
+    expect(option.series).toHaveLength(1)
+    expect(option.series[0].connectNulls).toBe(false)
+  })
   it("builds line-series trend charts and normalizes tooltip values for formatters", () => {
     const option = buildMultiSeriesTrendOption({
       dayKeys: ["2026-01-01"],
       series: [{ name: "Alpha", values: [42] }],
-      chartType: "line",
+      chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
       yAxisLabel: "Balance",
       axisLabelFormatter: (value) => `$${value}`,
       valueFormatter: (value, index) => `${index}:${value}`,
@@ -42,7 +75,7 @@ describe("BalanceHistory echartsOptions", () => {
         { name: "Alpha", values },
         { name: "Beta", values: [null, 2, 3, null] },
       ],
-      chartType: "line",
+      chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
     })
 
     expect(option.series).toEqual([
@@ -70,11 +103,48 @@ describe("BalanceHistory echartsOptions", () => {
     ])
   })
 
+  it("shows the observed points on either side of a long gap without joining them", () => {
+    const option = buildMultiSeriesTrendOption({
+      dayKeys: ["a", "b", "c", "d", "e", "f"],
+      series: [{ name: "Archive", values: [0, null, null, null, null, 5] }],
+      chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+    })
+    expect(option.series).toEqual([
+      expect.objectContaining({ showAllSymbol: true, connectNulls: false }),
+    ])
+  })
+
+  it("labels missing tooltip values while preserving recorded zero and exact native amounts", () => {
+    const option = buildMultiSeriesTrendOption({
+      dayKeys: ["a", "b", "c"],
+      series: [
+        { name: "Archive", values: [0, null, 5] },
+        {
+          name: "Native",
+          values: [null, 0.1, null],
+          valueFormatter: () => "0.100000000000001 CNY",
+        },
+      ],
+      chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+      missingValueLabel: "No record that day",
+      valueFormatter: (value) => `$${value}`,
+    }) as any
+
+    expect(option.tooltip.valueFormatter(NaN, 1)).toBe("No record that day")
+    expect(option.tooltip.valueFormatter(0, 0)).toBe("$0")
+    expect(option.series[1].tooltip.valueFormatter(NaN, 0)).toBe(
+      "No record that day",
+    )
+    expect(option.series[1].tooltip.valueFormatter(0.1, 1)).toBe(
+      "0.100000000000001 CNY",
+    )
+  })
+
   it("builds bar-series trend charts without line-only markers", () => {
     const option = buildMultiSeriesTrendOption({
       dayKeys: ["2026-01-01", "2026-01-02", "2026-01-03"],
       series: [{ name: "Bravo", values: [1, null, 2] }],
-      chartType: "bar",
+      chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Bar,
     }) as any
 
     expect(option.series[0]).toMatchObject({
@@ -102,30 +172,11 @@ describe("BalanceHistory echartsOptions", () => {
     expect(option.legend.textStyle.color).toBe("var(--chart-axis)")
   })
 
-  it("builds horizontal bar charts with formatter hooks and normalized tooltip dates", () => {
-    const option = buildAccountBreakdownBarOption({
-      categories: ["Alpha"],
-      values: [5],
-      valueLabel: "Balance",
-      axisLabelFormatter: (value) => `${value} USD`,
-      valueFormatter: (value, index) => `${index}:${value}`,
-    }) as any
-
-    expect(option.yAxis).toMatchObject({
-      inverse: true,
-      data: ["Alpha"],
-    })
-    expect(option.xAxis.axisLabel.formatter(5, 0)).toBe("5 USD")
-    expect(
-      option.tooltip.valueFormatter([new Date("2026-01-02T00:00:00Z")], 1),
-    ).toBe(`1:${Date.parse("2026-01-02T00:00:00Z")}`)
-  })
-
   it("falls back to empty series names and omits tooltip formatters when no formatter is provided", () => {
     const trend = buildMultiSeriesTrendOption({
       dayKeys: ["2026-01-01"],
       series: [{ name: "Alpha", values: [1] }],
-      chartType: "line",
+      chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
     }) as any
     expect(trend.tooltip).toEqual({ trigger: "axis" })
 
@@ -135,12 +186,34 @@ describe("BalanceHistory echartsOptions", () => {
     }) as any
     expect(pie.series[0].name).toBe("")
     expect(pie.tooltip).toEqual({ trigger: "item" })
-
-    const bar = buildAccountBreakdownBarOption({
-      categories: ["Alpha"],
-      values: [1],
-    }) as any
-    expect(bar.series[0].name).toBe("")
-    expect(bar.tooltip).toEqual({ trigger: "item" })
   })
+})
+
+it("retains independent exact tooltip amounts when comparing native account series", () => {
+  const option = buildMultiSeriesTrendOption({
+    dayKeys: ["2026-01-01"],
+    chartType: BALANCE_HISTORY_TREND_CHART_TYPES.Line,
+    bridgeGaps: false,
+    series: [
+      {
+        name: "First",
+        values: [0.1],
+        valueFormatter: () => "0.100000000000000001 CNY",
+      },
+      {
+        name: "Second",
+        values: [0.2],
+        valueFormatter: () => "0.200000000000000002 CNY",
+      },
+    ],
+  })
+  const plots = option.series as Array<{
+    tooltip: { valueFormatter: (value: number, index: number) => string }
+  }>
+  expect(plots[0]?.tooltip.valueFormatter(0.1, 0)).toBe(
+    "0.100000000000000001 CNY",
+  )
+  expect(plots[1]?.tooltip.valueFormatter(0.2, 0)).toBe(
+    "0.200000000000000002 CNY",
+  )
 })

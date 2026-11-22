@@ -1,4 +1,5 @@
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { buildAccountBalanceObservation } from "~~/tests/test-utils/accountBalance"
 
 // Initialize provider registrations before measuring the shared snapshot queries.
 import "~/services/checkin/autoCheckin/providers"
@@ -29,13 +30,7 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
-const accountBalance = {
-  schemaVersion: 2,
-  subject: { kind: "account" },
-  capturedAt: 1000,
-  positions: [],
-  coverage: "unknown",
-}
+const balanceObservation = buildAccountBalanceObservation("100")
 
 const {
   mockDetermineHealthStatus,
@@ -117,7 +112,7 @@ describe("apiService veloera channel APIs", () => {
     mockFetchApiData.mockReset()
     mockFetchApi.mockReset()
     mockFetchSiteStatus.mockReset()
-    mockFetchAccountBalance.mockResolvedValue({ balance: accountBalance })
+    mockFetchAccountBalance.mockResolvedValue(balanceObservation)
     mockFetchTodayUsage.mockResolvedValue({
       today_prompt_tokens: 11,
       today_completion_tokens: 22,
@@ -787,7 +782,7 @@ describe("apiService veloera channel APIs", () => {
     await expect(fetchSupportCheckIn(request as any)).resolves.toBeUndefined()
   })
 
-  it("aggregates quota, usage, income, and detected check-in state for account refreshes", async () => {
+  it("aggregates balance, usage, income, and detected check-in state for account refreshes", async () => {
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(123456)
     const request = {
       directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
@@ -812,7 +807,7 @@ describe("apiService veloera channel APIs", () => {
     )
 
     expect(result).toMatchObject({
-      balance: accountBalance,
+      balance: balanceObservation.balance,
       today_prompt_tokens: 11,
       today_completion_tokens: 22,
       today_quota_consumption: 33,
@@ -868,7 +863,7 @@ describe("apiService veloera channel APIs", () => {
     } as any)
 
     expect(result.success).toBe(true)
-    expect(result.data?.balance).toEqual(accountBalance)
+    expect(result.data?.balance).toEqual(balanceObservation.balance)
     expect(result.healthStatus.status).toBe(SiteHealthStatus.Healthy)
   })
 

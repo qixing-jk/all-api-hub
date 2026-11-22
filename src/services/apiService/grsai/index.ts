@@ -1,5 +1,4 @@
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -9,12 +8,12 @@ import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import {
   accountBalanceObservation,
   accountBalanceScope,
-  accountReportingScope,
 } from "~/services/accounts/balanceSnapshot"
 import { balancePosition, observeAmount } from "~/services/amounts/balance"
 import { parseDecimal } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
+  BALANCE_NATURES,
   EVIDENCE_KINDS,
   FINANCIAL_ENUMERATION,
   WALLET_BALANCE_COLLECTION_KEY,
@@ -24,11 +23,11 @@ import type {
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import {
+  GRSAI_CONSOLE_API_ORIGIN,
   GRSAI_CREDIT_ASSET,
   GRSAI_ENDPOINTS,
 } from "~/services/apiService/grsai/constants"
 import {
-  creditsToQuota,
   isGrsaiApiKey,
   isGrsaiApiKeyList,
   isGrsaiDashboardData,
@@ -70,10 +69,6 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("ApiService.Grsai")
-
-const COMPLETE_METRIC: AccountTodayMetricAvailability = {
-  status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
-}
 
 const unavailableMetric = (
   reason:
@@ -273,11 +268,8 @@ export async function fetchGrsaiModels(
 }
 
 /**
- * Account snapshot used by the refresh flow: the credit balance plus today's
- * and lifetime consumption.
- *
- * `usage` is deliberately omitted: the deployment exposes no request or token
- * series, and the product renders any summary it is given.
+ * Retain native wallet credits, lifetime consumption and the provider day as
+ * independent observations. This source exposes no request or token counters.
  */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
@@ -286,10 +278,21 @@ export async function fetchAccountData(
   const shouldCollectToday = request.includeTodayCashflow !== false
   const session = existingSession ?? (await openSignedInSession(request))
 
-  const [userInfo, dashboard] = await Promise.all([
-    fetchGrsaiUserInfo(request, session),
-    fetchGrsaiDashboard(request, session),
+  const [userResult, dashboardResult] = await Promise.all([
+    fetchGrsaiUserInfo(request, session).then((value) => ({
+      value,
+      observedAt: Date.now(),
+    })),
+    fetchGrsaiDashboard(request, session)
+      .then((value) => ({ value, observedAt: Date.now() }))
+      .catch((error) => {
+        if (request.abortSignal?.aborted || isGrsaiAuthFailureError(error))
+          throw error
+        return { value: undefined, observedAt: Date.now() }
+      }),
   ])
+  const userInfo = userResult.value
+  const dashboard = dashboardResult.value
 
   const expectedUserId = expectedAccountIdentity(request)
   if (expectedUserId && userInfo.id.trim() !== expectedUserId) {
@@ -301,89 +304,119 @@ export async function fetchAccountData(
     )
   }
 
-  const nativeCredits = (value: unknown) => {
-    const parsed = parseDecimal(value)
-    return parsed?.startsWith("-") ? undefined : parsed
+  const userCredits = parseDecimal(userInfo.credits)
+  const credits = userCredits ?? parseDecimal(dashboard?.credits)
+  const scope = accountBalanceScope(request, {
+    authority: GRSAI_CONSOLE_API_ORIGIN,
+    walletId: userInfo.id,
+  })
+  const observedAt =
+    userCredits !== undefined
+      ? userResult.observedAt
+      : dashboardResult.observedAt
+  const asset = { kind: ASSET_KINDS.Quota, ...GRSAI_CREDIT_ASSET }
+  const todayCredits = parseDecimal(dashboard?.todayConsumed)
+  const totalCredits = parseDecimal(dashboard?.totalConsumed)
+  const source = {
+    adapter: "grsai",
+    operation: "wallet:credits",
+    contractVersion: "native-credits/v1",
+    kind: EVIDENCE_KINDS.Reported,
+    inputs: [
+      `${userCredits !== undefined ? GRSAI_ENDPOINTS.userInfo : GRSAI_ENDPOINTS.dashboard}:credits`,
+    ],
   }
-  const userCredits = nativeCredits(userInfo.credits)
-  const credits = userCredits ?? nativeCredits(dashboard.credits)
-  const todayCredits = nativeCredits(dashboard.todayConsumed)
 
   const todayStatsAvailability: AccountTodayStatsAvailability = {
     consumption: shouldCollectToday
-      ? todayCredits === undefined
-        ? unavailableMetric(ACCOUNT_TODAY_METRIC_REASONS.RequestFailed)
-        : COMPLETE_METRIC
+      ? // The provider's "today" boundary is not verified. It cannot be added
+        // to the product's current-day monetary totals or net inflow estimate.
+        unavailableMetric(ACCOUNT_TODAY_METRIC_REASONS.Unsupported)
       : unavailableMetric(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
     requests: UNSUPPORTED_METRIC,
     tokens: UNSUPPORTED_METRIC,
     income: UNSUPPORTED_METRIC,
   }
-
-  const scope = accountBalanceScope(request, { walletId: userInfo.id })
-  const asset = { kind: ASSET_KINDS.Quota, ...GRSAI_CREDIT_ASSET } as const
-  const observedAt = Date.now()
-  const source = {
-    adapter: SITE_TYPES.GRSAI,
-    contractVersion: "credits/v1",
-    kind: EVIDENCE_KINDS.Reported,
-  } as const
-  const balanceEndpoint =
-    userCredits === undefined
-      ? GRSAI_ENDPOINTS.dashboard
-      : GRSAI_ENDPOINTS.userInfo
-  return {
-    ...accountBalanceObservation(
+  const lifetimeUsage = {
+    scope: "lifetime" as const,
+    cost: {
+      asset,
       scope,
-      [
-        balancePosition({
-          id: "credits",
-          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
-          scope,
-          observedAt,
-          asset,
-          value: credits,
-          source: {
-            ...source,
-            operation: "wallet:credits",
-            inputs: [`${balanceEndpoint}:credits`],
-          },
-        }),
-      ],
-      observedAt,
-      FINANCIAL_ENUMERATION.Complete,
-    ),
-    quota: creditsToQuota(Number(credits ?? 0)),
-    today_quota_consumption:
-      shouldCollectToday && todayCredits !== undefined
-        ? creditsToQuota(Number(todayCredits))
-        : 0,
+      amount: observeAmount(
+        totalCredits,
+        {
+          adapter: "grsai",
+          operation: `${GRSAI_ENDPOINTS.dashboard}:totalConsumed`,
+          contractVersion: "native-credits/v1",
+          kind: EVIDENCE_KINDS.Reported,
+        },
+        dashboardResult.observedAt,
+      ),
+    },
+  }
+  const currentUsage = {
+    scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+    cost: {
+      asset,
+      scope,
+      amount: observeAmount(
+        todayCredits,
+        {
+          adapter: "grsai",
+          operation: `${GRSAI_ENDPOINTS.dashboard}:todayConsumed`,
+          contractVersion: "native-credits/v1",
+          kind: EVIDENCE_KINDS.Reported,
+        },
+        dashboardResult.observedAt,
+      ),
+    },
+  }
+
+  const balance = accountBalanceObservation(
+    scope,
+    [
+      balancePosition({
+        id: "credits",
+        collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+        scope,
+        asset,
+        value: credits,
+        nature: BALANCE_NATURES.Prepaid,
+        observedAt,
+        source,
+      }),
+    ],
+    observedAt,
+    FINANCIAL_ENUMERATION.Complete,
+  )
+  // These endpoints report the same wallet; a usable fallback supersedes its
+  // alternate reading without turning an unavailable response into a removal.
+  if (credits !== undefined)
+    balance.balanceRefreshParts.push({
+      collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+      source: {
+        ...source,
+        operation:
+          userCredits !== undefined
+            ? GRSAI_ENDPOINTS.dashboard
+            : GRSAI_ENDPOINTS.userInfo,
+      },
+      enumeration: FINANCIAL_ENUMERATION.Complete,
+      positions: [],
+    })
+  return {
+    ...balance,
+    today_quota_consumption: 0,
+    usage: lifetimeUsage,
+    usageObservations: [
+      lifetimeUsage,
+      ...(shouldCollectToday ? [currentUsage] : []),
+    ],
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
     today_requests_count: 0,
     today_income: 0,
     todayStatsAvailability,
-    ...(shouldCollectToday && todayCredits !== undefined
-      ? {
-          usageObservations: [
-            {
-              scope: ACCOUNT_USAGE_SCOPES.SiteToday,
-              cost: {
-                asset,
-                amount: observeAmount(
-                  todayCredits,
-                  {
-                    ...source,
-                    operation: `${GRSAI_ENDPOINTS.dashboard}:todayConsumed`,
-                  },
-                  observedAt,
-                ),
-                scope: accountReportingScope(request),
-              },
-            },
-          ],
-        }
-      : {}),
     checkIn: request.checkIn,
   }
 }

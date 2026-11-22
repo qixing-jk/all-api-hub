@@ -18,17 +18,12 @@ import {
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildAccountBalanceObservation } from "~~/tests/test-utils/accountBalance"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
-const accountBalance = {
-  schemaVersion: 2,
-  subject: { kind: "account" },
-  capturedAt: 1000,
-  positions: [],
-  coverage: "unknown",
-}
+const balanceObservation = buildAccountBalanceObservation("500")
 
 const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
@@ -131,7 +126,7 @@ describe("apiService doneHub channel APIs", () => {
       status: "unknown",
       message: "unknown",
     })
-    mockFetchAccountBalance.mockResolvedValue({ balance: accountBalance })
+    mockFetchAccountBalance.mockResolvedValue(balanceObservation)
     mockFetchTodayIncome.mockResolvedValue({ today_income: 0 })
     mockFetchTodayUsage.mockResolvedValue({
       today_quota_consumption: 0,
@@ -1123,7 +1118,7 @@ describe("apiService doneHub channel APIs", () => {
     await expect(refreshAccountData(request as any)).resolves.toMatchObject({
       success: true,
       data: {
-        balance: accountBalance,
+        balance: balanceObservation.balance,
         today_quota_consumption: 88,
         today_requests_count: 7,
         today_prompt_tokens: 0,

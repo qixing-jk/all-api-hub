@@ -362,7 +362,7 @@ export const isAccountTodayMetricAvailable = (
   availability: AccountTodayMetricAvailability,
 ): boolean => availability.status !== ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
 
-export const isAccountTodayMetricComplete = (
+const isAccountTodayMetricComplete = (
   availability: AccountTodayMetricAvailability,
 ): boolean => availability.status === ACCOUNT_TODAY_METRIC_STATUSES.Complete
 

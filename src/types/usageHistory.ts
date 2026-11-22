@@ -83,10 +83,7 @@ export interface UsageHistoryCursor {
 }
 
 export type UsageHistorySyncState =
-  | "never"
-  | "success"
-  | "error"
-  | "unsupported"
+  "never" | "success" | "error" | "unsupported"
 
 export interface UsageHistorySyncStatus {
   state: UsageHistorySyncState

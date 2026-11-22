@@ -1,10 +1,34 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountAllowanceObservation,
+  ALLOWANCE_IDENTITY_KINDS,
+  type AccountAllowanceEntry,
+} from "~/services/accounts/allowances"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { FREEMODEL_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
+import { balancePosition } from "~/services/amounts/balance"
+import { budgetConstraint } from "~/services/amounts/budgets"
+import { normalizeDecimalUnits, sumDecimals } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_FUNDING,
+  BALANCE_NATURES,
+  BALANCE_RELATIONS,
+  BALANCE_VALIDITY_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
@@ -88,13 +112,6 @@ export async function fetchUserInfo(
   }
 }
 
-/** Reject missing amounts rather than presenting invented zero balances. */
-function amount(value: unknown, endpoint: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
-    throw invalid(endpoint)
-  return value
-}
-
 /** Load the provider-owned referral code without altering referral state. */
 export async function fetchInviteLink(
   request: ApiServiceRequest,
@@ -114,30 +131,155 @@ export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   await fetchUserInfo(request)
-  const [billing, usage] = await Promise.all([
-    readFreeModelConsoleResponse(request, "/api/billing"),
-    readFreeModelConsoleResponse(request, "/api/usage"),
+  const [billingObservation, usageObservation] = await Promise.all([
+    readFreeModelConsoleResponse(request, "/api/billing").then((data) => ({
+      data,
+      at: Date.now(),
+    })),
+    readFreeModelConsoleResponse(request, "/api/usage")
+      .then((data) => ({ data, at: Date.now() }))
+      .catch(() => ({ data: undefined, at: Date.now() })),
   ])
-  const credit =
-    amount(billing.creditCents, "/api/billing") +
-    amount(billing.signupCreditCents, "/api/billing")
-  if (!isRecord(billing.subscription)) throw invalid("/api/billing")
-  if (!isRecord(usage.window5h) || !isRecord(usage.windowWeek))
-    throw invalid("/api/usage")
-  const window = usage.window5h
-  const week = usage.windowWeek
-  const limit = amount(window.limitCents, "/api/usage") / 100
-  const used = amount(window.usedCents, "/api/usage") / 100
-  const weeklyRemaining =
-    Math.max(
-      0,
-      amount(week.limitCents, "/api/usage") -
-        amount(week.usedCents, "/api/usage"),
-    ) / 100
+  const { data: billing, at: observedAt } = billingObservation
+  const { data: usageData, at: usageAt } = usageObservation
+  const usage = usageData ?? {}
+  const plan = isRecord(billing.subscription) ? billing.subscription : undefined
+  const scope = accountBalanceScope(request)
+  const source = {
+    adapter: "freemodel",
+    operation: "/api/billing",
+    contractVersion: "credit-cents/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  }
+  const usd = (value: unknown) => normalizeDecimalUnits(value, 100)
+  const purchased = usd(billing.creditCents),
+    granted = usd(billing.signupCreditCents)
+  let total: string | undefined
+  if (purchased !== undefined && granted !== undefined) {
+    try {
+      total = sumDecimals([purchased, granted])
+    } catch {
+      // A bounded derived total must not discard independently valid credits.
+    }
+  }
+  const positions = [
+    balancePosition({
+      id: "available",
+      collectionKey: "credits",
+      scope,
+      value: total,
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      nature: BALANCE_NATURES.Prepaid,
+      funding: BALANCE_FUNDING.Mixed,
+      source: {
+        ...source,
+        kind: EVIDENCE_KINDS.Derived,
+        inputs: ["creditCents", "signupCreditCents"],
+      },
+      observedAt,
+    }),
+    ...(
+      [
+        ["purchased", purchased, "purchased"],
+        ["signup-credit", granted, "granted"],
+      ] as const
+    ).map(([id, value, funding]) =>
+      balancePosition({
+        id,
+        collectionKey: "credits",
+        scope,
+        value,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        nature: BALANCE_NATURES.Prepaid,
+        funding,
+        source,
+        observedAt,
+        parentId: "available",
+        relation: BALANCE_RELATIONS.Component,
+      }),
+    ),
+  ]
+  const usageSource = {
+    ...source,
+    operation: "/api/usage",
+    contractVersion: "allowance-cents/v1",
+  }
+  const planId = typeof plan?.planId === "string" ? plan.planId : "current-plan"
+  const allowanceEntries: AccountAllowanceEntry[] = (
+    ["5h", "week"] as const
+  ).map((period) => {
+    const window =
+      period === BUDGET_PERIODS.FiveHours ? usage.window5h : usage.windowWeek
+    const data = isRecord(window) ? window : {}
+    const resetAt =
+      typeof data.resetsAt === "number" && Number.isFinite(data.resetsAt)
+        ? data.resetsAt * 1000
+        : undefined
+    return {
+      id: `${planId}:${period}`,
+      collectionKey: "usage-windows",
+      label: planId,
+      identityKind:
+        typeof plan?.planId === "string"
+          ? ALLOWANCE_IDENTITY_KINDS.Upstream
+          : ALLOWANCE_IDENTITY_KINDS.SourceSlot,
+      validity: { kind: BALANCE_VALIDITY_KINDS.Unknown },
+      constraint: budgetConstraint({
+        scope,
+        source: usageSource,
+        observedAt: usageAt,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        limitState: BUDGET_LIMIT_STATES.Finite,
+        limit: usd(data.limitCents),
+        used: usd(data.usedCents),
+        remaining: usd(data.remainingCents),
+        enabled:
+          typeof plan?.status === "string"
+            ? plan.status === "active"
+            : undefined,
+        window:
+          period === BUDGET_PERIODS.FiveHours
+            ? {
+                kind: BUDGET_WINDOW_KINDS.Rolling,
+                period,
+                ...(resetAt !== undefined ? { resetsAt: resetAt } : {}),
+              }
+            : resetAt !== undefined
+              ? {
+                  kind: BUDGET_WINDOW_KINDS.Periodic,
+                  period,
+                  resetsAt: resetAt,
+                }
+              : { kind: BUDGET_WINDOW_KINDS.Unknown, period },
+      }),
+    }
+  })
   return {
     // The UI quotes credits and rolling limits in USD (cents / 100); plan
     // purchase prices can be GBP. Rolling allowance is not stored balance.
-    quota: Math.round((credit / 100) * QUOTA_PER_USD),
+    ...accountBalanceObservation(
+      scope,
+      positions,
+      observedAt,
+      FINANCIAL_ENUMERATION.Complete,
+    ),
+    ...accountAllowanceObservation(
+      scope,
+      [
+        {
+          source: usageSource,
+          collectionKey: "usage-windows",
+          enumeration:
+            usageData === undefined
+              ? FINANCIAL_ENUMERATION.Unavailable
+              : isRecord(usage.window5h) && isRecord(usage.windowWeek)
+                ? FINANCIAL_ENUMERATION.Complete
+                : FINANCIAL_ENUMERATION.Partial,
+          entries: allowanceEntries,
+        },
+      ],
+      usageAt,
+    ),
     today_quota_consumption: 0,
     today_prompt_tokens: 0,
     today_completion_tokens: 0,
@@ -146,20 +288,10 @@ export async function fetchAccountData(
     todayStatsAvailability: createUnsupportedTodayStatsAvailability(),
     checkIn: request.checkIn,
     subscription: {
-      name:
-        typeof billing.subscription.planId === "string"
-          ? billing.subscription.planId
-          : undefined,
-      isActive: billing.subscription.status === "active",
+      name: typeof plan?.planId === "string" ? plan.planId : undefined,
+      isActive:
+        typeof plan?.status === "string" ? plan.status === "active" : undefined,
       billingType: "amount",
-      amountLimit: limit,
-      usedAmount: used,
-      remainingAmount: Math.min(Math.max(0, limit - used), weeklyRemaining),
-      period: "5h",
-      periodResetTime:
-        typeof window.resetsAt === "number" && Number.isFinite(window.resetsAt)
-          ? new Date(window.resetsAt * 1000).toISOString()
-          : undefined,
     },
   }
 }

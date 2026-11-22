@@ -1,7 +1,6 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import { vercelAiGatewayCapabilities } from "~/services/apiAdapters/vercelAiGateway"
@@ -36,6 +35,20 @@ const creditsHandler = (balance: string, totalUsed: string) =>
 describe("Vercel AI Gateway account data", () => {
   beforeEach(() => server.resetHandlers())
   afterEach(() => server.resetHandlers())
+
+  it("preserves a known wallet when cumulative usage is missing", async () => {
+    server.use(
+      http.get("https://ai-gateway.vercel.sh/v1/credits", () =>
+        HttpResponse.json({ balance: "3.141592653589793238" }),
+      ),
+    )
+    const data = await fetchAccountData(request)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "3.141592653589793238",
+    })
+    expect(data.usage?.cost?.amount.status).toBe("unavailable")
+  })
 
   it("validates the chosen team against the submitted credential before saving", async () => {
     server.use(
@@ -288,16 +301,20 @@ describe("Vercel AI Gateway account data", () => {
   })
 
   it("reports the remaining AI Gateway credit as the account balance", async () => {
-    server.use(creditsHandler("12.5", "3"))
+    server.use(creditsHandler("12.500000000000000003", "3"))
     const data = await fetchAccountData({ ...request })
 
-    expect(data.quota).toBe(12.5 * QUOTA_PER_USD)
-    // Credit is purchased USD, not a token allowance.
-    expect(data.nativeBalance).toEqual({
-      unit: "USD",
-      total: 12.5,
-      permanent: 12.5,
-      daily: 0,
+    expect(data).not.toHaveProperty("quota")
+    expect(data).not.toHaveProperty("nativeBalance")
+    expect(data.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      scope: {
+        authority: "https://ai-gateway.vercel.sh",
+        organizationId: TEAM_ID,
+      },
+      amount: { status: "known", value: "12.500000000000000003" },
+      funding: "unknown",
+      validity: { kind: "unknown" },
     })
     // Spend reports are plan-gated, so no today window is published.
     expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
@@ -307,19 +324,26 @@ describe("Vercel AI Gateway account data", () => {
   it("keeps a zero balance distinct from a missing balance", async () => {
     server.use(creditsHandler("0", "0"))
     const data = await fetchAccountData({ ...request })
-    expect(data.quota).toBe(0)
-    expect(data.nativeBalance).toMatchObject({ unit: "USD", total: 0 })
+    expect(data.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "0" },
+    })
   })
 
-  it("fails rather than reporting zero when the balance is unreadable", async () => {
+  it("preserves lifetime usage when wallet balance is unreadable", async () => {
     server.use(
       http.get("https://ai-gateway.vercel.sh/v1/credits", () =>
         HttpResponse.json({ balance: "n/a", total_used: "0" }),
       ),
     )
-    await expect(fetchAccountData({ ...request })).rejects.toThrow(
-      "vercel_credits_unreadable",
-    )
+    const data = await fetchAccountData({ ...request })
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "unavailable",
+    })
+    expect(data.usage?.cost?.amount).toMatchObject({
+      status: "known",
+      value: "0",
+    })
   })
 
   it("requires the saved team before reading credits", async () => {

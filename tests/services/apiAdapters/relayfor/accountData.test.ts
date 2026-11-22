@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { getSiteDayReadings } from "~/services/accounts/metrics/accountTodayStats"
+import {
+  aggregateBalances,
+  BALANCE_PURPOSES,
+} from "~/services/accounts/metrics/balanceProjection"
+import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import { relayForAccountData } from "~/services/apiAdapters/relayfor/accountData"
 import {
   fetchRelayForOverview,
@@ -87,11 +94,121 @@ describe("relayForAccountData", () => {
     expect(data.allowances?.entries).toHaveLength(1)
     expect(data.allowances?.coverage).toBe("partial")
   })
+  it("keeps overview provider-day spending available to daily presentation without inventing a local-day window", async () => {
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, quota: 940000 },
+      timed_quota: 0,
+      group_quotas: [],
+      today: { quota: 500000, requests: 4, tokens: 100 },
+    } as never)
+    const data = await relayForAccountData.fetchData(createRequest())
+    expect(getSiteDayReadings(data)).toMatchObject([
+      {
+        lastKnown: false,
+        observedAt: expect.any(Number),
+        usage: {
+          scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+          cost: {
+            asset: { kind: "currency", code: "USD" },
+            amount: { status: "known", value: "1" },
+          },
+        },
+      },
+    ])
+    expect(
+      getDisplayConsumptionProjection([
+        { id: "relayfor-test", settledConsumption: data.settledConsumption },
+      ]).groups,
+    ).toEqual([])
+  })
+  it("includes permanent and timed funds reported together in the available total", async () => {
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, quota: 940000 },
+      timed_quota: 1880000,
+      group_quotas: [],
+    } as never)
+    const result = await relayForAccountData.fetchData(createRequest())
+    expect(
+      aggregateBalances([result.balance!], BALANCE_PURPOSES.Available),
+    ).toMatchObject({
+      amounts: [{ asset: { kind: "currency", code: "USD" }, value: "5.64" }],
+      conflictCount: 0,
+    })
+    expect(
+      result
+        .balanceRefreshParts!.flatMap((p) => p.positions)
+        .filter((p) => ["permanent", "timed"].includes(p.id)),
+    ).toHaveLength(2)
+  })
+  it("isolates native unit-normalization overflow from independent wallet entries", async () => {
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, quota: "0." + "0".repeat(252) + "1" },
+      timed_quota: 0,
+      group_quotas: [{ quota_group: "premium", quota: "500000" }],
+    } as never)
+    const result = await relayForAccountData.fetchData(createRequest())
+    expect(
+      result.balance?.positions.find((entry) => entry.id === "permanent")
+        ?.amount.status,
+    ).toBe("unavailable")
+    expect(
+      result.balance?.positions.find((entry) => entry.id === "group:premium")
+        ?.amount,
+    ).toMatchObject({ status: "known", value: "1" })
+  })
+  it("keeps wallet debt, scoped groups and plan limits without inventing a combined balance", async () => {
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, username: "alice", quota: "-1000000.000000000005" },
+      timed_quota: 500000,
+      group_quotas: [{ quota_group: "premium", quota: "1250000" }],
+      active_subscriptions: [
+        {
+          id: 12,
+          status: 1,
+          starts_at: "2020-01-01T00:00:00Z",
+          expires_at: "2099-01-01T00:00:00Z",
+          unlimited_quota: true,
+          quota_group: "premium",
+        },
+      ],
+    } as never)
+    vi.mocked(fetchRelayForTimedQuotas).mockRejectedValueOnce(
+      new Error("offline"),
+    )
+    const data = await relayForAccountData.fetchData(createRequest())
+    expect(data).not.toHaveProperty("quota")
+    expect(data).not.toHaveProperty("nativeBalance")
+    expect(data.balance?.positions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "permanent",
+          amount: expect.objectContaining({ value: "-2.00000000000000001" }),
+        }),
+        expect.objectContaining({
+          id: "group:premium",
+          scope: expect.objectContaining({
+            groups: { kind: "restricted", ids: ["premium"] },
+          }),
+          amount: expect.objectContaining({ value: "2.5" }),
+        }),
+      ]),
+    )
+    expect(data.allowances?.entries[0]).toMatchObject({
+      id: "12",
+      constraint: { limitState: "unlimited", remaining: { status: "unknown" } },
+    })
+    expect(data.balanceRefreshParts).toContainEqual(
+      expect.objectContaining({
+        collectionKey: "timed-grants",
+        enumeration: "unavailable",
+      }),
+    )
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("filters invalid grants and sorts active scoped grants by expiry", async () => {
+  it("retains active scoped grants and keeps timezone-free expiry unknown", async () => {
     vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
       user: { id: 1, username: "alice", quota: 0 },
       timed_quota: 1000000,
@@ -114,27 +231,38 @@ describe("relayForAccountData", () => {
       { status: 1, quota_remaining: 250000, expires_at: "2099-01-01" },
     ])
     const data = await relayForAccountData.fetchData(createRequest())
-    expect(
-      data.nativeBalance?.unit === "USD"
-        ? data.nativeBalance.timedDetails
-        : undefined,
-    ).toEqual([
+    const grants = data.balance?.positions.filter(
+      (position) => position.collectionKey === "timed-grants",
+    )
+    expect(grants).toHaveLength(3)
+    expect(grants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          amount: expect.objectContaining({ value: "0.5" }),
+          validity: { kind: "unknown" },
+        }),
+        expect.objectContaining({
+          amount: expect.objectContaining({ value: "1" }),
+          scope: expect.objectContaining({
+            groups: { kind: "restricted", ids: ["premium"] },
+          }),
+        }),
+      ]),
+    )
+    expect(data.balanceRefreshParts).toContainEqual(
       expect.objectContaining({
-        amount: 0.5,
-        expiresAt: "2099-01-01",
-        scope: undefined,
+        collectionKey: "timed-grants",
+        enumeration: "partial",
       }),
-      expect.objectContaining({
-        amount: 1,
-        expiresAt: "2099-02-01",
-        scope: "premium",
-      }),
-    ])
-    expect(
-      data.nativeBalance?.unit === "USD"
-        ? data.nativeBalance.components?.filter((c) => c.kind === "group")
-        : undefined,
-    ).toEqual([expect.objectContaining({ amount: 1, scope: "premium" })])
+    )
+    expect(data.balance?.positions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "group:premium",
+          amount: expect.objectContaining({ value: "1" }),
+        }),
+      ]),
+    )
   })
 
   it("maps balance, lifetime usage and today's activity from /api/user/overview", async () => {
@@ -153,13 +281,16 @@ describe("relayForAccountData", () => {
 
     const data = await relayForAccountData.fetchData(createRequest())
 
-    expect(data.quota).toBe(1000000)
-    expect(data.today_quota_consumption).toBe(10000)
+    expect(data.balance?.positions[0]?.amount).toMatchObject({ value: "2" })
+    expect(data.today_quota_consumption).toBe(0)
     expect(data.today_requests_count).toBe(5)
     expect(data.today_completion_tokens).toBe(2500)
     expect(data.today_prompt_tokens).toBe(0)
     expect(data.todayStatsAvailability).toEqual({
-      consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      },
       requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
       tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
       income: {
@@ -167,11 +298,14 @@ describe("relayForAccountData", () => {
         reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
       },
     })
-    expect(data.usage).toEqual({
-      scope: "lifetime",
+    expect(data.usage).toMatchObject({
+      scope: ACCOUNT_USAGE_SCOPES.Lifetime,
       totalRequests: 50,
       totalTokens: 25000,
-      totalCost: 3,
+      cost: {
+        asset: { kind: "currency", code: "USD" },
+        amount: { value: "3" },
+      },
     })
   })
 })

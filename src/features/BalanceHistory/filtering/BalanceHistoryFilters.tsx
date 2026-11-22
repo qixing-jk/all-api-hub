@@ -68,7 +68,7 @@ export function BalanceHistoryFilters({
     perAccountSeries,
   } = model
   return (
-    <div className="divide-border divide-y">
+    <div className="divide-y divide-border">
       <BalanceHistoryOptionFilter
         title={t("filters.tags")}
         hint={t("filters.tagsHint")}
@@ -90,20 +90,18 @@ export function BalanceHistoryFilters({
         maxVisibleLines={3}
       />
 
-      <div className="py-density-4 gap-y-density-2 flex flex-wrap items-center justify-between gap-x-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-density-2 py-density-4">
         <div>
-          <Label className="text-sm font-medium">
-            {t("settings:display.currencyUnit")}
-          </Label>
-          <div className="text-muted-foreground text-xs">
-            {t("settings:display.currencyDesc")}
+          <Label className="text-sm font-medium">{t("legacy.currency")}</Label>
+          <div className="text-xs text-muted-foreground">
+            {t("legacy.currencyHint")}
           </div>
         </div>
 
         <SegmentedControl
           layout="fit"
           size="sm"
-          aria-label={t("settings:display.currencyUnit")}
+          aria-label={t("legacy.currency")}
           value={currencyType}
           onValueChange={handleCurrencyChange}
           options={[
@@ -116,7 +114,7 @@ export function BalanceHistoryFilters({
       <div className="space-y-density-3 py-density-4">
         <div>
           <Label className="text-sm font-medium">{t("filters.range")}</Label>
-          <div className="text-muted-foreground text-xs">
+          <div className="text-xs text-muted-foreground">
             {t("filters.rangeHint", { days: safeRetentionDays })}
           </div>
         </div>
@@ -139,7 +137,7 @@ export function BalanceHistoryFilters({
           })}
         </ActionGroup>
 
-        <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-density-3 sm:grid-cols-2">
           <BalanceHistoryDateField
             label={t("filters.startDay")}
             value={startDayKey}
@@ -161,9 +159,10 @@ export function BalanceHistoryFilters({
         </div>
       </div>
 
-      <div className="text-muted-foreground py-density-3 flex items-start gap-2 text-xs">
+      <div className="flex items-start gap-2 py-density-3 text-xs text-muted-foreground">
         <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
         <span>
+          {t("legacy.coverage")} ·{" "}
           {t("summary.coverage", {
             snapshotAvailableDays,
             snapshotCompleteDays: snapshotCompleteDays.snapshotComplete,

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { SITE_TYPES } from "~/constants/siteType"
 import { sharedChatAccountRefresh } from "~/services/apiAdapters/sharedchat/accountRefresh"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -44,7 +45,7 @@ describe("sharedChatAccountRefresh", () => {
       today_requests_count: 8,
       today_income: 0,
       usage: {
-        scope: "current_period",
+        scope: ACCOUNT_USAGE_SCOPES.CurrentPeriod,
         totalRequests: 8,
         totalTokens: 4000,
         totalCost: 12.5,

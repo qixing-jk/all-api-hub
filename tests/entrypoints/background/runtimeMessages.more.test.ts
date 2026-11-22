@@ -45,7 +45,6 @@ const mocks = vi.hoisted(() => ({
   setupRedemptionAssistMessagingListeners: vi.fn(),
   setupUsageHistoryMessagingListeners: vi.fn(),
   setupWebdavAutoSyncMessagingListeners: vi.fn(),
-  handleDailyBalanceHistoryMessage: vi.fn(),
   setupDailyBalanceHistoryMessagingListeners: vi.fn(),
   setupTaskNotificationMessagingListeners: vi.fn(),
   setupSiteAnnouncementsMessagingListeners: vi.fn(),
@@ -181,7 +180,6 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
 }))
 
 vi.mock("~/services/history/dailyBalanceHistory/scheduler", () => ({
-  handleDailyBalanceHistoryMessage: mocks.handleDailyBalanceHistoryMessage,
   setupDailyBalanceHistoryMessagingListeners:
     mocks.setupDailyBalanceHistoryMessagingListeners,
 }))
@@ -275,9 +273,8 @@ describe("setupRuntimeMessageListeners additional routing", () => {
   })
 
   async function loadListener() {
-    const { setupRuntimeMessageListeners } = await import(
-      "~/entrypoints/background/runtimeMessages"
-    )
+    const { setupRuntimeMessageListeners } =
+      await import("~/entrypoints/background/runtimeMessages")
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
@@ -319,6 +316,19 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     )
     return runtimeMessageListener!
   }
+
+  it("does not route the removed endpoint that fabricated balance history", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+    expect(
+      listener(
+        { action: "balanceHistory:debugSeedEstimateSnapshots" },
+        {},
+        sendResponse,
+      ),
+    ).toBeUndefined()
+    expect(sendResponse).not.toHaveBeenCalled()
+  })
 
   it("routes exact New API owned-session cleanup through the background lifecycle", async () => {
     await loadListener()

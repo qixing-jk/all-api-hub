@@ -15,7 +15,11 @@ import {
   FINANCIAL_COVERAGE,
 } from "~/services/amounts/financialConstants"
 import * as adapterRegistry from "~/services/apiAdapters/registry"
+import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { SiteHealthStatus, type SiteAccount } from "~/types"
+import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { accountStorageTestSurface as accounts } from "~~/tests/test-utils/accountStorageTestSurface"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -109,6 +113,68 @@ describe("editor and background financial refresh ordering", () => {
       reason: "account-identity-changed",
       value: "20",
     })
+  })
+  it("captures the accepted editor observation after saving it", async () => {
+    const id = await accounts.addAccount(
+      buildSiteAccount({ site_type: SITE_TYPES.NEW_API }),
+    )
+    const account = (await accounts.getAccountById(id))!
+    const data = dataFor(account, "20")
+    data.balance!.capturedAt = Date.now()
+    const inputBalance = structuredClone(data.balance)
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      balanceHistory: { ...DEFAULT_BALANCE_HISTORY_PREFERENCES, enabled: true },
+    })
+    const getCapabilities = adapterRegistry.getSiteTypeCapabilities
+    vi.spyOn(adapterRegistry, "getSiteTypeCapabilities").mockImplementation(
+      (siteType) => {
+        const capabilities = getCapabilities(siteType)
+        return {
+          ...capabilities,
+          account: {
+            ...capabilities.account,
+            data: { fetchData: async () => data },
+          },
+        }
+      },
+    )
+    const result = await validateAndUpdateAccount({
+      accountId: id,
+      url: account.site_url,
+      siteName: account.site_name,
+      username: account.account_info.username,
+      accessToken: account.account_info.access_token,
+      userId: account.account_info.id,
+      exchangeRate: "7",
+      notes: "save",
+      tagIds: [],
+      checkInConfig: account.checkIn,
+      siteType: account.site_type,
+      authType: account.authType,
+      cookieAuthSessionCookie: "",
+    })
+    expect(result.success).toBe(true)
+    const committed = (await accounts.getAccountById(id))!
+    expect(
+      committed.account_info.balance?.positions.filter(
+        ({ amount }) => amount.source.kind !== EVIDENCE_KINDS.Legacy,
+      ),
+    ).toEqual(data.balance!.positions)
+    expect(data.balance).toEqual(inputBalance)
+    expect(committed.balanceRefreshGeneration).toBeGreaterThan(
+      account.balanceRefreshGeneration ?? 0,
+    )
+    expect(
+      (await dailyBalanceHistoryStorage.getStore())
+        .financialSnapshotsByAccountId?.[id],
+    ).toEqual([
+      {
+        balance: committed.account_info.balance,
+        source: "refresh",
+        generation: committed.balanceRefreshGeneration,
+      },
+    ])
   })
   it("keeps a saved-session balance stale when the editor selects another Kimi organization", async () => {
     const original = buildSiteAccount({

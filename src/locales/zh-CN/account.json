@@ -344,9 +344,21 @@
     "toggleSortOrder": "切换正序/倒序"
   },
   "netInflow": {
+    "coverage": "可比估算：{{included}}/{{eligible}} 个账户",
+    "details": "估算依据与覆盖范围",
+    "explanation": "期末账面余额 − 期初账面余额 + 已结算消耗。结果是未分类净变化，不是已确认收入。",
     "reasons": {
+      "balance": "缺少当前可比的账面余额观测",
+      "baseline": "缺少当天零点的可靠基线",
       "conflict": "已排除存在观测冲突的钱包",
-      "duplicate": "已排除重复钱包"
+      "consumption": "缺少完整的已结算消耗",
+      "disabled": "未启用估算",
+      "duplicate": "已排除重复钱包",
+      "identity": "资产、钱包、来源或适用范围已变化",
+      "interval": "余额与消耗的观测区间不一致",
+      "manual": "手动余额没有匹配的账单依据",
+      "precision": "金额超出支持的精度",
+      "unverified": "估算所需的可比性未核实"
     }
   },
   "popupOnboarding": {
@@ -400,7 +412,7 @@
   "stats": {
     "allowanceExpiry": "到期：{{time}}",
     "completion": "补全",
-    "estimatedTodayIncome": "估算收入",
+    "estimatedNetInflow": "估算净流入",
     "prompt": "提示",
     "subscriptionRemainingCount": "订阅剩余次数",
     "subscriptionRemainingTokens": "剩余 Token",

@@ -1,8 +1,11 @@
-import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
+import {
+  CURRENCIES,
+  DEFAULT_USD_TO_CNY_RATE,
+  QUOTA_PER_USD,
+} from "~/constants/money"
 import type { KimiOpenPlatformCurrency } from "~/services/kimiOpenPlatform/deployments"
 
-// Console amounts use 1e-5 currency units; inference balances are already CNY/USD.
-const KIMI_CONSOLE_AMOUNT_SCALE = 100_000
+import { kimiConsoleAmount } from "./balance"
 
 export type KimiUserInfo = {
   uid: string
@@ -162,8 +165,8 @@ export function parseKimiAccountInfo(payload: unknown): KimiAccountInfo {
     throw new Error("invalid_kimi_account_info")
   }
   return {
-    cur: data.cur / KIMI_CONSOLE_AMOUNT_SCALE,
-    today_consume: data.today_consume / KIMI_CONSOLE_AMOUNT_SCALE,
+    cur: Number(kimiConsoleAmount(data.cur)),
+    today_consume: Number(kimiConsoleAmount(data.today_consume)),
   }
 }
 
@@ -240,6 +243,6 @@ export function kimiAmountToQuota(
     typeof exchangeRateCnyPerUsd === "number" && exchangeRateCnyPerUsd > 0
       ? exchangeRateCnyPerUsd
       : DEFAULT_USD_TO_CNY_RATE
-  const usd = currency === "USD" ? amount : amount / rate
+  const usd = currency === CURRENCIES.USD ? amount : amount / rate
   return Math.round(usd * QUOTA_PER_USD)
 }

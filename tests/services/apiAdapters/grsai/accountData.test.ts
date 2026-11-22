@@ -1,11 +1,13 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   resolveAccountBrowserSession,
 } from "~/services/accountBrowserSession"
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import {
   fetchAccountData,
   fetchGrsaiModels,
@@ -139,20 +141,76 @@ describe("grsai account data", () => {
     server.use(configHandler(true), dashboardHandler(), userInfoHandler())
   })
 
-  it("normalizes credits into product quota units", async () => {
+  it("retains native credits without using a package purchase price as currency", async () => {
     const data = await fetchAccountData(request)
+    expect(data).not.toHaveProperty("quota")
+    expect(data.balance?.positions[0]).toMatchObject({
+      asset: { kind: "quota", id: "grsai:credits" },
+      amount: { status: "known", value: "5000" },
+      scope: { authority: CONSOLE },
+    })
+    expect(data.today_quota_consumption).toBe(0)
+    expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
+  })
 
-    // The deployment sells one US dollar for 66,600 credits; the product's
-    // quota scale is 500,000 points per dollar.
-    expect(data.quota).toBe(37_538)
-    expect(data.today_quota_consumption).toBe(10_000)
+  it.each([
+    {
+      payload: { totalConsumed: "400000.000000000000017" },
+      status: 200,
+      amount: {
+        status: OBSERVATION_STATUSES.Known,
+        value: "400000.000000000000017",
+      },
+    },
+    { payload: {}, status: 503, amount: { status: "unavailable" } },
+  ])(
+    "keeps wallet independent from missing dashboard fields or failed reads ($status)",
+    async ({ payload, status, amount }) => {
+      server.use(
+        http.post(`${CONSOLE}${GRSAI_ENDPOINTS.dashboard}`, () =>
+          HttpResponse.json(
+            { code: 0, msg: "success", data: payload },
+            { status },
+          ),
+        ),
+      )
+      const data = await fetchAccountData(request)
+      expect(data.balance?.positions[0]?.amount).toMatchObject({
+        status: "known",
+        value: "5000",
+      })
+      expect(data.usage?.cost?.amount).toMatchObject(amount)
+    },
+  )
+
+  it("retains lifetime native consumption separately from the unverified provider day", async () => {
+    const data = await fetchAccountData(request)
+    expect(data.usageObservations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scope: ACCOUNT_USAGE_SCOPES.Lifetime,
+          cost: expect.objectContaining({
+            amount: expect.objectContaining({ value: "400000" }),
+          }),
+        }),
+        expect.objectContaining({
+          scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+          cost: expect.objectContaining({
+            amount: expect.objectContaining({ value: "1332" }),
+          }),
+        }),
+      ]),
+    )
   })
 
   it("classifies the metrics the deployment actually exposes", async () => {
     const data = await fetchAccountData(request)
 
     expect(data.todayStatsAvailability).toEqual({
-      consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+      },
       requests: {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
         reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
@@ -168,9 +226,15 @@ describe("grsai account data", () => {
     })
     expect(data.today_requests_count).toBe(0)
     expect(data.today_completion_tokens).toBe(0)
-    // The deployment exposes no lifetime request or token series, and the
-    // product renders whatever summary it is given, so none is reported.
-    expect(data.usage).toBeUndefined()
+    expect(data.usage).toMatchObject({
+      scope: ACCOUNT_USAGE_SCOPES.Lifetime,
+      cost: {
+        asset: { kind: "quota", id: "grsai:credits" },
+        amount: { status: "known", value: "400000" },
+      },
+    })
+    expect(data.usage).not.toHaveProperty("totalRequests")
+    expect(data.usage).not.toHaveProperty("totalTokens")
   })
 
   it("skips today's consumption when the caller opts out", async () => {
@@ -283,7 +347,10 @@ describe("grsai account data", () => {
           userId: ACCOUNT_ID,
           username: ACCOUNT_EMAIL,
         })
-        expect(result.data.quota).toBe(37_538)
+        expect(result.data.balance?.positions[0]?.amount).toMatchObject({
+          status: "known",
+          value: "5000",
+        })
       }
       expect(resolveAccountBrowserSession).toHaveBeenCalledWith(
         expect.objectContaining({ siteType: SITE_TYPES.GRSAI }),

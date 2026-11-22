@@ -4,6 +4,7 @@ import type { LogResponseData } from "~/services/history/usageHistory/usageLogMo
 export type UsageHistoryPageQuery = {
   page: number
   pageSize: number
+  /** Unix seconds, as used by the shared history cursor. */
   startTimestamp: number
   endTimestamp: number
 }

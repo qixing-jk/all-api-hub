@@ -6,7 +6,7 @@
   },
   "breakdown": {
     "chartTypes": {
-      "histogram": "Histogram",
+      "bars": "Bars",
       "pie": "Pie"
     },
     "controls": {
@@ -19,6 +19,9 @@
       "pieDisabledForNegative": "Pie charts are unavailable for negative values."
     },
     "title": "Account breakdown"
+  },
+  "charts": {
+    "view": "Chart view"
   },
   "description": "See how your balances and allowances change over time.",
   "empty": {
@@ -69,8 +72,24 @@
       "title": "Total may be incomplete"
     }
   },
+  "legacy": {
+    "accountDetails": "Converted account details",
+    "columnsHint": "These amounts use the reference currency selected in Filters. Select a column heading to sort the accounts.",
+    "coverage": "Days with reference figures",
+    "currency": "Reference currency",
+    "currencyHint": "CNY uses the account’s current exchange rate.",
+    "referenceRate": "{{account}} · Reference on {{date}}: 1 USD = {{rate}} CNY",
+    "referenceRates": "Reference exchange rates",
+    "showColumns": "Show converted columns",
+    "title": "Converted history",
+    "totalsHint": "Old snapshots use the selected reference currency."
+  },
   "messages": {
     "error": {
+      "captureResultUnavailable": "Capture result unavailable.",
+      "lastLoadedDescription": "Showing the last loaded history. Reload failed; retry to update it.",
+      "loadDescription": "Saved history was not replaced. Retry, or use an app version that supports this data.",
+      "loadTitle": "History could not be loaded",
       "pruneFailed": "Prune failed: {{error}}",
       "refreshFailed": "Refresh failed: {{error}}",
       "settingsSaveFailed": "Failed to save settings: {{error}}"
@@ -85,7 +104,30 @@
       "pruneCompleted": "Prune completed",
       "refreshCompleted": "Refresh completed",
       "settingsSaved": "Settings saved"
+    },
+    "warning": {
+      "refreshIncomplete": "History capture incomplete. Recorded: {{captured}}; not recorded: {{uncaptured}}."
     }
+  },
+  "metricHelp": {
+    "allowanceHint": "Remaining allowance reported by the provider. The provider sets where it can be used and when it expires.",
+    "bonusHint": "Credits granted by the provider. The provider sets which charges they cover and when they expire.",
+    "convertedHint": "Historical balance shown in the reference currency selected in Filters, using the account’s current exchange rate.",
+    "estimatedHint": "Reference estimate from two archived balances and the recorded usage for that day. The balance and usage periods may differ.",
+    "incomeHint": "Money credited to the account, as recorded by the provider.",
+    "ledgerHint": "The account balance reported by the provider, shown in its original unit.",
+    "nativeHint": "This amount as reported by the provider, shown in its original unit.",
+    "netHint": "Recorded income minus recorded spending.",
+    "outcomeHint": "Spending recorded by the provider.",
+    "quotaHint": "Balance or remaining allowance measured in {{unit}}. The provider sets the deduction rules.",
+    "title": "Metric guide",
+    "trigger": "{{chart}} metric guide"
+  },
+  "metricMenu": {
+    "allowances": "Allowances",
+    "balances": "Balances",
+    "cashflow": "Income and spending",
+    "convertedBalance": "Converted balance"
   },
   "metrics": {
     "balance": "Balance",
@@ -95,6 +137,11 @@
     "outcome": "Outcome"
   },
   "native": {
+    "activityCoverage": "{{covered}}/{{total}} days with records",
+    "activityHint": "Native income and spending use the site's reporting dates.",
+    "activityTitle": "Period summary",
+    "amountsTitle": "Balances and allowances",
+    "coverage": "{{covered}} of {{total}} accounts have records",
     "dimensions": {
       "groups": "Groups",
       "keys": "Keys",
@@ -102,9 +149,30 @@
       "projects": "Projects",
       "routes": "Routes"
     },
+    "ended": "Ended",
     "expired": "Expired",
+    "firstRecord": "First record",
+    "gaps": "Gaps show dates without a value.",
+    "latest": "Latest record",
+    "netInflow": "Estimated net inflow",
+    "netInflowHint": "— means there is not enough data to estimate net inflow.",
+    "originalObservation": "Value from {{date}}",
+    "recordedIncome": "Recorded income",
+    "recordedRange": "Recorded dates: {{range}}",
+    "recordedSpending": "Recorded spending",
     "reset": "Reset",
-    "restrictions": "{{dimension}}: {{value}}"
+    "restrictions": "{{dimension}}: {{value}}",
+    "scope": "Authority · organization · wallet",
+    "sources": {
+      "console": "Console",
+      "inference": "Inference API",
+      "numbered": "Source {{number}}"
+    },
+    "status": "State",
+    "time": "Time",
+    "unknown": "Unknown",
+    "unknownAsset": "Unknown asset",
+    "unsupported": "Unsupported"
   },
   "overview": {
     "kpis": {
@@ -122,7 +190,7 @@
         "label": "Range net"
       }
     },
-    "title": "Overview"
+    "viewTrend": "View trend: {{metric}}, {{amount}}"
   },
   "settings": {
     "alarmUnsupported": "Alarms API is not available in this browser; end-of-day capture cannot be enabled.",
@@ -166,6 +234,7 @@
     },
     "emptyMetric": "No {{metric}} data in this range.",
     "gapBridge": "No records",
+    "noRecordForDay": "No record that day",
     "scopes": {
       "accounts": "By account",
       "total": "Total"

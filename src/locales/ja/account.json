@@ -344,9 +344,21 @@
     "toggleSortOrder": "昇順・降順を切り替え"
   },
   "netInflow": {
+    "coverage": "比較可能な推定：{{included}}/{{eligible}} アカウント",
+    "details": "推定の根拠と対象範囲",
+    "explanation": "期末帳簿残高 − 期首帳簿残高 + 確定利用額。これは未分類の純変化であり、確定収入ではありません。",
     "reasons": {
+      "balance": "現在の比較可能な帳簿残高がありません",
+      "baseline": "当日開始時点の信頼できる基準値がありません",
       "conflict": "観測内容が矛盾するウォレットを除外しました",
-      "duplicate": "重複ウォレットを除外しました"
+      "consumption": "完全な確定利用量がありません",
+      "disabled": "推定は無効です",
+      "duplicate": "重複ウォレットを除外しました",
+      "identity": "資産・ウォレット・情報源・範囲が変わりました",
+      "interval": "残高と利用量の観測期間が一致しません",
+      "manual": "手動残高に対応する請求根拠がありません",
+      "precision": "金額が対応精度を超えています",
+      "unverified": "推定に必要な比較可能性が未確認です"
     }
   },
   "popupOnboarding": {
@@ -400,7 +412,7 @@
   "stats": {
     "allowanceExpiry": "有効期限：{{time}}",
     "completion": "補完",
-    "estimatedTodayIncome": "推定収入",
+    "estimatedNetInflow": "推定純流入",
     "prompt": "プロンプト",
     "subscriptionRemainingCount": "サブスクリプション残り回数",
     "subscriptionRemainingTokens": "残りのトークン",

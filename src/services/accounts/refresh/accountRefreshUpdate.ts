@@ -8,7 +8,7 @@ import type { SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 
 /** Preserve data from adapters still returning the release wire format. */
-export function readLegacyAdapterFinancialPatch(
+function readLegacyAdapterFinancialPatch(
   data: AccountData,
   context: Parameters<typeof migrateAccountFinancialInfo>[1],
 ) {
@@ -20,11 +20,27 @@ export function readLegacyAdapterFinancialPatch(
       data.balanceUnavailable === undefined)
   )
     return {}
-  const { balance, legacyFinancial } = migrateAccountFinancialInfo(
-    { ...data, id: "", username: "", access_token: "" },
+  const { balance } = migrateAccountFinancialInfo(
+    {
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+      id: "",
+      username: "",
+      access_token: "",
+      ...(data.quota === undefined ? {} : { quota: data.quota }),
+      ...(data.nativeBalance === undefined
+        ? {}
+        : { nativeBalance: data.nativeBalance }),
+      ...(data.balanceUnavailable === undefined
+        ? {}
+        : { balanceUnavailable: data.balanceUnavailable }),
+    },
     context,
   )
-  return { balance, legacyFinancial }
+  return { balance }
 }
 
 /** Projects adapter data into a refresh patch without writing stored account state. */

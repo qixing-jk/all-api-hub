@@ -15,16 +15,11 @@ import { SiteHealthStatus } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildAccountBalanceObservation } from "~~/tests/test-utils/accountBalance"
 
 import { createCheckInConfig } from "../apiAdapters/checkInFixtures"
 
-const accountBalance = {
-  schemaVersion: 2,
-  subject: { kind: "account" },
-  capturedAt: 1000,
-  positions: [],
-  coverage: "unknown",
-}
+const balanceObservation = buildAccountBalanceObservation("1200")
 
 const {
   mockDetermineHealthStatus,
@@ -99,7 +94,7 @@ describe("AnyRouter API service", () => {
       status: SiteHealthStatus.Unknown,
       message: "mapped error",
     })
-    mockFetchAccountBalance.mockResolvedValue({ balance: accountBalance })
+    mockFetchAccountBalance.mockResolvedValue(balanceObservation)
     mockFetchTodayUsage.mockResolvedValue({
       today_quota_consumption: 10,
       today_prompt_tokens: 20,
@@ -123,7 +118,7 @@ describe("AnyRouter API service", () => {
     const result = await fetchAccountData(baseRequest)
 
     expect(result).toMatchObject({
-      balance: accountBalance,
+      balance: balanceObservation.balance,
       today_income: 50,
       today_quota_consumption: 10,
       today_prompt_tokens: 20,

@@ -1,3 +1,5 @@
+import { type BUDGET_PERIODS } from "~/services/amounts/financialConstants"
+
 /**
  * RelayFor wire types.
  *
@@ -37,6 +39,8 @@ export type RelayForOverview = {
 }
 
 export type RelayForSubscription = {
+  /** Optional raw identity; financial projection validates it before reuse. */
+  id?: unknown
   plan_name?: string
   plan_code?: string
   status: number
@@ -62,7 +66,7 @@ export type RelayForTokenLimits = {
 
 export type RelayForToken = {
   budget_usage?: {
-    window: "5h" | "day" | "week" | "month"
+    window: (typeof BUDGET_PERIODS)[keyof typeof BUDGET_PERIODS]
     limit: number
     used: number
     remaining: number

@@ -3,10 +3,7 @@ import { afterEach, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { vercelAiGatewayCapabilities } from "~/services/apiAdapters/vercelAiGateway"
-import {
-  fetchAccountData,
-  fetchVercelCredits,
-} from "~/services/apiService/vercelAiGateway"
+import { fetchVercelCredits } from "~/services/apiService/vercelAiGateway"
 import {
   fetchVercelKeyBudgets,
   updateVercelKeyBudget,
@@ -29,8 +26,7 @@ import {
   parseVercelCatalogModel,
 } from "~/services/apiService/vercelAiGateway/models"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import { t } from "~/utils/i18n/core"
+import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
@@ -256,13 +252,7 @@ it.each([null, {}, { user: { id: "u" } }])(
   },
 )
 
-it.each([
-  null,
-  {},
-  { balance: " ", total_used: "0" },
-  { balance: true, total_used: 0 },
-  { balance: "Infinity", total_used: 0 },
-])("rejects unreadable credits %j", async (body) => {
+it.each([null, {}])("rejects unrelated credit payloads %j", async (body) => {
   server.use(
     http.get("https://ai-gateway.vercel.sh/v1/credits", () =>
       HttpResponse.json(body),
@@ -272,25 +262,29 @@ it.each([
     "vercel_credits_unreadable",
   )
 })
-it("rejects balances that overflow the product quota without claiming a healthy refresh", async () => {
-  server.use(
-    http.get("https://ai-gateway.vercel.sh/v1/credits", () =>
-      HttpResponse.json({ balance: 1e308, total_used: 0 }),
-    ),
-  )
-  await expect(fetchAccountData(request)).rejects.toThrow(
-    "vercel_credits_unreadable",
-  )
-  expect(
-    await vercelAiGatewayCapabilities.account!.refresh!.refreshAccount(request),
-  ).toMatchObject({
-    success: false,
-    healthStatus: {
-      status: SiteHealthStatus.Unknown,
-      message: t("account:healthStatus.unknownError"),
-    },
-  })
-})
+it.each([" ", true, "Infinity", 1e308])(
+  "retains available lifetime usage when balance cannot be read exactly: %j",
+  async (balance) => {
+    server.use(
+      http.get("https://ai-gateway.vercel.sh/v1/credits", () =>
+        HttpResponse.json({ balance, total_used: 0 }),
+      ),
+    )
+    const result =
+      await vercelAiGatewayCapabilities.account!.refresh!.refreshAccount(
+        request,
+      )
+    expect(result.success).toBe(true)
+    expect(result.data?.balance?.positions[0]?.amount).toMatchObject({
+      status: "unavailable",
+    })
+    expect(result.data?.usage?.cost?.amount).toMatchObject({
+      status: "known",
+      value: "0",
+    })
+  },
+)
+
 it.each([401, 403, 429, 500])(
   "retains HTTP %i when a key deletion fails",
   async (status) => {

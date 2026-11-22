@@ -405,6 +405,13 @@ describe("novita api service", () => {
       availableUsd: 100,
       cashUsd: 80,
       creditLimitUsd: 20,
+      amounts: {
+        available: "100",
+        cash: "80",
+        creditLimit: "20",
+        pending: "0",
+        debt: "0",
+      },
     })
     expect(requestExecution.fetchPreparedJsonResponse).toHaveBeenCalledWith(
       request,
@@ -414,7 +421,7 @@ describe("novita api service", () => {
     )
   })
 
-  it("rejects non-numeric balance fields instead of coercing them to zero", async () => {
+  it("keeps non-numeric balance fields unavailable instead of coercing them to zero", async () => {
     vi.mocked(requestExecution.fetchPreparedJsonResponse).mockResolvedValueOnce(
       {
         ok: true,
@@ -422,8 +429,9 @@ describe("novita api service", () => {
         body: { ...BALANCE_FIXTURE, availableBalance: null },
       } as never,
     )
-    await expect(fetchNovitaBalanceDetail(request)).rejects.toMatchObject({
-      code: "JSON_PARSE_ERROR",
+    await expect(fetchNovitaBalanceDetail(request)).resolves.toMatchObject({
+      availableUsd: undefined,
+      amounts: { available: undefined, cash: "80", creditLimit: "20" },
     })
   })
 

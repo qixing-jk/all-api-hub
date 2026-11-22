@@ -60,9 +60,6 @@ describe("runtimeActions registry and helpers", () => {
     expect(RuntimeActionIds.AccountRefreshCompleted).toBe(
       "accountRefresh:completed",
     )
-    expect(RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots).toBe(
-      "balanceHistory:debugSeedEstimateSnapshots",
-    )
   })
 
   it("keeps broadcast runtime message types stable", () => {
@@ -71,4 +68,10 @@ describe("runtimeActions registry and helpers", () => {
     )
     expect(RuntimeMessageTypes.TAG_STORE_UPDATE).toBe("TAG_STORE_UPDATE")
   })
+})
+
+it("does not expose the removed debug endpoint that fabricated income history", () => {
+  expect(Object.values(RuntimeActionIds)).not.toContain(
+    "balanceHistory:debugSeedEstimateSnapshots",
+  )
 })

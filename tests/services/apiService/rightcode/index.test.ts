@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { acceptUsageObservations } from "~/services/accounts/refresh/usageAcceptance"
 import {
   createRightCodeKey,
@@ -480,7 +481,7 @@ describe("rightcode apiService index", () => {
             return {
               subscriptions: [
                 {
-                  id: 1,
+                  item_id: 1,
                   name: "Pro Plan",
                   expired_at: "2099-01-01T00:00:00",
                 },
@@ -501,28 +502,51 @@ describe("rightcode apiService index", () => {
 
       const result = await fetchAccountData(accountRequest)
 
-      expect(result.quota).toBe(12.34 * 500000)
+      expect(result.balance?.positions[0]?.amount).toMatchObject({
+        status: "known",
+        value: "12.34",
+      })
+      // The official subscription card prefixes these same quota fields with '$'.
+      const summary = result.allowances?.entries.find(
+        (entry) => entry.collectionKey === "subscription-summary",
+      )
+      expect(summary?.constraint).toMatchObject({
+        asset: { kind: "currency", code: "USD" },
+        limit: { value: "100" },
+        used: { value: "25" },
+        remaining: { value: "75" },
+      })
       expect(result.today_quota_consumption).toBe(0.5 * 500000)
       expect(result.today_completion_tokens).toBe(1500)
       expect(result.today_requests_count).toBe(10)
       expect(result.todayStatsAvailability?.consumption.status).toBe(
-        ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+        ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
       )
-      expect(result.usage).toEqual({
-        scope: "lifetime",
+      expect(result.usage).toMatchObject({
+        scope: ACCOUNT_USAGE_SCOPES.Lifetime,
         totalRequests: 120,
         totalTokens: 34500,
-        totalCost: 5.67,
+        cost: {
+          asset: { kind: "currency", code: "USD" },
+          amount: { status: "known", value: "5.67" },
+        },
       })
-      expect(result.subscription).toEqual({
-        name: "Pro Plan",
-        amountLimit: 100,
-        usedAmount: 25,
-        remainingAmount: 75,
-        expireTime: "2099-01-01T00:00:00",
-        isLongTerm: false,
-        isActive: true,
-      })
+      expect(result.allowances?.entries).toMatchObject([
+        {
+          id: "1:total",
+          label: "Pro Plan",
+          validity: { kind: "unknown" },
+          reportedTiming: { expiresAt: "2099-01-01T00:00:00" },
+        },
+        {
+          id: "summary",
+          constraint: {
+            limit: { value: "100" },
+            used: { value: "25" },
+            remaining: { value: "75" },
+          },
+        },
+      ])
     })
 
     it("omits today collection when includeTodayCashflow is false", async () => {
@@ -649,17 +673,17 @@ describe("rightcode apiService index", () => {
             return {
               subscriptions: [
                 {
-                  id: 1,
+                  item_id: 1,
                   name: "Expired Plan",
                   expired_at: "2020-01-01T00:00:00",
                 },
                 {
-                  id: 2,
+                  item_id: 2,
                   name: "Long Term Plan",
                   expired_at: null,
                 },
                 {
-                  id: 3,
+                  item_id: 3,
                   name: "Invalid Date Plan",
                   expired_at: "not-a-date",
                 },
@@ -677,12 +701,28 @@ describe("rightcode apiService index", () => {
       )
 
       const result = await fetchAccountData(accountRequest)
-      expect(result.subscription).toBeDefined()
-      expect(result.subscription?.isLongTerm).toBe(false) // because "not-a-date" is kept in expiries
-      expect(result.subscription?.name).toContain("Long Term Plan")
+      expect(result.allowances?.entries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "1:total",
+            label: "Expired Plan",
+            validity: { kind: "unknown" },
+          }),
+          expect.objectContaining({
+            id: "2:total",
+            label: "Long Term Plan",
+            validity: { kind: "unknown" },
+          }),
+          expect.objectContaining({
+            id: "3:total",
+            label: "Invalid Date Plan",
+            validity: { kind: "unknown" },
+          }),
+        ]),
+      )
     })
 
-    it("throws when overall usage stats payload is invalid", async () => {
+    it("retains wallet with unavailable cost when overall usage is invalid", async () => {
       vi.mocked(fetchRightCodeData).mockImplementation(
         async (_req, endpoint) => {
           if (endpoint === RIGHTCODE_ENDPOINTS.me) {
@@ -700,9 +740,14 @@ describe("rightcode apiService index", () => {
         },
       )
 
-      await expect(fetchAccountData(accountRequest)).rejects.toThrow(
-        "invalid_rightcode_overall_usage_stats",
-      )
+      const result = await fetchAccountData(accountRequest)
+      expect(result.balance?.positions[0]?.amount).toMatchObject({
+        status: "known",
+        value: "1",
+      })
+      expect(result.usage?.cost?.amount).toMatchObject({
+        status: "unavailable",
+      })
     })
 
     it("handles invalid usage stats by marking availability request_failed", async () => {
@@ -848,11 +893,7 @@ describe("rightcode apiService index", () => {
             throw new Error("401 Unauthorized")
           }
           if (endpoint === RIGHTCODE_ENDPOINTS.me) {
-            return {
-              id: 42,
-              username: "testuser",
-              user_token: "resynced-token",
-            }
+            throw new Error("retry identity network failure")
           }
           throw new Error("retry network fail")
         },

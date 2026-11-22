@@ -9,6 +9,7 @@ import {
   FinancialAmountSummary,
 } from "~/features/AccountManagement/components/FinancialAmountSummary"
 import { FinancialTotalsPopover } from "~/features/AccountManagement/components/FinancialTotalsPopover"
+import { NetInflowTotalsDisplay } from "~/features/AccountManagement/components/NetInflowTotalsDisplay"
 import { ProviderDayUsageSummary } from "~/features/AccountManagement/components/ProviderDayUsageSummary"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useBalanceAsOf } from "~/features/AccountManagement/data/useBalanceAsOf"
@@ -17,6 +18,7 @@ import {
   getReferenceCashflowTotal,
   selectDisplayCashflowGroups,
 } from "~/services/accounts/metrics/consumptionProjection"
+import { buildNetInflowTotals } from "~/services/accounts/metrics/netInflowTotals"
 import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
@@ -35,7 +37,7 @@ export default function AccountBalanceSummary({
   shareAction?: ReactNode
 } = {}) {
   const { t, i18n } = useTranslation("account")
-  const { displayData, todayIncomeEstimateTotals } = useAccountDataContext()
+  const { displayData, netInflowTotals } = useAccountDataContext()
   const asOf = useBalanceAsOf(displayData)
   const {
     showTodayCashflow,
@@ -45,9 +47,8 @@ export default function AccountBalanceSummary({
   } = useUserPreferencesContext()
   const displayCurrency = getDisplayCurrency(currencyDisplay, currencyType)
   const referenceCurrency = displayCurrency ?? CURRENCIES.USD
-  const estimate = preferences.balanceHistory?.estimatedTodayIncome?.enabled
-    ? todayIncomeEstimateTotals?.estimated?.[referenceCurrency]
-    : undefined
+  const netInflowEnabled =
+    preferences.balanceHistory?.estimatedTodayIncome?.enabled === true
   const consumption = useMemo(
     () => calculateTotalConsumption(displayData, asOf),
     [displayData, asOf],
@@ -55,6 +56,10 @@ export default function AccountBalanceSummary({
   const income = useMemo(
     () => calculateTotalIncomeForSites(displayData, asOf),
     [displayData, asOf],
+  )
+  const netTotals = useMemo(
+    () => netInflowTotals ?? buildNetInflowTotals(displayData),
+    [netInflowTotals, displayData],
   )
   const summaries = [
     {
@@ -68,6 +73,7 @@ export default function AccountBalanceSummary({
       tone: FINANCIAL_AMOUNT_TONES.Income,
     },
   ]
+  const showNetInflow = netInflowEnabled && netTotals.groups.length > 0
   return (
     <div
       role="region"
@@ -92,6 +98,12 @@ export default function AccountBalanceSummary({
               showAccountBreakdown
             >
               {showTodayCashflow && additionalDetails}
+              {showTodayCashflow && netInflowEnabled && (
+                <NetInflowTotalsDisplay
+                  totals={netTotals}
+                  sites={displayData}
+                />
+              )}
             </FinancialTotalsPopover>
             {shareAction}
           </div>
@@ -151,17 +163,11 @@ export default function AccountBalanceSummary({
           ))}
           {additionalSummary}
           <ProviderDayUsageSummary sites={displayData} />
-          {typeof estimate === "number" && (
-            <FinancialAmountSummary
-              label={t("stats.estimatedTodayIncome")}
-              emptyLabel={t("financial.unavailable")}
-              amounts={[
-                {
-                  asset: { kind: "currency", code: referenceCurrency },
-                  value: String(estimate),
-                },
-              ]}
-              tone={FINANCIAL_AMOUNT_TONES.Income}
+          {showNetInflow && (
+            <NetInflowTotalsDisplay
+              totals={netTotals}
+              sites={displayData}
+              compact
             />
           )}
         </div>

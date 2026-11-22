@@ -344,9 +344,21 @@
     "toggleSortOrder": "Đổi thứ tự sắp xếp"
   },
   "netInflow": {
+    "coverage": "Ước tính có thể so sánh: {{included}}/{{eligible}} tài khoản",
+    "details": "Cơ sở và phạm vi ước tính",
+    "explanation": "Số dư sổ sách cuối kỳ − số dư đầu kỳ + mức dùng đã quyết toán. Đây là biến động ròng chưa phân loại, không phải thu nhập đã xác nhận.",
     "reasons": {
+      "balance": "Thiếu số dư sổ sách hiện tại có thể so sánh",
+      "baseline": "Thiếu mốc đáng tin cậy đầu ngày",
       "conflict": "Đã loại trừ dữ liệu ví mâu thuẫn",
-      "duplicate": "Đã loại trừ ví trùng lặp"
+      "consumption": "Thiếu toàn bộ mức dùng đã quyết toán",
+      "disabled": "Ước tính đã tắt",
+      "duplicate": "Đã loại trừ ví trùng lặp",
+      "identity": "Tài sản, ví, nguồn hoặc phạm vi đã thay đổi",
+      "interval": "Khoảng quan sát số dư và mức dùng không khớp",
+      "manual": "Số dư nhập tay không có bằng chứng thanh toán khớp",
+      "precision": "Số tiền vượt độ chính xác hỗ trợ",
+      "unverified": "Chưa xác minh điều kiện so sánh"
     }
   },
   "popupOnboarding": {
@@ -400,7 +412,7 @@
   "stats": {
     "allowanceExpiry": "Hết hạn: {{time}}",
     "completion": "Hoàn thành",
-    "estimatedTodayIncome": "Thu nhập ước tính",
+    "estimatedNetInflow": "Dòng tiền ròng ước tính",
     "prompt": "Nhắc nhở",
     "subscriptionRemainingCount": "Số lượt đăng ký còn lại",
     "subscriptionRemainingTokens": "Token còn lại",

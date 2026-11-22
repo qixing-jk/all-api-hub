@@ -115,7 +115,7 @@ describe("Novita boundary validation", () => {
     })
     expect((await refreshAccountData(request as never)).success).toBe(false)
   })
-  it("does not add a zero credit limit to cash components", async () => {
+  it("keeps a zero credit limit separate from cash", async () => {
     server.use(
       http.get("https://api.novita.ai/openapi/v1/billing/balance/detail", () =>
         HttpResponse.json({
@@ -126,8 +126,20 @@ describe("Novita boundary validation", () => {
       ),
     )
     expect(
-      (await fetchAccountData(request as never)).nativeBalance,
-    ).toMatchObject({ components: [{ kind: "permanent", amount: 1 }] })
+      (await fetchAccountData(request as never)).balance?.positions,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "cash",
+          amount: expect.objectContaining({ value: "1" }),
+        }),
+        expect.objectContaining({
+          id: "credit-limit",
+          role: "credit-limit",
+          amount: expect.objectContaining({ value: "0" }),
+        }),
+      ]),
+    )
   })
   it("verifies a credential pair independently and rejects an unexpected account", async () => {
     const reads: string[] = []

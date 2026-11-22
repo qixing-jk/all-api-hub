@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { rightCodeAccountData } from "~/services/apiAdapters/rightcode/account/accountData"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -94,24 +95,164 @@ describe("rightCodeAccountData", () => {
     vi.useRealTimers()
   })
 
+  it("retains individual subscription pools, daily availability and unknown zone-less expiry", async () => {
+    useWorkingDeployment()
+    server.use(
+      http.get(`${baseUrl}/subscriptions/list`, () =>
+        HttpResponse.json({
+          subscriptions: [
+            {
+              item_id: 2,
+              name: "Plan A",
+              remaining_quota: "6.500000000000000017",
+              total_quota: "10",
+              available_today_quota: "2",
+              available_prefixes: ["/claude"],
+              expired_at: "2027-01-01T00:00:00",
+            },
+            {
+              item_id: 3,
+              name: "Plan B",
+              remaining_quota: "9",
+              total_quota: "20",
+              expired_at: "2027-02-01T00:00:00Z",
+            },
+          ],
+          total: 2,
+        }),
+      ),
+    )
+    const data = await rightCodeAccountData.fetchData(createRequest())
+    expect(data).not.toHaveProperty("subscription")
+    expect(data.allowances?.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "2:total",
+          label: "Plan A",
+          validity: { kind: "unknown" },
+          reportedTiming: { expiresAt: "2027-01-01T00:00:00" },
+          constraint: expect.objectContaining({
+            asset: { kind: "currency", code: "USD" },
+            remaining: expect.objectContaining({
+              value: "6.500000000000000017",
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          id: "2:day",
+          constraint: expect.objectContaining({
+            remaining: expect.objectContaining({ value: "2" }),
+            window: { kind: "unknown", period: "day" },
+          }),
+        }),
+        expect.objectContaining({
+          id: "3:total",
+          validity: { kind: "expires", at: Date.parse("2027-02-01T00:00:00Z") },
+        }),
+      ]),
+    )
+  })
+
+  it("keeps zone-less queried usage separate from lifetime and out of global today totals", async () => {
+    useWorkingDeployment()
+    const data = await rightCodeAccountData.fetchData(createRequest())
+    expect(data.todayStatsAvailability?.consumption).toEqual({
+      status: "unavailable",
+      reason: "wrong_period",
+    })
+    expect(data.usageObservations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scope: ACCOUNT_USAGE_SCOPES.Lifetime,
+          cost: expect.objectContaining({
+            amount: expect.objectContaining({ value: "3" }),
+          }),
+        }),
+        expect.objectContaining({
+          scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+          cost: expect.objectContaining({
+            amount: expect.objectContaining({ value: "0.4" }),
+            scope: expect.objectContaining({ authority: baseUrl }),
+          }),
+        }),
+      ]),
+    )
+  })
+
+  it("preserves the wallet when lifetime usage fails", async () => {
+    useWorkingDeployment()
+    server.use(
+      http.get(`${baseUrl}/use-log/stats/overall`, () =>
+        HttpResponse.json({ message: "failed" }, { status: 500 }),
+      ),
+    )
+    const data = await rightCodeAccountData.fetchData(createRequest())
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "12.5",
+    })
+    expect(data.usage?.cost?.amount).toMatchObject({ status: "unavailable" })
+    expect(data.usage?.totalRequests).toBeUndefined()
+  })
+
+  it("keeps valid plans when another subscription has no stable identity", async () => {
+    useWorkingDeployment()
+    server.use(
+      http.get(`${baseUrl}/subscriptions/list`, () =>
+        HttpResponse.json({
+          subscriptions: [
+            null,
+            { name: "missing id", remaining_quota: "3" },
+            { item_id: 2, name: "Valid", remaining_quota: "4" },
+          ],
+          total: 3,
+        }),
+      ),
+    )
+    const data = await rightCodeAccountData.fetchData(createRequest())
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "12.5",
+    })
+    expect(
+      data.allowances?.entries.filter(
+        (entry) => entry.collectionKey === "subscriptions",
+      ),
+    ).toMatchObject([{ id: "2:total", label: "Valid" }])
+    expect(data.allowanceRefreshParts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          collectionKey: "subscriptions",
+          enumeration: "partial",
+        }),
+      ]),
+    )
+  })
+
   it("maps the wallet balance, lifetime usage and today's activity", async () => {
     useWorkingDeployment()
 
     const data = await rightCodeAccountData.fetchData(createRequest())
 
-    // Right Code reports USD amounts; account storage uses internal quota points.
-    expect(data.quota).toBe(Math.round(12.5 * QUOTA_PER_USD))
+    expect(data).not.toHaveProperty("quota")
+    expect(data.balance?.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { status: "known", value: "12.5" },
+    })
     expect(data.today_quota_consumption).toBe(Math.round(0.4 * QUOTA_PER_USD))
     // The deployment reports one token total per period, carried on the completion side.
     expect(data.today_prompt_tokens).toBe(0)
     expect(data.today_completion_tokens).toBe(50)
     expect(data.today_requests_count).toBe(4)
     expect(data.today_income).toBe(0)
-    expect(data.usage).toEqual({
-      scope: "lifetime",
+    expect(data.usage).toMatchObject({
+      scope: ACCOUNT_USAGE_SCOPES.Lifetime,
       totalRequests: 40,
       totalTokens: 500,
-      totalCost: 3,
+      cost: {
+        asset: { kind: "currency", code: "USD" },
+        amount: { status: "known", value: "3" },
+      },
     })
     expect(data.checkIn).toEqual(createRequest().checkIn)
   })
@@ -122,9 +263,18 @@ describe("rightCodeAccountData", () => {
     const data = await rightCodeAccountData.fetchData(createRequest())
 
     expect(data.todayStatsAvailability).toEqual({
-      consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-      requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
-      tokens: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+      },
+      requests: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+      },
+      tokens: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod,
+      },
       income: {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
         reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
@@ -152,15 +302,26 @@ describe("rightCodeAccountData", () => {
 
     const data = await rightCodeAccountData.fetchData(createRequest())
 
-    expect(data.subscription).toEqual({
-      name: "Codex 月卡",
-      amountLimit: 10,
-      usedAmount: 3.5,
-      remainingAmount: 6.5,
-      expireTime: "2027-01-01T00:00:00",
-      isLongTerm: false,
-      isActive: true,
-    })
+    expect(data.allowances?.entries).toMatchObject([
+      {
+        id: "2:total",
+        label: "Codex 月卡",
+        validity: { kind: "unknown" },
+        constraint: {
+          limit: { value: "10" },
+          remaining: { value: "6.5" },
+          used: { status: "unknown" },
+        },
+      },
+      {
+        id: "summary",
+        constraint: {
+          limit: { value: "10" },
+          used: { value: "3.5" },
+          remaining: { value: "6.5" },
+        },
+      },
+    ])
   })
 
   it("skips today's activity without failing the refresh when asked to", async () => {
@@ -171,7 +332,10 @@ describe("rightCodeAccountData", () => {
     )
 
     expect(statsRequestUrls).toHaveLength(0)
-    expect(data.quota).toBe(Math.round(12.5 * QUOTA_PER_USD))
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "12.5",
+    })
     expect(data.today_quota_consumption).toBe(0)
     expect(data.today_completion_tokens).toBe(0)
     expect(data.today_requests_count).toBe(0)
@@ -194,7 +358,10 @@ describe("rightCodeAccountData", () => {
 
     const data = await rightCodeAccountData.fetchData(createRequest())
 
-    expect(data.quota).toBe(Math.round(12.5 * QUOTA_PER_USD))
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "12.5",
+    })
     expect(data.subscription).toBeUndefined()
   })
 
@@ -213,7 +380,10 @@ describe("rightCodeAccountData", () => {
       status: "unavailable",
       reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
     })
-    expect(data.quota).toBe(Math.round(12.5 * QUOTA_PER_USD))
+    expect(data.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "12.5",
+    })
   })
 
   it("rejects a payload that is not the account record", async () => {

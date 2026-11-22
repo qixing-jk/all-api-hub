@@ -1,7 +1,8 @@
+import { parseDecimal, scaleDecimal } from "~/services/amounts/decimal"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { isRecord } from "~/utils/core/object"
 
-import { NOVITA_AMOUNTS_PER_USD, NOVITA_OPENAPI_ENDPOINTS } from "./constants"
+import { NOVITA_OPENAPI_ENDPOINTS } from "./constants"
 
 /**
  * Wire contracts of the Novita OpenAPI, validated against live responses
@@ -16,9 +17,16 @@ export type NovitaUserInfo = {
 }
 
 export type NovitaBalanceDetail = {
-  availableUsd: number
-  cashUsd: number
-  creditLimitUsd: number
+  availableUsd?: number
+  cashUsd?: number
+  creditLimitUsd?: number
+  amounts: {
+    available?: string
+    cash?: string
+    creditLimit?: string
+    pending?: string
+    debt?: string
+  }
 }
 
 export type NovitaApiKey = {
@@ -44,13 +52,6 @@ const invalidResponseError = (endpoint: string): ApiError =>
     API_ERROR_CODES.JSON_PARSE_ERROR,
   )
 
-/** Reads a non-negative integer 1/10000 USD amount string. */
-function readAmount(value: unknown, endpoint: string): number {
-  if (typeof value !== "string" || !/^\d{1,15}$/.test(value.trim()))
-    throw invalidResponseError(endpoint)
-  return Number(value) / NOVITA_AMOUNTS_PER_USD
-}
-
 /** Parses and validates the `/v1/user/info` identity payload. */
 export function parseNovitaUserInfo(body: unknown): NovitaUserInfo {
   if (!isRecord(body))
@@ -67,10 +68,31 @@ export function parseNovitaUserInfo(body: unknown): NovitaUserInfo {
 export function parseNovitaBalanceDetail(body: unknown): NovitaBalanceDetail {
   const endpoint = NOVITA_OPENAPI_ENDPOINTS.balanceDetail
   if (!isRecord(body)) throw invalidResponseError(endpoint)
-  const availableUsd = readAmount(body.availableBalance, endpoint)
-  const cashUsd = readAmount(body.cashBalance, endpoint)
-  const creditLimitUsd = readAmount(body.creditLimit, endpoint)
-  return { availableUsd, cashUsd, creditLimitUsd }
+  const exact = (value: unknown) => {
+    const parsed =
+      typeof value === "string" && /^-?\d+$/.test(value)
+        ? parseDecimal(value)
+        : undefined
+    return parsed === undefined ? undefined : scaleDecimal(parsed, -4)
+  }
+  const amounts = {
+    available: exact(body.availableBalance),
+    cash: exact(body.cashBalance),
+    creditLimit: exact(body.creditLimit),
+    pending: exact(body.pendingCharges),
+    debt: exact(body.outstandingInvoices),
+  }
+  return {
+    // One-way compatibility projection, never used to reconstruct exact facts.
+    availableUsd:
+      amounts.available === undefined ? undefined : Number(amounts.available),
+    cashUsd: amounts.cash === undefined ? undefined : Number(amounts.cash),
+    creditLimitUsd:
+      amounts.creditLimit === undefined
+        ? undefined
+        : Number(amounts.creditLimit),
+    amounts,
+  }
 }
 
 /** Parses and validates the `/v2/user/key` inventory payload. */

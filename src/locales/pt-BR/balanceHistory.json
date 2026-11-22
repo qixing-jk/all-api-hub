@@ -6,7 +6,7 @@
   },
   "breakdown": {
     "chartTypes": {
-      "histogram": "Histograma",
+      "bars": "Barras",
       "pie": "Pizza"
     },
     "controls": {
@@ -19,6 +19,9 @@
       "pieDisabledForNegative": "Os gráficos de pizza não estão disponíveis para valores negativos."
     },
     "title": "Detalhamento da conta"
+  },
+  "charts": {
+    "view": "Visualização do gráfico"
   },
   "description": "Veja como os saldos e as cotas das suas contas mudam.",
   "empty": {
@@ -70,8 +73,24 @@
       "title": "O total pode estar incompleto"
     }
   },
+  "legacy": {
+    "accountDetails": "Valores convertidos da conta",
+    "columnsHint": "Os valores usam a moeda de referência de Filtros. Selecione o cabeçalho de uma coluna para ordenar as contas.",
+    "coverage": "Dias com valores de referência",
+    "currency": "Moeda de referência",
+    "currencyHint": "Os valores em CNY usam a taxa de câmbio atual da conta.",
+    "referenceRate": "{{account}} · Referência em {{date}}: 1 USD = {{rate}} CNY",
+    "referenceRates": "Taxas de câmbio de referência",
+    "showColumns": "Mostrar colunas de valores convertidos",
+    "title": "Registros anteriores convertidos",
+    "totalsHint": "Os registros antigos usam a moeda de referência selecionada."
+  },
   "messages": {
     "error": {
+      "captureResultUnavailable": "Resultado da captura indisponível.",
+      "lastLoadedDescription": "Exibindo o último histórico carregado. A recarga falhou; tente novamente para atualizá-lo.",
+      "loadDescription": "O histórico salvo não foi substituído. Tente novamente ou use uma versão compatível do aplicativo.",
+      "loadTitle": "Não foi possível carregar o histórico",
       "pruneFailed": "Falha na remoção: {{error}}",
       "refreshFailed": "Falha na atualização: {{error}}",
       "settingsSaveFailed": "Falha ao salvar configurações: {{error}}"
@@ -86,7 +105,30 @@
       "pruneCompleted": "Dados antigos removidos",
       "refreshCompleted": "Atualização concluída",
       "settingsSaved": "Configurações salvas"
+    },
+    "warning": {
+      "refreshIncomplete": "Captura incompleta. Registrado: {{captured}}; não registrado: {{uncaptured}}."
     }
+  },
+  "metricHelp": {
+    "allowanceHint": "Cota restante informada pelo provedor, que define seu uso e sua validade.",
+    "bonusHint": "Créditos concedidos pelo provedor, às vezes chamados de Bonus credits. O provedor define as despesas cobertas e a validade.",
+    "convertedHint": "Saldo histórico na moeda de referência selecionada nos filtros, convertido pela taxa de câmbio atual da conta.",
+    "estimatedHint": "Estimativa de referência baseada em dois saldos arquivados e no consumo registrado no dia. Os períodos podem ser diferentes.",
+    "incomeHint": "Créditos na conta registrados pelo provedor.",
+    "ledgerHint": "Saldo da conta informado pelo provedor, exibido na unidade original.",
+    "nativeHint": "Valor informado pelo provedor, exibido na unidade original.",
+    "netHint": "Receitas registradas menos despesas registradas.",
+    "outcomeHint": "Despesas registradas pelo provedor.",
+    "quotaHint": "Saldo ou cota restante em {{unit}}. O provedor define as regras de desconto.",
+    "title": "Guia de métricas",
+    "trigger": "Guia de métricas de {{chart}}"
+  },
+  "metricMenu": {
+    "allowances": "Cotas",
+    "balances": "Saldos",
+    "cashflow": "Receitas e despesas",
+    "convertedBalance": "Saldo convertido"
   },
   "metrics": {
     "balance": "Saldo",
@@ -96,6 +138,11 @@
     "outcome": "Gastos"
   },
   "native": {
+    "activityCoverage": "{{covered}}/{{total}} dias com registros",
+    "activityHint": "Receitas e gastos na moeda original usam as datas de registro do provedor.",
+    "activityTitle": "Resumo do período",
+    "amountsTitle": "Saldos e cotas",
+    "coverage": "{{covered}} de {{total}} contas têm registros",
     "dimensions": {
       "groups": "Grupos",
       "keys": "Chaves",
@@ -103,9 +150,30 @@
       "projects": "Projetos",
       "routes": "Rotas"
     },
+    "ended": "Encerrado",
     "expired": "Expirado",
+    "firstRecord": "Primeiro registro",
+    "gaps": "As lacunas no gráfico indicam dias sem dados.",
+    "latest": "Último registro",
+    "netInflow": "Entrada líquida estimada",
+    "netInflowHint": "— indica que faltam dados para estimar a entrada líquida.",
+    "originalObservation": "Valor de {{date}}",
+    "recordedIncome": "Receitas registradas",
+    "recordedRange": "Datas com registros: {{range}}",
+    "recordedSpending": "Despesas registradas",
     "reset": "Redefinido",
-    "restrictions": "{{dimension}}: {{value}}"
+    "restrictions": "{{dimension}}: {{value}}",
+    "scope": "Site · organização · carteira",
+    "sources": {
+      "console": "Console",
+      "inference": "API de inferência",
+      "numbered": "Fonte {{number}}"
+    },
+    "status": "Estado",
+    "time": "Horário",
+    "unknown": "Desconhecido",
+    "unknownAsset": "Ativo desconhecido",
+    "unsupported": "Não compatível"
   },
   "overview": {
     "kpis": {
@@ -123,7 +191,7 @@
         "label": "Variação líquida no período"
       }
     },
-    "title": "Visão geral"
+    "viewTrend": "Ver tendência: {{metric}}, {{amount}}"
   },
   "settings": {
     "alarmUnsupported": "A API de alarmes não está disponível neste navegador; não é possível habilitar a captura de fim de dia.",
@@ -167,6 +235,7 @@
     },
     "emptyMetric": "Não há dados {{metric}} neste intervalo.",
     "gapBridge": "Sem registros",
+    "noRecordForDay": "Sem registro nesse dia",
     "scopes": {
       "accounts": "Por conta",
       "total": "Total"

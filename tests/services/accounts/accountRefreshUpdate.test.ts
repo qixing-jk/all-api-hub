@@ -74,6 +74,9 @@ it("retains a legacy provider's refreshed amount as a reference during adapter r
     value: "3",
     source: { kind: "legacy" },
   })
-  expect(update.account_info?.legacyFinancial?.quota).toBe(1500000)
+  expect(
+    update.account_info?.balance?.positions?.[0]?.amount?.source?.amountInputs
+      ?.quota,
+  ).toBe("1500000")
   expect(update.account_info).not.toHaveProperty("quota")
 })

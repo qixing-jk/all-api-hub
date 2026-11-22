@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   fetchAimlApiAccountData,
@@ -243,10 +244,9 @@ it.each([
 it.each([
   null,
   { currency: "EUR" },
-  { currency: "USD", user_id: 1.5 },
-  { currency: "USD", user_id: 1, email: {} },
-  { currency: "USD", user_id: 1, email: null, current_balance: -1 },
-])("rejects invalid billing identity and balances %#", async (body) => {
+  { currency: CURRENCIES.USD, user_id: 1.5 },
+  { currency: CURRENCIES.USD, user_id: 1, email: {} },
+])("rejects invalid billing identity %#", async (body) => {
   server.use(
     http.get(`${origin}/v2/billing/detail`, () => HttpResponse.json(body)),
   )
@@ -255,33 +255,60 @@ it.each([
   )
 })
 
-it.each([
-  null,
-  { currency: "EUR", current_balance: 1 },
-  { currency: "USD", current_balance: "1" },
-  { currency: "USD", current_balance: -1 },
-])("rejects invalid account balances %#", async (body) => {
-  server.use(
-    http.get(`${origin}/v2/billing`, () => HttpResponse.json(body)),
-    http.get(`${origin}/v2/usage/detail`, () =>
-      HttpResponse.json({ spend: 0, requests: 0, groups: [] }),
-    ),
-  )
-  await expect(fetchAimlApiAccountData(request)).rejects.toMatchObject(invalid)
-})
+it.each([null, { currency: "EUR", current_balance: 1 }])(
+  "rejects invalid account balances %#",
+  async (body) => {
+    server.use(
+      http.get(`${origin}/v2/billing`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v2/usage/detail`, () =>
+        HttpResponse.json({ spend: 0, requests: 0, groups: [] }),
+      ),
+    )
+    await expect(fetchAimlApiAccountData(request)).rejects.toMatchObject(
+      invalid,
+    )
+  },
+)
 
-it.each([
-  null,
-  { spend: -1, requests: 0, groups: [] },
-  { spend: 0, requests: 0, groups: null },
-])("rejects invalid today usage %#", async (body) => {
+it.each(["1", -1])(
+  "preserves exact or signed account balance %s",
+  async (current_balance) => {
+    server.use(
+      http.get(`${origin}/v2/billing`, () =>
+        HttpResponse.json({ currency: CURRENCIES.USD, current_balance }),
+      ),
+      http.get(`${origin}/v2/billing/detail`, () =>
+        HttpResponse.json({
+          currency: CURRENCIES.USD,
+          user_id: 1,
+          email: null,
+          current_balance,
+        }),
+      ),
+    )
+    expect(
+      (
+        await fetchAimlApiAccountData({
+          ...request,
+          includeTodayCashflow: false,
+        })
+      ).balance?.positions[0]?.amount,
+    ).toMatchObject({ status: "known", value: String(current_balance) })
+    expect(await fetchAimlApiBillingDetail(request)).toMatchObject({
+      currentBalance: String(current_balance),
+      userId: 1,
+    })
+  },
+)
+
+it("rejects a non-object today usage response", async () => {
   server.use(
-    http.get(`${origin}/v2/usage/detail`, () => HttpResponse.json(body)),
+    http.get(`${origin}/v2/usage/detail`, () => HttpResponse.json(null)),
   )
   await expect(fetchAimlApiTodayUsage(request)).rejects.toMatchObject(invalid)
 })
 
-it("skips malformed day groups and retains valid token counts", async () => {
+it("retains valid token counts with incomplete coverage when day groups are malformed", async () => {
   server.use(
     http.get(`${origin}/v2/usage/detail`, () =>
       HttpResponse.json({
@@ -291,11 +318,12 @@ it("skips malformed day groups and retains valid token counts", async () => {
       }),
     ),
   )
-  expect(await fetchAimlApiTodayUsage(request)).toEqual({
-    spendUsd: 0,
+  expect(await fetchAimlApiTodayUsage(request)).toMatchObject({
+    spendUsd: "0",
     requests: 0,
     inputTokens: 3,
     outputTokens: 4,
+    tokensComplete: false,
   })
 })
 

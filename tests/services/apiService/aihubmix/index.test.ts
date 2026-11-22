@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { OBSERVATION_STATUSES } from "~/services/amounts/financialConstants"
 import {
   fetchAccountData,
   fetchAccountQuota,
@@ -483,7 +484,16 @@ describe("apiService AIHubMix", () => {
             username: "aihubmix-user",
             display_name: "aihubmix-user",
             access_token: "existing-access-token",
-            quota: 900000,
+            balance: {
+              positions: [
+                expect.objectContaining({
+                  amount: expect.objectContaining({
+                    status: OBSERVATION_STATUSES.Known,
+                    value: "1.8",
+                  }),
+                }),
+              ],
+            },
             used_quota: 12345,
           },
         })
@@ -640,7 +650,16 @@ describe("apiService AIHubMix", () => {
             username: "aihubmix-user",
             display_name: "aihubmix-user",
             access_token: "",
-            quota: 900000,
+            balance: {
+              positions: [
+                expect.objectContaining({
+                  amount: expect.objectContaining({
+                    status: OBSERVATION_STATUSES.Known,
+                    value: "1.8",
+                  }),
+                }),
+              ],
+            },
           },
         })
       }),
@@ -871,7 +890,13 @@ describe("apiService AIHubMix", () => {
     })
 
     expect(accountData).toMatchObject({
-      quota: 900000,
+      balance: {
+        positions: [
+          expect.objectContaining({
+            amount: expect.objectContaining({ status: "known", value: "1.8" }),
+          }),
+        ],
+      },
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
@@ -961,7 +986,16 @@ describe("apiService AIHubMix", () => {
       {
         success: true,
         data: {
-          quota: 500000,
+          balance: {
+            positions: [
+              expect.objectContaining({
+                amount: expect.objectContaining({
+                  status: "known",
+                  value: "1",
+                }),
+              }),
+            ],
+          },
           today_quota_consumption: 0,
         },
         healthStatus: {

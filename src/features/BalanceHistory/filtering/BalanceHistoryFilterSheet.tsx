@@ -1,5 +1,5 @@
 import { Funnel } from "lucide-react"
-import { useRef, type ComponentProps } from "react"
+import { useRef, type ComponentProps, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -13,6 +13,7 @@ import {
 } from "~/components/ui/sheet"
 import { getBalanceHistoryQuickRangeLabel } from "~/features/BalanceHistory/reporting/presentation"
 import type { useBalanceHistoryViewModel } from "~/features/BalanceHistory/workspace/useBalanceHistoryViewModel"
+import { cn } from "~/lib/utils"
 
 import { BalanceHistoryFilters } from "./BalanceHistoryFilters"
 
@@ -24,10 +25,14 @@ type FilterSummaryModel = Pick<
   | "resetFilters"
 >
 
-/** Keep reporting filters available without taking space above the overview. */
+/** Show the report filter summary and open its controls on demand. */
 export function BalanceHistoryFilterSheet({
   model,
+  heading,
+  periodEnd,
 }: {
+  heading?: string
+  periodEnd?: ReactNode
   model: ComponentProps<typeof BalanceHistoryFilters>["model"] &
     FilterSummaryModel
 }) {
@@ -59,14 +64,36 @@ export function BalanceHistoryFilterSheet({
     .join(" · ")
 
   return (
-    <div className="gap-y-density-1 flex max-w-full min-w-0 flex-wrap items-center gap-x-2">
-      <span
-        className="text-muted-foreground max-w-full min-w-0 truncate text-xs"
-        title={summary}
+    <div
+      role="group"
+      aria-label={t("filters.title")}
+      className={cn(
+        "max-w-full min-w-0 items-center gap-x-3 gap-y-density-1",
+        heading ? "grid grid-cols-[minmax(0,1fr)_auto]" : "flex flex-wrap",
+      )}
+    >
+      {heading && (
+        <h2 className="col-start-1 row-start-1 text-sm font-semibold [overflow-wrap:anywhere]">
+          {heading}
+        </h2>
+      )}
+      <div
+        className={cn(
+          "flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-density-1 text-xs text-muted-foreground",
+          heading && "col-span-2 col-start-1 row-start-2",
+        )}
       >
-        {summary}
-      </span>
-      <div className="flex shrink-0 items-center gap-x-2">
+        <span className="max-w-full min-w-0 truncate" title={summary}>
+          {summary}
+        </span>
+        {periodEnd}
+      </div>
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-x-2",
+          heading && "col-start-2 row-start-1",
+        )}
+      >
         {model.hasActiveFilters && (
           <Button
             size="sm"
@@ -97,8 +124,8 @@ export function BalanceHistoryFilterSheet({
               titleRef.current?.focus()
             }}
           >
-            <SheetHeader className="border-border flex-row items-start gap-x-3 border-b">
-              <span className="bg-primary-soft text-primary-soft-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
+            <SheetHeader className="flex-row items-start gap-x-3 border-b border-border">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
                 <Funnel aria-hidden="true" className="size-4" />
               </span>
               <div className="space-y-density-1">

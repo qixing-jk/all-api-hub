@@ -1,10 +1,28 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { CURRENCIES } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountAllowanceObservation,
+  ALLOWANCE_IDENTITY_KINDS,
+  parseAllowanceInstant,
+} from "~/services/accounts/allowances"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
 import { SHAREDCHAT_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import { observeAmount } from "~/services/amounts/balance"
+import { budgetConstraint, type BudgetWindow } from "~/services/amounts/budgets"
+import {
+  ASSET_KINDS,
+  BALANCE_VALIDITY_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_PERIODS,
+  BUDGET_WINDOW_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -45,6 +63,7 @@ type SharedChatUserPayload = {
 }
 
 type SharedChatCodexSubscriptionPayload = {
+  id?: unknown
   subTypeName?: unknown
   billingType?: unknown
   limit?: unknown
@@ -114,25 +133,11 @@ const buildCodexServiceCredential = (params: {
   baseUrl: SHAREDCHAT_CODEX_BASE_URL,
 })
 
-const toFiniteNumber = (value: unknown, fallback = 0): number => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return fallback
-}
-
 const toOptionalString = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() ? value.trim() : undefined
 
 const toOptionalBoolean = (value: unknown): boolean | undefined =>
   typeof value === "boolean" ? value : undefined
-
-// SharedChat's `/frontend-api/vibe-code/quota` returns USD amounts; AccountData
-// balance and consumption fields are stored as internal quota points.
-const amountToQuota = (amount: number): number =>
-  Math.round(amount * QUOTA_PER_USD)
 
 const extractSharedChatData = <T>(
   body: SharedChatEnvelope<T>,
@@ -244,80 +249,139 @@ export async function fetchAccountData(
   const codex = await getCodexQuota(request)
   const subscription = codex.subscriptions
   const currentUsage = codex.currentUsage
-  const remainingAmount = toFiniteNumber(subscription?.remainingAmount)
   const parsedTotalRequests = toOptionalFiniteNumber(
     currentUsage?.totalRequests,
   )
   const parsedTotalTokens = toOptionalFiniteNumber(currentUsage?.totalTokens)
-  const parsedTotalCost = toOptionalFiniteNumber(currentUsage?.totalCost)
-  const totalRequests = parsedTotalRequests ?? 0
-  const totalTokens = parsedTotalTokens ?? 0
-  const totalCost = parsedTotalCost ?? 0
-  const invalidPayload: AccountTodayMetricAvailability = {
-    status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-    reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
-  }
-  const complete: AccountTodayMetricAvailability = {
-    status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
-  }
   const notCollected: AccountTodayMetricAvailability = {
     status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
     reason: ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
   }
-  const shouldCollectToday = request.includeTodayCashflow !== false
 
   // The production dashboard labels currentUsage as “24-Hour Statistics”. Keep
   // its richer boundary explicit because it is a rolling window, not calendar today.
   const todayStatsAvailability = {
-    consumption: shouldCollectToday
-      ? parsedTotalCost === undefined
-        ? invalidPayload
-        : complete
-      : notCollected,
-    requests: shouldCollectToday
-      ? parsedTotalRequests === undefined
-        ? invalidPayload
-        : complete
-      : notCollected,
-    tokens: shouldCollectToday
-      ? parsedTotalTokens === undefined
-        ? invalidPayload
-        : {
-            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
-            reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
-          }
-      : notCollected,
+    consumption: notCollected,
+    requests: notCollected,
+    tokens: notCollected,
     income: {
       status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
       reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
     },
   } satisfies NonNullable<AccountData["todayStatsAvailability"]>
+  const observedAt = Date.now()
+  const scope = accountBalanceScope(request)
+  const source = {
+    adapter: "sharedchat",
+    operation: SHAREDCHAT_CODEX_QUOTA_ENDPOINT,
+    contractVersion: "subscription/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  }
+  const period = toOptionalString(subscription?.period)
+  const resetAt = parseAllowanceInstant(subscription?.periodResetTime)
+  const window: BudgetWindow =
+    period === BUDGET_PERIODS.Day ||
+    period === BUDGET_PERIODS.Week ||
+    period === BUDGET_PERIODS.Month
+      ? {
+          kind: BUDGET_WINDOW_KINDS.Periodic,
+          period,
+          ...(resetAt !== undefined ? { resetsAt: resetAt } : {}),
+        }
+      : { kind: BUDGET_WINDOW_KINDS.Unknown }
+  const expiry = parseAllowanceInstant(subscription?.expireTime)
+  const countBilling = subscription?.billingType === "count"
+  const allowances = accountAllowanceObservation(
+    scope,
+    [
+      {
+        collectionKey: "codex-subscription",
+        source,
+        // A missing member is not evidence that the current plan was removed.
+        enumeration: subscription
+          ? FINANCIAL_ENUMERATION.Complete
+          : FINANCIAL_ENUMERATION.Unavailable,
+        entries: subscription
+          ? [
+              {
+                // The endpoint's singleton source slot is used only when no plan id is reported.
+                id: `${toOptionalString(subscription.id) ?? "codex-current"}:${countBilling ? "count" : "amount"}`,
+                identityKind: toOptionalString(subscription.id)
+                  ? ALLOWANCE_IDENTITY_KINDS.Upstream
+                  : ALLOWANCE_IDENTITY_KINDS.SourceSlot,
+                collectionKey: "codex-subscription",
+                label: toOptionalString(subscription.subTypeName),
+                validity:
+                  expiry !== undefined
+                    ? { kind: BALANCE_VALIDITY_KINDS.Expires, at: expiry }
+                    : { kind: BALANCE_VALIDITY_KINDS.Unknown },
+                reportedTiming: {
+                  ...(typeof subscription.expireTime === "string"
+                    ? { expiresAt: subscription.expireTime }
+                    : {}),
+                  ...(typeof subscription.periodResetTime === "string"
+                    ? { resetsAt: subscription.periodResetTime }
+                    : {}),
+                },
+                constraint: budgetConstraint({
+                  scope,
+                  source,
+                  observedAt,
+                  asset: countBilling
+                    ? {
+                        kind: ASSET_KINDS.Quota,
+                        id: "sharedchat:codex-requests",
+                        label: "requests",
+                        displayLabel: "requests",
+                        displayScale: 1,
+                      }
+                    : subscription?.billingType === "amount"
+                      ? { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD }
+                      : { kind: ASSET_KINDS.Unknown },
+                  limitState: BUDGET_LIMIT_STATES.Finite,
+                  limit: countBilling
+                    ? subscription.limit
+                    : subscription.amountLimit,
+                  used: countBilling
+                    ? subscription.usedCount
+                    : subscription.usedAmount,
+                  remaining: countBilling
+                    ? subscription.remainingCount
+                    : subscription.remainingAmount,
+                  enabled: toOptionalBoolean(subscription.isActive),
+                  window,
+                }),
+              },
+            ]
+          : [],
+      },
+    ],
+    observedAt,
+  )
 
   return {
-    quota: amountToQuota(remainingAmount),
-    today_quota_consumption: shouldCollectToday ? amountToQuota(totalCost) : 0,
+    ...allowances,
+    today_quota_consumption: 0,
     today_prompt_tokens: 0,
-    today_completion_tokens: shouldCollectToday ? totalTokens : 0,
-    today_requests_count: shouldCollectToday ? totalRequests : 0,
+    today_completion_tokens: 0,
+    today_requests_count: 0,
     today_income: 0,
     todayStatsAvailability,
     usage: {
-      scope: "rolling_window",
-      totalRequests,
-      totalTokens,
-      totalCost,
+      scope: ACCOUNT_USAGE_SCOPES.RollingWindow,
+      totalRequests: parsedTotalRequests,
+      totalTokens: parsedTotalTokens,
+      cost: {
+        scope,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        amount: observeAmount(currentUsage?.totalCost, source, observedAt),
+      },
       lastRequestTime: toOptionalString(currentUsage?.lastRequestTime),
     },
     subscription: subscription
       ? {
           name: toOptionalString(subscription.subTypeName),
           billingType: toOptionalString(subscription.billingType),
-          limit: toOptionalFiniteNumber(subscription.limit),
-          amountLimit: toOptionalFiniteNumber(subscription.amountLimit),
-          usedAmount: toOptionalFiniteNumber(subscription.usedAmount),
-          remainingAmount: toOptionalFiniteNumber(subscription.remainingAmount),
-          usedCount: toOptionalFiniteNumber(subscription.usedCount),
-          remainingCount: toOptionalFiniteNumber(subscription.remainingCount),
           period: toOptionalString(subscription.period),
           periodResetTime: toOptionalString(subscription.periodResetTime),
           expireTime: toOptionalString(subscription.expireTime),

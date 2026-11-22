@@ -1,7 +1,6 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   normalizeAccountSiteProfileUrlForManagedChannel,
@@ -68,6 +67,130 @@ const publicNodes = [
 const user = { id: 7, name: "Example", email: "example@example.invalid" }
 
 describe("FreeModel integration", () => {
+  it("keeps both credits when only their derived total exceeds decimal precision", async () => {
+    const largeDollars = "9".repeat(254)
+    server.use(
+      http.get(`${origin}/api/billing`, () =>
+        HttpResponse.json({
+          creditCents: `${largeDollars}00`,
+          signupCreditCents: 1,
+        }),
+      ),
+      http.get(`${origin}/api/usage`, () => HttpResponse.json({})),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
+    })
+    expect(result.balance?.positions).toMatchObject([
+      { id: "available", amount: { status: "unavailable" } },
+      { id: "purchased", amount: { status: "known", value: largeDollars } },
+      { id: "signup-credit", amount: { status: "known", value: "0.01" } },
+    ])
+  })
+  it("keeps independent credit when cents normalization exceeds decimal precision", async () => {
+    const tiny = `0.${"0".repeat(252)}1`
+    server.use(
+      http.get(`${origin}/api/billing`, () =>
+        HttpResponse.json({ creditCents: tiny, signupCreditCents: 50 }),
+      ),
+      http.get(`${origin}/api/usage`, () =>
+        HttpResponse.json({
+          window5h: { limitCents: 500 },
+          windowWeek: { limitCents: 2000 },
+        }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
+    })
+    expect(result.balance?.positions).toMatchObject([
+      { id: "available", amount: { status: "unavailable" } },
+      { id: "purchased", amount: { status: "unavailable" } },
+      { id: "signup-credit", amount: { status: "known", value: "0.5" } },
+    ])
+    expect(result.allowances?.entries[0]?.constraint.limit).toMatchObject({
+      status: "known",
+      value: "5",
+    })
+  })
+  it("keeps purchased and granted credit plus both independent allowance windows", async () => {
+    server.use(
+      http.get(`${origin}/api/billing`, () =>
+        HttpResponse.json({
+          creditCents: 125,
+          signupCreditCents: 50,
+          subscription: { planId: "pro", status: "active" },
+        }),
+      ),
+      http.get(`${origin}/api/usage`, () =>
+        HttpResponse.json({
+          window5h: { limitCents: 500, usedCents: 100, resetsAt: 1790000000 },
+          windowWeek: { limitCents: 2000, usedCents: 1700 },
+        }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
+    })
+    expect(result).not.toHaveProperty("quota")
+    expect(result.balance?.positions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "purchased",
+          funding: "purchased",
+          amount: expect.objectContaining({ value: "1.25" }),
+        }),
+        expect.objectContaining({
+          id: "signup-credit",
+          funding: "granted",
+          amount: expect.objectContaining({ value: "0.5" }),
+        }),
+      ]),
+    )
+    expect(result.allowances?.entries).toMatchObject([
+      {
+        id: "pro:5h",
+        constraint: {
+          limit: { value: "5" },
+          used: { value: "1" },
+          remaining: { status: "unknown" },
+          window: { kind: "rolling", period: "5h", resetsAt: 1790000000000 },
+        },
+      },
+      {
+        id: "pro:week",
+        constraint: {
+          limit: { value: "20" },
+          used: { value: "17" },
+          remaining: { status: "unknown" },
+          window: { kind: "unknown", period: "week" },
+        },
+      },
+    ])
+  })
+  it("preserves wallet credit when the independent usage source fails", async () => {
+    server.use(
+      http.get(`${origin}/api/billing`, () =>
+        HttpResponse.json({ creditCents: 125, signupCreditCents: 50 }),
+      ),
+      http.get(
+        `${origin}/api/usage`,
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
+    })
+    expect(result.balance?.positions[0]?.amount).toMatchObject({
+      status: "known",
+      value: "1.75",
+    })
+    expect(result.allowanceRefreshParts?.[0]?.enumeration).toBe("unavailable")
+  })
   it("bootstraps a cookie account from the verified identity with check-in disabled", async () => {
     const account = getSiteTypeCapabilities(SITE_TYPES.FREEMODEL).account!
     const bootstrap = account.bootstrap!
@@ -131,9 +254,13 @@ describe("FreeModel integration", () => {
     ).resolves.toMatchObject({ success: false })
   })
 
-  it.each([-1, "125", null])(
-    "rejects invalid stored credits: %s",
-    async (creditCents) => {
+  it.each([
+    [-1, "-0.01"],
+    ["125", "1.25"],
+    [null, undefined],
+  ])(
+    "preserves exact or unavailable stored credits: %s",
+    async (creditCents, expected) => {
       server.use(
         http.get(`${origin}/api/billing`, () =>
           HttpResponse.json({
@@ -149,15 +276,15 @@ describe("FreeModel integration", () => {
           }),
         ),
       )
-      await expect(
-        fetchAccountData({
-          ...request,
-          checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
-        }),
-      ).rejects.toMatchObject({
-        endpoint: "/api/billing",
-        code: "JSON_PARSE_ERROR",
+      const data = await fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
       })
+      expect(data.balance?.positions[1]?.amount).toMatchObject(
+        expected === undefined
+          ? { status: "unavailable" }
+          : { status: "known", value: expected },
+      )
     },
   )
 
@@ -181,13 +308,11 @@ describe("FreeModel integration", () => {
       ...request,
       checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
     })
-    expect(data.subscription).toMatchObject({
-      name: undefined,
-      periodResetTime: undefined,
-      isActive: false,
-      remainingAmount: 0,
-    })
-    expect(data.quota).toBe(0)
+    expect(data.subscription?.isActive).toBeUndefined()
+    expect(data.allowances?.entries[0]?.constraint.remaining.status).toBe(
+      "unknown",
+    )
+    expect(data.balance?.positions[0]?.amount).toMatchObject({ value: "0" })
   })
 
   it.each([{ keys: [{ id: 0, name: "bad", suffix: "abcd" }] }, { keys: null }])(
@@ -259,31 +384,39 @@ describe("FreeModel integration", () => {
     ["subscription", "/api/billing"],
     ["window5h", "/api/usage"],
     ["windowWeek", "/api/usage"],
-  ])("attributes malformed %s to %s", async (field, endpoint) => {
-    server.use(
-      http.get(`${origin}/api/billing`, () =>
-        HttpResponse.json({
-          creditCents: 0,
-          signupCreditCents: 0,
-          subscription: field === "subscription" ? null : { status: "active" },
-        }),
-      ),
-      http.get(`${origin}/api/usage`, () =>
-        HttpResponse.json({
-          window5h:
-            field === "window5h" ? null : { limitCents: 0, usedCents: 0 },
-          windowWeek:
-            field === "windowWeek" ? null : { limitCents: 0, usedCents: 0 },
-        }),
-      ),
-    )
-    await expect(
-      fetchAccountData({
+  ])(
+    "keeps wallet facts when optional %s from %s is malformed",
+    async (field, _endpoint) => {
+      server.use(
+        http.get(`${origin}/api/billing`, () =>
+          HttpResponse.json({
+            creditCents: 0,
+            signupCreditCents: 0,
+            subscription:
+              field === "subscription" ? null : { status: "active" },
+          }),
+        ),
+        http.get(`${origin}/api/usage`, () =>
+          HttpResponse.json({
+            window5h:
+              field === "window5h" ? null : { limitCents: 0, usedCents: 0 },
+            windowWeek:
+              field === "windowWeek" ? null : { limitCents: 0, usedCents: 0 },
+          }),
+        ),
+      )
+      const data = await fetchAccountData({
         ...request,
         checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
-      }),
-    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR", endpoint })
-  })
+      })
+      expect(data.balance?.positions[0]?.amount).toMatchObject({ value: "0" })
+      expect(
+        data.allowances?.entries.every(
+          (entry) => entry.constraint.remaining.status === "unknown",
+        ),
+      ).toBe(true)
+    },
+  )
 
   beforeEach(() => {
     server.use(
@@ -805,15 +938,23 @@ describe("FreeModel integration", () => {
       ...request,
       checkIn: createCheckInConfig(SITE_TYPES.FREEMODEL),
     })
-    expect(data.quota).toBe(1.75 * QUOTA_PER_USD)
-    expect(data.subscription).toMatchObject({
-      name: "pro",
-      amountLimit: 5,
-      usedAmount: 1,
-      remainingAmount: 4,
-      period: "5h",
-      isActive: true,
-    })
+    expect(data.balance?.positions[0]?.amount).toMatchObject({ value: "1.75" })
+    expect(
+      data.allowances?.entries.map((entry) => entry.constraint),
+    ).toMatchObject([
+      {
+        limit: { value: "5" },
+        used: { value: "1" },
+        remaining: { status: "unknown" },
+        window: { kind: "rolling", period: "5h" },
+      },
+      {
+        limit: { value: "33" },
+        used: { value: "2" },
+        remaining: { status: "unknown" },
+        window: { kind: "unknown", period: "week" },
+      },
+    ])
     expect(data.todayStatsAvailability?.requests.status).toBe("unavailable")
     expect(data.today_requests_count).toBe(0)
   })

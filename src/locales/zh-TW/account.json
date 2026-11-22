@@ -344,9 +344,21 @@
     "toggleSortOrder": "切換正序/倒序"
   },
   "netInflow": {
+    "coverage": "可比估算：{{included}}/{{eligible}} 個帳戶",
+    "details": "估算依據與涵蓋範圍",
+    "explanation": "期末帳面餘額 − 期初帳面餘額 + 已結算消耗。結果是未分類淨變化，不是已確認收入。",
     "reasons": {
+      "balance": "缺少目前可比的帳面餘額觀測",
+      "baseline": "缺少當天零點的可靠基準",
       "conflict": "已排除觀測衝突的錢包",
-      "duplicate": "已排除重複錢包"
+      "consumption": "缺少完整的已結算消耗",
+      "disabled": "未啟用估算",
+      "duplicate": "已排除重複錢包",
+      "identity": "資產、錢包、來源或適用範圍已變更",
+      "interval": "餘額與消耗的觀測區間不一致",
+      "manual": "手動餘額沒有相符的帳單依據",
+      "precision": "金額超出支援的精確度",
+      "unverified": "估算所需的可比性未核實"
     }
   },
   "popupOnboarding": {
@@ -400,7 +412,7 @@
   "stats": {
     "allowanceExpiry": "到期：{{time}}",
     "completion": "補全",
-    "estimatedTodayIncome": "估算收入",
+    "estimatedNetInflow": "估算淨流入",
     "prompt": "提示",
     "subscriptionRemainingCount": "訂閱剩餘次數",
     "subscriptionRemainingTokens": "剩餘 Token",

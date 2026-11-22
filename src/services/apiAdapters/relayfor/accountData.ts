@@ -1,5 +1,5 @@
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { CURRENCIES } from "~/constants/money"
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -8,22 +8,28 @@ import {
   accountAllowanceObservation,
   ALLOWANCE_IDENTITY_KINDS,
   parseAllowanceInstant,
+  type AccountAllowanceEntry,
 } from "~/services/accounts/allowances"
 import {
-  accountBalanceObservation,
   accountBalanceScope,
+  accountBalanceSnapshot,
 } from "~/services/accounts/balanceSnapshot"
-import { balancePosition } from "~/services/amounts/balance"
+import {
+  balancePosition,
+  observeAmount,
+  type BalanceRefreshPart,
+  type UsageScope,
+} from "~/services/amounts/balance"
 import { budgetConstraint } from "~/services/amounts/budgets"
 import { normalizeDecimalUnits } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
-  BALANCE_LABEL_KEYS,
-  BALANCE_RELATIONS,
+  BALANCE_NATURES,
   BALANCE_ROLES,
   BALANCE_VALIDITY_KINDS,
   BUDGET_LIMIT_STATES,
   EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
   FINANCIAL_ENUMERATION,
   SCOPE_SELECTION_KINDS,
   WALLET_BALANCE_COLLECTION_KEY,
@@ -34,370 +40,324 @@ import {
   fetchRelayForTimedQuotas,
 } from "~/services/apiService/relayfor"
 import {
-  quotaToUsd,
   RELAYFOR_ENDPOINTS,
   RELAYFOR_QUOTA_PER_USD,
 } from "~/services/apiService/relayfor/constants"
 import { isRecord } from "~/services/apiService/relayfor/parsing"
-import type {
-  AccountBalanceComponent,
-  AccountTodayMetricAvailability,
-  AccountTodayStatsAvailability,
-} from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
+  type AccountTodayMetricAvailability,
 } from "~/types"
 
-const COMPLETE_METRIC: AccountTodayMetricAvailability = {
-  status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
-}
-
-const UNSUPPORTED_INCOME: AccountTodayMetricAvailability = {
-  status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-  reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
-}
-
-/**
- * Fetches RelayFor overview and converts it to AccountData.
- */
+/** Preserve each source and scope; a displayed aggregate does not prove fungibility. */
 export async function fetchRelayForAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
   const overview = await fetchRelayForOverview(request)
-
-  const today = overview.today
-  const totalRequests = overview.requests ?? 0
-  const totalTokens =
-    (overview.input_tokens ?? 0) + (overview.output_tokens ?? 0) ||
-    overview.token_count ||
-    0
-  const totalQuota = overview.total_quota
-  const now = Date.now()
-  const subscriptions = (overview.active_subscriptions ?? []).filter(
-    (item) =>
-      item.status === 1 &&
-      (parseAllowanceInstant(item.starts_at) === undefined ||
-        parseAllowanceInstant(item.starts_at)! <= now) &&
-      (parseAllowanceInstant(item.expires_at) === undefined ||
-        parseAllowanceInstant(item.expires_at)! > now),
-  )
-  const components: AccountBalanceComponent[] = [
-    { kind: "permanent", amount: quotaToUsd(overview.user.quota) },
-    { kind: "timed", amount: quotaToUsd(overview.timed_quota ?? 0) },
-    ...subscriptions.map((item): AccountBalanceComponent => ({
-      kind: "subscription",
-      name: item.plan_name ?? item.plan_code,
-      amount: item.unlimited_quota
-        ? 0
-        : quotaToUsd(Math.max(0, item.quota_remaining ?? 0)),
-      unlimited: item.unlimited_quota,
-      expiresAt: item.expires_at,
-      resetAt: item.next_reset_at,
-      scope: item.quota_group || undefined,
-      unlockedModels: Object.keys(item.model_rules ?? {}),
-    })),
-    ...(overview.group_quotas ?? []).flatMap(
-      (item): AccountBalanceComponent[] => {
-        if (
-          !item ||
-          typeof item !== "object" ||
-          !("quota" in item) ||
-          typeof item.quota !== "number"
-        )
-          return []
-        return [
-          {
-            kind: "group",
-            amount: quotaToUsd(item.quota),
-            scope: "quota_group" in item ? String(item.quota_group) : undefined,
-          },
-        ]
-      },
-    ),
-  ]
-
-  let timedDetails: AccountBalanceComponent[] | undefined
-  let timedDetailsUnavailable = false
-  let timedObservedAt = now
-  if ((overview.timed_quota ?? 0) > 0) {
-    try {
-      const grants = await fetchRelayForTimedQuotas(request)
-      timedObservedAt = Date.now()
-      timedDetails = grants
-        .flatMap((item): AccountBalanceComponent[] => {
-          if (
-            !isRecord(item) ||
-            item.status !== 1 ||
-            typeof item.quota_remaining !== "number" ||
-            !Number.isFinite(item.quota_remaining) ||
-            item.quota_remaining <= 0 ||
-            typeof item.expires_at !== "string" ||
-            (parseAllowanceInstant(item.expires_at) !== undefined &&
-              parseAllowanceInstant(item.expires_at)! <= timedObservedAt) ||
-            !Number.isFinite(Date.parse(item.expires_at))
-          )
-            return []
-          return [
-            {
-              kind: "timed",
-              name: typeof item.name === "string" ? item.name : undefined,
-              amount: quotaToUsd(item.quota_remaining),
-              scope:
-                typeof item.quota_group === "string"
-                  ? item.quota_group
-                  : undefined,
-              expiresAt: item.expires_at,
-            },
-          ]
-        })
-        .sort(
-          (a, b) =>
-            Date.parse(a.expiresAt ?? "") - Date.parse(b.expiresAt ?? ""),
-        )
-    } catch {
-      timedDetailsUnavailable = true
-    }
-  }
-
-  const todayStatsAvailability: AccountTodayStatsAvailability = {
-    consumption: metric(today?.quota),
-    requests: metric(today?.requests),
-    tokens: metric(
-      today?.tokens ??
-        (typeof today?.input_tokens === "number" &&
-        typeof today?.output_tokens === "number"
-          ? today.input_tokens + today.output_tokens
-          : undefined),
-    ),
-    income: UNSUPPORTED_INCOME,
-  }
-
-  const scope = accountBalanceScope(request, {
-    walletId: String(overview.user.id),
-  })
-  const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD } as const
+  const observedAt = Date.now()
+  const scope = accountBalanceScope(request)
   const source = {
-    adapter: SITE_TYPES.RELAYFOR,
+    adapter: "relayfor",
     operation: RELAYFOR_ENDPOINTS.overview,
-    contractVersion: "usd-quota-500000/v1",
+    contractVersion: "quota-usd/v1",
     kind: EVIDENCE_KINDS.Reported,
-  } as const
-  const plansSource = {
-    ...source,
-    operation: `${source.operation}:active_subscriptions`,
   }
-  const collectionKey = "active-subscriptions"
-  const plans = subscriptions.map((item, index) => {
-    const label = item.plan_name ?? item.plan_code
-    const expiresAt = parseAllowanceInstant(item.expires_at)
-    const models = Object.keys(item.model_rules ?? {})
-    return {
-      id: `plan:${index}`,
-      collectionKey,
-      label,
-      identityKind: ALLOWANCE_IDENTITY_KINDS.ObservationOnly,
-      reportedTiming: {
-        expiresAt: item.expires_at,
-        startsAt: item.starts_at,
-        resetsAt: item.next_reset_at,
-      },
-      validity:
-        expiresAt === undefined
-          ? ({ kind: BALANCE_VALIDITY_KINDS.Unknown } as const)
-          : ({ kind: BALANCE_VALIDITY_KINDS.Expires, at: expiresAt } as const),
-      constraint: budgetConstraint({
-        scope: {
-          ...scope,
-          groups: item.quota_group
-            ? {
-                kind: SCOPE_SELECTION_KINDS.Restricted,
-                ids: [item.quota_group],
-              }
-            : scope.groups,
-          models: models.length
-            ? { kind: SCOPE_SELECTION_KINDS.Restricted, ids: models }
-            : scope.models,
-        },
-        asset,
-        source: plansSource,
-        observedAt: now,
-        limitState: item.unlimited_quota
-          ? BUDGET_LIMIT_STATES.Unlimited
-          : BUDGET_LIMIT_STATES.Finite,
-        limit: normalizeDecimalUnits(item.quota_total, RELAYFOR_QUOTA_PER_USD),
-        remaining: normalizeDecimalUnits(
-          item.quota_remaining,
-          RELAYFOR_QUOTA_PER_USD,
-        ),
-        enabled: true,
-      }),
-    }
+  const usd = (value: unknown) =>
+    normalizeDecimalUnits(value, RELAYFOR_QUOTA_PER_USD)
+  const scoped = (raw: Record<string, unknown>): UsageScope => ({
+    ...scope,
+    groups:
+      typeof raw.quota_group === "string" && raw.quota_group
+        ? { kind: SCOPE_SELECTION_KINDS.Restricted, ids: [raw.quota_group] }
+        : { kind: SCOPE_SELECTION_KINDS.Unknown },
+    models:
+      isRecord(raw.model_rules) && Object.keys(raw.model_rules).length
+        ? {
+            kind: SCOPE_SELECTION_KINDS.Restricted,
+            ids: Object.keys(raw.model_rules),
+          }
+        : { kind: SCOPE_SELECTION_KINDS.Unknown },
   })
-  return {
-    ...accountBalanceObservation(
-      scope,
-      [
+  const parts: BalanceRefreshPart[] = [
+    {
+      collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+      source,
+      enumeration: FINANCIAL_ENUMERATION.Complete,
+      positions: [
         balancePosition({
-          id: "wallet",
+          id: "permanent",
+          labelKey: "permanentBalance",
           collectionKey: WALLET_BALANCE_COLLECTION_KEY,
           scope,
-          asset,
           source,
-          observedAt: now,
-          value: normalizeDecimalUnits(
-            overview.user.quota,
-            RELAYFOR_QUOTA_PER_USD,
-          ),
+          observedAt,
+          value: usd(overview.user.quota),
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          role: BALANCE_ROLES.Available,
+          nature: BALANCE_NATURES.Prepaid,
         }),
-        ...(overview.timed_quota === undefined
-          ? []
-          : [
-              balancePosition({
-                id: "timed-quota",
-                collectionKey: WALLET_BALANCE_COLLECTION_KEY,
-                scope,
-                asset,
-                source,
-                observedAt: now,
-                value: normalizeDecimalUnits(
-                  overview.timed_quota,
-                  RELAYFOR_QUOTA_PER_USD,
-                ),
-                labelKey: BALANCE_LABEL_KEYS.Timed,
-              }),
-            ]),
-        ...(timedDetails ?? []).map((detail, index) => {
-          const expiry = parseAllowanceInstant(detail.expiresAt)
-          return balancePosition({
-            id: `timed-grant:${index}`,
-            parentId: "timed-quota",
-            relation: BALANCE_RELATIONS.Component,
-            collectionKey: WALLET_BALANCE_COLLECTION_KEY,
-            scope: {
-              ...scope,
-              groups: detail.scope
-                ? {
-                    kind: SCOPE_SELECTION_KINDS.Restricted,
-                    ids: [detail.scope],
-                  }
-                : scope.groups,
-            },
-            asset,
-            source: { ...source, inputs: [RELAYFOR_ENDPOINTS.timedQuotas] },
-            observedAt: timedObservedAt,
-            value: detail.amount,
-            label: detail.name,
-            reportedTiming: { expiresAt: detail.expiresAt },
-            ...(expiry === undefined
-              ? {}
-              : {
-                  validity: {
-                    kind: BALANCE_VALIDITY_KINDS.Expires,
-                    at: expiry,
-                  },
-                }),
-          })
+        balancePosition({
+          id: "timed",
+          labelKey: "timedBalance",
+          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+          scope,
+          source,
+          observedAt,
+          value: usd(overview.timed_quota),
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          role: BALANCE_ROLES.Available,
         }),
-        ...components
-          .filter((component) => component.kind === "group")
-          .map((component, index) =>
-            balancePosition({
-              id: `group:${index}`,
-              role: BALANCE_ROLES.Allowance,
-              collectionKey: WALLET_BALANCE_COLLECTION_KEY,
-              scope: {
-                ...scope,
-                groups: component.scope
-                  ? {
-                      kind: SCOPE_SELECTION_KINDS.Restricted,
-                      ids: [component.scope],
-                    }
-                  : scope.groups,
-              },
-              asset,
-              source,
-              observedAt: now,
-              value: component.amount,
-              label: component.scope,
-            }),
-          ),
       ],
-      now,
-      timedDetailsUnavailable
-        ? FINANCIAL_ENUMERATION.Partial
-        : FINANCIAL_ENUMERATION.Complete,
+    },
+  ]
+  if (usd(overview.timed_quota) !== undefined)
+    parts.push({
+      collectionKey: "timed-summary",
+      source,
+      enumeration: FINANCIAL_ENUMERATION.Complete,
+      positions: [],
+    })
+  const groups = overview.group_quotas
+  parts.push({
+    collectionKey: "groups",
+    source,
+    enumeration:
+      Array.isArray(groups) && groups.every(isRecord)
+        ? FINANCIAL_ENUMERATION.Complete
+        : FINANCIAL_ENUMERATION.Partial,
+    positions: (Array.isArray(groups) ? groups : []).flatMap((raw, index) => {
+      if (!isRecord(raw)) return []
+      const id =
+        typeof raw.quota_group === "string" && raw.quota_group
+          ? `group:${raw.quota_group}`
+          : `unidentified:${observedAt}:${index}`
+      return [
+        balancePosition({
+          id,
+          collectionKey: "groups",
+          scope: scoped(raw),
+          source,
+          observedAt,
+          value: usd(raw.quota),
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          role: BALANCE_ROLES.Available,
+        }),
+      ]
+    }),
+  })
+  const timedSource = {
+    ...source,
+    operation: RELAYFOR_ENDPOINTS.timedQuotas,
+    inputs: [RELAYFOR_ENDPOINTS.timedQuotas],
+  }
+  let grants: unknown[] | undefined
+  if (usd(overview.timed_quota) === "0") grants = []
+  else
+    try {
+      grants = await fetchRelayForTimedQuotas(request)
+    } catch {
+      /* A failed detail read does not erase the verified overview. */
+    }
+  const grantAt = Date.now()
+  parts.push({
+    source: timedSource,
+    collectionKey: "timed-grants",
+    enumeration:
+      grants === undefined
+        ? FINANCIAL_ENUMERATION.Unavailable
+        : grants.every(isRecord)
+          ? FINANCIAL_ENUMERATION.Complete
+          : FINANCIAL_ENUMERATION.Partial,
+    positions: (grants ?? []).flatMap((raw, index) => {
+      if (!isRecord(raw) || raw.status !== 1) return []
+      const id =
+        typeof raw.id === "string" && raw.id
+          ? raw.id
+          : typeof raw.id === "number" && Number.isSafeInteger(raw.id)
+            ? String(raw.id)
+            : `unidentified:${grantAt}:${index}`
+      const expiresAt = parseAllowanceInstant(raw.expires_at)
+      return [
+        balancePosition({
+          id: `timed-grant:${id}`,
+          collectionKey: "timed-grants",
+          source: timedSource,
+          scope: scoped(raw),
+          observedAt: grantAt,
+          value: usd(raw.quota_remaining),
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          role: BALANCE_ROLES.Ledger,
+          validity:
+            expiresAt === undefined
+              ? { kind: BALANCE_VALIDITY_KINDS.Unknown }
+              : { kind: BALANCE_VALIDITY_KINDS.Expires, at: expiresAt },
+          ...(typeof raw.name === "string" ? { label: raw.name } : {}),
+          ...(typeof raw.expires_at === "string"
+            ? { reportedTiming: { expiresAt: raw.expires_at } }
+            : {}),
+        }),
+      ]
+    }),
+  })
+  const plans = overview.active_subscriptions
+  const entries: AccountAllowanceEntry[] = (
+    Array.isArray(plans) ? plans : []
+  ).flatMap((raw, index) => {
+    if (!isRecord(raw)) return []
+    const id =
+      typeof raw.id === "string" && raw.id
+        ? raw.id
+        : typeof raw.id === "number" && Number.isSafeInteger(raw.id)
+          ? String(raw.id)
+          : undefined
+    const expiry = parseAllowanceInstant(raw.expires_at)
+    return [
+      {
+        id: id ?? `unidentified:${observedAt}:${index}`,
+        identityKind: id
+          ? ALLOWANCE_IDENTITY_KINDS.Upstream
+          : ALLOWANCE_IDENTITY_KINDS.ObservationOnly,
+        collectionKey: "plans",
+        label:
+          typeof raw.plan_name === "string"
+            ? raw.plan_name
+            : typeof raw.plan_code === "string"
+              ? raw.plan_code
+              : undefined,
+        validity:
+          expiry === undefined
+            ? { kind: BALANCE_VALIDITY_KINDS.Unknown }
+            : { kind: BALANCE_VALIDITY_KINDS.Expires, at: expiry },
+        reportedTiming: {
+          ...(typeof raw.starts_at === "string"
+            ? { startsAt: raw.starts_at }
+            : {}),
+          ...(typeof raw.expires_at === "string"
+            ? { expiresAt: raw.expires_at }
+            : {}),
+          ...(typeof raw.next_reset_at === "string"
+            ? { resetsAt: raw.next_reset_at }
+            : {}),
+        },
+        constraint: budgetConstraint({
+          scope: scoped(raw),
+          source,
+          observedAt,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          limitState:
+            raw.unlimited_quota === true
+              ? BUDGET_LIMIT_STATES.Unlimited
+              : BUDGET_LIMIT_STATES.Finite,
+          limit: usd(raw.quota_total),
+          remaining: usd(raw.quota_remaining),
+          enabled:
+            typeof raw.status === "number" ? raw.status === 1 : undefined,
+        }),
+      },
+    ]
+  })
+  const today = overview.today
+  const unsupported: AccountTodayMetricAvailability = {
+    status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+    reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+  }
+  const positions = parts.flatMap((part) => part.positions)
+  const totalTokens =
+    typeof overview.input_tokens === "number" &&
+    typeof overview.output_tokens === "number"
+      ? overview.input_tokens + overview.output_tokens
+      : overview.token_count
+  return {
+    balance: accountBalanceSnapshot(
+      scope,
+      positions,
+      grantAt,
+      parts.every((part) => part.enumeration === FINANCIAL_ENUMERATION.Complete)
+        ? FINANCIAL_COVERAGE.Complete
+        : FINANCIAL_COVERAGE.Partial,
     ),
+    balanceRefreshParts: parts,
     ...accountAllowanceObservation(
       scope,
       [
         {
-          source: plansSource,
-          collectionKey,
+          source,
+          collectionKey: "plans",
           enumeration:
-            overview.active_subscriptions === undefined ||
-            subscriptions.some(
-              (item) =>
-                parseAllowanceInstant(item.starts_at) === undefined ||
-                parseAllowanceInstant(item.expires_at) === undefined,
+            Array.isArray(plans) &&
+            plans.every(
+              (raw) =>
+                isRecord(raw) &&
+                [raw.starts_at, raw.expires_at, raw.next_reset_at].every(
+                  (at) =>
+                    at === undefined || parseAllowanceInstant(at) !== undefined,
+                ),
             )
-              ? FINANCIAL_ENUMERATION.Partial
-              : FINANCIAL_ENUMERATION.Complete,
-          entries: plans,
+              ? FINANCIAL_ENUMERATION.Complete
+              : FINANCIAL_ENUMERATION.Partial,
+          entries,
         },
       ],
-      now,
+      observedAt,
     ),
-    quota: overview.user.quota,
-    nativeBalance: {
-      unit: "USD",
-      permanent: quotaToUsd(overview.user.quota),
-      daily: quotaToUsd(overview.timed_quota ?? 0),
-      total: components
-        .filter((item) => item.kind !== "group")
-        .reduce((sum, item) => sum + item.amount, 0),
-      components,
-      timedDetails,
-      timedDetailsUnavailable,
-    },
-    subscription: subscriptions.length
-      ? {
-          name: subscriptions
-            .map((item) => item.plan_name ?? item.plan_code)
-            .filter(Boolean)
-            .join(" · "),
-          isActive: true,
-        }
-      : undefined,
-    today_quota_consumption: today?.quota ?? 0,
+    today_quota_consumption: 0,
     today_prompt_tokens: today?.input_tokens ?? 0,
     today_completion_tokens:
       today?.output_tokens ??
       Math.max(0, (today?.tokens ?? 0) - (today?.input_tokens ?? 0)),
     today_requests_count: today?.requests ?? 0,
     today_income: 0,
-    todayStatsAvailability,
-    usage:
-      typeof totalQuota === "number" && Number.isFinite(totalQuota)
-        ? {
-            scope: "lifetime",
-            totalRequests,
-            totalTokens,
-            totalCost: quotaToUsd(totalQuota),
-          }
-        : undefined,
+    todayStatsAvailability: {
+      consumption: unsupported,
+      income: unsupported,
+      requests: metric(today?.requests),
+      tokens: metric(
+        today?.tokens ??
+          (typeof today?.input_tokens === "number" &&
+          typeof today?.output_tokens === "number"
+            ? today.input_tokens + today.output_tokens
+            : undefined),
+      ),
+    },
+    usage: {
+      scope: ACCOUNT_USAGE_SCOPES.Lifetime,
+      totalRequests: overview.requests,
+      totalTokens,
+      cost: {
+        scope,
+        asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+        amount: observeAmount(
+          usd(overview.total_quota),
+          { ...source, inputs: ["total_quota"] },
+          observedAt,
+        ),
+      },
+    },
+    usageObservations: [
+      {
+        scope: ACCOUNT_USAGE_SCOPES.SiteToday,
+        cost: {
+          scope,
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          amount: observeAmount(
+            usd(today?.quota),
+            { ...source, inputs: ["today.quota"] },
+            observedAt,
+          ),
+        },
+      },
+    ],
     checkIn: request.checkIn,
   }
 }
-
 const metric = (value: unknown): AccountTodayMetricAvailability =>
   typeof value === "number" && Number.isFinite(value) && value >= 0
-    ? COMPLETE_METRIC
+    ? { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete }
     : {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
         reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
       }
-
 export const relayForAccountData: AccountDataCapability = {
-  fetchData: (request) => fetchRelayForAccountData(request),
+  fetchData: fetchRelayForAccountData,
 }

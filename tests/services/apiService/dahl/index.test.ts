@@ -46,6 +46,160 @@ const body = {
 }
 
 describe("Dahl account contract", () => {
+  it("keeps exact pool and key balances when their derived total overflows", async () => {
+    const pool = "9".repeat(256)
+    server.use(
+      http.get(`${origin}/v1/account`, () =>
+        HttpResponse.json({
+          ...body,
+          token_balance: pool,
+          tokens_on_keys: "1",
+        }),
+      ),
+      http.get(`${origin}/v1/account/usage`, () =>
+        HttpResponse.json({
+          total_requests: 2,
+          total_input_tokens: 20,
+          total_output_tokens: 10,
+        }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.DAHL),
+    })
+    expect(result.balance?.positions).toMatchObject([
+      { id: "total", amount: { status: "unavailable" } },
+      {
+        id: "pool",
+        amount: { status: "known", value: pool },
+        parentId: "total",
+        relation: "component",
+      },
+      {
+        id: "keys",
+        amount: { status: "known", value: "1" },
+        parentId: "total",
+        relation: "allocation",
+      },
+    ])
+    expect(result.usage).toMatchObject({ totalRequests: 2, totalTokens: 30 })
+  })
+  it("keeps pool and allocated balances as one native Token asset without cash valuation", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () =>
+        HttpResponse.json({
+          ...body,
+          token_balance: 100000000,
+          tokens_on_keys: 20000000,
+        }),
+      ),
+      http.get(`${origin}/v1/account/usage`, () =>
+        HttpResponse.json({
+          total_input_tokens: 20,
+          total_output_tokens: 10,
+          total_requests: 2,
+        }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.DAHL),
+    })
+    expect(
+      result.balance?.positions.map((p) => [
+        p.id,
+        p.asset.kind,
+        "value" in p.amount ? p.amount.value : undefined,
+        p.parentId,
+      ]),
+    ).toEqual([
+      ["total", "quota", "120000000", undefined],
+      ["pool", "quota", "100000000", "total"],
+      ["keys", "quota", "20000000", "total"],
+    ])
+    expect(result).not.toHaveProperty("quota")
+    expect(result).not.toHaveProperty("nativeBalance")
+    expect(result.balance?.positions[2]?.relation).toBe("allocation")
+    expect(result.balance?.positions.map((p) => p.labelKey)).toEqual([
+      "totalTokens",
+      "poolTokens",
+      "allocatedTokens",
+    ])
+    expect(result.usage).not.toHaveProperty("totalCost")
+    expect(result.subscription).toBeUndefined()
+    expect(result.balanceRefreshParts).toEqual([
+      expect.objectContaining({
+        enumeration: "complete",
+        positions: result.balance?.positions,
+      }),
+    ])
+  })
+  it.each([1.5, -1])(
+    "keeps invalid atomic pool amount %s unknown without losing key allocations",
+    async (token_balance) => {
+      server.use(
+        http.get(`${origin}/v1/account`, () =>
+          HttpResponse.json({
+            ...body,
+            token_balance,
+            tokens_on_keys: "9007199254740993000",
+          }),
+        ),
+        http.get(`${origin}/v1/account/usage`, () =>
+          HttpResponse.json({
+            total_requests: 0,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+          }),
+        ),
+      )
+      const data = await fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.DAHL),
+      })
+      expect(data.balance?.positions).toMatchObject([
+        { id: "total", amount: { status: "unavailable" } },
+        { id: "pool", amount: { status: "unavailable" } },
+        {
+          id: "keys",
+          amount: { status: "known", value: "9007199254740993000" },
+        },
+      ])
+    },
+  )
+
+  it("keeps a known allocation when the pool is missing and usage is unavailable", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () =>
+        HttpResponse.json({
+          ...body,
+          token_balance: null,
+          tokens_on_keys: "9007199254740993000",
+        }),
+      ),
+      http.get(
+        `${origin}/v1/account/usage`,
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.DAHL),
+    })
+    expect(
+      result.balance?.positions.map((p) => [
+        p.id,
+        p.amount.status,
+        "value" in p.amount ? p.amount.value : undefined,
+      ]),
+    ).toEqual([
+      ["total", "unavailable", undefined],
+      ["pool", "unavailable", undefined],
+      ["keys", "known", "9007199254740993000"],
+    ])
+    expect(result.usage?.totalTokens).toBeUndefined()
+  })
   it("reuses verified optional inventory tokens without repeating account and key requests", async () => {
     server.use(
       http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
@@ -254,7 +408,25 @@ describe("Dahl account contract", () => {
     await saveDahlKeyName(owner, 8, "Other key")
     const scope = await session.resolveDefaultScope()
     const collection = await session.openCollection(scope.scopeKey)
-    const ref = (await collection.list()).items[0]!.ref
+    const listed = (await collection.list()).items[0]!
+    const ref = listed.ref
+    expect(listed.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "allocation",
+        parent: expect.objectContaining({
+          id: "total",
+          collectionKey: "/v1/account",
+          scope: expect.objectContaining({ authority: origin }),
+        }),
+        position: expect.objectContaining({
+          asset: expect.objectContaining({ kind: "quota", id: "dahl:tokens" }),
+          scope: expect.objectContaining({
+            keys: { kind: "restricted", ids: ["7"] },
+          }),
+          amount: expect.objectContaining({ status: "known", value: "100" }),
+        }),
+      }),
+    )
     await collection.delete(ref)
     expect(write).toHaveBeenCalledOnce()
     expect((await collection.list()).items).toHaveLength(0)
@@ -992,9 +1164,10 @@ describe("Dahl account contract", () => {
       ...request,
       checkIn: createCheckInConfig(SITE_TYPES.DAHL),
     })
-    expect(result.quota).toBe(1500000) // 100M tokens * $0.03/M * 500000 quota/USD.
-    expect(result.subscription).toMatchObject({ remainingTokens: 100000000 })
-    expect(result.subscription?.remainingCount).toBeUndefined()
+    expect(result.balance?.positions[0]?.amount).toMatchObject({
+      value: "100000000",
+    })
+    expect(result.subscription).toBeUndefined()
     expect(result.usage).toMatchObject({ totalTokens: 30, totalRequests: 2 })
     expect(result.todayStatsAvailability?.consumption).toMatchObject({
       status: "unavailable",
@@ -1067,6 +1240,14 @@ describe("Dahl account contract", () => {
         ...request,
         checkIn: createCheckInConfig(SITE_TYPES.DAHL),
       }),
-    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    ).resolves.toMatchObject({
+      balance: {
+        positions: [
+          { amount: { status: "unavailable" } },
+          { amount: { status: "unavailable" } },
+          { amount: { value: "0" } },
+        ],
+      },
+    })
   })
 })

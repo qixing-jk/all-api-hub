@@ -1,30 +1,16 @@
-import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
-import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
-import {
-  BALANCE_PURPOSES,
-  getDisplayBalancePositions,
-  projectBalance,
-} from "~/services/accounts/metrics/balanceProjection"
-import {
-  getDisplayConsumptionProjection,
-  getDisplayIncomeProjection,
-} from "~/services/accounts/metrics/consumptionProjection"
-import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
-import { balancePositionKey, usageScopeKey } from "~/services/amounts/balance"
+import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import type { AccountAllowanceSnapshot } from "~/services/accounts/allowances"
+import type { BalanceSnapshot } from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
-  BALANCE_ROLES,
+  OBSERVATION_STATUSES,
 } from "~/services/amounts/financialConstants"
-import type {
-  AccountNativeBalance,
-  AccountTodayStatsAvailability,
-  SiteAccount,
-} from "~/types"
-import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import type { FinancialIncomeFact } from "~/services/amounts/income"
+import type { FinancialConsumptionFact } from "~/services/amounts/usage"
+import type { AccountUsageSummary } from "~/types"
 import type {
   BalanceHistoryPreferences,
   DailyBalanceHistoryCaptureSource,
-  DailyBalanceSnapshot,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
@@ -35,159 +21,77 @@ import { dailyBalanceHistoryStorage } from "./storage"
 
 const logger = createLogger("DailyBalanceHistoryCapture")
 
-/**
- * Best-effort snapshot upsert used by refresh-driven and alarm-driven capture.
- *
- * Cashflow fields are stored independently only when their refreshed metric is
- * complete, avoiding placeholder or partial values in historical estimates.
- */
+/** Append accepted native observations; old quota records remain read-only. */
 export async function maybeCaptureDailyBalanceSnapshot(params: {
   config?: BalanceHistoryPreferences
   accountId: string
-  quota: number
-  nativeBalance?: AccountNativeBalance
-  balanceUnavailable?: boolean
-  today_income: number
-  today_quota_consumption: number
-  todayStatsAvailability: AccountTodayStatsAvailability
+  generation?: number
+  balance?: BalanceSnapshot
+  allowances?: AccountAllowanceSnapshot
+  settledConsumption?: FinancialConsumptionFact[]
+  usage?: AccountUsageSummary[]
+  reportedIncome?: FinancialIncomeFact[]
   source: DailyBalanceHistoryCaptureSource
-  capturedAtMs?: number
   timeZone?: string
 }): Promise<boolean> {
   const config = params.config ?? DEFAULT_BALANCE_HISTORY_PREFERENCES
+  const reportedDayCosts = (params.usage ?? []).flatMap(
+    ({ scope, cost, reportedDay }) => {
+      if (
+        (scope !== ACCOUNT_USAGE_SCOPES.Today &&
+          scope !== ACCOUNT_USAGE_SCOPES.SiteToday) ||
+        !cost?.scope ||
+        cost.amount.status !== OBSERVATION_STATUSES.Known ||
+        cost.asset.kind === ASSET_KINDS.Unknown
+      )
+        return []
+      const dayKey =
+        reportedDay ??
+        (cost.window
+          ? getDayKeyFromUnixSeconds(
+              cost.window.start / 1000,
+              cost.window.timeZone,
+            )
+          : undefined)
+      return [
+        {
+          ...cost,
+          scope: cost.scope,
+          ...(dayKey ? { dayKey } : {}),
+        },
+      ]
+    },
+  )
   if (
     !config.enabled ||
-    !supportsMonetaryBalance(params.nativeBalance, params.balanceUnavailable)
-  ) {
-    return false
-  }
-
-  const capturedAtMs =
-    typeof params.capturedAtMs === "number" &&
-    Number.isFinite(params.capturedAtMs)
-      ? params.capturedAtMs
-      : Date.now()
-
-  const dayKey = getDayKeyFromUnixSeconds(
-    Math.floor(capturedAtMs / 1000),
-    params.timeZone,
+    (!params.balance &&
+      !params.allowances &&
+      !params.settledConsumption?.length &&
+      !reportedDayCosts.length &&
+      !params.reportedIncome?.length)
   )
-
-  const snapshot: DailyBalanceSnapshot = {
-    quota: params.quota,
-    today_income: isAccountTodayMetricComplete(
-      params.todayStatsAvailability.income,
-    )
-      ? params.today_income
-      : null,
-    today_quota_consumption: isAccountTodayMetricComplete(
-      params.todayStatsAvailability.consumption,
-    )
-      ? params.today_quota_consumption
-      : null,
-    capturedAt: capturedAtMs,
-    source: params.source,
-  }
+    return false
 
   try {
-    return await dailyBalanceHistoryStorage.upsertSnapshot({
+    return await dailyBalanceHistoryStorage.appendFinancialSnapshot({
       accountId: params.accountId,
-      dayKey,
-      snapshot,
+      snapshot: {
+        generation: params.generation,
+        balance: params.balance,
+        allowances: params.allowances,
+        settledConsumption: params.settledConsumption,
+        ...(reportedDayCosts.length ? { reportedDayCosts } : {}),
+        reportedIncome: params.reportedIncome,
+        source: params.source,
+      },
       retentionDays: config.retentionDays,
       timeZone: params.timeZone,
     })
   } catch (error) {
-    logger.error(
-      `Failed to upsert daily balance snapshot (accountId=${params.accountId}, dayKey=${dayKey})`,
-      getErrorMessage(error),
-    )
+    logger.error("Failed to append financial history", {
+      accountId: params.accountId,
+      error: getErrorMessage(error),
+    })
     return false
   }
-}
-
-/** Keep the existing history series populated from fresh, compatible USD observations. */
-export async function maybeCaptureAccountReferenceBalance({
-  config,
-  account,
-  source,
-  asOf = Date.now(),
-}: {
-  config?: BalanceHistoryPreferences
-  account: SiteAccount
-  source: DailyBalanceHistoryCaptureSource
-  asOf?: number
-}): Promise<boolean> {
-  if (!(config ?? DEFAULT_BALANCE_HISTORY_PREFERENCES).enabled) return false
-  const info = account.account_info
-  if (!info.balance) return false
-  // Unreadable independent wallets still identify separate balances.
-  const wallets = new Set(
-    getDisplayBalancePositions(info.balance)
-      .filter((position) => position.role !== BALANCE_ROLES.Allowance)
-      .map((position) =>
-        position.scope.walletId ||
-        position.scope.organizationId ||
-        position.scope.workspaceId
-          ? usageScopeKey({
-              ...position.scope,
-              routes: position.scope.routes ?? { kind: "all" },
-            })
-          : balancePositionKey(position),
-      ),
-  )
-  if (wallets.size !== 1) return false
-  const { amounts, conflicts, positions } = projectBalance(
-    info.balance,
-    BALANCE_PURPOSES.Available,
-    asOf,
-  )
-  const [balance] = amounts
-  if (
-    positions.length !== 1 ||
-    amounts.length !== 1 ||
-    conflicts.length ||
-    balance?.asset.kind !== ASSET_KINDS.Currency ||
-    balance.asset.code !== CURRENCIES.USD
-  )
-    return false
-  const quota = Number(balance.value) * QUOTA_PER_USD
-  if (!Number.isFinite(quota)) return false
-  const display = {
-    id: account.id,
-    exchangeRate: account.exchange_rate,
-    disabled: account.disabled,
-    excludeFromTodayIncome: false,
-    settledConsumption: info.settledConsumption,
-    reportedIncome: info.reportedIncome,
-    todayStatsAvailability: info.todayStatsAvailability,
-  }
-  const spending = getDisplayConsumptionProjection([display], asOf)
-  const income = getDisplayIncomeProjection([display], asOf)
-  const consumptionQuota = spending.amount.USD * QUOTA_PER_USD
-  const incomeQuota = income.amount.USD * QUOTA_PER_USD
-  const consumption = Number.isFinite(consumptionQuota)
-    ? spending.coverageByCurrency.USD.status
-    : ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
-  const received = Number.isFinite(incomeQuota)
-    ? income.coverageByCurrency.USD.status
-    : ACCOUNT_TODAY_METRIC_STATUSES.Unavailable
-  const unavailable = {
-    status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-  } as const
-  return maybeCaptureDailyBalanceSnapshot({
-    config,
-    accountId: account.id,
-    quota,
-    today_income: incomeQuota,
-    today_quota_consumption: consumptionQuota,
-    todayStatsAvailability: {
-      consumption: { status: consumption },
-      income: { status: received },
-      requests: unavailable,
-      tokens: unavailable,
-    },
-    capturedAtMs: asOf,
-    source,
-  })
 }

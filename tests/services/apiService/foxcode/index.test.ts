@@ -1,7 +1,6 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { QUOTA_PER_USD } from "~/constants/money"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { fetchAccountData, fetchUserInfo } from "~/services/apiService/foxcode"
 import { fetchRecentUsage } from "~/services/apiService/foxcode/usage"
@@ -26,6 +25,85 @@ const request = {
 const user = { id: userId, name: "Work", role: "USER", isActive: true }
 
 describe("FoxCode console account contract", () => {
+  it("preserves the native yearly reset period", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            user,
+            subscription: {
+              active: [
+                {
+                  id: "annual",
+                  plan: {
+                    name: "Annual",
+                    resetType: "YEARLY",
+                    quotaLimit: 10000000,
+                  },
+                  quotaUsed: 2000000,
+                  quotaRemaining: 8000000,
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig("foxcode"),
+      includeTodayCashflow: false,
+    })
+    expect(result.allowances?.entries[0]?.constraint).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      remaining: { value: "8" },
+      window: { kind: "periodic", period: "year" },
+    })
+  })
+  it("keeps valid plan amounts when one field normalization exceeds decimal precision", async () => {
+    const tiny = `0.${"0".repeat(252)}1`
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            user,
+            subscription: {
+              active: [
+                {
+                  id: "plan",
+                  plan: {
+                    name: "Daily",
+                    resetType: "DAILY",
+                    quotaLimit: 1000000,
+                  },
+                  quotaUsed: tiny,
+                  quotaRemaining: 500000,
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig("foxcode"),
+      includeTodayCashflow: false,
+    })
+    expect(result.allowances?.entries[0]?.constraint).toMatchObject({
+      limit: { status: "known", value: "1" },
+      used: { status: "unknown" },
+      remaining: { status: "known", value: "0.5" },
+    })
+  })
   beforeEach(async () => {
     const boundary = installCookieTransport()
     const cookie = (await browser.cookies.getAll({}))[0]!
@@ -106,7 +184,7 @@ describe("FoxCode console account contract", () => {
     })
   })
 
-  it("uses the nearest expiry across active resetting plans", async () => {
+  it("preserves each active plan's expiry instead of summing distinct constraints", async () => {
     const plan = {
       plan: { name: "Daily", resetType: "DAILY", quotaLimit: 1000000 },
       quotaUsed: 0,
@@ -123,8 +201,8 @@ describe("FoxCode console account contract", () => {
             user,
             subscription: {
               active: [
-                { ...plan, endDate: "2099-01-01T00:00:00Z" },
-                { ...plan, endDate: "2098-01-01T00:00:00Z" },
+                { ...plan, id: "plan-a", endDate: "2099-01-01T00:00:00Z" },
+                { ...plan, id: "plan-b", endDate: "2098-01-01T00:00:00Z" },
               ],
             },
           },
@@ -138,7 +216,31 @@ describe("FoxCode console account contract", () => {
         includeTodayCashflow: false,
       }),
     ).toMatchObject({
-      subscription: { expireTime: "2098-01-01T00:00:00Z", remainingAmount: 2 },
+      allowances: {
+        entries: [
+          {
+            id: "plan-a",
+            identityKind: "upstream",
+            validity: {
+              kind: "expires",
+              at: Date.parse("2099-01-01T00:00:00Z"),
+            },
+            constraint: {
+              remaining: { value: "1" },
+              window: { kind: "periodic", period: "day" },
+            },
+          },
+          {
+            id: "plan-b",
+            identityKind: "upstream",
+            validity: {
+              kind: "expires",
+              at: Date.parse("2098-01-01T00:00:00Z"),
+            },
+            constraint: { remaining: { value: "1" } },
+          },
+        ],
+      },
     })
   })
 
@@ -279,13 +381,19 @@ describe("FoxCode console account contract", () => {
           HttpResponse.json({ success: true, data: { user, ...data } }),
         ),
       )
-      await expect(
-        fetchAccountData({
-          ...request,
-          checkIn: createCheckInConfig("foxcode"),
-          includeTodayCashflow: false,
-        }),
-      ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+      const pending = fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig("foxcode"),
+        includeTodayCashflow: false,
+      })
+      if (!Array.isArray(data.subscription.active))
+        await expect(pending).rejects.toMatchObject({
+          code: "JSON_PARSE_ERROR",
+        })
+      else
+        expect(
+          (await pending).allowances?.entries[0]?.constraint.limit.status,
+        ).toBe("unknown")
     },
   )
 
@@ -309,7 +417,10 @@ describe("FoxCode console account contract", () => {
       ...request,
       checkIn: createCheckInConfig("foxcode"),
     })
-    expect(result).toMatchObject({ success: true, data: { quota: 0 } })
+    expect(result).toMatchObject({
+      success: true,
+      data: { allowances: { entries: [] } },
+    })
     expect(result.data?.recentUsageRecords).toBeUndefined()
     server.use(
       http.get(
@@ -414,7 +525,7 @@ describe("FoxCode console account contract", () => {
     })
   })
 
-  it("keeps purchased credit separate from resetting plan allowances and excludes expired history", async () => {
+  it("keeps non-resetting and periodic plans separate and excludes historical rows", async () => {
     server.use(
       http.get(`${origin}/api/auth/me`, () =>
         HttpResponse.json({ success: true, data: { user } }),
@@ -463,16 +574,25 @@ describe("FoxCode console account contract", () => {
       checkIn: createCheckInConfig("unknown"),
       includeTodayCashflow: false,
     })
-    expect(data.quota).toBe(8 * QUOTA_PER_USD)
-    expect(data.subscription).toMatchObject({
-      name: "Monthly",
-      amountLimit: 2,
-      usedAmount: 0.5,
-      remainingAmount: 1.5,
-      period: "DAILY",
-      expireTime: "2026-11-01T00:00:00Z",
-      isActive: true,
-    })
+    expect(data.balance).toBeUndefined()
+    expect(data.allowances?.entries).toMatchObject([
+      {
+        id: "credit",
+        constraint: {
+          limit: { value: "10" },
+          remaining: { value: "8" },
+          window: { kind: "lifetime" },
+        },
+      },
+      {
+        id: "monthly",
+        constraint: {
+          limit: { value: "2" },
+          remaining: { value: "1.5" },
+          window: { kind: "periodic", period: "day" },
+        },
+      },
+    ])
     expect(data.todayStatsAvailability?.consumption.status).toBe("unavailable")
     expect(data.usage).toBeUndefined()
   })

@@ -59,6 +59,8 @@ import {
   AccountWriteRejectedError,
   type AccountWriteGuard,
 } from "~/services/core/accountWriteGuard"
+import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
 import {
   AuthTypeEnum,
@@ -66,6 +68,7 @@ import {
   type SiteAccount,
 } from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
+import { DAILY_BALANCE_HISTORY_CAPTURE_SOURCES } from "~/types/dailyBalanceHistory"
 import type { DeepPartial } from "~/types/utils"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -322,7 +325,7 @@ class AccountMutations {
   ): Promise<boolean> {
     const { guard, ...mutationOptions } = options
     try {
-      await accountConfigStore.mutateAccount(
+      const committed = await accountConfigStore.mutateAccount(
         id,
         (account) => {
           const loaded = mutationOptions.loadedKimiAuth
@@ -426,6 +429,7 @@ class AccountMutations {
             userTimestampMode: mutationOptions.userTimestampMode,
           })
           const financial = mutationOptions.balanceRefresh
+          let acceptedFinancial = false
           if (financial) {
             if (
               account.balanceRefreshGeneration === financial.generation &&
@@ -439,6 +443,7 @@ class AccountMutations {
                 ...nextAccount,
                 account_info: { ...nextAccount.account_info },
               }
+              acceptedFinancial = true
               if (data)
                 Object.assign(
                   nextAccount.account_info,
@@ -504,12 +509,37 @@ class AccountMutations {
           }
           return {
             nextAccount,
-            result: true,
+            result: { account: nextAccount, acceptedFinancial },
             changed: true,
           }
         },
         { guard },
       )
+      if (committed.acceptedFinancial) {
+        try {
+          const prefs = await userPreferences.getPreferences()
+          const info = committed.account.account_info
+          await maybeCaptureDailyBalanceSnapshot({
+            config: prefs.balanceHistory,
+            accountId: id,
+            generation: committed.account.balanceRefreshGeneration,
+            balance: info.balance,
+            allowances: info.allowances,
+            settledConsumption: info.settledConsumption,
+            reportedIncome: info.reportedIncome,
+            usage: [
+              ...(info.usage ? [info.usage] : []),
+              ...(info.usageObservations ?? []),
+            ],
+            source: DAILY_BALANCE_HISTORY_CAPTURE_SOURCES.Refresh,
+          })
+        } catch (error) {
+          logger.warn("Failed to capture accepted editor balance", {
+            accountId: id,
+            error,
+          })
+        }
+      }
       return true
     } catch (error) {
       // A rejected guard is a decided outcome, not a storage failure: the caller

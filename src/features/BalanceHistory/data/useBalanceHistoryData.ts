@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next"
 
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -32,7 +31,10 @@ const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const balanceHistorySurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage
 /** Load snapshots and own explicit refresh/prune feedback without hiding existing content. */
-export function useBalanceHistoryData(selectedAccountIds: string[]) {
+export function useBalanceHistoryData(
+  selectedAccountIds: string[],
+  enabled = true,
+) {
   const mountedRef = useRef(false)
   const loadGenerationRef = useRef(0)
   const loadingToastIdsRef = useRef(new Set<string>())
@@ -41,6 +43,7 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
   const [tagStore, setTagStore] = useState<TagStore | null>(null)
   const [store, setStore] = useState<DailyBalanceHistoryStore | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     if (!mountedRef.current) return
@@ -49,27 +52,28 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore, nextTagStore] = await Promise.all([
-        accountQueries.getEnabledAccounts(),
+        accountQueries.getAllAccountsOrThrow(),
         dailyBalanceHistoryStorage.getStore(),
         tagStorage.getTagStore(),
       ])
       if (isCurrent()) {
-        setAccounts(
-          nextAccounts.filter((account) =>
-            supportsMonetaryBalance(account.account_info.nativeBalance),
-          ),
-        )
+        setAccounts(nextAccounts.filter(({ disabled }) => !disabled))
         setStore(nextStore)
         setTagStore(nextTagStore)
+        setLoadError(null)
       }
     } catch (error) {
-      if (isCurrent()) logger.error("Failed to load data", error)
+      if (isCurrent()) {
+        logger.error("Failed to load data", error)
+        setLoadError(getErrorMessage(error))
+      }
     } finally {
       if (isCurrent()) setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
+    if (!enabled) return
     mountedRef.current = true
     void loadData()
     const loadingToastIds = loadingToastIdsRef.current
@@ -79,7 +83,7 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
       for (const id of loadingToastIds) toast.dismiss(id)
       loadingToastIds.clear()
     }
-  }, [loadData])
+  }, [enabled, loadData])
 
   const handleRefreshNow = useCallback(async () => {
     if (!mountedRef.current) return
@@ -90,6 +94,7 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
       entrypoint: optionsEntrypoint,
     })
     let toastId: string | undefined
+    let captureComplete = false
     try {
       toastId = toast.loading(t("messages.loading.refreshing"))
       loadingToastIdsRef.current.add(toastId)
@@ -110,15 +115,32 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
           if (!response?.success) {
             throw new Error(response?.error || "Unknown error")
           }
+          if (!response.data)
+            throw new Error(t("messages.error.captureResultUnavailable"))
 
-          if (mountedRef.current)
-            toast.success(t("messages.success.refreshCompleted"), {
-              id: toastId,
-            })
+          captureComplete = response.data.failed === 0
+          const counts = {
+            captured: response.data.success,
+            uncaptured: response.data.failed,
+          }
+          if (mountedRef.current) {
+            if (captureComplete)
+              toast.success(t("messages.success.refreshCompleted", counts), {
+                id: toastId,
+              })
+            else
+              toast.warning(t("messages.warning.refreshIncomplete", counts), {
+                id: toastId,
+              })
+          }
           await loadData()
         },
       )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      if (captureComplete) tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      else
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
     } catch (error) {
       if (mountedRef.current)
         toast.error(
@@ -176,6 +198,9 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
     tagStore,
     store,
     isLoading,
+    loadError,
+    retryLoad: loadData,
+    hasLoadedData: store !== null,
     handleRefreshNow,
     handlePruneNow,
   }

@@ -219,7 +219,7 @@ it("uses the independent inference secret even when a management token is also s
       })
     }),
   )
-  expect((await fetchNanoGptBalance(request)).usdBalance).toBe(1)
+  expect((await fetchNanoGptBalance(request)).usdBalance).toBe("1")
 })
 
 it("admits key-read tokens after a usage scope refusal but does not hide expired tokens", async () => {

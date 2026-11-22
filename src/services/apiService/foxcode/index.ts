@@ -1,9 +1,29 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountAllowanceObservation,
+  ALLOWANCE_IDENTITY_KINDS,
+  parseAllowanceInstant,
+  type AccountAllowanceEntry,
+} from "~/services/accounts/allowances"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
 import { createUnavailableTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
+import { budgetConstraint, type BudgetWindow } from "~/services/amounts/budgets"
+import {
+  compareDecimal,
+  normalizeDecimalUnits,
+} from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_VALIDITY_KINDS,
+  BUDGET_LIMIT_STATES,
+  BUDGET_WINDOW_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -73,7 +93,7 @@ export async function fetchDashboard(request: ApiServiceRequest) {
   })
 }
 
-/** Native base quota is USD credit; channel multipliers are estimates, never extra balances. */
+/** Plans retain their individual USD constraints; a non-resetting plan is not proof of a wallet. */
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
@@ -85,36 +105,77 @@ export async function fetchAccountData(
       !Array.isArray(dashboard.subscription.active)
     )
       throw invalidFoxCodeResponse(endpoint)
-    const active = dashboard.subscription.active.map((value) => {
-      if (
-        !isRecord(value) ||
-        !isRecord(value.plan) ||
-        typeof value.plan.resetType !== "string" ||
-        typeof value.plan.name !== "string" ||
-        typeof value.endDate !== "string" ||
-        !Number.isFinite(Date.parse(value.endDate))
-      )
-        throw invalidFoxCodeResponse(endpoint)
-      return {
-        name: value.plan.name,
-        reset: value.plan.resetType,
-        limit: foxCodeAmount(value.plan.quotaLimit, endpoint),
-        used: foxCodeAmount(value.quotaUsed, endpoint),
-        remaining: foxCodeAmount(value.quotaRemaining, endpoint),
-        expiry: value.endDate,
-      }
-    })
-    const purchased = active.filter(
-      (plan) => plan.reset === FOXCODE_NON_RESETTING_PLAN,
+    const observedAt = Date.now()
+    const scope = accountBalanceScope(request)
+    const source = {
+      adapter: "foxcode",
+      operation: endpoint,
+      contractVersion: "plan-usd/v1",
+      kind: EVIDENCE_KINDS.Reported,
+    }
+    const usd = (value: unknown) => {
+      const amount = normalizeDecimalUnits(value, FOXCODE_UNITS_PER_USD)
+      return amount === undefined || compareDecimal(amount, "0") < 0
+        ? undefined
+        : amount
+    }
+    const entries: AccountAllowanceEntry[] = dashboard.subscription.active.map(
+      (raw, index) => {
+        const value = isRecord(raw) ? raw : {}
+        const plan = isRecord(value.plan) ? value.plan : {}
+        const reportedId =
+          typeof value.id === "string" && value.id.trim()
+            ? value.id
+            : typeof value.id === "number" && Number.isSafeInteger(value.id)
+              ? String(value.id)
+              : undefined
+        const expiry = parseAllowanceInstant(value.endDate)
+        const reset = plan.resetType
+        const period =
+          reset === "DAILY"
+            ? "day"
+            : reset === "WEEKLY"
+              ? "week"
+              : reset === "MONTHLY"
+                ? "month"
+                : reset === "YEARLY"
+                  ? "year"
+                  : undefined
+        const window: BudgetWindow =
+          reset === FOXCODE_NON_RESETTING_PLAN
+            ? { kind: BUDGET_WINDOW_KINDS.Lifetime }
+            : period
+              ? { kind: BUDGET_WINDOW_KINDS.Periodic, period }
+              : { kind: BUDGET_WINDOW_KINDS.Unknown }
+        return {
+          id: reportedId ?? `unidentified:${observedAt}:${index}`,
+          identityKind: reportedId
+            ? ALLOWANCE_IDENTITY_KINDS.Upstream
+            : ALLOWANCE_IDENTITY_KINDS.ObservationOnly,
+          collectionKey: "active-plans",
+          label: typeof plan.name === "string" ? plan.name : undefined,
+          validity:
+            expiry !== undefined
+              ? { kind: BALANCE_VALIDITY_KINDS.Expires, at: expiry }
+              : { kind: BALANCE_VALIDITY_KINDS.Unknown },
+          ...(typeof value.endDate === "string"
+            ? { reportedTiming: { expiresAt: value.endDate } }
+            : {}),
+          constraint: budgetConstraint({
+            scope,
+            source,
+            observedAt,
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            limitState: BUDGET_LIMIT_STATES.Finite,
+            limit: usd(plan.quotaLimit),
+            used: usd(value.quotaUsed),
+            remaining: usd(value.quotaRemaining),
+            enabled: true,
+            window,
+          }),
+        }
+      },
     )
-    const plans = active.filter(
-      (plan) => plan.reset !== FOXCODE_NON_RESETTING_PLAN,
-    )
-    const sum = (list: typeof active, field: "limit" | "used" | "remaining") =>
-      list.reduce((total, plan) => total + plan[field], 0) /
-      FOXCODE_UNITS_PER_USD
-    const periods = new Set(plans.map((plan) => plan.reset))
-    const period = periods.size === 1 ? plans[0]!.reset : undefined
     let recentUsageRecords
     if (request.includeTodayCashflow !== false) {
       try {
@@ -132,7 +193,18 @@ export async function fetchAccountData(
       }
     }
     return {
-      quota: sum(purchased, "remaining") * QUOTA_PER_USD,
+      ...accountAllowanceObservation(
+        scope,
+        [
+          {
+            source,
+            collectionKey: "active-plans",
+            enumeration: FINANCIAL_ENUMERATION.Complete,
+            entries,
+          },
+        ],
+        observedAt,
+      ),
       today_quota_consumption: 0,
       today_prompt_tokens: 0,
       today_completion_tokens: 0,
@@ -142,18 +214,13 @@ export async function fetchAccountData(
       todayStatsAvailability: createUnavailableTodayStatsAvailability(
         ACCOUNT_TODAY_METRIC_REASONS.NotCollected,
       ),
-      ...(plans.length
+      ...(entries.length
         ? {
             subscription: {
-              name: plans.map((plan) => plan.name).join(" / "),
+              name: entries
+                .flatMap((entry) => (entry.label ? [entry.label] : []))
+                .join(" / "),
               billingType: "quota",
-              amountLimit: sum(plans, "limit"),
-              usedAmount: sum(plans, "used"),
-              remainingAmount: sum(plans, "remaining"),
-              period,
-              expireTime: [...plans].sort(
-                (a, b) => Date.parse(a.expiry) - Date.parse(b.expiry),
-              )[0]!.expiry,
               isActive: true,
             },
           }
