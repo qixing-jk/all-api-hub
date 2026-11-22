@@ -87,7 +87,7 @@ test("Requesty shows monetary balance and only implemented key creation options"
     getAccountManagementListItemTestId("requesty-semantics"),
   )
   await expect(account).toBeVisible()
-  await expect(account.getByTitle("Click to refresh balance")).toContainText(
+  await expect(account.getByRole("button", { name: /\$12\.50/ })).toContainText(
     "$12.50",
   )
   await expect(

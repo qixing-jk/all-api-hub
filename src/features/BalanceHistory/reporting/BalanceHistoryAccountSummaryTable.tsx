@@ -649,10 +649,18 @@ export default function BalanceHistoryAccountSummaryTable({
                       </span>
                     </span>
                   </div>
-                  {render(
-                    hasNativeBalances
-                      ? BALANCE_HISTORY_SUMMARY_COLUMNS.FinancialBalances
-                      : BALANCE_HISTORY_SUMMARY_COLUMNS.EndBalance,
+                  {hasNativeBalances ? (
+                    render(BALANCE_HISTORY_SUMMARY_COLUMNS.FinancialBalances)
+                  ) : (
+                    <div>
+                      {!showReferenceFallbacks &&
+                        row.original.endBalance !== null && (
+                          <span className="block text-xs text-muted-foreground">
+                            {`${t("legacy.title")} · ${t("table.columns.endBalance")}`}
+                          </span>
+                        )}
+                      {render(BALANCE_HISTORY_SUMMARY_COLUMNS.EndBalance)}
+                    </div>
                   )}
                   {row.original.nativeActivity?.length ||
                   (showReferenceFallbacks &&
@@ -699,7 +707,9 @@ export default function BalanceHistoryAccountSummaryTable({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="hover:bg-transparent">
                   {headerGroup.headers.map((header) => {
-                    const sort = header.column.getIsSorted()
+                    const sort = nativeOrder
+                      ? false
+                      : header.column.getIsSorted()
                     const SortIcon = sort === "asc" ? ChevronUp : ChevronDown
                     return (
                       <TableHead

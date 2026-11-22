@@ -6,6 +6,7 @@ import {
   type Worker,
 } from "@playwright/test"
 
+import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
@@ -274,6 +275,15 @@ export function createStoredAccount(
       delete account.account_info[field as keyof typeof account.account_info]
   }
   return normalizeSiteAccount(account)
+}
+
+/** Reads the USD observation from a saved account without converting native quota. */
+export function getStoredAccountUsdObservation(
+  account: SiteAccount | undefined,
+) {
+  return account?.account_info.balance?.positions.find(
+    ({ asset }) => asset.kind === "currency" && asset.code === CURRENCIES.USD,
+  )?.amount
 }
 
 /**

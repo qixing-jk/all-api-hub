@@ -76,6 +76,27 @@ describe("native history sorting choices", () => {
     ).toBe(0)
   })
 
+  it("sorts a last-known amount even when its chart has no current points", () => {
+    const saved = series("saved", [null])
+    saved.observations[0] = {
+      at: 0,
+      observedAt: 0,
+      value: "8",
+      status: OBSERVATION_STATUSES.Stale,
+    }
+    const [option] = buildNativeHistorySortOptions(
+      [saved, series("fresh", ["10"])],
+      [],
+      () => "Wallet",
+    ).values()
+    expect(option?.values).toEqual(
+      new Map([
+        ["saved", "8"],
+        ["fresh", "10"],
+      ]),
+    )
+  })
+
   it("keeps multiple positions from one account separate from cross-account sorting", () => {
     const one = series("one", ["2"])
     const other = series("two", ["5"])

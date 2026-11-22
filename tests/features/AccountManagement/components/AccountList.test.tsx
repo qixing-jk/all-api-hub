@@ -2316,7 +2316,7 @@ describe("AccountList", () => {
     const listHeader = screen.getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader,
     )
-    expect(within(listHeader).queryByText("common:total:")).toBeNull()
+    expect(listHeader).not.toHaveTextContent("common:total:")
     expect(
       within(listHeader).getByTestId(
         ACCOUNT_MANAGEMENT_TEST_IDS.accountListSortControls,
@@ -2555,6 +2555,11 @@ describe("AccountList", () => {
     const trigger = screen.getByRole("button", {
       name: "account:financial.summaryDetails",
     })
+    expect(
+      screen.queryByRole("dialog", {
+        name: "account:financial.filteredSubtotal",
+      }),
+    ).not.toBeInTheDocument()
     await user.click(trigger)
     const details = screen.getByRole("dialog", {
       name: "account:financial.filteredSubtotal",
@@ -2580,6 +2585,11 @@ describe("AccountList", () => {
       }),
     ).not.toBeInTheDocument()
     await user.click(trigger)
+    expect(
+      screen.getByRole("dialog", {
+        name: "account:financial.filteredSubtotal",
+      }),
+    ).toBeVisible()
     expect(
       screen.queryByRole("combobox", {
         name: "account:financial.totalPurpose",

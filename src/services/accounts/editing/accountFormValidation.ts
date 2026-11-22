@@ -21,6 +21,8 @@ export function normalizeManualBalanceUsd(value: unknown): string | undefined {
   if (!trimmed) return undefined
   const amount = Number(trimmed)
   if (!Number.isFinite(amount) || amount < 0) return undefined
+  if (/^0(?:x[0-9a-f]+|o[0-7]+|b[01]+)$/i.test(trimmed))
+    return parseDecimal(String(BigInt(trimmed)))
   const decimal = trimmed
     .replace(/^\+/, "")
     .replace(/^(-?)\./, (_match, sign: string) => `${sign}0.`)

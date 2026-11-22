@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { CURRENCIES } from "~/constants/money"
@@ -117,8 +117,17 @@ describe("canonical account balance statistics", () => {
     ).toBeUndefined()
   })
   it("uses the release observation time rather than a later successful balance-only sync for reference spending", () => {
-    const yesterday = Date.now() - 86_400_000
-    const site = buildSiteAccount({ id: "legacy", last_sync_time: Date.now() })
+    const now = new Date(2026, 10, 1, 23, 30)
+    vi.setSystemTime(now)
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const previous = new Date(now)
+    const yesterday = previous.setDate(now.getDate() - 1)
+    const site = buildSiteAccount({
+      id: "legacy",
+      last_sync_time: now.getTime(),
+    })
     site.account_info.today_quota_consumption = 500_000
     site.account_info.todayStatsAvailability =
       buildCompleteTodayStatsAvailability()

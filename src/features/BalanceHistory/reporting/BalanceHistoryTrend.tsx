@@ -216,7 +216,7 @@ export function BalanceHistoryTrend({
               role={nativeTrend ? "img" : undefined}
               aria-label={
                 nativeTrend
-                  ? `${metricLabel}. ${nativeTrend.series.map(({ name }) => name).join(", ")}`
+                  ? `${metricLabel}. ${trendScope === BALANCE_HISTORY_TREND_SERIES_SCOPES.Total ? t("trend.scopes.total") : t("trend.scopes.accounts")}. ${nativeTrend.series.map(({ name }) => name).join(", ")}`
                   : undefined
               }
             >

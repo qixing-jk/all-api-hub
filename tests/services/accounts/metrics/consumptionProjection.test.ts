@@ -5,6 +5,7 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { calculateAccountStats } from "~/services/accounts/accountStorage/accountStatistics"
 import {
   displayCashflowAmount,
+  getDisplayConsumptionProjection,
   selectDisplayCashflow,
 } from "~/services/accounts/metrics/consumptionProjection"
 import {
@@ -61,6 +62,45 @@ function fact(id: string, value: string, end = now): FinancialConsumptionFact {
 }
 
 afterEach(() => vi.useRealTimers())
+
+it("keeps native coverage partial across assets and monetary coverage limited to its contributors", () => {
+  const usd = fact("a", "10")
+  const yuan = {
+    ...usd,
+    asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.CNY },
+    amount: { ...usd.amount, value: "72" },
+  } as FinancialConsumptionFact
+  const euro = {
+    ...fact("b", "5"),
+    asset: { kind: ASSET_KINDS.Currency, code: "EUR" },
+  } as FinancialConsumptionFact
+  const result = getDisplayConsumptionProjection(
+    [
+      { id: "a", exchangeRate: 7.2, settledConsumption: [usd, yuan] },
+      { id: "b", settledConsumption: [euro] },
+    ],
+    now,
+  )
+  expect(selectDisplayCashflow(result, "USD", 7.2)).toMatchObject({
+    value: 20,
+    coverage: { status: "partial", completeCount: 1, eligibleCount: 2 },
+  })
+  expect(
+    getDisplayConsumptionProjection(
+      [
+        {
+          id: "a",
+          settledConsumption: [usd, { ...yuan, coverage: "partial" }],
+        },
+      ],
+      now,
+    ).nativeCoverage,
+  ).toMatchObject({
+    status: "partial",
+    completeCount: 0,
+    partialCount: 1,
+  })
+})
 
 it("shows both income currencies in the selected monetary total while preserving the original facts", () => {
   vi.useFakeTimers()

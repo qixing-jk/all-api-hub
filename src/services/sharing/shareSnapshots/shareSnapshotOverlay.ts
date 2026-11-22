@@ -762,10 +762,7 @@ export const drawShareSnapshotOverlay = (
     summary: payload.incomeSummary,
     value:
       typeof todayIncome === "number"
-        ? formatSignedCurrencyAmount(
-            todayIncome,
-            getShareDisplayCurrency(payload) ?? CURRENCIES.USD,
-          )
+        ? formatSignedCurrencyAmount(todayIncome, payload.currencyType)
         : "—",
   })
   drawInfoBlock({
@@ -777,16 +774,13 @@ export const drawShareSnapshotOverlay = (
       payload.siteDayUsage?.length
         ? siteDayLabel
         : labels.outcome,
-    readings: payload.siteDayUsage?.flatMap((usage) =>
-      siteDayUsageValues(usage, locale),
-    ),
+    readings: firstSiteDay
+      ? siteDayUsageValues(firstSiteDay, locale)
+      : undefined,
     summary: payload.consumptionSummary,
     value:
       typeof todayOutcome === "number"
-        ? formatSignedCurrencyAmount(
-            -todayOutcome,
-            getShareDisplayCurrency(payload) ?? CURRENCIES.USD,
-          )
+        ? formatSignedCurrencyAmount(-todayOutcome, payload.currencyType)
         : "—",
   })
 

@@ -110,7 +110,7 @@ describe("Daya API account data", () => {
   let transport: ReturnType<typeof session>
   it("keeps refreshed daily costs available after storage readback and display conversion", async () => {
     vi.useFakeTimers({ toFake: ["Date"] })
-    vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
+    vi.setSystemTime(new Date("2026-11-18T16:01:00Z"))
     await mockIdentity([
       http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
         HttpResponse.json(envelope({ today_cost: "1.75", today_requests: 4 })),
@@ -168,7 +168,7 @@ describe("Daya API account data", () => {
   })
   it("includes collected provider-day costs in financial reporting independently from missing token counts", async () => {
     vi.useFakeTimers({ toFake: ["Date"] })
-    vi.setSystemTime(new Date("2026-11-19T06:00:00Z"))
+    vi.setSystemTime(new Date("2026-11-18T16:01:00Z"))
     await mockIdentity([
       http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>
         HttpResponse.json(envelope({ today_cost: "1.75", today_requests: 4 })),
@@ -198,7 +198,7 @@ describe("Daya API account data", () => {
       },
       window: {
         start: Date.parse("2026-11-19T00:00:00+08:00"),
-        end: Date.parse("2026-11-19T14:00:00+08:00"),
+        end: Date.parse("2026-11-19T00:01:00+08:00"),
         timeZone: "Asia/Shanghai",
       },
     })

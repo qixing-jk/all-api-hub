@@ -24,7 +24,7 @@ describe("account-owned login migration", () => {
     })
     old.checkIn.loginCheckIn = { provider: ACCOUNT_LOGIN_METHODS.Password }
     const migrated = migrateAccountConfig(old)
-    expect(migrated.configVersion).toBe(8)
+    expect(migrated.configVersion).toBe(9)
     expect(migrated.login).toEqual({
       methodId: ACCOUNT_LOGIN_METHODS.Password,
       credentials: { username: "alice", password: " secret " },

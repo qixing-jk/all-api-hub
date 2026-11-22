@@ -43,10 +43,19 @@ export function buildNativeHistoryEstimates(
         >
       >
     >()
-    for (const { netInflow } of item.observations) {
-      if (netInflow?.status !== NET_INFLOW_STATUSES.Available) continue
+    const candidates = item.observations
+      .flatMap(({ netInflow }) =>
+        netInflow?.status === NET_INFLOW_STATUSES.Available ? [netInflow] : [],
+      )
+      .sort(
+        (a, b) =>
+          a.window.start - b.window.start || b.window.end - a.window.end,
+      )
+    let coveredUntil = -Infinity
+    for (const netInflow of candidates) {
       const day = getDayKeyFromUnixSeconds(netInflow.window.end / 1000)
-      if (!days.has(day)) continue
+      if (!days.has(day) || netInflow.window.start < coveredUntil) continue
+      coveredUntil = netInflow.window.end
       const values = byDay.get(day) ?? new Map()
       const prior = values.get(netInflow.window.start)
       if (!prior || prior.window.end <= netInflow.window.end) {
@@ -72,6 +81,9 @@ export function buildNativeHistoryEstimates(
         asset: item.position.asset,
         total,
         partial: observations.some(({ partial }) => partial),
+        dailyPartial: dayKeys.map((day) =>
+          [...(byDay.get(day)?.values() ?? [])].some(({ partial }) => partial),
+        ),
         recordedDays: [...byDay.keys()],
         values: dayKeys.map((day) => {
           const values = byDay.get(day)
@@ -171,7 +183,8 @@ export function presentNativeHistoryActivity({
                 value: known.length ? sumAmounts(known) : null,
                 covered: known.length,
                 partial: group.some(
-                  (item) => item.partial && item.values[index] != null,
+                  (item) =>
+                    item.dailyPartial[index] && item.values[index] != null,
                 ),
               }
             })
@@ -258,7 +271,7 @@ export function presentNativeHistoryActivity({
               const value = item.values[day]
               if (value == null) return "—"
               const formatted = displayAmount(asset, value)
-              return item.partial
+              return item.dailyPartial[day]
                 ? `${formatted} · ${t("keyManagement:financial.partial")}`
                 : formatted
             },

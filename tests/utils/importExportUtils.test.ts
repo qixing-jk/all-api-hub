@@ -2016,6 +2016,25 @@ describe("normalizeBackupForMerge", () => {
       tagsById: { t1: { id: "t1", name: "Tag" } },
     })
   })
+
+  it("merges accounts from a validated nested V1 account envelope", () => {
+    const account = { id: "legacy-nested" }
+    const bookmark = { id: "legacy-bookmark" }
+    const result = normalizeBackupForMerge(
+      {
+        version: "1.0",
+        timestamp: 654,
+        data: {
+          accounts: { schemaVersion: 1, accounts: [account] },
+          bookmarks: [bookmark],
+        },
+      },
+      null,
+    )
+
+    expect(result.accounts).toEqual([account])
+    expect(result.bookmarks).toEqual([bookmark])
+  })
 })
 
 // Export handlers rely on DOM APIs and toast; we mainly assert that they

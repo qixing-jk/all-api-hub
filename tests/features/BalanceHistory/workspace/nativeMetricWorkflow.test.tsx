@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { CURRENCIES } from "~/constants/money"
 import { createBalanceHistoryPreview } from "~/features/BalanceHistory/data/createBalanceHistoryPreview"
@@ -20,6 +20,51 @@ import {
   subtractDaysFromDayKey,
 } from "~/utils/core/dayKey"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
+
+it("builds the mixed preview with archived days, native balances and distinct activity", () => {
+  vi.useFakeTimers({ toFake: ["Date"] })
+  try {
+    const now = new Date(2026, 10, 2, 12).getTime()
+    vi.setSystemTime(now)
+    const { accounts, store } = createBalanceHistoryPreview(
+      REPORT_PREVIEW_SCENARIOS.Mixed,
+    )
+    const accountIds = accounts.map(({ id }) => id)
+    const [first, second, quota] = accountIds
+    expect(Object.keys(store.referenceSnapshotsByAccountId)).toEqual([
+      first,
+      second,
+    ])
+    expect(
+      Object.keys(store.referenceSnapshotsByAccountId[first!]!),
+    ).toHaveLength(6)
+    const snapshots = store.financialSnapshotsByAccountId!
+    expect(snapshots[first!]).toHaveLength(20)
+    expect(snapshots[first!]?.at(-1)).toMatchObject({
+      balance: {
+        capturedAt: now,
+        positions: expect.arrayContaining([
+          expect.objectContaining({ id: "bonus-credits" }),
+        ]),
+      },
+      reportedIncome: [
+        expect.objectContaining({
+          amount: expect.objectContaining({ value: "2.5" }),
+        }),
+      ],
+    })
+    expect(snapshots[second!]?.at(-1)?.settledConsumption).toEqual([
+      expect.objectContaining({
+        amount: expect.objectContaining({ value: "0.42" }),
+      }),
+    ])
+    expect(snapshots[quota!]?.at(-1)?.balance?.positions[0]?.asset.kind).toBe(
+      "quota",
+    )
+  } finally {
+    vi.useRealTimers()
+  }
+})
 
 function activityPreview() {
   const preview = createBalanceHistoryPreview(REPORT_PREVIEW_SCENARIOS.Empty)

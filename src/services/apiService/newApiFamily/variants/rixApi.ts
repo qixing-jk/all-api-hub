@@ -306,6 +306,7 @@ export async function fetchAccountData(
   })
   const wallet = data.balance?.positions[0]
   if (
+    wallet?.amount.status === OBSERVATION_STATUSES.Known &&
     wallet?.asset.kind === ASSET_KINDS.Currency &&
     wallet.asset.code === CURRENCIES.USD &&
     wallet.amount.source.operation === "/api/user/self:balance" &&

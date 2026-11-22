@@ -60,6 +60,13 @@ type ConsumptionGroup = {
   window: FinancialConsumptionFact["window"]
   coverage: AccountMetricCoverage
 }
+const groupContributors = new WeakMap<
+  ConsumptionGroup,
+  {
+    complete: Set<string>
+    partial: Set<string>
+  }
+>()
 
 /** Prefer the configured conversion for display while retaining the original amount. */
 export function displayCashflowAmount(
@@ -209,6 +216,28 @@ export function selectDisplayCashflow(
       )
     ) {
       try {
+        const contributors = monetaryGroups.map((group) =>
+          groupContributors.get(group),
+        )
+        const partialIds = new Set(
+          contributors.flatMap((group) => [...(group?.partial ?? [])]),
+        )
+        const completeIds = new Set(
+          contributors.flatMap((group) => [...(group?.complete ?? [])]),
+        )
+        for (const id of partialIds) completeIds.delete(id)
+        const eligibleCount = projection.nativeCoverage.eligibleCount
+        const coverage: AccountMetricCoverage = contributors.every(Boolean)
+          ? {
+              ...projection.nativeCoverage,
+              status:
+                completeIds.size === eligibleCount
+                  ? ACCOUNT_TODAY_METRIC_STATUSES.Complete
+                  : ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+              completeCount: completeIds.size,
+              partialCount: partialIds.size,
+            }
+          : projection.nativeCoverage
         const displayAmount: Amount = {
           asset: { kind: ASSET_KINDS.Currency, code: currency },
           value: sumDecimals(converted.map(({ value }) => value)),
@@ -233,7 +262,7 @@ export function selectDisplayCashflow(
         return {
           value: Number(displayAmount.value),
           currency,
-          coverage: projection.nativeCoverage,
+          coverage,
           displayAmount,
           nativeAmount: undefined,
           comparisonAmount,
@@ -467,6 +496,7 @@ function projectPeriodAmounts(
         fact.window.timeZone === timeZone
       const available =
         fact.amount.status === OBSERVATION_STATUSES.Known &&
+        fact.amount.observedAt <= asOf &&
         fact.asset.kind !== ASSET_KINDS.Unknown &&
         unrestricted &&
         fact.scope.subject.kind === FINANCIAL_SUBJECT_KINDS.Account &&
@@ -491,6 +521,7 @@ function projectPeriodAmounts(
   const amount = { USD: 0, CNY: 0 }
   const nativeComplete = new Set<string>()
   const nativeIncluded = new Set<string>()
+  const nativePartial = new Set<string>()
   const assets = new Set(
     candidates.map(({ fact }) => assetIdentity(fact.asset)),
   )
@@ -648,15 +679,21 @@ function projectPeriodAmounts(
             // Retain the native amount if a display conversion cannot be represented.
           }
         }
-        groups.push({
+        const group: ConsumptionGroup = {
           amount: { asset: first.fact.asset, value },
           ...(cnyValue === undefined ? {} : { cnyValue }),
           ...(usdValue === undefined ? {} : { usdValue }),
           window: first.fact.window,
           coverage,
+        }
+        groupContributors.set(group, {
+          complete: completeIds,
+          partial: partialIds,
         })
+        groups.push(group)
         for (const candidate of compatible) nativeIncluded.add(candidate.id)
         for (const id of completeIds) nativeComplete.add(id)
+        for (const id of partialIds) nativePartial.add(id)
         if (
           windows.size === 1 &&
           parseDecimal(Number(value)) === value &&
@@ -671,7 +708,10 @@ function projectPeriodAmounts(
     }
   }
   for (const id of nativeComplete) {
-    if ([...incomplete].some((key) => key === id || key.startsWith(`${id}:`)))
+    if (
+      nativePartial.has(id) ||
+      [...incomplete].some((key) => key === id || key.startsWith(`${id}:`))
+    )
       nativeComplete.delete(id)
   }
   if (new Set(groups.map((group) => JSON.stringify(group.window))).size > 1)

@@ -68,6 +68,52 @@ describe("editor and background financial refresh ordering", () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
+  it("keeps the previous wallet invalidated when fetching the edited identity fails", async () => {
+    const original = buildSiteAccount({ site_type: SITE_TYPES.NEW_API })
+    original.account_info.balance = dataFor(original, "20").balance
+    const id = await accounts.addAccount(original)
+    const account = (await accounts.getAccountById(id))!
+    const getCapabilities = adapterRegistry.getSiteTypeCapabilities
+    vi.spyOn(adapterRegistry, "getSiteTypeCapabilities").mockImplementation(
+      (siteType) => {
+        const capabilities = getCapabilities(siteType)
+        return {
+          ...capabilities,
+          account: {
+            ...capabilities.account,
+            data: {
+              fetchData: vi.fn().mockRejectedValue(new Error("offline")),
+            },
+          },
+        }
+      },
+    )
+
+    const result = await validateAndUpdateAccount({
+      accountId: id,
+      url: account.site_url,
+      siteName: account.site_name,
+      username: account.account_info.username,
+      accessToken: account.account_info.access_token,
+      userId: "other-user",
+      exchangeRate: "7",
+      notes: "",
+      tagIds: [],
+      checkInConfig: account.checkIn,
+      siteType: account.site_type,
+      authType: account.authType,
+      cookieAuthSessionCookie: "",
+    })
+
+    expect(result.success).toBe(true)
+    const saved = (await accounts.getAccountById(id))!
+    expect(saved.account_info.id).toBe("other-user")
+    expect(saved.account_info.balance?.positions[0]?.amount).toMatchObject({
+      status: "stale",
+      reason: "account-identity-changed",
+      value: "20",
+    })
+  })
   it("captures the accepted editor observation after saving it", async () => {
     const id = await accounts.addAccount(
       buildSiteAccount({ site_type: SITE_TYPES.NEW_API }),
@@ -184,13 +230,15 @@ describe("editor and background financial refresh ordering", () => {
   })
 
   it.each([
-    { first: "editor", failed: false },
-    { first: "background", failed: false },
-    { first: "editor", failed: true },
-    { first: "background", failed: true },
+    { first: "editor", failed: false, early: false },
+    { first: "background", failed: false, early: false },
+    { first: "editor", failed: true, early: false },
+    { first: "background", failed: true, early: false },
+    { first: "background", failed: false, early: true },
+    { first: "background", failed: true, early: true },
   ])(
-    "keeps newer financial facts while saving the editor fields: $first starts first, editor failure $failed",
-    async ({ first, failed }) => {
+    "keeps newer financial facts when $first starts first, editor failure $failed and first finishes early $early",
+    async ({ first, failed, early }) => {
       const original = buildSiteAccount({ site_type: SITE_TYPES.NEW_API })
       original.account_info.balance = dataFor(original, "10").balance
       const id = await accounts.addAccount(original)
@@ -249,10 +297,21 @@ describe("editor and background financial refresh ordering", () => {
         editing = edit()
         await vi.waitFor(() => expect(fetchData).toHaveBeenCalledTimes(1))
       }
+      if (early) {
+        backgroundData.resolve(dataFor(account, "30"))
+        await refreshing
+        const pending = await accounts.getAccountById(id)
+        expect(
+          pending?.account_info.balance?.positions[0]?.amount,
+        ).toMatchObject({
+          status: "known",
+          value: "10",
+        })
+      }
       if (failed) editorData.reject(new Error("editor fetch failed"))
       else editorData.resolve(dataFor(account, "20"))
       expect((await editing).success).toBe(true)
-      if (first === "background") {
+      if (first === "background" && !early) {
         backgroundData.resolve(dataFor(account, "30"))
         await refreshing
       }

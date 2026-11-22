@@ -37,6 +37,7 @@ import {
 } from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
+  BALANCE_VALIDITY_KINDS,
   EVIDENCE_KINDS,
   FINANCIAL_COVERAGE,
   FINANCIAL_ENUMERATION,
@@ -151,6 +152,7 @@ function acceptedFinancialSnapshot(
     incoming === undefined ? undefined : balanceSnapshotSchema.parse(incoming)
   const observedParts =
     parts ?? (snapshot ? snapshotRefreshParts(snapshot) : undefined)
+  const asOf = Date.now()
   let previous = account.account_info.balance
   if (
     previous?.positions.some(
@@ -207,7 +209,10 @@ function acceptedFinancialSnapshot(
           ),
         ).size === 1 &&
         corresponding.every(
-          (position) => position.amount.status === OBSERVATION_STATUSES.Known,
+          (position) =>
+            position.amount.status === OBSERVATION_STATUSES.Known &&
+            (position.validity.kind !== BALANCE_VALIDITY_KINDS.Expires ||
+              position.validity.at > asOf),
         )
       )
         retired.add(balancePositionKey(old))
@@ -433,6 +438,10 @@ class AccountMutations {
               )
             ) {
               const data = financial.data
+              const prior = {
+                ...nextAccount,
+                account_info: { ...nextAccount.account_info },
+              }
               acceptedFinancial = true
               if (data)
                 Object.assign(
@@ -451,7 +460,7 @@ class AccountMutations {
                   ).account_info,
                 )
               nextAccount.account_info.allowances = acceptAccountAllowances(
-                account.account_info.allowances,
+                prior.account_info.allowances,
                 data?.allowances,
                 data?.allowanceRefreshParts,
                 id,
@@ -459,28 +468,28 @@ class AccountMutations {
                 Date.now(),
               )
               nextAccount.account_info.balance = acceptedFinancialSnapshot(
-                account,
+                prior,
                 data ? nextAccount.account_info.balance : undefined,
                 data?.balanceRefreshParts,
                 true,
               )
               nextAccount.account_info.settledConsumption = acceptPeriodAmounts(
-                account.account_info.settledConsumption,
+                prior.account_info.settledConsumption,
                 data?.settledConsumption,
               )
               nextAccount.account_info.reportedIncome = acceptPeriodAmounts(
-                account.account_info.reportedIncome,
+                prior.account_info.reportedIncome,
                 data?.reportedIncome,
               )
               nextAccount.account_info.usage = acceptUsageObservations(
-                account.account_info.usage
-                  ? [account.account_info.usage]
+                prior.account_info.usage
+                  ? [prior.account_info.usage]
                   : undefined,
                 data?.usage ? [data.usage] : undefined,
               )?.[0]
               nextAccount.account_info.usageObservations =
                 acceptUsageObservations(
-                  account.account_info.usageObservations,
+                  prior.account_info.usageObservations,
                   data?.usageObservations,
                 )
             } else {

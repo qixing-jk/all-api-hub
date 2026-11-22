@@ -64,7 +64,10 @@ export function buildNativeHistorySortOptions(
     string,
     { label: string; values: Map<string, string> }
   >()
-  for (const { key, items } of groupFinancialHistoryMetrics(series)) {
+  for (const { key, items } of groupFinancialHistoryMetrics(
+    series,
+    (item) => item.observations.at(-1)?.value != null,
+  )) {
     const values = new Map<string, string>()
     for (const item of items) {
       const value = item.observations.at(-1)?.value

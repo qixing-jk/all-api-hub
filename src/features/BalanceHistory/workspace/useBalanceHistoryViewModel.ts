@@ -97,7 +97,7 @@ export function useBalanceHistoryViewModel(
     hasLoadedData: hasLoadedSaved,
     handleRefreshNow,
     handlePruneNow,
-  } = useBalanceHistoryData(selectedAccountIds)
+  } = useBalanceHistoryData(selectedAccountIds, !preview)
   const accounts = preview?.accounts ?? savedAccounts
   const store = preview?.store ?? savedStore
   const tagStore = preview ? null : savedTags

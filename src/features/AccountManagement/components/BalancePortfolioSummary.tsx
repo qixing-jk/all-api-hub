@@ -74,6 +74,19 @@ export function BalancePortfolioSummary({
     () => getDisplayBalancePortfolio(sites, BALANCE_PURPOSES.Available, asOf),
     [sites, asOf],
   )
+  const quotaSiteNames = useMemo(() => {
+    const namesByAsset = new Map<string, Set<string>>()
+    for (const { site, positions } of portfolio.contributions) {
+      for (const { asset, scope } of positions) {
+        if (asset.kind !== ASSET_KINDS.Quota) continue
+        const key = assetIdentity(getPortfolioAsset(asset, scope.authority))
+        const names = namesByAsset.get(key) ?? new Set<string>()
+        names.add(site.name)
+        namesByAsset.set(key, names)
+      }
+    }
+    return namesByAsset
+  }, [portfolio])
   const {
     amounts,
     primary,
@@ -109,17 +122,8 @@ export function BalancePortfolioSummary({
   const BalanceValue = canToggleCurrency ? "button" : "div"
   const assetLabel = (asset: Asset) => {
     if (asset.kind !== ASSET_KINDS.Quota) return getAssetLabel(asset)
-    const names = portfolio.contributions
-      .filter(({ positions }) =>
-        positions.some(
-          (position) =>
-            assetIdentity(
-              getPortfolioAsset(position.asset, position.scope.authority),
-            ) === assetIdentity(asset),
-        ),
-      )
-      .map(({ site }) => site.name)
-    return [...new Set(names)].join(" · ") || asset.label
+    const names = quotaSiteNames.get(assetIdentity(asset))
+    return names?.size ? [...names].join(" · ") : asset.label
   }
   const primaryLabel = useConvertedPrimary
     ? displayCurrency === CURRENCIES.USD
@@ -241,7 +245,7 @@ export function BalancePortfolioSummary({
                 {...(canToggleCurrency
                   ? {
                       type: "button",
-                      "aria-label": currencyToggleLabel,
+                      "aria-label": `${primaryText}. ${currencyToggleLabel}`,
                       onClick: () =>
                         void updateCurrencyType(nextCurrencyDisplay),
                     }
@@ -258,9 +262,8 @@ export function BalancePortfolioSummary({
                   "leading-tight",
                 )}
                 title={
-                  canToggleCurrency
-                    ? currencyToggleLabel
-                    : formatAssetAmount(primary, i18n.language)
+                  primaryAmount &&
+                  formatAssetAmount(primaryAmount, i18n.language)
                 }
               >
                 {compact && !inline && !showAccountBreakdown ? (
@@ -271,7 +274,7 @@ export function BalancePortfolioSummary({
                   primaryText
                 )}
               </BalanceValue>
-              {!inline && (amounts.length > 1 || useConvertedPrimary) && (
+              {(useConvertedPrimary || (!inline && amounts.length > 1)) && (
                 <Caption
                   className="block min-w-0 truncate"
                   title={primaryLabel}

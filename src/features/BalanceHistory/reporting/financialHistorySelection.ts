@@ -28,12 +28,14 @@ export function financialHistoryComparisonKey(
 /** Keep compatible account series together and expose ambiguous sources separately. */
 export function groupFinancialHistoryMetrics(
   series: readonly FinancialHistorySeries[],
+  includeSeries = (item: FinancialHistorySeries) =>
+    item.values.some((value) => value !== null),
 ) {
   const groups = new Map<string, FinancialHistorySeries[]>()
   for (const item of series) {
     if (
       item.position.asset.kind === ASSET_KINDS.Unknown ||
-      !item.values.some((value) => value !== null)
+      !includeSeries(item)
     )
       continue
     const key =
@@ -101,6 +103,7 @@ export function canSumFinancialHistory(
 export function getFinancialHistoryDayEntries(
   items: FinancialHistorySeries[],
   day: number,
+  canSum = canSumFinancialHistory(items),
 ): Array<{
   accountId?: string
   value: string | null
@@ -111,7 +114,7 @@ export function getFinancialHistoryDayEntries(
     accountId,
     value: values.at(day) ?? null,
   }))
-  if (items.length === 1 || canSumFinancialHistory(items)) {
+  if (items.length === 1 || canSum) {
     const known = positions.flatMap(({ value }) =>
       value === null ? [] : [value],
     )

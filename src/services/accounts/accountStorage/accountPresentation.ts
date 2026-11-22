@@ -28,7 +28,7 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
-import { convertUsdToCny } from "~/utils/core/money"
+import { convertCurrencyAmount } from "~/utils/core/money"
 
 /** Preserve a source's absence reason until qualified financial facts are available. */
 function financialMetricAvailability(
@@ -101,10 +101,18 @@ class AccountPresentation {
         const observedAt =
           at > 0 && Number.isFinite(new Date(at).getTime()) ? at : undefined
         const usd = value / QUOTA_PER_USD
+        const cny = convertCurrencyAmount(
+          { asset: { kind: "currency", code: "USD" }, value: String(usd) },
+          "CNY",
+          account.exchange_rate,
+        )
         return {
           amount: {
             USD: usd,
-            CNY: Number(convertUsdToCny(String(usd), account.exchange_rate)),
+            CNY:
+              cny.asset.kind === "currency" && cny.asset.code === "CNY"
+                ? Number(cny.value)
+                : 0,
           },
           ...(observedAt === undefined ? {} : { observedAt }),
           lastKnown:
@@ -175,12 +183,12 @@ class AccountPresentation {
           income: financialMetricAvailability(
             !!account.account_info.reportedIncome?.length,
             originalAvailability.income,
-            incomeProjection.coverage,
+            incomeProjection.nativeCoverage,
           ),
           consumption: financialMetricAvailability(
             !!account.account_info.settledConsumption?.length,
             originalAvailability.consumption,
-            consumptionProjection.coverage,
+            consumptionProjection.nativeCoverage,
           ),
         },
         usage: account.account_info.usage,

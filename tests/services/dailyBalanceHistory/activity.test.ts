@@ -127,8 +127,41 @@ describe("recorded financial history activity", () => {
     expect(flows).toEqual([
       expect.objectContaining({
         total: "0",
+        partial: true,
         values: [null, "0"],
         recordedDays: ["2026-11-02"],
+      }),
+    ])
+  })
+
+  it("excludes a span over an unselected day and a charge before the interval closed", () => {
+    const early = spend(day, day + 3_600_000, "99", "early")
+    early.amount = {
+      ...early.amount,
+      observedAt: day + 1_800_000,
+    } as typeof early.amount
+    const thirdDay = Date.UTC(2026, 10, 3)
+    const spanning = spend(day, thirdDay + 3_600_000, "90", "spanning")
+    const valid = spend(thirdDay, thirdDay + 3_600_000, "5", "settled")
+    const results = buildFinancialHistoryActivity({
+      store: {
+        schemaVersion: 4,
+        referenceSnapshotsByAccountId: {},
+        financialSnapshotsByAccountId: {
+          alpha: [
+            { source: "refresh", settledConsumption: [early, spanning, valid] },
+          ],
+        },
+      },
+      accountIds: ["alpha"],
+      dayKeys: ["2026-11-01", "2026-11-03"],
+      asOf: thirdDay + 3_600_000,
+    })
+    expect(results).toEqual([
+      expect.objectContaining({
+        total: "5",
+        recordedDays: ["2026-11-03"],
+        values: [null, "5"],
       }),
     ])
   })

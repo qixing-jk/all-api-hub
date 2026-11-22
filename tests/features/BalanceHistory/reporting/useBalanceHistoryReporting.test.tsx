@@ -7,6 +7,7 @@ import {
   BALANCE_HISTORY_TREND_SERIES_SCOPES,
 } from "~/features/BalanceHistory/contracts"
 import { BalanceHistoryBreakdown } from "~/features/BalanceHistory/reporting/BalanceHistoryBreakdown"
+import { buildNativeHistoryEstimates } from "~/features/BalanceHistory/reporting/nativeHistoryActivity"
 import { useBalanceHistoryReporting } from "~/features/BalanceHistory/reporting/useBalanceHistoryReporting"
 import {
   accountBalanceScope,
@@ -20,6 +21,7 @@ import {
   FINANCIAL_COVERAGE,
   FINANCIAL_SETTLEMENT_STATUSES,
   INCOME_CLASSIFICATIONS,
+  OBSERVATION_STATUSES,
 } from "~/services/amounts/financialConstants"
 import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newApiFamily/financialContractVersions"
 import { DAILY_BALANCE_HISTORY_METRICS } from "~/services/history/dailyBalanceHistory/constants"
@@ -80,6 +82,64 @@ function buildOptions(
 }
 
 describe("useBalanceHistoryReporting", () => {
+  it("counts a cumulative estimate once when its revised observation ends on another local date", () => {
+    const boundary = new Date(2026, 9, 2).getTime()
+    const hour = 3600_000
+    const scope = accountBalanceScope({
+      accountId: "alpha",
+      baseUrl: "https://example.com",
+    })
+    const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD } as const
+    const source = {
+      adapter: "fixture",
+      operation: "wallet",
+      contractVersion: "1",
+      kind: EVIDENCE_KINDS.Derived,
+    }
+    const position = balancePosition({
+      id: "wallet",
+      scope,
+      asset,
+      source,
+      value: "10",
+      observedAt: boundary - 3 * hour,
+    })
+    const observation = (value: string, start: number, end: number) => ({
+      at: end,
+      observedAt: end,
+      value: "10",
+      status: OBSERVATION_STATUSES.Known,
+      netInflow: {
+        status: "available" as const,
+        classification: "unclassified-net-change" as const,
+        amount: { asset, value },
+        scope,
+        source,
+        window: { start, end, timeZone: "UTC" },
+      },
+    })
+    expect(
+      buildNativeHistoryEstimates(
+        [
+          {
+            key: "alpha-wallet",
+            accountId: "alpha",
+            position,
+            values: ["10", "10"],
+            observations: [
+              observation("4", boundary - 3 * hour, boundary - hour),
+              observation("7", boundary - 3 * hour, boundary + hour),
+              observation("3", boundary + hour, boundary + 2 * hour),
+            ],
+          },
+        ],
+        ["2026-10-01", "2026-10-02"],
+      ),
+    ).toMatchObject([
+      { total: "10", values: [null, "10"], recordedDays: ["2026-10-02"] },
+    ])
+  })
+
   it("keeps duplicate native wallet balances readable without offering pie shares", async () => {
     const at = new Date(2026, 9, 1, 12).getTime()
     const options = buildOptions({ asOf: at, trendBalanceKey: null })

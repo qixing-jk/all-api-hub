@@ -29,14 +29,22 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
+const accountBalance = {
+  schemaVersion: 2,
+  subject: { kind: "account" },
+  capturedAt: 1000,
+  positions: [],
+  coverage: "unknown",
+}
+
 const {
   mockDetermineHealthStatus,
-  mockFetchAccountQuota,
+  mockFetchAccountBalance,
   mockFetchTodayIncome,
   mockFetchTodayUsage,
 } = vi.hoisted(() => ({
   mockDetermineHealthStatus: vi.fn(),
-  mockFetchAccountQuota: vi.fn(),
+  mockFetchAccountBalance: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
   mockFetchTodayUsage: vi.fn(),
 }))
@@ -93,7 +101,7 @@ vi.mock("~/services/accounts/accountHealth", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
-  fetchAccountQuota: (...args: unknown[]) => mockFetchAccountQuota(...args),
+  fetchAccountBalance: (...args: unknown[]) => mockFetchAccountBalance(...args),
   fetchTodayIncome: (...args: unknown[]) => mockFetchTodayIncome(...args),
   fetchTodayUsage: (...args: unknown[]) => mockFetchTodayUsage(...args),
 }))
@@ -109,7 +117,7 @@ describe("apiService veloera channel APIs", () => {
     mockFetchApiData.mockReset()
     mockFetchApi.mockReset()
     mockFetchSiteStatus.mockReset()
-    mockFetchAccountQuota.mockResolvedValue(100)
+    mockFetchAccountBalance.mockResolvedValue({ balance: accountBalance })
     mockFetchTodayUsage.mockResolvedValue({
       today_prompt_tokens: 11,
       today_completion_tokens: 22,
@@ -804,7 +812,7 @@ describe("apiService veloera channel APIs", () => {
     )
 
     expect(result).toMatchObject({
-      quota: 100,
+      balance: accountBalance,
       today_prompt_tokens: 11,
       today_completion_tokens: 22,
       today_quota_consumption: 33,
@@ -860,13 +868,13 @@ describe("apiService veloera channel APIs", () => {
     } as any)
 
     expect(result.success).toBe(true)
-    expect(result.data?.quota).toBe(100)
+    expect(result.data?.balance).toEqual(accountBalance)
     expect(result.healthStatus.status).toBe(SiteHealthStatus.Healthy)
   })
 
   it("delegates refresh failures to determineHealthStatus", async () => {
     const failure = new Error("quota failed")
-    mockFetchAccountQuota.mockRejectedValueOnce(failure)
+    mockFetchAccountBalance.mockRejectedValueOnce(failure)
     mockDetermineHealthStatus.mockReturnValueOnce({
       status: 2,
       message: "degraded",

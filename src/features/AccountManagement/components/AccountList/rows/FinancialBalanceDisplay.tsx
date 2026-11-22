@@ -202,14 +202,19 @@ export function FinancialBalanceDisplay({
     if (hoveredAmount && !hoveredAmount.isConnected) setHoveredAmount(null)
   }, [hoveredAmount, firstAmount, snapshot, manual, allowances, asOf])
   const displayed = getDisplayBalancePositions(manual ?? snapshot)
-  const inlinePositions = displayed.slice(0, 2).map((position) => ({
+  const readablePositions = displayed.map((position) => ({
     position,
     value: readableBalanceAmount(position),
     observation: getPositionObservation(position),
   }))
-  const hasReadableBalance = inlinePositions.some(
+  const hasReadableBalance = readablePositions.some(
     ({ value }) => value !== undefined,
   )
+  const inlinePositions = (
+    hasReadableBalance
+      ? readablePositions.filter(({ value }) => value !== undefined)
+      : readablePositions
+  ).slice(0, !hasReadableBalance && allowances?.entries.length ? 1 : 2)
   const inlineAllowances = hasReadableBalance
     ? []
     : (allowances?.entries.slice(0, Math.max(0, 2 - inlinePositions.length)) ??
@@ -468,7 +473,14 @@ export function FinancialBalanceDisplay({
                       onAmountPointerEnter={handleAmountPointerEnter}
                       exactAmount={fullValue}
                       showNativeTitle={!showFullAmountHint}
-                      ariaLabel={`${roleLabel} · ${displayedValue} · ${statusLabel}`}
+                      ariaLabel={[
+                        p.label,
+                        roleLabel,
+                        displayedValue,
+                        statusLabel,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                       label={
                         p.label ??
                         (p.relation === BALANCE_RELATIONS.Component
@@ -580,6 +592,7 @@ export function FinancialBalanceDisplay({
                   <BalancePositionDetails
                     key={balancePositionKey(position)}
                     position={position}
+                    asOf={asOf}
                   />
                 ))}
               </dl>
@@ -595,6 +608,7 @@ export function FinancialBalanceDisplay({
               <BalancePositionDetails
                 key={balancePositionKey(p)}
                 position={p}
+                asOf={asOf}
               />
             ))}
           </dl>

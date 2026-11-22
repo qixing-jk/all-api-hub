@@ -61,22 +61,24 @@ export function buildNativeBalanceHistoryMetrics({
           : role === BALANCE_ROLES.Ledger
             ? t("balanceHistory:metricHelp.ledgerHint")
             : t("balanceHistory:metricHelp.nativeHint")
-    const overviewEntries = getFinancialHistoryDayEntries(items, -1).map(
-      ({ accountId, value, covered, total }) => ({
-        accountId,
-        accountLabel: accountId ? accountName(accountId) : undefined,
-        amount: value === null ? undefined : displayAmount(asset, value),
-        covered,
-        total,
-      }),
-    )
-    const totals =
-      items.length > 1 && canSumFinancialHistory(items)
-        ? financialHistory.dayKeys.map((_, day) => {
-            const entries = getFinancialHistoryDayEntries(items, day)
-            return entries.length === 1 ? entries[0] : undefined
-          })
-        : undefined
+    const canSum = items.length > 1 && canSumFinancialHistory(items)
+    const overviewEntries = getFinancialHistoryDayEntries(
+      items,
+      -1,
+      canSum,
+    ).map(({ accountId, value, covered, total }) => ({
+      accountId,
+      accountLabel: accountId ? accountName(accountId) : undefined,
+      amount: value === null ? undefined : displayAmount(asset, value),
+      covered,
+      total,
+    }))
+    const totals = canSum
+      ? financialHistory.dayKeys.map((_, day) => {
+          const entries = getFinancialHistoryDayEntries(items, day, canSum)
+          return entries.length === 1 ? entries[0] : undefined
+        })
+      : undefined
     return {
       key,
       kind:
@@ -148,7 +150,7 @@ export function buildNativeBalanceHistoryMetrics({
             },
           }
         : undefined,
-      openingEntries: getFinancialHistoryDayEntries(items, 0).flatMap(
+      openingEntries: getFinancialHistoryDayEntries(items, 0, canSum).flatMap(
         ({ accountId, value, covered, total }) =>
           value === null
             ? []

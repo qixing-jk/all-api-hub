@@ -803,7 +803,9 @@ describe("BalanceDisplay", () => {
       )
       expect(
         within(group).getByText(
-          new RegExp(`${nativeCurrency}\\s*6\\.000000000000000001`),
+          new RegExp(
+            `^${value.startsWith("-") ? "-" : ""}${nativeCurrency}\\s*6\\.000000000000000001$`,
+          ),
         ),
       ).toBeVisible()
       expect(fact.amount).toMatchObject({ value })
@@ -1109,6 +1111,7 @@ describe("BalanceDisplay", () => {
     )
     expect(screen.queryByText("$999.00")).not.toBeInTheDocument()
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
+    expect(screen.queryByRole("meter")).not.toBeInTheDocument()
     await user.click(
       screen.getByRole("button", {
         name: testI18n.t("account:financial.details"),
@@ -1358,7 +1361,7 @@ describe("BalanceDisplay", () => {
               label: "Monthly",
               validity: {
                 kind: BALANCE_VALIDITY_KINDS.Expires,
-                at: Date.UTC(2099, 0, 1),
+                at: Date.UTC(2099, 0, 10, 12),
               },
               constraint: budgetConstraint({
                 source,
@@ -1520,7 +1523,13 @@ describe("BalanceDisplay", () => {
   it.each([true, false])(
     "labels yesterday's provider-day reading independently of cost visibility (%s)",
     (showTodayCashflow) => {
-      const observedAt = Date.now() - 86400000
+      const now = new Date(2026, 10, 1, 23, 30)
+      vi.setSystemTime(now)
+      onTestFinished(() => {
+        vi.useRealTimers()
+      })
+      const previous = new Date(now)
+      const observedAt = previous.setDate(now.getDate() - 1)
       mockUseUserPreferencesContext.mockReturnValue({
         currencyType: CURRENCIES.USD,
         showTodayCashflow,

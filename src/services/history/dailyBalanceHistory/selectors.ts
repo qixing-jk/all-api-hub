@@ -143,7 +143,12 @@ export function buildFinancialHistorySeries(params: {
     const cumulativeBoundaries = new Set(
       snapshots.flatMap((snapshot) =>
         (snapshot.settledConsumption ?? [])
-          .filter(isCumulativeConsumption)
+          .filter(
+            (fact) =>
+              "observedAt" in fact.amount &&
+              fact.amount.observedAt <= params.asOf &&
+              isCumulativeConsumption(fact),
+          )
           .map((fact) => fact.window.start),
       ),
     )
@@ -165,6 +170,15 @@ export function buildFinancialHistorySeries(params: {
         })),
       ]
       for (const { position, allowance, capturedAt, seriesKey } of positions) {
+        if (
+          capturedAt > params.asOf ||
+          ("observedAt" in position.amount &&
+            position.amount.observedAt > params.asOf) ||
+          (allowance &&
+            "observedAt" in allowance.constraint.stateObservation &&
+            allowance.constraint.stateObservation.observedAt > params.asOf)
+        )
+          continue
         const key = JSON.stringify([accountId, seriesKey])
         const series = byKey.get(key) ?? {
           key,
@@ -212,7 +226,10 @@ export function buildFinancialHistorySeries(params: {
           previous?.position.amount.status === OBSERVATION_STATUSES.Known &&
           previous.position.amount.observedAt < amount.observedAt
         ) {
-          const consumption = snapshot.settledConsumption ?? []
+          const consumption = (snapshot.settledConsumption ?? []).filter(
+            ({ amount }) =>
+              !("observedAt" in amount) || amount.observedAt <= params.asOf,
+          )
           const starts = consumption
             .filter(
               (fact) =>
@@ -287,6 +304,7 @@ export function buildFinancialHistorySeries(params: {
         })),
       ]
       for (const { key: endedKey, at } of endings) {
+        if (at > params.asOf) continue
         const key = JSON.stringify([accountId, endedKey])
         previousPositions.delete(key)
         periodBaselines.delete(key)

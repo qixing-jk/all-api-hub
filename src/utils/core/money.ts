@@ -10,8 +10,8 @@ import {
   DECIMAL_BOUNDS,
   DECIMAL_ERRORS,
   divideDecimal,
-  divideDecimalByInteger,
   multiplyDecimal,
+  normalizeDecimalUnits,
   parseDecimal,
 } from "~/services/amounts/decimal"
 import { ASSET_KINDS } from "~/services/amounts/financialConstants"
@@ -40,7 +40,8 @@ export function getAssetLabel(asset: Asset, unknownLabel = ""): string {
 /** Charts use the same native scale as account amounts, while storage remains atomic. */
 export function getAssetDisplayValue(amount: Amount): string {
   return amount.asset.kind === ASSET_KINDS.Quota
-    ? divideDecimalByInteger(amount.value, amount.asset.displayScale)
+    ? (normalizeDecimalUnits(amount.value, amount.asset.displayScale) ??
+        amount.value)
     : amount.value
 }
 

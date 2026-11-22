@@ -9,12 +9,34 @@ import {
   formatCompactAssetAmount,
   formatMoneyFixed,
   formatTelemetryMoney,
+  getAssetDisplayValue,
   getAssetLabel,
   getDisplayMoneyValue,
   normalizeMoneyForDisplay,
 } from "~/utils/core/money"
 
 describe("money utils", () => {
+  it.each([
+    [0.5, "12"],
+    [3, "12"],
+    [10, "1.2"],
+  ])(
+    "keeps native history values readable with quota scale %s",
+    (displayScale, value) => {
+      expect(
+        getAssetDisplayValue({
+          value: "12",
+          asset: {
+            kind: "quota",
+            id: "fixture",
+            label: "Tokens",
+            displayLabel: "Scaled",
+            displayScale,
+          },
+        }),
+      ).toBe(value)
+    },
+  )
   it.each([
     [`0.${"0".repeat(253)}1`, 100],
     [`-0.${"0".repeat(252)}1`, 10],

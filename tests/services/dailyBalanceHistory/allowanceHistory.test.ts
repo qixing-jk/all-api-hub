@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { CURRENCIES } from "~/constants/money"
 import { accountAllowanceObservation } from "~/services/accounts/allowances"
@@ -46,7 +46,7 @@ const source = {
   contractVersion: "1",
   kind: EVIDENCE_KINDS.Reported,
 }
-const now = Date.now()
+const now = new Date(2026, 1, 7, 12).getTime()
 const allowances = (remaining: string | undefined, capturedAt = now) =>
   accountAllowanceObservation(
     scope,
@@ -82,7 +82,11 @@ const allowances = (remaining: string | undefined, capturedAt = now) =>
     capturedAt,
   ).allowances
 
-beforeEach(() => values.clear())
+beforeEach(() => {
+  values.clear()
+  vi.setSystemTime(now)
+})
+afterEach(() => vi.useRealTimers())
 
 it.each([
   {

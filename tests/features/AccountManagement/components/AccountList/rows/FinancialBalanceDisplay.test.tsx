@@ -327,7 +327,7 @@ it("retains keyboard focus when a refreshed balance stops needing abbreviation",
     { withUserPreferencesProvider: false, withThemeProvider: false },
   )
   await userEvent.setup().tab()
-  const focused = document.activeElement
+  expect(screen.getByRole("button", { name: /\$1\.23M/ })).toHaveFocus()
   const refreshed = structuredClone(snapshot)
   refreshed.positions[0]!.amount = {
     ...refreshed.positions[0]!.amount,
@@ -337,7 +337,7 @@ it("retains keyboard focus when a refreshed balance stops needing abbreviation",
   }
   view.rerender(<FinancialBalanceDisplay {...props} snapshot={refreshed} />)
   expect(await screen.findByText("$20.00", { exact: true })).toBeVisible()
-  expect(document.activeElement).toBe(focused)
+  expect(screen.getByRole("button", { name: /\$20\.00/ })).toHaveFocus()
 })
 
 it.each(["expired", "reset"] as const)(
@@ -1670,25 +1670,33 @@ it("shows the observation window and its reset separately from expiry in details
     FINANCIAL_COVERAGE.Complete,
   )
   const user = userEvent.setup()
+  const i18n = await createResourceTestI18n({ en: { account: enAccount } })
   render(
-    <FinancialBalanceDisplay
-      snapshot={snapshot}
-      disabled={false}
-      refreshing={false}
-      onRefresh={() => {}}
-    />,
+    <I18nextProvider i18n={i18n}>
+      <FinancialBalanceDisplay
+        snapshot={snapshot}
+        disabled={false}
+        refreshing={false}
+        onRefresh={() => {}}
+      />
+    </I18nextProvider>,
     { withUserPreferencesProvider: false, withThemeProvider: false },
   )
   await user.click(
     await screen.findByRole("button", {
-      name: testI18n.t("account:financial.details"),
+      name: i18n.t("account:financial.details"),
     }),
   )
   const dialog = screen.getByRole("dialog")
-  expect(dialog).toHaveTextContent(testI18n.t("account:financial.window"))
-  expect(dialog).toHaveTextContent(testI18n.t("account:financial.resetsAt"))
-  expect(dialog).toHaveTextContent("Asia/Shanghai")
-  expect(dialog).toHaveTextContent("1/3/2026, 8:00:00 AM")
+  expect(dialog).toHaveTextContent(
+    `${i18n.t("account:financial.resetsAt")}: 1/3/2026, 8:00:00 AM GMT+8 · Asia/Shanghai`,
+  )
+  expect(dialog).toHaveTextContent(`${i18n.t("account:financial.window")}:`)
+  expect(dialog).toHaveTextContent(
+    i18n.t("account:financial.expires", {
+      date: new Date(1767484800000).toLocaleString(i18n.language),
+    }),
+  )
   const caption = generateShareSnapshotCaption(
     buildAccountShareSnapshotPayload({
       currencyType: CURRENCIES.USD,

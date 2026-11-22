@@ -1,7 +1,10 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
-import { getAccountManagementListItemTestId } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -130,10 +133,14 @@ test("RelayFor shows scoped allowances, access conditions, accepted routing and 
   const row = page.getByTestId(
     getAccountManagementListItemTestId("relayfor-parity"),
   )
-  await row.getByTitle("Click to refresh balance", { exact: true }).click()
+  await row.hover({ position: { x: 8, y: 8 } })
+  await row
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
+    .click()
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem).click()
   await expect.poll(() => overviewReads).toBeGreaterThan(0)
-  await expect(row).toContainText("$6.00")
-  const balance = row.getByTitle("Click to refresh balance", { exact: true })
+  await expect(row).toContainText("$1.00")
+  const balance = row.getByRole("button", { name: /\$1\.00/ })
   const font = (element: HTMLElement) => ({
     size: getComputedStyle(element).fontSize,
     weight: getComputedStyle(element).fontWeight,
@@ -151,7 +158,7 @@ test("RelayFor shows scoped allowances, access conditions, accepted routing and 
   )
   await expect
     .poll(async () => (await balance.innerText()).replace(/\s/g, ""))
-    .toBe("$6.00")
+    .toContain("$1.00")
   await page.mouse.move(0, 0)
   await expect
     .poll(async () => {
@@ -168,14 +175,14 @@ test("RelayFor shows scoped allowances, access conditions, accepted routing and 
   const closedHeight = (await row.boundingBox())!.height
   await row.screenshot({ path: testInfo.outputPath("allowances.png") })
   const allowanceTrigger = row.getByRole("button", {
-    name: "Allowance details",
+    name: "Balance details",
     exact: true,
   })
   await allowanceTrigger.hover()
-  const allowances = page.getByRole("dialog", { name: "Allowance details" })
+  const allowances = page.getByRole("dialog", { name: "Balance details" })
   await expect(allowances).toBeVisible()
-  await expect(allowances).toContainText("Quota group: premium-only")
-  await expect(allowances).toContainText("Unlocked models: gpt-4o")
+  await expect(allowances).toContainText("premium-only")
+  await expect(allowances).toContainText("gpt-4o")
   await expect(allowanceTrigger).not.toBeFocused()
   await allowances.hover()
   await expect(allowances).toBeVisible()
@@ -206,13 +213,13 @@ test("RelayFor shows scoped allowances, access conditions, accepted routing and 
   await expect(allowances).not.toBeVisible()
   await allowanceTrigger.click()
   await expect(allowances).toBeVisible()
-  // The panel can cover the page heading. The header's outer padding is outside
-  // the panel and its controls; locator actionability also checks the hit target.
-  await page.getByRole("banner").click({ position: { x: 2, y: 2 } })
+  // The narrow dialog can cover the header, so pick a viewport edge outside it.
+  const openBounds = (await allowances.boundingBox())!
+  await page.mouse.click(1, openBounds.y > 1 ? 1 : 799)
   await expect(allowances).not.toBeVisible()
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.reload()
-  await expect(row).toContainText("$6.00")
+  await expect(row).toContainText("$1.00")
   await page.goto(url(MENU_ITEM_IDS.MODELS))
   const { modelDisplay: models } = await readModelCatalog({
     page,

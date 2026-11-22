@@ -31,7 +31,7 @@ export interface ShareBalanceEntry {
   scope: Record<
     "projects" | "keys" | "models" | "groups",
     (typeof SCOPE_SELECTION_KINDS)[keyof typeof SCOPE_SELECTION_KINDS]
-  >
+  > & { routes?: NonNullable<BalancePosition["scope"]["routes"]>["kind"] }
   validity: BalancePosition["validity"]
   reportedTiming?: BalancePosition["reportedTiming"]
   window?: BalancePosition["window"]

@@ -32,6 +32,7 @@ import {
   type SiteAccount,
 } from "~/types"
 import { isPlainObject } from "~/utils/core/object"
+import { sanitizeOriginUrl } from "~/utils/core/url"
 
 /** Unknown restrictions remain explicit until the adapter verifies them. */
 export function accountBalanceScope<
@@ -50,8 +51,8 @@ export function accountBalanceScope<
       kind: FINANCIAL_SUBJECT_KINDS.Account,
       ...(request.accountId ? { accountId: request.accountId } : {}),
     },
-    authority: new URL(request.baseUrl).origin,
     ...identity,
+    authority: identity.authority ?? new URL(request.baseUrl).origin,
     projects: { kind: SCOPE_SELECTION_KINDS.Unknown },
     keys: { kind: SCOPE_SELECTION_KINDS.Unknown },
     models: { kind: SCOPE_SELECTION_KINDS.Unknown },
@@ -218,11 +219,11 @@ export function readAccountBalance(
 
 /** Reported and manually selected balances remain independent sources. */
 export function getAccountBalanceSnapshots(account: SiteAccount) {
-  const scope = accountBalanceScope({
-    baseUrl: account.site_url,
-    accountId: account.id,
-    auth: { authType: account.authType },
-  })
+  const authority = sanitizeOriginUrl(account.site_url)
+  const scope = accountBalanceScope(
+    { baseUrl: account.site_url, accountId: account.id },
+    { authority: authority ?? "legacy:unknown-authority" },
+  )
   let reported = readAccountBalance(
     account.account_info,
     scope,
@@ -350,7 +351,8 @@ export function getAccountBalanceSnapshots(account: SiteAccount) {
     }
   }
   const value = normalizeManualBalanceUsd(account.manualBalanceUsd)
-  if (value === undefined) return { reported, manual: undefined }
+  if (value === undefined || authority === undefined)
+    return { reported, manual: undefined }
   const manualScope: UsageScope = {
     ...scope,
     models: { kind: SCOPE_SELECTION_KINDS.All },

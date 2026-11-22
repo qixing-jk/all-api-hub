@@ -17,7 +17,10 @@ import {
   AccountUpdateUserTimestampMode,
   createDefaultAccountStorageConfig,
 } from "~/services/accounts/editing/accountDefaults"
-import { getDisplayBalancePortfolio } from "~/services/accounts/metrics/balanceProjection"
+import {
+  BALANCE_PURPOSES,
+  getDisplayBalancePortfolio,
+} from "~/services/accounts/metrics/balanceProjection"
 import { getDisplayIncomeProjection } from "~/services/accounts/metrics/consumptionProjection"
 import { buildAccountRefreshUpdate } from "~/services/accounts/refresh/accountRefreshUpdate"
 import { balancePosition, observeAmount } from "~/services/amounts/balance"
@@ -432,9 +435,11 @@ it.each(
       independent,
     ])
     expect(
-      getDisplayBalancePortfolio([
-        accountPresentation.convertToDisplayData(saved),
-      ]).amounts,
+      getDisplayBalancePortfolio(
+        [accountPresentation.convertToDisplayData(saved)],
+        BALANCE_PURPOSES.Available,
+        now + 10,
+      ).amounts,
     ).toEqual([
       ...(change === "same window" || change === "meaning"
         ? [{ asset: { kind: "currency", code: "USD" }, value: "8" }]
@@ -464,9 +469,11 @@ it.each(
         independent,
       ])
       expect(
-        getDisplayBalancePortfolio([
-          accountPresentation.convertToDisplayData(latest),
-        ]).amounts,
+        getDisplayBalancePortfolio(
+          [accountPresentation.convertToDisplayData(latest)],
+          BALANCE_PURPOSES.Available,
+          now + 10,
+        ).amounts,
       ).toEqual([
         { asset: { kind: "currency", code: "USD" }, value },
         { asset: { kind: "currency", code: "CNY" }, value: "2" },
@@ -669,14 +676,7 @@ it.each(["ordinary", "editor"] as const)(
   },
 )
 
-it.each([
-  "day",
-  "earlier end",
-  "source",
-  "asset",
-  "scope",
-  "noncumulative",
-] as const)(
+it.each(["day", "source", "asset", "scope", "noncumulative"] as const)(
   "does not reuse another %s's amount when a reading fails",
   async (difference) => {
     const { account, cost } = await periodAccount()
@@ -690,8 +690,6 @@ it.each([
     }
     if (difference === "day")
       failed.window = { ...cost.window, start: 400, end: 500 }
-    if (difference === "earlier end")
-      failed.window = { ...cost.window, end: 150 }
     if (difference === "source")
       failed.amount.source = {
         ...cost.amount.source,
@@ -716,3 +714,29 @@ it.each([
     )
   },
 )
+
+it("keeps the later reading when the same cumulative source fails for a shorter interval", async () => {
+  const { account, cost } = await periodAccount()
+  const saved = await refreshPeriod("ordinary", account, {
+    settledConsumption: [
+      {
+        ...cost,
+        window: { ...cost.window, end: 150 },
+        amount: {
+          status: "unavailable",
+          reason: "missing",
+          source: cost.amount.source,
+        },
+      },
+    ],
+  })
+  expect(saved.account_info.settledConsumption).toEqual([
+    expect.objectContaining({
+      window: cost.window,
+      amount: expect.objectContaining({
+        status: "stale",
+        value: cost.amount.status === "known" ? cost.amount.value : undefined,
+      }),
+    }),
+  ])
+})

@@ -14,9 +14,17 @@ import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
+const accountBalance = {
+  schemaVersion: 2,
+  subject: { kind: "account" },
+  capturedAt: 1000,
+  positions: [],
+  coverage: "unknown",
+}
+
 const {
   mockDetermineHealthStatus,
-  mockFetchAccountQuota,
+  mockFetchAccountBalance,
   mockFetchApi,
   mockFetchApiData,
   mockFetchTodayIncome,
@@ -24,7 +32,7 @@ const {
   mockT,
 } = vi.hoisted(() => ({
   mockDetermineHealthStatus: vi.fn(),
-  mockFetchAccountQuota: vi.fn(),
+  mockFetchAccountBalance: vi.fn(),
   mockFetchApi: vi.fn(),
   mockFetchApiData: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
@@ -37,7 +45,7 @@ vi.mock("~/services/accounts/accountHealth", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
-  fetchAccountQuota: mockFetchAccountQuota,
+  fetchAccountBalance: mockFetchAccountBalance,
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
 }))
@@ -79,7 +87,7 @@ describe("apiService wong", () => {
       status: SiteHealthStatus.Unknown,
       message: "mapped error",
     })
-    mockFetchAccountQuota.mockResolvedValue(1200)
+    mockFetchAccountBalance.mockResolvedValue({ balance: accountBalance })
     mockFetchTodayUsage.mockResolvedValue({
       today_quota_consumption: 10,
       today_prompt_tokens: 20,
@@ -220,7 +228,7 @@ describe("apiService wong", () => {
     const result = await fetchAccountData(baseRequest)
 
     expect(result).toMatchObject({
-      quota: 1200,
+      balance: accountBalance,
       today_income: 50,
       today_quota_consumption: 10,
       today_prompt_tokens: 20,
@@ -269,7 +277,7 @@ describe("apiService wong", () => {
     expect(result).toEqual({
       success: true,
       data: expect.objectContaining({
-        quota: 1200,
+        balance: accountBalance,
         checkIn: expect.any(Object),
       }),
       healthStatus: {
@@ -286,7 +294,7 @@ describe("apiService wong", () => {
   })
 
   it("maps refresh failures through determineHealthStatus", async () => {
-    mockFetchAccountQuota.mockRejectedValueOnce(new Error("quota failed"))
+    mockFetchAccountBalance.mockRejectedValueOnce(new Error("quota failed"))
 
     const result = await refreshAccountData(baseRequest)
 

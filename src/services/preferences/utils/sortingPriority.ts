@@ -384,7 +384,6 @@ function compareByUserSortField(
   sortField: SortField,
   currencyType: CurrencyType,
   sortOrder: SortOrder,
-  currencyDisplay: CurrencyDisplay,
 ) {
   switch (sortField) {
     case DATA_TYPE_NAME:
@@ -407,24 +406,6 @@ function compareByUserSortField(
     case DATA_TYPE_BALANCE: {
       return compareBalances(a, b, currencyType, sortOrder)
     }
-    case DATA_TYPE_CONSUMPTION:
-      return compareNativePeriodMetric(
-        a,
-        b,
-        currencyType,
-        sortOrder,
-        getDisplayConsumptionProjection,
-        currencyDisplay,
-      )
-    case DATA_TYPE_INCOME:
-      return compareNativePeriodMetric(
-        a,
-        b,
-        currencyType,
-        sortOrder,
-        getDisplayIncomeProjection,
-        currencyDisplay,
-      )
     case DATA_TYPE_CREATED_AT: {
       const aCreatedAt =
         typeof a.created_at === "number" && Number.isFinite(a.created_at)
@@ -445,22 +426,21 @@ function compareByUserSortField(
  * Orders displayed local-day and provider-day readings in their own asset groups;
  * retained values follow current readings and missing values stay last.
  */
-function compareNativePeriodMetric(
-  a: DisplaySiteData,
-  b: DisplaySiteData,
+function createNativePeriodComparator(
   currencyType: CurrencyType,
   sortOrder: SortOrder,
   project:
     typeof getDisplayConsumptionProjection | typeof getDisplayIncomeProjection,
   currencyDisplay: CurrencyDisplay,
-): number {
+) {
+  const asOf = Date.now()
   const value = (account: DisplaySiteData) => {
     const individualAccount: DisplaySiteData = {
       ...account,
       disabled: false,
       excludeFromTodayIncome: false,
     }
-    const projection = project([individualAccount])
+    const projection = project([individualAccount], asOf)
     const displayed = selectDisplayCashflow(
       projection,
       getDisplayCurrency(currencyDisplay, currencyType),
@@ -486,7 +466,7 @@ function compareNativePeriodMetric(
     const reference = projection.references?.[0]
     if (!reference) {
       if (project !== getDisplayConsumptionProjection) return undefined
-      const reading = getSiteDayReadings(account)[0]
+      const reading = getSiteDayReadings(account, asOf)[0]
       const cost = reading?.usage.cost
       return reading &&
         cost &&
@@ -512,19 +492,26 @@ function compareNativePeriodMetric(
       amount,
     }
   }
-  const first = value(a),
-    second = value(b)
-  if (!first || !second) return first ? -1 : second ? 1 : 0
-  if (first.lastKnown !== second.lastKnown) return first.lastKnown ? 1 : -1
-  if (first.siteDay !== second.siteDay) return first.siteDay ? 1 : -1
-  return compareFinancialAmounts(
-    first.amount,
-    a,
-    second.amount,
-    b,
-    currencyType,
-    sortOrder,
-  )
+  const values = new WeakMap<DisplaySiteData, ReturnType<typeof value>>()
+  const getValue = (account: DisplaySiteData) => {
+    if (!values.has(account)) values.set(account, value(account))
+    return values.get(account)
+  }
+  return (a: DisplaySiteData, b: DisplaySiteData) => {
+    const first = getValue(a)
+    const second = getValue(b)
+    if (!first || !second) return first ? -1 : second ? 1 : 0
+    if (first.lastKnown !== second.lastKnown) return first.lastKnown ? 1 : -1
+    if (first.siteDay !== second.siteDay) return first.siteDay ? 1 : -1
+    return compareFinancialAmounts(
+      first.amount,
+      a,
+      second.amount,
+      b,
+      currencyType,
+      sortOrder,
+    )
+  }
 }
 /** Compares saved manual positions, leaving unlisted accounts after listed ones. */
 function compareManualOrder(
@@ -566,6 +553,20 @@ export function createDynamicSortComparator(
 ) {
   const comparisonCurrency =
     getDisplayCurrency(currencyDisplay, currencyType) ?? CURRENCIES.USD
+  const projectCashflow =
+    userSortField === DATA_TYPE_CONSUMPTION
+      ? getDisplayConsumptionProjection
+      : userSortField === DATA_TYPE_INCOME
+        ? getDisplayIncomeProjection
+        : undefined
+  const compareCashflow =
+    projectCashflow &&
+    createNativePeriodComparator(
+      comparisonCurrency,
+      sortOrder,
+      projectCashflow,
+      currencyDisplay,
+    )
   const pinnedAccountIdSet = new Set(pinnedAccountIds)
   const getContextBoost = createAccountContextBoostResolver(
     config,
@@ -579,14 +580,15 @@ export function createDynamicSortComparator(
     if (priorityComparison !== 0) return priorityComparison
 
     if (userSortField !== null) {
-      const userComparison = compareByUserSortField(
-        a,
-        b,
-        userSortField,
-        comparisonCurrency,
-        sortOrder,
-        currencyDisplay,
-      )
+      const userComparison = compareCashflow
+        ? compareCashflow(a, b)
+        : compareByUserSortField(
+            a,
+            b,
+            userSortField,
+            comparisonCurrency,
+            sortOrder,
+          )
       if (userComparison !== 0) return userComparison
     }
 

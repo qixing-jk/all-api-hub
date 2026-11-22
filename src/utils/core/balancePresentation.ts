@@ -206,20 +206,32 @@ export function formatBalanceWindow(
 ): string[] {
   if (!window) return []
   const format = (at: number) => {
+    const instant = new Date(at)
+    if (!Number.isFinite(instant.getTime())) return undefined
     try {
-      return new Date(at).toLocaleString(locale, { timeZone: window.timeZone })
+      return instant.toLocaleString(locale, {
+        timeZone: window.timeZone,
+        timeZoneName: "shortOffset",
+      })
     } catch {
       // An unsupported zone or locale still has an unambiguous UTC representation.
-      return new Date(at).toISOString()
+      return instant.toISOString()
     }
   }
-  const lines = [
-    `${t("account:financial.window")}: ${format(window.start)} – ${format(window.end)} · ${window.timeZone}`,
-  ]
+  const start = format(window.start)
+  const end = format(window.end)
+  const lines =
+    start && end
+      ? [
+          `${t("account:financial.window")}: ${start} – ${end} · ${window.timeZone}`,
+        ]
+      : []
   if (window.resetsAt !== undefined) {
-    lines.push(
-      `${t("account:financial.resetsAt")}: ${format(window.resetsAt)} · ${window.timeZone}`,
-    )
+    const reset = format(window.resetsAt)
+    if (reset)
+      lines.push(
+        `${t("account:financial.resetsAt")}: ${reset} · ${window.timeZone}`,
+      )
   }
   return lines
 }

@@ -229,7 +229,8 @@ export function estimateNetInflow({
         fact.amount.source.contractVersion !==
           end.amount.source.contractVersion ||
         fact.amount.source.operation !== first.amount.source.operation ||
-        fact.amount.source.kind !== first.amount.source.kind,
+        fact.amount.source.kind !== first.amount.source.kind ||
+        usageScopeKey(fact.scope) !== usageScopeKey(first.scope),
     )
   )
     return {

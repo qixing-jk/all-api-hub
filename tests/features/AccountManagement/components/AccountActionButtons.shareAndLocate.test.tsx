@@ -274,6 +274,8 @@ describe("AccountActionButtons", () => {
           balance: { USD: 12, CNY: 0 },
           todayIncome: { USD: 8, CNY: 0 },
           todayConsumption: { USD: 4, CNY: 0 },
+          reportedIncome: [buildPeriodIncome("acc-share", "8")],
+          settledConsumption: [buildPeriodConsumption("acc-share", "4")],
           last_sync_time: 0,
         })}
         onCopyKey={vi.fn()}
@@ -315,6 +317,9 @@ describe("AccountActionButtons", () => {
     )
     expect(payload).not.toHaveProperty("todayIncome")
     expect(payload).not.toHaveProperty("todayOutcome")
+    expect(payload).not.toHaveProperty("incomeSummary")
+    expect(payload).not.toHaveProperty("consumptionSummary")
+    expect(payload).not.toHaveProperty("todayNetAmount")
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShareAccountSnapshot,
@@ -425,7 +430,7 @@ describe("AccountActionButtons", () => {
       }),
     },
   ])(
-    "falls back to a balance-only snapshot for $label",
+    "keeps coverage in a snapshot with $label and no native observations",
     async ({ availability }) => {
       const user = userEvent.setup({ skipHover: true })
 
@@ -466,6 +471,16 @@ describe("AccountActionButtons", () => {
       expect(payload).not.toHaveProperty("todayIncome")
       expect(payload).not.toHaveProperty("todayOutcome")
       expect(payload).not.toHaveProperty("todayNet")
+      expect(payload).toMatchObject({
+        incomeSummary: {
+          groups: [],
+          nativeCoverage: { status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable },
+        },
+        consumptionSummary: {
+          groups: [],
+          nativeCoverage: { status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable },
+        },
+      })
     },
   )
 

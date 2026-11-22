@@ -8,7 +8,11 @@ import { Badge, Button } from "~/components/ui"
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { CURRENCIES } from "~/constants/money"
 import type { ReferenceCashflow } from "~/services/accounts/metrics/consumptionProjection"
-import { isKnownOrStaleObservation } from "~/services/amounts/balance"
+import { assetIdentity } from "~/services/amounts/assets"
+import {
+  isKnownOrStaleObservation,
+  usageScopeKey,
+} from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
   FINANCIAL_COVERAGE,
@@ -73,6 +77,7 @@ export function AccountConsumptionDetails({
     })),
   ]
   const seen = new Set<string>()
+  const occurrences = new Map<string, number>()
   return (
     <div className="w-full max-w-full min-w-0 divide-y divide-border/60">
       {site.referenceConsumption && (
@@ -84,17 +89,34 @@ export function AccountConsumptionDetails({
       {observations.flatMap((usage) => {
         const cost = usage.cost
         if (!cost) return []
-        const key = JSON.stringify([
+        const fingerprint = JSON.stringify([
           usage.income,
           usage.scope,
           usage.coverage,
           usage.settlement,
           cost,
         ])
-        if (seen.has(key)) return []
-        seen.add(key)
+        if (seen.has(fingerprint)) return []
+        seen.add(fingerprint)
+        const { adapter, operation, contractVersion } = cost.amount.source
+        const stream = JSON.stringify([
+          usage.income,
+          usage.scope,
+          usage.settlement,
+          assetIdentity(cost.asset),
+          cost.scope && usageScopeKey(cost.scope),
+          adapter,
+          operation,
+          contractVersion,
+        ])
+        const occurrence = occurrences.get(stream) ?? 0
+        occurrences.set(stream, occurrence + 1)
         return [
-          <ConsumptionObservationRow key={key} usage={usage} cost={cost} />,
+          <ConsumptionObservationRow
+            key={`${stream}:${occurrence}`}
+            usage={usage}
+            cost={cost}
+          />,
         ]
       })}
     </div>

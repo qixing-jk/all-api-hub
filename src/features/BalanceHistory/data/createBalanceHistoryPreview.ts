@@ -44,7 +44,9 @@ export function createBalanceHistoryPreview(scenario: ReportPreviewScenario) {
       })
       const snapshots: FinancialHistorySnapshot[] = []
       for (let day = 29; day >= 0; day--) {
-        const at = now - day * 86_400_000
+        const previewDate = new Date(now)
+        previewDate.setDate(previewDate.getDate() - day)
+        const at = previewDate.getTime()
         const change = (day % 7) * 5 - (day % 3) * 10
         const value =
           (index === 2 ? 5200 : index === 3 ? -12 : 146 + index * 25) + change

@@ -18,16 +18,24 @@ import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 import { createCheckInConfig } from "../apiAdapters/checkInFixtures"
 
+const accountBalance = {
+  schemaVersion: 2,
+  subject: { kind: "account" },
+  capturedAt: 1000,
+  positions: [],
+  coverage: "unknown",
+}
+
 const {
   mockDetermineHealthStatus,
-  mockFetchAccountQuota,
+  mockFetchAccountBalance,
   mockFetchTodayIncome,
   mockFetchTodayUsage,
   mockCheckIn,
   mockT,
 } = vi.hoisted(() => ({
   mockDetermineHealthStatus: vi.fn(),
-  mockFetchAccountQuota: vi.fn(),
+  mockFetchAccountBalance: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
   mockFetchTodayUsage: vi.fn(),
   mockCheckIn: vi.fn(),
@@ -39,7 +47,7 @@ vi.mock("~/services/accounts/accountHealth", () => ({
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
-  fetchAccountQuota: mockFetchAccountQuota,
+  fetchAccountBalance: mockFetchAccountBalance,
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
 }))
@@ -91,7 +99,7 @@ describe("AnyRouter API service", () => {
       status: SiteHealthStatus.Unknown,
       message: "mapped error",
     })
-    mockFetchAccountQuota.mockResolvedValue(1200)
+    mockFetchAccountBalance.mockResolvedValue({ balance: accountBalance })
     mockFetchTodayUsage.mockResolvedValue({
       today_quota_consumption: 10,
       today_prompt_tokens: 20,
@@ -115,7 +123,7 @@ describe("AnyRouter API service", () => {
     const result = await fetchAccountData(baseRequest)
 
     expect(result).toMatchObject({
-      quota: 1200,
+      balance: accountBalance,
       today_income: 50,
       today_quota_consumption: 10,
       today_prompt_tokens: 20,
@@ -178,7 +186,7 @@ describe("AnyRouter API service", () => {
   })
 
   it("maps refresh failures through determineHealthStatus", async () => {
-    mockFetchAccountQuota.mockRejectedValueOnce(new Error("quota failed"))
+    mockFetchAccountBalance.mockRejectedValueOnce(new Error("quota failed"))
 
     const result = await refreshAccountData(baseRequest)
 

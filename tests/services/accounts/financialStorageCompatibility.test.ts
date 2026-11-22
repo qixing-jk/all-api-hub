@@ -44,6 +44,7 @@ import {
   FINANCIAL_SUBJECT_KINDS,
   INCOME_CLASSIFICATIONS,
   OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
 } from "~/services/amounts/financialConstants"
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -158,7 +159,7 @@ it.each(["site URL", "upstream user ID", "cashflow-only site URL"] as const)(
     const unknownIncome = buildPeriodIncome(id, "0")
     unknownIncome.amount = { ...unknownCost.amount }
     let generation = (await accountMutations.beginBalanceRefresh(id, request))!
-    await accountMutations.updateAccountFromRefresh(
+    const failedReadingCommit = await accountMutations.updateAccountFromRefresh(
       id,
       {
         health: { status: SiteHealthStatus.Healthy },
@@ -177,6 +178,12 @@ it.each(["site URL", "upstream user ID", "cashflow-only site URL"] as const)(
       undefined,
       generation,
     )
+    expect(
+      failedReadingCommit?.account_info.settledConsumption?.[0]?.amount,
+    ).toMatchObject({
+      status: OBSERVATION_STATUSES.Unknown,
+      reason: "request-failed",
+    })
     request = await assertLastKnownReferences()
 
     // A verified reading for the new account replaces the reference display;
@@ -818,6 +825,65 @@ it("reserves generations above existing accounts when migrating the local counte
   ).toBeGreaterThan(9000)
 })
 
+it.each([
+  [-1, "invalid_balance_refresh_generation"],
+  [Number.MAX_SAFE_INTEGER, "balance_refresh_generation_overflow"],
+] as const)(
+  "preserves account storage when a generation cannot be reserved (%s)",
+  async (counter, error) => {
+    const id = await accountMutations.addAccount(buildSiteAccount())
+    const account = (await accountQueries.getAccountById(id))!
+    await storage.set(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION, counter)
+    try {
+      await expect(
+        accountMutations.beginBalanceRefresh(id, account),
+      ).rejects.toThrow(error)
+      expect(await accountQueries.getAccountById(id)).toEqual(account)
+      expect(await storage.get(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION)).toBe(
+        counter,
+      )
+    } finally {
+      await storage.remove(ACCOUNT_STORAGE_KEYS.BALANCE_GENERATION)
+    }
+  },
+)
+
+it("restores AIML API full-day cashflow provenance while preserving the account's wallet restriction", async () => {
+  const account = buildSiteAccount({
+    site_type: SITE_TYPES.AIMLAPI,
+    configVersion: 8,
+  })
+  const start = Date.UTC(2026, 10, 19)
+  const fact = buildPeriodConsumption(account.id, "2.50")
+  const source = {
+    adapter: SITE_TYPES.AIMLAPI,
+    operation: "/v2/usage/detail",
+    contractVersion: "utc-day/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  }
+  delete fact.cumulative
+  fact.window = { start, end: start + 86_400_000, timeZone: "UTC" }
+  fact.amount = {
+    status: OBSERVATION_STATUSES.Known,
+    value: "2.5",
+    observedAt: start + 43_200_000,
+    source,
+  }
+  fact.scope.walletId = "fixture-wallet"
+  fact.scope.models = { kind: SCOPE_SELECTION_KINDS.Unknown }
+  account.account_info.settledConsumption = [fact]
+  await accountDataTransfer.importData({ accounts: [account] })
+  const saved = await accountQueries.getAccountById(account.id)
+  expect(saved?.account_info.settledConsumption).toEqual([
+    {
+      ...fact,
+      cumulative: true,
+      scope: { ...fact.scope, models: { kind: SCOPE_SELECTION_KINDS.All } },
+      amount: { ...fact.amount, source: { ...source, contractVersion: "1" } },
+    },
+  ])
+})
+
 it("preserves malformed legacy asset evidence without making it a current financial fact", async () => {
   const account = buildSiteAccount()
   delete account.account_info.quota
@@ -858,7 +924,7 @@ it("migrates v4.10.1 Novita cash and credit limit as last-known details", async 
   ).toEqual([
     expect.objectContaining({
       role: "available",
-      amount: expect.objectContaining({ value: "25" }),
+      amount: expect.objectContaining({ status: "stale", value: "25" }),
     }),
     expect.objectContaining({
       role: "ledger",
@@ -1005,6 +1071,12 @@ it("binds every new account financial scope before its first refresh", async () 
     ...usage,
     cost: {
       ...usage.cost!,
+      amount: {
+        ...usage.cost!.amount,
+        status: OBSERVATION_STATUSES.Known,
+        value: "64",
+        observedAt: 200,
+      },
       scope: {
         ...usage.cost!.scope!,
         subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId: id },

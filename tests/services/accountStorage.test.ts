@@ -62,7 +62,10 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
-import { DAILY_BALANCE_HISTORY_CAPTURE_SOURCES } from "~/types/dailyBalanceHistory"
+import {
+  DAILY_BALANCE_HISTORY_CAPTURE_SOURCES,
+  type DailyBalanceHistoryStore,
+} from "~/types/dailyBalanceHistory"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 import { server } from "~~/tests/msw/server"
@@ -1864,8 +1867,11 @@ describe("accountStorage core behaviors", () => {
       Reflect.deleteProperty(account.account_info, field)
     seedStorage([account])
     const snapshot = await accountStorage.getAccountManagementSnapshot()
-    expect(snapshot.displayAccounts[0]?.referenceConsumption).toBeUndefined()
-    expect(snapshot.displayAccounts[0]?.referenceIncome).toBeUndefined()
+    expect(snapshot.displayAccounts).toHaveLength(1)
+    const [displayed] = snapshot.displayAccounts
+    expect(displayed?.id).toBe(account.id)
+    expect(displayed!.referenceConsumption).toBeUndefined()
+    expect(displayed!.referenceIncome).toBeUndefined()
   })
 
   it("convertToDisplayData should preserve cookie auth session cookies", () => {
@@ -4929,8 +4935,13 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
+    let rejectedCommit = false
     storageHooks.beforeSet = async (key) => {
-      if (key === ACCOUNT_STORAGE_KEYS.ACCOUNTS) {
+      if (
+        key === ACCOUNT_STORAGE_KEYS.ACCOUNTS &&
+        mockRefreshAccountData.mock.calls.length > 0
+      ) {
+        rejectedCommit = true
         throw new Error("storage write failed")
       }
     }
@@ -4945,7 +4956,9 @@ describe("accountStorage core behaviors", () => {
         },
       )
 
-      expect(result).toBeNull()
+      expect(mockRefreshAccountData).toHaveBeenCalledOnce()
+      expect(rejectedCommit).toBe(true)
+      expect(result).toMatchObject({ refreshed: false, reEnabled: false })
       expect(
         (await accountStorage.getAccountById("disabled-persist-fail"))
           ?.disabled,
@@ -7140,11 +7153,22 @@ describe("accountStorage core behaviors", () => {
       const dayKey = getDayKeyFromUnixSeconds(nowUnixSeconds)
       const stored = storageData.get(
         STORAGE_KEYS.DAILY_BALANCE_HISTORY_STORE,
-      ) as any
+      ) as DailyBalanceHistoryStore | undefined
 
       expect(
         stored?.referenceSnapshotsByAccountId?.["balance-history"]?.[dayKey],
       ).toBeUndefined()
+      for (const receipt of stored?.financialSnapshotsByAccountId?.[
+        "balance-history"
+      ] ?? []) {
+        expect(receipt.settledConsumption ?? []).toEqual([])
+        expect(receipt.reportedIncome ?? []).toEqual([])
+        expect(
+          (receipt.balance?.positions ?? []).every(
+            (position) => position.amount.source.kind === EVIDENCE_KINDS.Legacy,
+          ),
+        ).toBe(true)
+      }
     } finally {
       vi.useRealTimers()
     }

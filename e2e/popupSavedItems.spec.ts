@@ -385,7 +385,7 @@ test("updates popup account totals after disabling an account from management", 
     page.getByRole("button", { name: "Popup Disable Account" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Click to switch to CNY" }),
+    page.getByRole("region", { name: "Financial totals" }),
   ).toContainText("$3.00")
 
   const accountPagePromise = waitForExtensionPage(context, {
@@ -431,7 +431,7 @@ test("updates popup account totals after disabling an account from management", 
     refreshedPopupPage.getByTestId(getPopupViewTestId("accounts")),
   ).toBeVisible()
   await expect(
-    refreshedPopupPage.getByRole("button", { name: "Click to switch to CNY" }),
+    refreshedPopupPage.getByRole("region", { name: "Financial totals" }),
   ).toContainText("$1.00")
   await expect(
     refreshedPopupPage.getByTestId(

@@ -67,6 +67,41 @@ const billingScope = {
   models: { kind: SCOPE_SELECTION_KINDS.All },
   groups: { kind: SCOPE_SELECTION_KINDS.All },
 }
+
+it("keeps a later receipt and its ending outside an as-of report", () => {
+  const known = position("7", first)
+  const [series] = buildFinancialHistorySeries({
+    store: {
+      schemaVersion: 4,
+      referenceSnapshotsByAccountId: {},
+      financialSnapshotsByAccountId: {
+        a1: [
+          {
+            balance: accountBalanceSnapshot(scope, [known], first),
+            source: "refresh",
+          },
+          {
+            balance: accountBalanceSnapshot(
+              scope,
+              [position("14", second)],
+              second,
+            ),
+            endedPositionKeys: [getFinancialSeriesKey(known)],
+            source: "refresh",
+          },
+        ],
+      },
+    },
+    asOf: first,
+    accountIds: ["a1"],
+    startDayKey: "2026-02-07",
+    endDayKey: "2026-02-09",
+  }).series
+
+  expect(series?.observations).toEqual([
+    expect.objectContaining({ at: first, status: "known", value: "7" }),
+  ])
+})
 const ledger = (
   value: string,
   at: number,

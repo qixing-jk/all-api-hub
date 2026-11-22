@@ -6,26 +6,36 @@ import {
   usageScopeKey,
 } from "~/services/amounts/balance"
 import { FINANCIAL_COVERAGE } from "~/services/amounts/financialConstants"
-import type { FinancialIncomeFact } from "~/services/amounts/income"
-import type { FinancialConsumptionFact } from "~/services/amounts/usage"
+import {
+  isCumulativeIncome,
+  type FinancialIncomeFact,
+} from "~/services/amounts/income"
+import {
+  isCumulativeConsumption,
+  type FinancialConsumptionFact,
+} from "~/services/amounts/usage"
 
 type PeriodAmountFact = FinancialConsumptionFact | FinancialIncomeFact
 
 const collectionPeriodKey = (fact: PeriodAmountFact) => {
   const { source } = fact.amount
+  const cumulative =
+    "settlement" in fact
+      ? isCumulativeConsumption(fact)
+      : isCumulativeIncome(fact)
   return JSON.stringify([
     usageScopeKey(
       normalizeRecordedDailyReportScope(fact.scope, fact.asset, source),
     ),
     fact.window.start,
-    fact.cumulative === true ? undefined : fact.window.end,
+    cumulative ? undefined : fact.window.end,
     fact.window.timeZone,
     source.adapter,
     source.operation,
     source.contractVersion,
     source.kind,
     "settlement" in fact ? fact.settlement : fact.classification,
-    fact.cumulative,
+    cumulative,
   ])
 }
 
@@ -69,7 +79,6 @@ export function acceptPeriodAmounts<T extends PeriodAmountFact>(
     if (
       !isKnownOrStaleObservation(fact.amount) &&
       old &&
-      old.window.end <= fact.window.end &&
       isKnownOrStaleObservation(old.amount)
     )
       return {

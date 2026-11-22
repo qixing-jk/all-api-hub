@@ -235,7 +235,7 @@ export default function SiteInfo({
               type="button"
               variant="link"
               size="sm"
-              className="group/site-link h-auto min-h-0 min-w-0 flex-1 shrink items-center justify-start gap-x-0.5 p-0 text-left has-[>svg]:p-0 has-[>svg]:px-0"
+              className="group/site-link h-auto min-h-0 min-w-0 flex-1 shrink items-center justify-start gap-x-0.5 p-0 text-left has-[>svg]:p-0 has-[>svg]:px-0 @max-sm/account-row:focus-visible:ring-inset"
               title={openSiteTooltip}
               onClick={handleOpenAccountSite}
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowOpenButton}

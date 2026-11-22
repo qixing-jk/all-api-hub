@@ -19,7 +19,6 @@ export function getFinancialSnapshotCapturedAt(
     snapshot.balance?.capturedAt ?? -Infinity,
     snapshot.allowances?.capturedAt ?? -Infinity,
   )
-  if (Number.isFinite(balanceCapturedAt)) return balanceCapturedAt
   return [
     ...(snapshot.settledConsumption ?? []),
     ...(snapshot.reportedIncome ?? []),
@@ -30,7 +29,7 @@ export function getFinancialSnapshotCapturedAt(
         latest,
         "observedAt" in amount ? amount.observedAt : (window?.end ?? -Infinity),
       ),
-    -Infinity,
+    balanceCapturedAt,
   )
 }
 

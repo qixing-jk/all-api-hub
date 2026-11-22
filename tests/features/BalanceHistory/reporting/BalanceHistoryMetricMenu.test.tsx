@@ -63,16 +63,16 @@ describe("BalanceHistoryMetricMenu", () => {
         name: "Trend: Recorded income · USD",
       }),
     )
+    expect(
+      screen.queryByRole("menuitemradio", {
+        name: /balanceHistory:metrics\.outcome/,
+      }),
+    ).not.toBeInTheDocument()
     await user.click(
       screen.getByRole("menuitemradio", {
         name: "balanceHistory:metrics.income · balanceHistory:legacy.title",
       }),
     )
     expect(onChange).toHaveBeenCalledWith("reference:income")
-    expect(
-      screen.queryByRole("menuitemradio", {
-        name: "balanceHistory:metrics.outcome",
-      }),
-    ).not.toBeInTheDocument()
   })
 })

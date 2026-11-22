@@ -63,6 +63,31 @@ const consumption = (value: string): FinancialConsumptionFact => ({
 })
 
 describe("net inflow estimation", () => {
+  it("does not join consecutive spend windows belonging to different wallets", () => {
+    const middle = startAt + (endAt - startAt) / 2
+    const available = (at: number) => ({
+      ...position("10", at),
+      role: BALANCE_ROLES.Available,
+      scope: { ...scope, walletId: undefined },
+    })
+    const first = consumption("2")
+    first.window.end = middle
+    const second = consumption("3")
+    second.window.start = middle
+    const estimate = (walletId: string) =>
+      estimateNetInflow({
+        start: available(startAt),
+        end: available(endAt),
+        consumption: [first, { ...second, scope: { ...scope, walletId } }],
+        allowAccountBalance: true,
+      })
+
+    expect(estimate("main")).toMatchObject({
+      status: "available",
+      amount: { value: "5" },
+    })
+    expect(estimate("other")).toMatchObject({ status: "unavailable" })
+  })
   it("subtracts a full-length native balance without requiring an out-of-range negative operand", () => {
     const magnitude = "9".repeat(256)
     expect(

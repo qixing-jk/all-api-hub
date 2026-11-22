@@ -1,6 +1,7 @@
 import { CURRENCIES } from "~/constants/money"
 import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/constants/siteType"
 import { readAccountBalance } from "~/services/accounts/balanceSnapshot"
+import { hasRecordedCashflowAmount } from "~/services/accounts/metrics/consumptionProjection"
 import {
   currentDailyUsdContract,
   normalizeRecordedDailyReportScope,
@@ -257,11 +258,11 @@ export function migrateAccountFinancialInfo(
     info.legacyFinancial?.cashflow ??
     (!info.balance || hasLegacy || info.legacyFinancial
       ? {
-          ...(info.settledConsumption?.length ||
+          ...(hasRecordedCashflowAmount(info.settledConsumption) ||
           !Object.hasOwn(info, "today_quota_consumption")
             ? {}
             : { consumption: info.today_quota_consumption }),
-          ...(info.reportedIncome?.length ||
+          ...(hasRecordedCashflowAmount(info.reportedIncome) ||
           !Object.hasOwn(info, "today_income")
             ? {}
             : { income: info.today_income }),
@@ -300,6 +301,12 @@ export function migrateAccountFinancialInfo(
     balanceUnavailable: _unavailable,
     ...current
   } = info
+  if (
+    current.usageObservations !== undefined &&
+    (!Array.isArray(current.usageObservations) ||
+      current.usageObservations.some((usage) => !isPlainObject(usage)))
+  )
+    throw new Error("invalid_account_usage_observation")
   return {
     ...current,
     ...(current.usage === undefined

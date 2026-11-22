@@ -617,7 +617,7 @@ describe("popup BalanceSection components", () => {
       screen.queryByText("account:stats.todayConsumption"),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByText("account:stats.todayIncome"),
+      screen.queryByRole("region", { name: "account:filteredTotals.income" }),
     ).not.toBeInTheDocument()
     fireEvent.click(
       screen.getByRole("button", { name: "account:financial.summary" }),

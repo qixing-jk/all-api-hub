@@ -55,7 +55,7 @@ function sumRecorded(values: string[]): string | null {
 }
 
 /** Retain the widest query from repeated cumulative observations of the same stream. */
-function nonOverlappingFacts(candidates: Candidate[]): Candidate[] {
+function nonOverlappingFacts(candidates: Candidate[]) {
   const cumulative = new Map<string, Candidate>()
   const intervals = candidates.filter((candidate) => {
     const { fact, stream } = candidate
@@ -108,7 +108,7 @@ function nonOverlappingFacts(candidates: Candidate[]): Candidate[] {
     }
     selected.push(candidate)
   }
-  return selected
+  return { selected, conflict: Number.isFinite(conflictingUntil) }
 }
 
 /** A recorded net amount requires two complete observations of the same interval. */
@@ -176,7 +176,11 @@ export function buildFinancialHistoryActivity({
   return accountIds.flatMap((accountId) => {
     const grouped = new Map<
       string,
-      { kind: FinancialHistoryActivityKind; candidates: Candidate[] }
+      {
+        kind: FinancialHistoryActivityKind
+        candidates: Candidate[]
+        conflict?: boolean
+      }
     >()
     const dayCosts = new Map<string, Map<string, ReportedDayCost>>()
     const append = (
@@ -194,11 +198,27 @@ export function buildFinancialHistoryActivity({
         fact.coverage === FINANCIAL_COVERAGE.Unknown
       )
         return
-      const end = Math.min(window.end, amount.observedAt)
+      const cumulative =
+        "settlement" in fact
+          ? isCumulativeConsumption(fact)
+          : isCumulativeIncome(fact)
+      if (!cumulative && amount.observedAt < window.end) return
+      const end = cumulative
+        ? Math.min(window.end, amount.observedAt)
+        : window.end
       if (end <= window.start) return
       const firstDay = dayAt(window.start, window.timeZone)
       const lastDay = dayAt(end - 1, window.timeZone)
-      if (!days.has(firstDay) || !days.has(lastDay)) return
+      if (
+        !days.has(firstDay) ||
+        !days.has(lastDay) ||
+        (firstDay !== lastDay &&
+          !listDayKeysInRange({
+            startDayKey: firstDay,
+            endDayKey: lastDay,
+          }).every((day) => days.has(day)))
+      )
+        return
 
       const key = JSON.stringify([kind, assetIdentity(asset)])
       const group = grouped.get(key) ?? { kind, candidates: [] }
@@ -271,9 +291,11 @@ export function buildFinancialHistoryActivity({
       }
     }
     for (const group of grouped.values()) {
-      group.candidates = nonOverlappingFacts(group.candidates)
+      const { selected, conflict } = nonOverlappingFacts(group.candidates)
+      group.candidates = selected
+      group.conflict = conflict
     }
-    for (const { kind, candidates } of [...grouped.values()]) {
+    for (const { kind, candidates, conflict } of [...grouped.values()]) {
       const asset = candidates[0]?.fact.asset
       if (kind !== FINANCIAL_HISTORY_ACTIVITY_KINDS.Income || !asset) continue
       const assetKey = assetIdentity(asset)
@@ -290,24 +312,28 @@ export function buildFinancialHistoryActivity({
           {
             kind: FINANCIAL_HISTORY_ACTIVITY_KINDS.Net,
             candidates: net,
+            conflict: conflict || spending?.conflict,
           },
         )
     }
     const recorded = Array.from(
       grouped,
-      ([key, { kind, candidates: selected }]) => {
+      ([key, { kind, candidates: selected, conflict }]) => {
         const first = selected[0]
         const total = sumRecorded(selected.map(({ value }) => value))
         if (!first || total === null) return []
         const dayValues = new Map<string, string[]>()
+        const partialDays = new Set<string>()
         const recordedDays = new Set<string>()
-        for (const { firstDay, lastDay, value } of selected) {
+        for (const { firstDay, lastDay, value, partial, fact } of selected) {
           for (const day of listDayKeysInRange({
             startDayKey: firstDay,
             endDayKey: lastDay,
           }))
             recordedDays.add(day)
           if (firstDay !== lastDay) continue
+          if (partial || fact.coverage === FINANCIAL_COVERAGE.Partial)
+            partialDays.add(firstDay)
           const values = dayValues.get(firstDay) ?? []
           values.push(value)
           dayValues.set(firstDay, values)
@@ -319,12 +345,15 @@ export function buildFinancialHistoryActivity({
             accountId,
             asset: first.fact.asset,
             total,
-            partial: selected.some(
-              ({ fact, partial }) =>
-                partial || fact.coverage === FINANCIAL_COVERAGE.Partial,
-            ),
+            partial:
+              Boolean(conflict) ||
+              selected.some(
+                ({ fact, partial }) =>
+                  partial || fact.coverage === FINANCIAL_COVERAGE.Partial,
+              ),
             recordedDays: [...recordedDays],
             values: dayKeys.map((day) => sumRecorded(dayValues.get(day) ?? [])),
+            dailyPartial: dayKeys.map((day) => partialDays.has(day)),
             scopes: [
               ...new Map(
                 selected.map(
@@ -362,6 +391,7 @@ export function buildFinancialHistoryActivity({
               total,
               recordedDays: [...costs.keys()],
               values,
+              dailyPartial: dayKeys.map((day) => costs.has(day)),
               scopes: [first.scope],
             },
           ]

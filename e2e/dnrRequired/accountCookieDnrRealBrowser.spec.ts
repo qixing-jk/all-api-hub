@@ -3,6 +3,7 @@ import type { AddressInfo, Socket } from "node:net"
 import type { BrowserContext, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
@@ -241,8 +242,8 @@ test("isolates same-site cookie and access-token accounts through account refres
         page,
         serviceWorker,
         accountIds: savedAccounts.map((account) => account.id),
-        expectedBalances: ["33000", "44000", "55000", "66000"].map((value) => ({
-          asset: { kind: "quota" },
+        expectedBalances: ["0.066", "0.088", "0.11", "0.132"].map((value) => ({
+          asset: { kind: "currency", code: "USD" },
           value,
         })),
       })
@@ -751,11 +752,12 @@ async function waitForStoredAccountQuota(
       const accounts = await readStoredAccounts(serviceWorker)
       const account = accounts.find((candidate) => candidate.id === accountId)
       const amount = account?.account_info.balance?.positions.find(
-        (position) => position.asset.kind === "quota",
+        (position) =>
+          position.asset.kind === "currency" && position.asset.code === "USD",
       )?.amount
       return amount?.status === "known" ? amount.value : null
     })
-    .toBe(String(expectedQuota))
+    .toBe(String(expectedQuota / QUOTA_PER_USD))
 }
 
 type CapturedSelfRequest = {

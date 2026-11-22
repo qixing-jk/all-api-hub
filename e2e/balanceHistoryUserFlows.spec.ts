@@ -121,7 +121,8 @@ test("selects recorded cashflow by native unit and keeps converted balance histo
   extensionDir,
 }) => {
   const worker = await getServiceWorker(context)
-  const now = Date.now()
+  const now = new Date().setHours(12, 0, 0, 0)
+  await page.clock.setFixedTime(now)
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
   const todayKey = getDayKeyFromUnixSeconds(now / 1000)
@@ -253,6 +254,13 @@ test("selects recorded cashflow by native unit and keeps converted balance histo
     name: "Account breakdown",
     exact: true,
   })
+  const showBreakdownForCapture = async () => {
+    const chartSwitch = page.getByRole("group", { name: "Chart view" })
+    if (await chartSwitch.isVisible())
+      await chartSwitch
+        .getByRole("button", { name: "Account breakdown", exact: true })
+        .click()
+  }
   const summary = page.getByTestId(BALANCE_HISTORY_TEST_IDS.accountSummary)
   await expect(summary.getByText("$123.45", { exact: true })).toBeVisible()
   await expect(summary.getByText("$4.50", { exact: true })).toBeVisible()
@@ -330,6 +338,7 @@ test("selects recorded cashflow by native unit and keeps converted balance histo
     captureTarget: breakdown,
     id: "history-native-cny-income",
     extensionDir,
+    beforeCapture: showBreakdownForCapture,
   })
   await select(trend, "Recorded spending · USD")
   await select(breakdown, "Recorded spending · USD")
@@ -343,6 +352,7 @@ test("selects recorded cashflow by native unit and keeps converted balance histo
     captureTarget: breakdown,
     id: "history-converted-spending",
     extensionDir,
+    beforeCapture: showBreakdownForCapture,
   })
   await page.reload()
   await expect(trend.locator("canvas")).toBeVisible()

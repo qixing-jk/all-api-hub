@@ -8,7 +8,6 @@ import {
   createEmptyAccountTodayStatsCoverage,
   createUnavailableTodayStatsAvailability,
   getSiteDayReadings,
-  getSiteDayUsage,
   getSiteDayUsages,
   isAccountTodayMetricLegacyUnclassified,
   normalizeAccountTodayMetricAvailability,
@@ -21,6 +20,7 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
   type AccountTodayMetricReason,
 } from "~/types/accountTodayStats"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 const PARTIAL_REASONS = new Set<AccountTodayMetricReason>([
   ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
@@ -62,7 +62,39 @@ const PROFILE_FALLBACK = {
 } as const
 
 describe("accountTodayStats", () => {
+  it.each([
+    { label: "weekly", start: Date.UTC(2026, 10, 13) },
+    { label: "intraday", start: Date.UTC(2026, 10, 19, 23) },
+  ])(
+    "keeps a $label settlement out of daily provider readings",
+    ({ start }) => {
+      const end = Date.UTC(2026, 10, 20)
+      const fact = {
+        asset: { kind: "currency", code: CURRENCIES.USD } as const,
+        scope: accountReportingScope({ baseUrl: "https://provider.example" }),
+        amount: observeAmount(
+          "12",
+          {
+            adapter: "provider",
+            operation: "settlement",
+            contractVersion: "1",
+            kind: "reported",
+          },
+          end,
+        ),
+        window: { start, end, timeZone: "UTC" },
+        settlement: "settled" as const,
+        coverage: "complete" as const,
+      }
+      expect(getSiteDayReadings({ settledConsumption: [fact] }, end)).toEqual(
+        [],
+      )
+    },
+  )
   it("retains partial cost coverage in the provider-day reading", () => {
+    const observedAt = new Date(2026, 10, 19, 0, 0, 1).getTime()
+    const timeZone = "Etc/GMT-14"
+    const providerDay = getDayKeyFromUnixSeconds(observedAt / 1000, timeZone)
     const fact = {
       scope: accountReportingScope({
         baseUrl: "https://site.example",
@@ -77,20 +109,25 @@ describe("accountTodayStats", () => {
           operation: "cost",
           contractVersion: "1",
         },
-        1000,
+        observedAt,
       ),
-      window: { start: 0, end: 1000, timeZone: "UTC" },
+      window: {
+        start: Date.parse(`${providerDay}T00:00:00+14:00`),
+        end: observedAt,
+        timeZone,
+      },
       settlement: "settled" as const,
       coverage: "partial" as const,
     }
     expect(
-      getSiteDayReadings({ settledConsumption: [fact] }, 2000)[0]?.usage.cost,
+      getSiteDayReadings({ settledConsumption: [fact] }, observedAt + 1000)[0]
+        ?.usage.cost,
     ).toMatchObject({ coverage: "partial" })
   })
 
   it("suppresses an already projected local cost without dropping its provider-day counters", () => {
-    const start = new Date()
-    start.setHours(0, 0, 0, 0)
+    const start = new Date(2026, 10, 19).getTime()
+    const now = new Date(2026, 10, 19, 12).getTime()
     const fact = {
       asset: { kind: "currency" as const, code: CURRENCIES.USD },
       amount: observeAmount(
@@ -101,15 +138,15 @@ describe("accountTodayStats", () => {
           contractVersion: "1",
           kind: EVIDENCE_KINDS.Reported,
         },
-        Date.now(),
+        now,
       ),
       scope: accountReportingScope({
         baseUrl: "https://daya.example",
         accountId: "daya",
       }),
       window: {
-        start: start.getTime(),
-        end: Date.now() + 1,
+        start,
+        end: now + 1,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
       coverage: "complete" as const,
@@ -126,7 +163,10 @@ describe("accountTodayStats", () => {
         window: fact.window,
       },
     }
-    const reading = getSiteDayUsages({ usage, settledConsumption: [fact] })[0]
+    const reading = getSiteDayUsages(
+      { usage, settledConsumption: [fact] },
+      now,
+    )[0]
     expect(reading).toMatchObject({ totalRequests: 4, totalTokens: 330 })
     expect(reading?.cost).toBeUndefined()
   })
@@ -156,8 +196,9 @@ describe("accountTodayStats", () => {
     })
   })
   it("preserves the original provider day and marks yesterday's known amount as last-known", () => {
-    const now = Date.now()
-    const yesterday = now - 86400000
+    const now = new Date(2026, 10, 1, 23, 30).getTime()
+    const previous = new Date(now)
+    const yesterday = previous.setDate(previous.getDate() - 1)
     const usage = {
       scope: "site_today" as const,
       reportedDay: "2026-11-18",
@@ -181,9 +222,10 @@ describe("accountTodayStats", () => {
     ])
   })
   it("retains every provider-day asset alongside an already displayed local-day cost", () => {
-    const now = Date.now()
-    const start = new Date(now)
-    start.setHours(0, 0, 0, 0)
+    const start = new Date(2026, 10, 19)
+    const now = start.getTime() + 1000
+    const providerDay = getDayKeyFromUnixSeconds(now / 1000, "Etc/GMT-14")
+    const providerStart = Date.parse(`${providerDay}T00:00:00+14:00`)
     const scope = accountReportingScope({
       baseUrl: "https://usage.example",
       accountId: "usage",
@@ -199,9 +241,12 @@ describe("accountTodayStats", () => {
       scope,
       amount: observeAmount(value, source, now),
       window: {
-        start: start.getTime() + offset,
+        start: offset === 0 ? start.getTime() : providerStart,
         end: now + 1,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone:
+          offset === 0
+            ? Intl.DateTimeFormat().resolvedOptions().timeZone
+            : "Etc/GMT-14",
       },
       settlement: "settled" as const,
       coverage: "complete" as const,
@@ -214,17 +259,18 @@ describe("accountTodayStats", () => {
         fact("JPY", "25", -3600000),
       ],
     }
-    expect(getSiteDayUsages(account).map((usage) => usage.cost?.asset)).toEqual(
-      [
-        { kind: "currency", code: "EUR" },
-        { kind: "currency", code: "JPY" },
-      ],
-    )
+    expect(
+      getSiteDayUsages(account, now).map((usage) => usage.cost?.asset),
+    ).toEqual([
+      { kind: "currency", code: "EUR" },
+      { kind: "currency", code: "JPY" },
+    ])
   })
   it("keeps a known provider-day cost readable when its interval crosses the local day", () => {
-    const now = Date.now()
-    const start = new Date(now)
-    start.setHours(0, 0, 0, 0)
+    const start = new Date(2026, 10, 19)
+    const now = start.getTime() + 1000
+    const providerDay = getDayKeyFromUnixSeconds(now / 1000, "Etc/GMT-14")
+    const providerStart = Date.parse(`${providerDay}T00:00:00+14:00`)
     const scope = accountReportingScope({
       baseUrl: "https://usage.example",
       accountId: "usage",
@@ -243,16 +289,16 @@ describe("accountTodayStats", () => {
         now,
       ),
       window: {
-        start: start.getTime() - 3600000,
+        start: providerStart,
         end: now + 1,
-        timeZone: "UTC",
+        timeZone: "Etc/GMT-14",
       },
       settlement: "settled" as const,
       coverage: "complete" as const,
       cumulative: true as const,
     }
     expect(
-      getSiteDayUsage({ settledConsumption: [fact] })?.cost?.amount,
+      getSiteDayUsages({ settledConsumption: [fact] }, now)[0]?.cost?.amount,
     ).toMatchObject({ status: "known", value: "2.5" })
   })
   it("creates independent unavailable availability groups for the supplied reason", () => {

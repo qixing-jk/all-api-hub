@@ -1,10 +1,26 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+  accountReportingScope,
+} from "~/services/accounts/balanceSnapshot"
 import { createUnavailableTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { CUBENCE_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
+import { balancePosition, observeAmount } from "~/services/amounts/balance"
+import { normalizeDecimalUnits } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_ENUMERATION,
+  FINANCIAL_SETTLEMENT_STATUSES,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
@@ -37,11 +53,34 @@ export async function fetchAccountData(
 ): Promise<AccountData> {
   return withCubenceSession(request, async (scoped) => {
     const user = await readCubenceUser(scoped)
+    const balance = cubenceNumber(user.normal_balance, CUBENCE_ME_ENDPOINT)
+    const scope = accountBalanceScope(request)
+    const observedAt = Date.now()
+    const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD } as const
+    const source = {
+      adapter: SITE_TYPES.CUBENCE,
+      operation: `${CUBENCE_ME_ENDPOINT}:normal_balance`,
+      contractVersion: "usd-per-million/v1",
+      kind: EVIDENCE_KINDS.Reported,
+    } as const
     const data: AccountData = {
-      quota:
-        (cubenceNumber(user.normal_balance, CUBENCE_ME_ENDPOINT) /
-          CUBENCE_UNITS_PER_USD) *
-        QUOTA_PER_USD,
+      ...accountBalanceObservation(
+        scope,
+        [
+          balancePosition({
+            id: "normal_balance",
+            collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+            scope,
+            observedAt,
+            asset,
+            value: normalizeDecimalUnits(balance, CUBENCE_UNITS_PER_USD),
+            source,
+          }),
+        ],
+        observedAt,
+        FINANCIAL_ENUMERATION.Complete,
+      ),
+      quota: (balance / CUBENCE_UNITS_PER_USD) * QUOTA_PER_USD,
       today_quota_consumption: 0,
       today_requests_count: 0,
       today_prompt_tokens: 0,
@@ -80,6 +119,24 @@ export async function fetchAccountData(
         total = number("tokens"),
         output = number("output_tokens")
       if (output > total) invalidCubenceResponse(TODAY_ENDPOINT)
+      const costObservedAt = Date.now()
+      const start = Date.parse(body.window_start)
+      if (costObservedAt > start)
+        data.settledConsumption = [
+          {
+            asset,
+            amount: observeAmount(
+              normalizeDecimalUnits(cost, CUBENCE_UNITS_PER_USD),
+              { ...source, operation: `${TODAY_ENDPOINT}:summary.cost` },
+              costObservedAt,
+            ),
+            scope: accountReportingScope(request),
+            window: { start, end: costObservedAt, timeZone: "Asia/Shanghai" },
+            settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+            coverage: FINANCIAL_COVERAGE.Complete,
+            cumulative: true,
+          },
+        ]
       data.today_quota_consumption =
         (cost / CUBENCE_UNITS_PER_USD) * QUOTA_PER_USD
       data.today_requests_count = calls

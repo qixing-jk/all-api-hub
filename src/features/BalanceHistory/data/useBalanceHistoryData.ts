@@ -31,7 +31,10 @@ const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const balanceHistorySurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage
 /** Load snapshots and own explicit refresh/prune feedback without hiding existing content. */
-export function useBalanceHistoryData(selectedAccountIds: string[]) {
+export function useBalanceHistoryData(
+  selectedAccountIds: string[],
+  enabled = true,
+) {
   const mountedRef = useRef(false)
   const loadGenerationRef = useRef(0)
   const loadingToastIdsRef = useRef(new Set<string>())
@@ -49,12 +52,12 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore, nextTagStore] = await Promise.all([
-        accountQueries.getEnabledAccounts(),
+        accountQueries.getAllAccountsOrThrow(),
         dailyBalanceHistoryStorage.getStore(),
         tagStorage.getTagStore(),
       ])
       if (isCurrent()) {
-        setAccounts(nextAccounts)
+        setAccounts(nextAccounts.filter(({ disabled }) => !disabled))
         setStore(nextStore)
         setTagStore(nextTagStore)
         setLoadError(null)
@@ -70,6 +73,7 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
   }, [])
 
   useEffect(() => {
+    if (!enabled) return
     mountedRef.current = true
     void loadData()
     const loadingToastIds = loadingToastIdsRef.current
@@ -79,7 +83,7 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
       for (const id of loadingToastIds) toast.dismiss(id)
       loadingToastIds.clear()
     }
-  }, [loadData])
+  }, [enabled, loadData])
 
   const handleRefreshNow = useCallback(async () => {
     if (!mountedRef.current) return

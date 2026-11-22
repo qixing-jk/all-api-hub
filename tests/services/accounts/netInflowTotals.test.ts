@@ -49,6 +49,24 @@ function site(id: string, overrides: Partial<Estimate> = {}) {
 }
 
 describe("native net inflow totals", () => {
+  it("groups overlapping independent wallet windows consistently when account order changes", () => {
+    const accounts = [0, 6, 12].map((minutes, index) => {
+      const start = minutes * 60_000
+      const account = site(`wallet-${index}`, {
+        window: { start, end: start + 3_600_000, timeZone: "UTC" },
+      })
+      const estimate = account.netInflowEstimate!.estimates[0]!.netInflow!
+      if (estimate.status !== "available") throw new Error("fixture")
+      estimate.amount.value = String(2 ** index)
+      estimate.scope.walletId = account.id
+      return account
+    })
+    const groups = (entries: typeof accounts) =>
+      buildNetInflowTotals(entries).groups.map(({ amount }) => amount.value)
+    expect(groups(accounts)).toEqual(["3", "4"])
+    expect(groups([...accounts].reverse())).toEqual(["3", "4"])
+  })
+
   it("normalizes cancelled fractional charges before checking the final precision bound", () => {
     const entries = ["9".repeat(256), "0.1", "-0.1"].map((value, index) => {
       const account = site(`wallet-${index}`)

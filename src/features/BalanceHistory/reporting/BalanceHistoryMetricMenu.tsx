@@ -76,7 +76,7 @@ export function BalanceHistoryMetricMenu({
     estimatedIncome: t("metricHelp.estimatedHint"),
   } satisfies Record<BalanceHistoryVisibleMetric, string>
   const commonOption = (key: BalanceHistoryVisibleMetric): MetricOption => ({
-    key: nativeMetrics.length ? `reference:${key}` : key,
+    key: `reference:${key}`,
     label:
       nativeMetrics.length > 0
         ? `${key === DAILY_BALANCE_HISTORY_METRICS.Balance ? t("metricMenu.convertedBalance") : getBalanceHistoryMetricLabel(t, key)} · ${t("legacy.title")}`
@@ -134,7 +134,11 @@ export function BalanceHistoryMetricMenu({
       ],
     },
   ].filter(({ options }) => options.length > 0)
-  const selected = nativeMetric ?? commonOption(metric)
+  const preferred = nativeMetric ?? commonOption(metric)
+  const options = groups.flatMap((group) => group.options)
+  const selected =
+    options.find(({ key }) => key === preferred.key) ?? options[0]
+  if (!selected) return null
   return (
     <div className="flex min-w-0 items-center gap-1">
       <DropdownMenu>

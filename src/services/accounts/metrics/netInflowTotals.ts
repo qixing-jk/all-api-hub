@@ -6,7 +6,10 @@ import {
   type BalancePosition,
 } from "~/services/amounts/balance"
 import { sumDecimals } from "~/services/amounts/decimal"
-import { FINANCIAL_COVERAGE } from "~/services/amounts/financialConstants"
+import {
+  ASSET_KINDS,
+  FINANCIAL_COVERAGE,
+} from "~/services/amounts/financialConstants"
 import {
   NET_INFLOW_MAX_CLOCK_SKEW_MS,
   NET_INFLOW_REASONS,
@@ -132,10 +135,15 @@ export function buildNetInflowTotals(
       wallets.set(walletKey, entries)
     }
   }
+  const accepted: NetInflowContribution[] = []
   for (const entries of wallets.values()) {
-    const first = entries.reduce((latest, entry) =>
-      entry.estimate.window.end > latest.estimate.window.end ? entry : latest,
+    entries.sort(
+      (a, b) =>
+        b.estimate.window.end - a.estimate.window.end ||
+        a.accountId.localeCompare(b.accountId) ||
+        a.seriesKey.localeCompare(b.seriesKey),
     )
+    const first = entries[0]!
     const signature = (entry: NetInflowContribution) =>
       JSON.stringify([
         // Restricted views of one wallet do not prove independently additive funds.
@@ -174,7 +182,22 @@ export function buildNetInflowTotals(
           reason: NET_INFLOW_EXCLUSION_REASONS.DuplicateWallet,
         })),
     )
-    const result = first.estimate
+    accepted.push(first)
+  }
+  // The tolerance can overlap without being transitive. Give first-fit a stable order.
+  accepted.sort(
+    ({ estimate: a }, { estimate: b }) =>
+      Number(b.amount.asset.kind === ASSET_KINDS.Currency) -
+        Number(a.amount.asset.kind === ASSET_KINDS.Currency) ||
+      assetIdentity(a.amount.asset).localeCompare(
+        assetIdentity(b.amount.asset),
+      ) ||
+      a.window.timeZone.localeCompare(b.window.timeZone) ||
+      a.window.start - b.window.start ||
+      a.window.end - b.window.end,
+  )
+  for (const contribution of accepted) {
+    const result = contribution.estimate
     const asset = assetIdentity(result.amount.asset)
     const group = [...groups.values()].find(
       (group) =>
@@ -185,7 +208,7 @@ export function buildNetInflowTotals(
     )
     if (group) {
       variedWindows ||= groupKey(result) !== group.key
-      group.contributions.push(first)
+      group.contributions.push(contribution)
       group.window = {
         ...group.window,
         start: Math.min(group.window.start, result.window.start),
@@ -197,7 +220,7 @@ export function buildNetInflowTotals(
         key,
         amount: result.amount,
         window: result.window,
-        contributions: [first],
+        contributions: [contribution],
       })
     }
   }

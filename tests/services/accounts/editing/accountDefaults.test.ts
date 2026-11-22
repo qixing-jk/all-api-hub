@@ -940,18 +940,46 @@ describe("accountDefaults", () => {
       "preserves the reported snapshot when manual balance is cleared (replacement=%s)",
       (replacement) => {
         const account = createSiteAccount({ manualBalanceUsd: "2" })
-        const reported = getAccountBalanceSnapshots(account).reported
+        const scope = accountBalanceScope({
+          baseUrl: account.site_url,
+          accountId: account.id,
+        })
+        const wallet = (value: string, observedAt: number) =>
+          accountBalanceSnapshot(
+            scope,
+            [
+              balancePosition({
+                id: "wallet",
+                scope,
+                value,
+                observedAt,
+                asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+                source: {
+                  adapter: "fixture",
+                  operation: "balance",
+                  contractVersion: "1",
+                  kind: EVIDENCE_KINDS.Reported,
+                },
+              }),
+            ],
+            observedAt,
+            FINANCIAL_COVERAGE.Complete,
+          )
+        const reported = wallet("10", 100)
+        const next = wallet("20", 200)
         account.account_info.balance = reported
         const updated = applySiteAccountUpdates({
           account,
           updates: {
             manualBalanceUsd: "",
-            ...(replacement ? { account_info: { balance: reported } } : {}),
+            ...(replacement ? { account_info: { balance: next } } : {}),
           },
           now: 1000,
           userTimestampMode: AccountUpdateUserTimestampMode.Touch,
         })
-        expect(updated.account_info.balance).toEqual(reported)
+        expect(updated.account_info.balance).toEqual(
+          replacement ? next : reported,
+        )
         expect(getAccountBalanceSnapshots(updated).manual).toBeUndefined()
         expect(updated.account_info).not.toHaveProperty("quota")
       },

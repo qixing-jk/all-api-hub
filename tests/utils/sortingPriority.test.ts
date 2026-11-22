@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   DATA_TYPE_BALANCE,
@@ -101,6 +101,8 @@ function balanceSite(
 }
 
 describe("createDynamicSortComparator", () => {
+  beforeEach(() => vi.setSystemTime(new Date(2026, 10, 20, 12)))
+  afterEach(() => vi.useRealTimers())
   it.each(["asc", "desc"] as const)(
     "orders accepted decimal boundary balances across currencies without intermediate overflow in %s order",
     (order) => {
@@ -206,11 +208,12 @@ describe("createDynamicSortComparator", () => {
   it("sorts the original primary cashflow rather than a secondary asset selected by the reference currency", () => {
     const sites = [
       { id: "a", usd: "9", cny: "1" },
-      { id: "b", usd: "1", cny: "2" },
+      { id: "b", usd: "1", cny: "70" },
     ].map(({ id, usd, cny }) =>
       buildDisplaySiteData({
         id,
-        name: id,
+        name: id === "a" ? "Zulu" : "Alpha",
+        exchangeRate: 7,
         settledConsumption: [
           buildFinancialPeriodFact({ accountId: id, value: usd }),
           buildFinancialPeriodFact({
@@ -745,7 +748,8 @@ describe("createDynamicSortComparator", () => {
     (metric) => {
       const sites = [
         { id: "a", usd: "9", cny: "1" },
-        { id: "b", usd: "1", cny: "2" },
+        { id: "b", usd: "1", cny: "70" },
+        { id: "c", usd: "3", cny: "10" },
       ].map(({ id, usd, cny }) => {
         const facts = [
           buildFinancialPeriodFact({ accountId: id, value: usd }),
@@ -758,6 +762,7 @@ describe("createDynamicSortComparator", () => {
         return buildDisplaySiteData({
           id,
           name: id,
+          exchangeRate: 7,
           settledConsumption: facts,
           reportedIncome: facts.map(({ settlement: _settlement, ...fact }) => ({
             ...fact,
@@ -771,14 +776,14 @@ describe("createDynamicSortComparator", () => {
             createDynamicSortComparator(config(), null, metric, "USD", "asc"),
           )
           .map(({ id }) => id),
-      ).toEqual(["b", "a"])
+      ).toEqual(["c", "a", "b"])
       expect(
         [...sites]
           .sort(
             createDynamicSortComparator(config(), null, metric, "CNY", "asc"),
           )
           .map(({ id }) => id),
-      ).toEqual(["b", "a"])
+      ).toEqual(["c", "a", "b"])
     },
   )
   it.each([DATA_TYPE_CONSUMPTION, DATA_TYPE_INCOME] as const)(
@@ -901,40 +906,6 @@ describe("createDynamicSortComparator", () => {
       )
     },
   )
-  it.each<SortOrder>(["asc", "desc"])(
-    "keeps native allowances after comparable balances in %s order",
-    (order) => {
-      const accounts = [
-        buildDisplaySiteData({
-          id: "native",
-          balance: { USD: 5, CNY: 35 },
-          nativeBalance: {
-            unit: CURRENCIES.USD,
-            total: 100,
-            permanent: 5,
-            daily: 95,
-          },
-        }),
-        balanceSite("low", "1"),
-        balanceSite("high", "10"),
-      ]
-      accounts.sort(
-        createDynamicSortComparator(
-          config(),
-          null,
-          DATA_TYPE_BALANCE,
-          CURRENCIES.USD,
-          order,
-          {},
-          [],
-        ),
-      )
-      expect(accounts.map(({ id }) => id)).toEqual(
-        order === "asc" ? ["low", "high", "native"] : ["high", "low", "native"],
-      )
-    },
-  )
-
   it("groups pinned, normal, and disabled accounts when no context boost applies", () => {
     const accounts = [
       buildDisplaySiteData({

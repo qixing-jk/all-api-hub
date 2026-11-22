@@ -157,10 +157,10 @@ test("native quota balances match monetary balance typography and control size",
   await waitForExtensionRoot(page)
   const money = page
     .getByTestId(getAccountManagementListItemTestId("font-money"))
-    .getByRole("button", { name: "Click to refresh balance", exact: true })
+    .getByRole("button", { name: /\$22\.00/ })
   const token = page
     .getByTestId(getAccountManagementListItemTestId("font-token"))
-    .getByRole("button", { name: "22 M Token", exact: true })
+    .getByRole("button", { name: /22 M Token/ })
   await expect(money).toContainText("$22.00")
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 })

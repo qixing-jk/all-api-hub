@@ -4,16 +4,23 @@ import { Storage } from "@plasmohq/storage"
 
 import { QUOTA_PER_USD } from "~/constants/money"
 import { accountAllowanceSnapshotSchema } from "~/services/accounts/allowances"
+import { assetIdentity } from "~/services/amounts/assets"
 import {
   balanceSnapshotSchema,
+  usageScopeKey,
   usageScopeSchema,
 } from "~/services/amounts/balance"
-import { FINANCIAL_SUBJECT_KINDS } from "~/services/amounts/financialConstants"
+import {
+  FINANCIAL_SETTLEMENT_STATUSES,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
 import { financialIncomeFactSchema } from "~/services/amounts/income"
 import {
   financialConsumptionFactSchema,
   isCumulativeConsumption,
   reportedUsageCostSchema,
+  type FinancialConsumptionFact,
 } from "~/services/amounts/usage"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
@@ -37,6 +44,11 @@ import {
   getFinancialSeriesKey,
   getFinancialSnapshotCapturedAt,
 } from "./identity"
+import {
+  getSoleAccountBalance,
+  isConsumptionApplicableToBalance,
+  NET_INFLOW_MAX_CLOCK_SKEW_MS,
+} from "./netInflow"
 
 const logger = createLogger("DailyBalanceHistoryStorage")
 
@@ -242,14 +254,72 @@ function sanitizeStore(value: unknown): DailyBalanceHistoryStore {
   }
 }
 
-/**
- * Prunes expired entries from the store in place.
- */
+/** Find eligible recorded baselines per billing boundary and independent balance series. */
+function getBillingBaselines(entries: FinancialHistorySnapshot[]) {
+  const windows = new Map<number, Map<string, FinancialConsumptionFact>>()
+  const bucketFor = (at: number) =>
+    Math.floor(at / NET_INFLOW_MAX_CLOCK_SKEW_MS)
+  for (const { settledConsumption } of entries) {
+    for (const fact of settledConsumption ?? []) {
+      if (
+        !isCumulativeConsumption(fact) ||
+        fact.settlement !== FINANCIAL_SETTLEMENT_STATUSES.Settled ||
+        fact.amount.status !== OBSERVATION_STATUSES.Known
+      )
+        continue
+      const bucket = bucketFor(fact.window.start)
+      const facts = windows.get(bucket) ?? new Map()
+      facts.set(
+        JSON.stringify([
+          fact.window.start,
+          assetIdentity(fact.asset),
+          usageScopeKey(fact.scope),
+          fact.amount.source.adapter,
+          fact.amount.source.contractVersion,
+        ]),
+        fact,
+      )
+      windows.set(bucket, facts)
+    }
+  }
+  const closest = new Map<
+    string,
+    { distance: number; entry: FinancialHistorySnapshot }
+  >()
+  if (windows.size === 0) return new Set<FinancialHistorySnapshot>()
+  for (const entry of entries) {
+    const positions = entry.balance?.positions ?? []
+    const sole = getSoleAccountBalance(positions)
+    for (const position of positions) {
+      if (position.amount.status !== OBSERVATION_STATUSES.Known) continue
+      const at = position.amount.observedAt
+      const bucket = bucketFor(at)
+      for (const candidate of [bucket - 1, bucket, bucket + 1]) {
+        for (const [id, fact] of windows.get(candidate) ?? []) {
+          const distance = Math.abs(at - fact.window.start)
+          if (
+            distance > NET_INFLOW_MAX_CLOCK_SKEW_MS ||
+            !isConsumptionApplicableToBalance(position, fact, position === sole)
+          )
+            continue
+          const key = JSON.stringify([id, getFinancialSeriesKey(position)])
+          const previous = closest.get(key)
+          if (!previous || distance < previous.distance)
+            closest.set(key, { distance, entry })
+        }
+      }
+    }
+  }
+  return new Set(Array.from(closest.values(), ({ entry }) => entry))
+}
+
+/** Prunes expired observations and compacts equivalent intraday receipts. */
 function compactHistory(
   entries: FinancialHistorySnapshot[],
   dayKeyFor: (unixSeconds: number) => string,
   cutoff: string,
 ) {
+  const baselines = getBillingBaselines(entries)
   const output: FinancialHistorySnapshot[] = []
   let signature: string | undefined
   let runLength = 0
@@ -316,7 +386,8 @@ function compactHistory(
     ])
     runLength = shape === signature ? runLength + 1 : 1
     signature = shape
-    if (runLength > 2) output[output.length - 1] = entry
+    if (runLength > 2 && !baselines.has(output[output.length - 1]!))
+      output[output.length - 1] = entry
     else output.push(entry)
   }
   return output
@@ -401,19 +472,19 @@ class DailyBalanceHistoryStorage {
   }): Promise<boolean> {
     try {
       const snapshot = parseFinancialSnapshot(params.snapshot, params.accountId)
-      await this.updateStore((store) => {
+      const signature = (entry: FinancialHistorySnapshot) =>
+        JSON.stringify([
+          entry.generation,
+          entry.balance,
+          entry.allowances,
+          entry.settledConsumption,
+          entry.reportedDayCosts,
+          entry.reportedIncome,
+        ])
+      const snapshotSignature = signature(snapshot)
+      const updated = await this.updateStore((store) => {
         const byAccount = (store.financialSnapshotsByAccountId ??= {})
         const entries = (byAccount[params.accountId] ??= [])
-        const signature = (entry: FinancialHistorySnapshot) =>
-          JSON.stringify([
-            entry.generation,
-            entry.balance,
-            entry.allowances,
-            entry.settledConsumption,
-            entry.reportedDayCosts,
-            entry.reportedIncome,
-          ])
-        const snapshotSignature = signature(snapshot)
         if (
           entries.some(
             (entry) =>
@@ -462,7 +533,11 @@ class DailyBalanceHistoryStorage {
           params.timeZone,
         )
       })
-      return true
+      return (
+        updated.financialSnapshotsByAccountId?.[params.accountId]?.some(
+          (entry) => signature(entry) === snapshotSignature,
+        ) ?? false
+      )
     } catch (error) {
       logger.error("Failed to append financial history", {
         error: getErrorMessage(error),

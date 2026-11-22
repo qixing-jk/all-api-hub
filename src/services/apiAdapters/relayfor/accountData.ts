@@ -1,13 +1,43 @@
+import { CURRENCIES } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import {
+  accountAllowanceObservation,
+  ALLOWANCE_IDENTITY_KINDS,
+  parseAllowanceInstant,
+} from "~/services/accounts/allowances"
+import {
+  accountBalanceObservation,
+  accountBalanceScope,
+} from "~/services/accounts/balanceSnapshot"
+import { balancePosition } from "~/services/amounts/balance"
+import { budgetConstraint } from "~/services/amounts/budgets"
+import { normalizeDecimalUnits } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BALANCE_LABEL_KEYS,
+  BALANCE_RELATIONS,
+  BALANCE_ROLES,
+  BALANCE_VALIDITY_KINDS,
+  BUDGET_LIMIT_STATES,
+  EVIDENCE_KINDS,
+  FINANCIAL_ENUMERATION,
+  SCOPE_SELECTION_KINDS,
+  WALLET_BALANCE_COLLECTION_KEY,
+} from "~/services/amounts/financialConstants"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
   fetchRelayForOverview,
   fetchRelayForTimedQuotas,
 } from "~/services/apiService/relayfor"
-import { quotaToUsd } from "~/services/apiService/relayfor/constants"
+import {
+  quotaToUsd,
+  RELAYFOR_ENDPOINTS,
+  RELAYFOR_QUOTA_PER_USD,
+} from "~/services/apiService/relayfor/constants"
 import { isRecord } from "~/services/apiService/relayfor/parsing"
 import type {
   AccountBalanceComponent,
@@ -53,20 +83,18 @@ export async function fetchRelayForAccountData(
   const components: AccountBalanceComponent[] = [
     { kind: "permanent", amount: quotaToUsd(overview.user.quota) },
     { kind: "timed", amount: quotaToUsd(overview.timed_quota ?? 0) },
-    ...subscriptions.map(
-      (item): AccountBalanceComponent => ({
-        kind: "subscription",
-        name: item.plan_name ?? item.plan_code,
-        amount: item.unlimited_quota
-          ? 0
-          : quotaToUsd(Math.max(0, item.quota_remaining ?? 0)),
-        unlimited: item.unlimited_quota,
-        expiresAt: item.expires_at,
-        resetAt: item.next_reset_at,
-        scope: item.quota_group || undefined,
-        unlockedModels: Object.keys(item.model_rules ?? {}),
-      }),
-    ),
+    ...subscriptions.map((item): AccountBalanceComponent => ({
+      kind: "subscription",
+      name: item.plan_name ?? item.plan_code,
+      amount: item.unlimited_quota
+        ? 0
+        : quotaToUsd(Math.max(0, item.quota_remaining ?? 0)),
+      unlimited: item.unlimited_quota,
+      expiresAt: item.expires_at,
+      resetAt: item.next_reset_at,
+      scope: item.quota_group || undefined,
+      unlockedModels: Object.keys(item.model_rules ?? {}),
+    })),
     ...(overview.group_quotas ?? []).flatMap(
       (item): AccountBalanceComponent[] => {
         if (
@@ -140,7 +168,168 @@ export async function fetchRelayForAccountData(
     income: UNSUPPORTED_INCOME,
   }
 
+  const scope = accountBalanceScope(request, {
+    walletId: String(overview.user.id),
+  })
+  const asset = { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD } as const
+  const source = {
+    adapter: SITE_TYPES.RELAYFOR,
+    operation: RELAYFOR_ENDPOINTS.overview,
+    contractVersion: "usd-quota-500000/v1",
+    kind: EVIDENCE_KINDS.Reported,
+  } as const
+  const plansSource = {
+    ...source,
+    operation: `${source.operation}:active_subscriptions`,
+  }
+  const collectionKey = "active-subscriptions"
+  const plans = subscriptions.map((item, index) => {
+    const label = item.plan_name ?? item.plan_code
+    const expiresAt = parseAllowanceInstant(item.expires_at)
+    const models = Object.keys(item.model_rules ?? {})
+    return {
+      id: `plan:${index}`,
+      collectionKey,
+      label,
+      identityKind: ALLOWANCE_IDENTITY_KINDS.ObservationOnly,
+      reportedTiming: {
+        expiresAt: item.expires_at,
+        startsAt: item.starts_at,
+        resetsAt: item.next_reset_at,
+      },
+      validity:
+        expiresAt === undefined
+          ? ({ kind: BALANCE_VALIDITY_KINDS.Unknown } as const)
+          : ({ kind: BALANCE_VALIDITY_KINDS.Expires, at: expiresAt } as const),
+      constraint: budgetConstraint({
+        scope: {
+          ...scope,
+          groups: item.quota_group
+            ? {
+                kind: SCOPE_SELECTION_KINDS.Restricted,
+                ids: [item.quota_group],
+              }
+            : scope.groups,
+          models: models.length
+            ? { kind: SCOPE_SELECTION_KINDS.Restricted, ids: models }
+            : scope.models,
+        },
+        asset,
+        source: plansSource,
+        observedAt: now,
+        limitState: item.unlimited_quota
+          ? BUDGET_LIMIT_STATES.Unlimited
+          : BUDGET_LIMIT_STATES.Finite,
+        limit: normalizeDecimalUnits(item.quota_total, RELAYFOR_QUOTA_PER_USD),
+        remaining: normalizeDecimalUnits(
+          item.quota_remaining,
+          RELAYFOR_QUOTA_PER_USD,
+        ),
+        enabled: true,
+      }),
+    }
+  })
   return {
+    ...accountBalanceObservation(
+      scope,
+      [
+        balancePosition({
+          id: "wallet",
+          collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+          scope,
+          asset,
+          source,
+          observedAt: now,
+          value: normalizeDecimalUnits(
+            overview.user.quota,
+            RELAYFOR_QUOTA_PER_USD,
+          ),
+        }),
+        ...(overview.timed_quota === undefined
+          ? []
+          : [
+              balancePosition({
+                id: "timed-quota",
+                collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+                scope,
+                asset,
+                source,
+                observedAt: now,
+                value: normalizeDecimalUnits(
+                  overview.timed_quota,
+                  RELAYFOR_QUOTA_PER_USD,
+                ),
+                labelKey: BALANCE_LABEL_KEYS.Timed,
+              }),
+            ]),
+        ...(timedDetails ?? []).map((detail, index) => {
+          const expiry = parseAllowanceInstant(detail.expiresAt)
+          return balancePosition({
+            id: `timed-grant:${index}`,
+            parentId: "timed-quota",
+            relation: BALANCE_RELATIONS.Component,
+            collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+            scope,
+            asset,
+            source,
+            observedAt: now,
+            value: detail.amount,
+            label: detail.name,
+            reportedTiming: { expiresAt: detail.expiresAt },
+            ...(expiry === undefined
+              ? {}
+              : {
+                  validity: {
+                    kind: BALANCE_VALIDITY_KINDS.Expires,
+                    at: expiry,
+                  },
+                }),
+          })
+        }),
+        ...components
+          .filter((component) => component.kind === "group")
+          .map((component, index) =>
+            balancePosition({
+              id: `group:${index}`,
+              role: BALANCE_ROLES.Allowance,
+              collectionKey: WALLET_BALANCE_COLLECTION_KEY,
+              scope: {
+                ...scope,
+                groups: component.scope
+                  ? {
+                      kind: SCOPE_SELECTION_KINDS.Restricted,
+                      ids: [component.scope],
+                    }
+                  : scope.groups,
+              },
+              asset,
+              source,
+              observedAt: now,
+              value: component.amount,
+              label: component.scope,
+            }),
+          ),
+      ],
+      now,
+      timedDetailsUnavailable
+        ? FINANCIAL_ENUMERATION.Partial
+        : FINANCIAL_ENUMERATION.Complete,
+    ),
+    ...accountAllowanceObservation(
+      scope,
+      [
+        {
+          source: plansSource,
+          collectionKey,
+          enumeration:
+            overview.active_subscriptions === undefined
+              ? FINANCIAL_ENUMERATION.Partial
+              : FINANCIAL_ENUMERATION.Complete,
+          entries: plans,
+        },
+      ],
+      now,
+    ),
     quota: overview.user.quota,
     nativeBalance: {
       unit: "USD",

@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import type { Asset } from "~/services/amounts/assets"
+import { normalizeDecimalUnits } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
   OBSERVATION_STATUSES,
@@ -23,7 +24,9 @@ export function getFinancialHistoryPresentation(
 ) {
   const unitLabel = (asset: Asset) =>
     asset.kind === ASSET_KINDS.Quota
-      ? asset.displayLabel
+      ? normalizeDecimalUnits("1", asset.displayScale) === undefined
+        ? asset.label
+        : asset.displayLabel
       : getAssetLabel(asset, t("native.unknownAsset"))
   const displayValue = (asset: Asset, value: string) =>
     asset.kind === ASSET_KINDS.Unknown

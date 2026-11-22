@@ -167,6 +167,7 @@ export function accountShareBalanceSummary(
             keys: p.scope.keys.kind,
             models: p.scope.models.kind,
             groups: p.scope.groups.kind,
+            ...(p.scope.routes ? { routes: p.scope.routes.kind } : {}),
           },
           validity:
             p.validity.kind === BALANCE_VALIDITY_KINDS.Expires
@@ -339,7 +340,8 @@ export function shareBalanceLines(
             (amount.asset.code === CURRENCIES.USD ||
               amount.asset.code === CURRENCIES.CNY) &&
             currencyType !== undefined &&
-            amount.asset.code !== currencyType
+            amount.asset.code !== currencyType &&
+            value !== formatBalanceAmount(amount, locale)
             ? `${value} · ${formatBalanceAmount(amount, locale)}`
             : value
         }) ?? [])

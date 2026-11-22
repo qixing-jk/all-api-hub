@@ -35,6 +35,7 @@ for (const width of [320, 390, 1100]) {
       const completionCopy = (language === "en" ? enKeys : zhKeys).provisioning
         .actions
       await page.setViewportSize({ width, height: 850 })
+      await page.emulateMedia({ reducedMotion: "reduce" })
       installExtensionPageGuards(page)
       await forceExtensionLanguage(page, language)
       await stubLlmMetadataIndex(context)
@@ -70,6 +71,10 @@ for (const width of [320, 390, 1100]) {
       )
       await more.click()
       const root = page.getByRole("menu")
+      const minimumSubmenuWidth = await page.evaluate(
+        () =>
+          12 * parseFloat(getComputedStyle(document.documentElement).fontSize),
+      )
       // Completion adds one grouped entry, rather than two top-level scope actions.
       expect(await root.getByRole("menuitem").count()).toBe(13)
       await expect(
@@ -142,7 +147,7 @@ for (const width of [320, 390, 1100]) {
       await expect(async () => {
         const box = await submenu.boundingBox()
         expect(box).not.toBeNull()
-        expect(box!.width).toBeGreaterThanOrEqual(192)
+        expect(box!.width).toBeGreaterThanOrEqual(minimumSubmenuWidth - 1)
         expect(box!.x).toBeGreaterThanOrEqual(0)
         expect(box!.x + box!.width).toBeLessThanOrEqual(width)
       }).toPass()
@@ -152,9 +157,12 @@ for (const width of [320, 390, 1100]) {
       })
       await page.keyboard.press("ArrowLeft")
       await expect(relatedPages).toBeFocused()
-      await page
-        .getByRole("menuitem", { name: copy.share, exact: true })
-        .click()
+      const share = root.getByRole("menuitem", {
+        name: copy.share,
+        exact: true,
+      })
+      await share.focus()
+      await share.press("ArrowRight")
       const shareMenu = page.getByRole("menu", {
         name: copy.share,
         exact: true,
@@ -168,7 +176,7 @@ for (const width of [320, 390, 1100]) {
       await expect(async () => {
         const box = await shareMenu.boundingBox()
         expect(box).not.toBeNull()
-        expect(box!.width).toBeGreaterThanOrEqual(192)
+        expect(box!.width).toBeGreaterThanOrEqual(minimumSubmenuWidth - 1)
         expect(box!.x).toBeGreaterThanOrEqual(0)
         expect(box!.x + box!.width).toBeLessThanOrEqual(width)
       }).toPass()

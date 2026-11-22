@@ -5,12 +5,13 @@ import {
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { readStoredAccounts } from "~~/e2e/scenarios/accountManualAdd"
 import {
   forceExtensionLanguage,
+  getStoredAccountUsdObservation,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
-import { getAccounts } from "~~/scripts/cdp/sandbox.mjs"
 import {
   assertAccountDetectionOutcome,
   closeAccountDraft,
@@ -136,7 +137,7 @@ for (const mismatchedRefresh of [false, true]) {
       guidance: "Complete NanoGPT credentials",
       timeoutMs: 60000,
     })
-    expect(await getAccounts(worker)).toHaveLength(0)
+    expect(await readStoredAccounts(worker)).toHaveLength(0)
     expect(calls).toHaveLength(0)
     await expect(
       dialog.getByText("Complete NanoGPT credentials", { exact: true }),
@@ -167,7 +168,7 @@ for (const mismatchedRefresh of [false, true]) {
         ),
       ).toBeVisible()
       await expect(dialog).toBeVisible()
-      expect(await getAccounts(worker)).toHaveLength(0)
+      expect(await readStoredAccounts(worker)).toHaveLength(0)
       await expect(dialog.getByTestId(accounts.userIdInput)).toHaveValue(
         ADDRESS,
       )
@@ -179,7 +180,7 @@ for (const mismatchedRefresh of [false, true]) {
     await expect(dialog.getByTestId(accounts.confirmAddButton)).toBeEnabled()
     await dialog.getByTestId(accounts.confirmAddButton).click()
     await dialog.waitFor({ state: "hidden", timeout: 60000 })
-    const saved = (await getAccounts(worker))[0]
+    const saved = (await readStoredAccounts(worker))[0]
     if (!saved) throw new Error("No saved NanoGPT account")
     await fs.writeFile(
       testInfo.outputPath("saved-state-and-protocol.json"),
@@ -202,9 +203,11 @@ for (const mismatchedRefresh of [false, true]) {
     await row.getByTestId(accounts.rowMoreActionsButton).click()
     await page.getByTestId(accounts.rowRefreshMenuItem).click()
     await expect
-      .poll(async () => (await getAccounts(worker))[0]?.account_info.quota)
-      .toBe(6_250_000)
-    const verified = (await getAccounts(worker))[0]
+      .poll(async () =>
+        getStoredAccountUsdObservation((await readStoredAccounts(worker))[0]),
+      )
+      .toMatchObject({ status: "known", value: "12.5" })
+    const verified = (await readStoredAccounts(worker))[0]
     expect(verified).toMatchObject({
       health: { status: "healthy" },
       account_info: {
@@ -223,21 +226,27 @@ for (const mismatchedRefresh of [false, true]) {
     await page.getByTestId(accounts.rowRefreshMenuItem).click()
     if (mismatchedRefresh) {
       await expect
-        .poll(async () => (await getAccounts(worker))[0]?.health.status)
+        .poll(async () => (await readStoredAccounts(worker))[0]?.health.status)
         .not.toBe("healthy")
-      const current = (await getAccounts(worker))[0]
+      const current = (await readStoredAccounts(worker))[0]
       if (!current) throw new Error("Saved account disappeared during refresh")
-      expect(current.account_info.quota).toBe(6_250_000)
+      expect(getStoredAccountUsdObservation(current)).toMatchObject({
+        value: "12.5",
+      })
       expect(current.account_info.id).toBe(ADDRESS)
       expect(current.last_sync_time).toBeGreaterThanOrEqual(
         saved.last_sync_time,
       )
     } else {
       await expect
-        .poll(async () => (await getAccounts(worker))[0]?.account_info.quota)
-        .toBe(0)
+        .poll(async () =>
+          getStoredAccountUsdObservation((await readStoredAccounts(worker))[0]),
+        )
+        .toMatchObject({ status: "known", value: "0" })
       await expect(row).toContainText("0.00")
-      expect((await getAccounts(worker))[0]?.health.status).toBe("healthy")
+      expect((await readStoredAccounts(worker))[0]?.health.status).toBe(
+        "healthy",
+      )
     }
     await row.screenshot({
       path: testInfo.outputPath("02-refreshed-account.png"),

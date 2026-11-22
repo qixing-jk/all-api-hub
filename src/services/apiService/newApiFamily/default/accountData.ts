@@ -355,6 +355,7 @@ const buildTodayLogQueryParams = (
   }
 
   for (const [key, value] of Object.entries(resolvedConfig.extraParams)) {
+    if (key === "start_timestamp" || key === "end_timestamp") continue
     searchParams.set(key, value)
   }
 

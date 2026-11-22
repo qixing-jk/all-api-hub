@@ -100,6 +100,16 @@ export function readBackupAccountConfig(
     Array.isArray(data.data?.accounts)
   )
     raw = { ...raw, accounts: data.data.accounts }
+  // Selective WebDAV uploads can contain bookmarks without the accounts list.
+  if (
+    raw &&
+    typeof raw === "object" &&
+    !Array.isArray(raw) &&
+    !("accounts" in raw) &&
+    "bookmarks" in raw &&
+    Array.isArray(raw.bookmarks)
+  )
+    raw = { ...raw, accounts: [] }
   const config = normalizeAccountStorageConfigForRead(
     (Array.isArray(raw) ? { accounts: raw } : raw) as AccountStorageConfig,
   )
@@ -356,19 +366,14 @@ function normalizeV1BackupForMerge(
   tagStore: TagStore | null
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
-  readBackupAccountConfig(data)
+  const validated = readBackupAccountConfig(data)
   const accountsField: any = data.accounts
   const accountsConfig = Array.isArray(accountsField)
     ? { accounts: accountsField }
-    : accountsField || {}
-  const legacyAccounts = (data.data as any)?.accounts
+    : accountsField || data.data?.accounts || {}
   const legacyBookmarks = (data.data as any)?.bookmarks
 
-  const accounts = Array.isArray(accountsConfig.accounts)
-    ? canonicalizeLegacyAccountConfigs(accountsConfig.accounts)
-    : Array.isArray(legacyAccounts)
-      ? canonicalizeLegacyAccountConfigs(legacyAccounts)
-      : []
+  const accounts = canonicalizeLegacyAccountConfigs(validated?.accounts ?? [])
 
   const bookmarks = Array.isArray(accountsConfig.bookmarks)
     ? accountsConfig.bookmarks

@@ -26,6 +26,10 @@ import {
 } from "~/services/accounts/accountPersistence/shared"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import {
+  accountBalanceScope,
+  accountBalanceSnapshot,
+} from "~/services/accounts/balanceSnapshot"
 import { withManualAccountDataFetchTimeout } from "~/services/accounts/editing/accountCreationTimeout"
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
 import { readLegacyAdapterFinancialPatch } from "~/services/accounts/refresh/accountRefreshUpdate"
@@ -188,6 +192,11 @@ export async function validateAndSaveAccount(
     accountIdentity,
   })
   const { fields, requestAccountIdentity, requestBaseUrl } = persistenceContext
+  const emptyBalance = accountBalanceSnapshot(
+    accountBalanceScope({ baseUrl: requestBaseUrl }),
+    [],
+    Date.now(),
+  )
 
   if (options.deferDataRefresh === true) {
     const accountData: Omit<
@@ -201,6 +210,7 @@ export async function validateAndSaveAccount(
       account_info: {
         ...fields.account_info,
         ...EMPTY_ACCOUNT_INFO_METRICS,
+        balance: emptyBalance,
         todayStatsAvailability:
           productProfile.metrics.deferredTodayStatsAvailability,
       },
@@ -386,6 +396,7 @@ export async function validateAndSaveAccount(
       account_info: {
         ...fields.account_info,
         ...EMPTY_ACCOUNT_INFO_METRICS,
+        balance: emptyBalance,
         todayStatsAvailability:
           productProfile.metrics.deferredTodayStatsAvailability,
       },

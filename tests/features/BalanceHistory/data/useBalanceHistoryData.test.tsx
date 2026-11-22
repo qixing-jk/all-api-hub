@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
   dismiss: vi.fn(),
 }))
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
-  accountQueries: { getEnabledAccounts: mocks.accounts },
+  accountQueries: { getAllAccountsOrThrow: mocks.accounts },
 }))
 vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
   dailyBalanceHistoryStorage: { getStore: mocks.store },

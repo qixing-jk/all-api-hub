@@ -54,8 +54,7 @@ const cloneUsageAggregation = (
   today_quota_consumption: aggregation.today_quota_consumption,
   nativeQuotaConsumption:
     aggregation.nativeQuotaConsumption ??
-    parseDecimal(aggregation.today_quota_consumption) ??
-    "0",
+    parseDecimal(aggregation.today_quota_consumption),
   today_prompt_tokens: aggregation.today_prompt_tokens,
   today_completion_tokens: aggregation.today_completion_tokens,
   coverage: {
@@ -139,12 +138,21 @@ export const aggregateUsageData = (
     if (quota === undefined) result.coverage.consumption.invalidCount += 1
     else {
       try {
-        result.nativeQuotaConsumption = addDecimal(
-          result.nativeQuotaConsumption ?? "0",
-          quota,
-        )
-        result.today_quota_consumption = Number(result.nativeQuotaConsumption)
-        result.coverage.consumption.validCount += 1
+        const subtotal =
+          result.nativeQuotaConsumption === undefined
+            ? undefined
+            : addDecimal(result.nativeQuotaConsumption, quota)
+        const total =
+          subtotal === undefined
+            ? addFiniteValue(result.today_quota_consumption, Number(quota))
+            : Number(subtotal)
+        if (total === null) {
+          result.coverage.consumption.invalidCount += 1
+        } else {
+          result.nativeQuotaConsumption = subtotal
+          result.today_quota_consumption = total
+          result.coverage.consumption.validCount += 1
+        }
       } catch {
         result.coverage.consumption.invalidCount += 1
       }

@@ -207,7 +207,7 @@ export function formatAllowanceLabel(
   t: TFunction,
 ): string {
   return [
-    entry.label ?? t("account:financial.allowance"),
+    entry.label?.trim() || t("account:financial.allowance"),
     getBudgetPeriodLabel(entry.constraint.window, t),
   ]
     .filter(Boolean)

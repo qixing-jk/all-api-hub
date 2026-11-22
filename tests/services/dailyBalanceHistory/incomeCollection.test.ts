@@ -23,8 +23,8 @@ afterEach(() => {
 it("keeps complete daily income in history after a later source fails, then accepts a newer complete reading", async () => {
   vi.useFakeTimers({ toFake: ["Date"] })
   vi.mocked(browser.permissions.contains).mockResolvedValue(false)
-  const start = Date.UTC(2026, 10, 21)
-  const end = start + 86_400_000
+  const start = new Date(2026, 10, 21).getTime()
+  const end = new Date(2026, 10, 22).getTime()
   vi.setSystemTime(start + 3_600_000)
   let partial = false
   let topupQuota = 5_000_000

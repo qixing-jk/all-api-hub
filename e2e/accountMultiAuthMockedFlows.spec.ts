@@ -146,8 +146,8 @@ test("saves two access-token accounts on the same mocked site", async ({
     page,
     serviceWorker,
     accountIds: accounts.map((account) => account.id),
-    expectedBalances: ["11000", "22000"].map((value) => ({
-      asset: { kind: "quota" },
+    expectedBalances: ["0.022", "0.044"].map((value) => ({
+      asset: { kind: "currency", code: "USD" },
       value,
     })),
   })
@@ -259,8 +259,8 @@ test("grants cookie-auth optional permissions and saves two cookie accounts on t
     page,
     serviceWorker,
     accountIds: accounts.map((account) => account.id),
-    expectedBalances: ["33000", "44000"].map((value) => ({
-      asset: { kind: "quota" },
+    expectedBalances: ["0.066", "0.088"].map((value) => ({
+      asset: { kind: "currency", code: "USD" },
       value,
     })),
   })

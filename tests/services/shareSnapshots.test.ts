@@ -1016,7 +1016,7 @@ describe("shareSnapshots", () => {
     expect(payload.originUrl).toBe("https://example.com")
   })
 
-  it("treats numeric-only legacy input as unknown, including NaN", () => {
+  it("shows finite legacy input as a reference with unknown coverage", () => {
     for (const balance of [0, 123, Number.NaN]) {
       const payload = buildAccountShareSnapshotPayload({
         currencyType: CURRENCIES.USD,
@@ -1030,9 +1030,10 @@ describe("shareSnapshots", () => {
         entries: [],
       })
       expect(generateShareSnapshotCaption(payload)).toContain(
-        "shareSnapshots:financial.unavailable",
+        Number.isFinite(balance)
+          ? "account:financial.lastKnown"
+          : "shareSnapshots:financial.unavailable",
       )
-      expect(generateShareSnapshotCaption(payload)).not.toContain("$0.00")
     }
   })
 
@@ -1372,7 +1373,8 @@ describe("shareSnapshots", () => {
       expect(caption).toContain("All API Hub")
       expect(caption).toContain("Example Site")
       expect(caption).not.toContain("https://")
-      expect(caption).toContain("shareSnapshots:financial.unavailable")
+      expect(caption).toContain("account:financial.lastKnown")
+      expect(caption).toContain("$12.34")
       expect(caption).toContain("shareSnapshots:financial.unknown")
     })
   })

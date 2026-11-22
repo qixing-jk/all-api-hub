@@ -1,9 +1,13 @@
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
 import { getDisplayConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import { assetIdentity } from "~/services/amounts/assets"
-import { isKnownOrStaleObservation } from "~/services/amounts/balance"
+import {
+  isKnownOrStaleObservation,
+  usageScopeKey,
+} from "~/services/amounts/balance"
 import {
   ASSET_KINDS,
+  FINANCIAL_SETTLEMENT_STATUSES,
   FINANCIAL_SUBJECT_KINDS,
   OBSERVATION_STATUSES,
 } from "~/services/amounts/financialConstants"
@@ -21,36 +25,67 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
 } from "~/types/accountTodayStats"
-import { formatLocalDayKey } from "~/utils/core/dayKey"
+import {
+  createUnixDayKeyFormatter,
+  formatLocalDayKey,
+} from "~/utils/core/dayKey"
+
+/** Check that the observed interval begins at the provider's calendar boundary. */
+function isProviderDayWindow({
+  start,
+  end,
+  timeZone,
+}: FinancialConsumptionFact["window"]) {
+  if (end <= start) return false
+  try {
+    const dayKey = createUnixDayKeyFormatter(timeZone)
+    const day = dayKey(start / 1000)
+    return (
+      dayKey((start - 1) / 1000) !== day && dayKey((end - 1) / 1000) === day
+    )
+  } catch {
+    return false
+  }
+}
 
 /** The provider's day can coexist with lifetime usage on the same account. */
-export function getSiteDayUsages(account: {
-  usage?: AccountUsageSummary
-  usageObservations?: AccountUsageSummary[]
-  settledConsumption?: FinancialConsumptionFact[]
-}): AccountUsageSummary[] {
+export function getSiteDayUsages(
+  account: {
+    usage?: AccountUsageSummary
+    usageObservations?: AccountUsageSummary[]
+    settledConsumption?: FinancialConsumptionFact[]
+  },
+  asOf = Date.now(),
+): AccountUsageSummary[] {
   const observations = [account.usage, ...(account.usageObservations ?? [])]
   const facts = account.settledConsumption ?? []
   const accountId =
     facts[0]?.scope.subject.kind === FINANCIAL_SUBJECT_KINDS.Account
       ? (facts[0].scope.subject.accountId ?? "")
       : ""
-  const projected = getDisplayConsumptionProjection([
-    { id: accountId, settledConsumption: facts },
-  ])
+  const projected = getDisplayConsumptionProjection(
+    [{ id: accountId, settledConsumption: facts }],
+    asOf,
+  )
   const seen = new Set<string>()
   return [
     ...observations,
-    ...facts.map((fact): AccountUsageSummary => ({
-      scope: ACCOUNT_USAGE_SCOPES.Today,
-      cost: {
-        asset: fact.asset,
-        amount: fact.amount,
-        scope: fact.scope,
-        window: fact.window,
-        coverage: fact.coverage,
-      },
-    })),
+    ...facts
+      .filter(
+        ({ window, settlement }) =>
+          settlement === FINANCIAL_SETTLEMENT_STATUSES.Settled &&
+          isProviderDayWindow(window),
+      )
+      .map((fact): AccountUsageSummary => ({
+        scope: ACCOUNT_USAGE_SCOPES.Today,
+        cost: {
+          asset: fact.asset,
+          amount: fact.amount,
+          scope: fact.scope,
+          window: fact.window,
+          coverage: fact.coverage,
+        },
+      })),
   ].flatMap((usage) => {
     if (
       !usage ||
@@ -84,6 +119,8 @@ export function getSiteDayUsages(account: {
             assetIdentity(cost.asset),
             cost.amount.value,
             cost.amount.observedAt,
+            cost.scope ? usageScopeKey(cost.scope) : undefined,
+            cost.amount.source,
             cost.window,
             usage.reportedDay,
           ])
@@ -132,7 +169,7 @@ export function getSiteDayReadings(
   account: Parameters<typeof getSiteDayUsages>[0] & { last_sync_time?: number },
   asOf = Date.now(),
 ): SiteDayReading[] {
-  return getSiteDayUsages(account).map((usage) => {
+  return getSiteDayUsages(account, asOf).map((usage) => {
     const amount = usage.cost?.amount
     const at =
       usage.observedAt ??

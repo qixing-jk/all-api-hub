@@ -96,6 +96,7 @@ describe("purpose-specific balance projection", () => {
       100,
     )
     expect(total.convertedCurrencyTotals).toEqual({ USD: "3", CNY: "23" })
+    expect(total.amounts).toHaveLength(2)
     expect(total.amounts).toEqual(
       expect.arrayContaining([
         { asset: { kind: ASSET_KINDS.Currency, code: "USD" }, value: "2" },
@@ -302,9 +303,21 @@ describe("purpose-specific balance projection", () => {
     })
   })
   it("reports overflowing native portfolio totals without turning them into zero or throwing", () => {
-    const a = position("a", "9".repeat(256)),
-      b = position("b", "9".repeat(256))
+    const value = "9".repeat(256)
+    const a = position("a", value),
+      b = position("b", value)
     b.scope = { ...scope, walletId: "other" }
+    for (const entry of [a, b]) {
+      expect(
+        projectBalance(
+          accountBalanceSnapshot(scope, [entry], 100, "complete"),
+          BALANCE_PURPOSES.Prepaid,
+        ),
+      ).toMatchObject({
+        amounts: [{ value, asset: entry.asset }],
+        coverage: "complete",
+      })
+    }
     const snapshot = accountBalanceSnapshot(
       scope,
       [a, b],

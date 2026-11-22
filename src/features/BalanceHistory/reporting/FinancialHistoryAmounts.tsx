@@ -7,6 +7,7 @@ import {
 } from "~/services/amounts/financialConstants"
 import type { FinancialHistorySeries } from "~/services/history/dailyBalanceHistory/selectors"
 import { formatBudgetAmount } from "~/utils/core/budgetPresentation"
+import { formatAssetAmount } from "~/utils/core/money"
 
 import type { getFinancialHistoryPresentation } from "./financialHistoryPresentation"
 
@@ -37,6 +38,11 @@ export function FinancialHistoryAmounts({
               record.allowance.constraint,
               BUDGET_AMOUNT_FIELDS.Remaining,
               t,
+              false,
+              {
+                formatAmount: (amount) =>
+                  formatAssetAmount(amount, i18n.language),
+              },
             )
           : record.value === null
             ? "—"

@@ -17,7 +17,26 @@ it("shows a readable observation range and keeps its timezone and reset separate
       "en-US",
     ),
   ).toEqual([
-    "account:financial.window: 11/20/2026, 12:00:00 AM – 11/20/2026, 1:00:00 AM · UTC",
-    "account:financial.resetsAt: 11/21/2026, 12:00:00 AM · UTC",
+    expect.stringMatching(
+      /account:financial.window: 11\/20\/2026, 12:00:00 AM GMT(?:\+0)? – 11\/20\/2026, 1:00:00 AM GMT(?:\+0)? · UTC/,
+    ),
+    expect.stringMatching(
+      /account:financial.resetsAt: 11\/21\/2026, 12:00:00 AM GMT(?:\+0)? · UTC/,
+    ),
   ])
+})
+
+it("labels the offset at both ends of a daylight-saving transition", () => {
+  const t = ((key: string) => key) as TFunction
+  expect(
+    formatBalanceWindow(
+      {
+        start: Date.parse("2026-11-01T05:30:00Z"),
+        end: Date.parse("2026-11-01T06:30:00Z"),
+        timeZone: "America/New_York",
+      },
+      t,
+      "en-US",
+    ),
+  ).toEqual([expect.stringMatching(/1:30:00 AM GMT-4 – .*1:30:00 AM GMT-5/)])
 })

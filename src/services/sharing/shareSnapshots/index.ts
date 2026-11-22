@@ -6,6 +6,7 @@ import type { getDisplayBalancePortfolio } from "~/services/accounts/metrics/bal
 import { BALANCE_PURPOSES } from "~/services/accounts/metrics/balanceProjection"
 import type { ConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import type { BalanceSnapshot } from "~/services/amounts/balance"
+import { parseDecimal } from "~/services/amounts/decimal"
 import {
   ASSET_KINDS,
   FINANCIAL_COVERAGE,
@@ -137,7 +138,7 @@ const applyCashflow = <TPayload extends ShareSnapshotCashflowPayload>(
 
 const appendCashflowAndAsOf = (
   lines: string[],
-  payload: ShareSnapshotCashflowPayload,
+  payload: ShareSnapshotCashflowPayload & { currencyType: CurrencyType },
   labels: ShareSnapshotOverlayLabels,
   asOfText: string,
   currencyType?: CurrencyType,
@@ -169,13 +170,13 @@ const appendCashflowAndAsOf = (
     lines.push(
       `${labels.today}: ${labels.income} ${formatSignedCurrencyAmount(
         payload.todayIncome,
-        currencyType ?? CURRENCIES.USD,
+        payload.currencyType,
       )} / ${labels.outcome} ${formatSignedCurrencyAmount(
         -payload.todayOutcome,
-        currencyType ?? CURRENCIES.USD,
+        payload.currencyType,
       )} · ${labels.net} ${formatSignedCurrencyAmount(
         payload.todayNet,
-        currencyType ?? CURRENCIES.USD,
+        payload.currencyType,
       )}`,
     )
   }
@@ -191,6 +192,7 @@ export const buildOverviewShareSnapshotPayload = ({
   currencyType,
   currencyDisplay,
   enabledAccountCount,
+  totalBalance,
   portfolio,
   consumption,
   income,
@@ -247,6 +249,7 @@ export const buildOverviewShareSnapshotPayload = ({
   const exportTime = Date.now()
   const safeAsOf = resolveSafeAsOf(asOf, exportTime)
   const seed = resolveSeed(backgroundSeed, createShareSnapshotSeed)
+  const referenceValue = parseDecimal(totalBalance)
 
   const payload: OverviewShareSnapshotPayload = {
     ...(includeTodayCashflow && siteDayUsage?.length
@@ -294,7 +297,14 @@ export const buildOverviewShareSnapshotPayload = ({
             },
           }),
       ...(portfolio?.referenceUsd === undefined
-        ? {}
+        ? !portfolio && referenceValue !== undefined
+          ? {
+              referenceAmount: {
+                asset: { kind: ASSET_KINDS.Currency, code: currencyType },
+                value: referenceValue,
+              },
+            }
+          : {}
         : {
             referenceAmount: {
               asset: {
@@ -347,6 +357,7 @@ export const buildAccountShareSnapshotPayload = ({
   exchangeRate,
   siteName,
   originUrl,
+  balance,
   balanceSnapshot,
   allowances,
   consumption,
@@ -384,6 +395,17 @@ export const buildAccountShareSnapshotPayload = ({
   const safeAsOf = resolveSafeAsOf(asOf, exportTime)
   const seed = resolveSeed(backgroundSeed, createShareSnapshotSeed)
 
+  const balanceSummary = accountShareBalanceSummary(
+    balanceSnapshot,
+    allowances,
+    exportTime,
+  )
+  const referenceValue = parseDecimal(balance)
+  if (!balanceSnapshot && referenceValue !== undefined)
+    balanceSummary.referenceAmount = {
+      asset: { kind: ASSET_KINDS.Currency, code: currencyType },
+      value: referenceValue,
+    }
   const payload: AccountShareSnapshotPayload = {
     ...(includeTodayCashflow && siteDayUsage?.length
       ? {
@@ -406,11 +428,7 @@ export const buildAccountShareSnapshotPayload = ({
     ...(exchangeRate !== undefined ? { exchangeRate } : {}),
     siteName: siteName.trim(),
     originUrl: originUrl ? sanitizeOriginUrl(originUrl) : undefined,
-    balanceSummary: accountShareBalanceSummary(
-      balanceSnapshot,
-      allowances,
-      exportTime,
-    ),
+    balanceSummary,
     asOf: safeAsOf,
     backgroundSeed: seed,
   }

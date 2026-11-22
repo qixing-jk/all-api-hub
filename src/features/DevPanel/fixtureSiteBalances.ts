@@ -279,6 +279,7 @@ export function buildDevSiteFinancialScenarios(
             scope,
             siteType === SITE_TYPES.KIMI ? CURRENCIES.CNY : CURRENCIES.USD,
             "console",
+            now,
           ).balance.positions
           break
         case SITE_TYPES.CUBENCE:

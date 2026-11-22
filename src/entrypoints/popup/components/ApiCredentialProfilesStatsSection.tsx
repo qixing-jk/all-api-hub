@@ -13,6 +13,7 @@ import {
   ASSET_KINDS,
   FINANCIAL_COVERAGE,
 } from "~/services/amounts/financialConstants"
+import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -38,7 +39,9 @@ export default function ApiCredentialProfilesStatsSection() {
     "shareSnapshots",
   ])
   const { profiles, isLoading } = useApiCredentialProfiles()
-  const { currencyType: displayCurrency } = useUserPreferencesContext()
+  const { currencyType, currencyDisplay = currencyType } =
+    useUserPreferencesContext()
+  const displayCurrency = getDisplayCurrency(currencyDisplay, currencyType)
   const minute = useAllowanceClock()
   const [hasLoaded, setHasLoaded] = useState(false)
 

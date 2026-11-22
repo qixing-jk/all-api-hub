@@ -141,85 +141,92 @@ export function useAccountSnapshot({
   const accountsRef = useRef<SiteAccount[]>([])
   accountsRef.current = accounts
   const targetedReloadGenerationRef = useRef(0)
+  const appliedTargetedReloadRef = useRef(0)
   const targetedReloadGenerationByAccountIdRef = useRef<Record<string, number>>(
     {},
   )
   const hasLoadedAccountDataRef = useRef(false)
   hasLoadedAccountDataRef.current = hasLoadedAccountData
 
-  const loadAccountData = useCallback(async () => {
-    try {
-      logger.debug("Loading account data")
-      await accountCheckInState.resetExpiredCheckIns()
-      const [accountSnapshot, currentTagStore, balanceHistory] =
-        await Promise.all([
-          accountReadModels.getAccountManagementSnapshot(),
-          tagStorage.getTagStore(),
-          readBalanceHistoryForEstimates(estimatedTodayIncomeEnabled),
-        ])
-      const {
-        accounts: allAccounts,
-        bookmarks: allBookmarks,
-        orderedIds: storedOrderedIds,
-        stats: accountStats,
-        pinnedIds,
-      } = accountSnapshot
-      const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-      const displaySiteData = buildDisplayDataWithBalanceHistory({
-        nextAccounts: allAccounts,
-        currentTagStore,
-        balanceHistoryStore: balanceHistory.store,
-        balanceHistoryUnavailable: balanceHistory.unavailable,
-        todayKey,
-      })
+  const loadAccountData = useCallback(
+    async function load() {
+      try {
+        logger.debug("Loading account data")
+        await accountCheckInState.resetExpiredCheckIns()
+        const appliedTargetedReload = appliedTargetedReloadRef.current
+        const [accountSnapshot, currentTagStore, balanceHistory] =
+          await Promise.all([
+            accountReadModels.getAccountManagementSnapshot(),
+            tagStorage.getTagStore(),
+            readBalanceHistoryForEstimates(estimatedTodayIncomeEnabled),
+          ])
+        if (appliedTargetedReload !== appliedTargetedReloadRef.current)
+          return load()
+        const {
+          accounts: allAccounts,
+          bookmarks: allBookmarks,
+          orderedIds: storedOrderedIds,
+          stats: accountStats,
+          pinnedIds,
+        } = accountSnapshot
+        const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+        const displaySiteData = buildDisplayDataWithBalanceHistory({
+          nextAccounts: allAccounts,
+          currentTagStore,
+          balanceHistoryStore: balanceHistory.store,
+          balanceHistoryUnavailable: balanceHistory.unavailable,
+          todayKey,
+        })
 
-      setTagStore(currentTagStore)
-      setTags(
-        Object.values(currentTagStore.tagsById).sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-        ),
-      )
-
-      if (hasLoadedAccountDataRef.current) {
-        setPrevTotalConsumption(prevTotalConsumption)
-        setPrevBalances(prevBalances)
-      }
-
-      setAccounts(allAccounts)
-      setBookmarks(allBookmarks)
-      setStats(accountStats)
-      setDisplayData(displaySiteData)
-      const entryIdSet = new Set<string>([
-        ...displaySiteData.map((site) => site.id),
-        ...allBookmarks.map((bookmark) => bookmark.id),
-      ])
-
-      setEntryLayoutSnapshot({
-        orderedIds: storedOrderedIds.filter((id) => entryIdSet.has(id)),
-        pinnedIds: pinnedIds.filter((id) => entryIdSet.has(id)),
-      })
-
-      if (allAccounts.length > 0) {
-        const latestSyncTime = Math.max(
-          ...allAccounts.map((acc) => acc.last_sync_time),
+        setTagStore(currentTagStore)
+        setTags(
+          Object.values(currentTagStore.tagsById).sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+          ),
         )
-        if (latestSyncTime > 0) {
-          setLastUpdateTime(new Date(latestSyncTime))
+
+        if (hasLoadedAccountDataRef.current) {
+          setPrevTotalConsumption(prevTotalConsumption)
+          setPrevBalances(prevBalances)
+        }
+
+        setAccounts(allAccounts)
+        setBookmarks(allBookmarks)
+        setStats(accountStats)
+        setDisplayData(displaySiteData)
+        const entryIdSet = new Set<string>([
+          ...displaySiteData.map((site) => site.id),
+          ...allBookmarks.map((bookmark) => bookmark.id),
+        ])
+
+        setEntryLayoutSnapshot({
+          orderedIds: storedOrderedIds.filter((id) => entryIdSet.has(id)),
+          pinnedIds: pinnedIds.filter((id) => entryIdSet.has(id)),
+        })
+
+        if (allAccounts.length > 0) {
+          const latestSyncTime = Math.max(
+            ...allAccounts.map((acc) => acc.last_sync_time),
+          )
+          if (latestSyncTime > 0) {
+            setLastUpdateTime(new Date(latestSyncTime))
+          }
+        }
+      } catch (error) {
+        logger.error("Failed to load account data", error)
+      } finally {
+        if (!hasLoadedAccountDataRef.current) {
+          setHasLoadedAccountData(true)
         }
       }
-    } catch (error) {
-      logger.error("Failed to load account data", error)
-    } finally {
-      if (!hasLoadedAccountDataRef.current) {
-        setHasLoadedAccountData(true)
-      }
-    }
-  }, [
-    buildDisplayDataWithBalanceHistory,
-    estimatedTodayIncomeEnabled,
-    prevTotalConsumption,
-    prevBalances,
-  ])
+    },
+    [
+      buildDisplayDataWithBalanceHistory,
+      estimatedTodayIncomeEnabled,
+      prevTotalConsumption,
+      prevBalances,
+    ],
+  )
 
   /**
    * Tag CRUD actions exposed to UIs (AccountDialog, filters).
@@ -322,6 +329,7 @@ export function useAccountSnapshot({
           }
         }
 
+        appliedTargetedReloadRef.current += 1
         accountsRef.current = mergedAccounts
         setAccounts(mergedAccounts)
         const balanceHistory = await readBalanceHistoryForEstimates(

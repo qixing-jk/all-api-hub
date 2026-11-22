@@ -60,6 +60,8 @@ export function FinancialHistoryRecords({
   const observations = [...item.observations].reverse()
   const first = item.observations[0]
   const latest = observations[0]
+  const showCurrentConstraint =
+    item.allowance && !lifecycleStatuses.has(latest?.status ?? "")
   const recordAmount = (observation: FinancialHistoryObservation) =>
     observation.allowance
       ? formatBudgetAmount(
@@ -215,7 +217,7 @@ export function FinancialHistoryRecords({
           {t("native.netInflowHint")}
         </p>
       )}
-      {item.allowance && (
+      {showCurrentConstraint && item.allowance && (
         <p className="text-xs text-muted-foreground">
           {formatBudgetConstraint(item.allowance.constraint, t, false)}
         </p>
@@ -240,7 +242,7 @@ export function FinancialHistoryRecords({
         </p>
       ))}
       <FinancialObservationDetails>
-        {item.allowance && (
+        {showCurrentConstraint && item.allowance && (
           <p>{formatBudgetConstraint(item.allowance.constraint, t)}</p>
         )}
         {item.allowance?.validity.kind === BALANCE_VALIDITY_KINDS.Unknown && (
