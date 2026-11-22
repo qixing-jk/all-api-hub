@@ -1,12 +1,26 @@
+import { CURRENCIES } from "~/constants/money"
+import type { Asset } from "~/services/amounts/assets"
+import type { EvidenceRef } from "~/services/amounts/balance"
+import type { BudgetWindow } from "~/services/amounts/budgets"
+import { type FINANCIAL_COVERAGE } from "~/services/amounts/financialConstants"
 import type {
   ApiCredentialTelemetryBalance,
+  ApiCredentialTelemetryFinancialMapping,
   ApiCredentialTelemetryQuota,
   ApiCredentialTelemetryTokenUsage,
 } from "~/types/apiCredentialProfiles"
 
+/** A completed request whose result was invalidated by newer credential work. */
+export class TelemetryRefreshSupersededError extends Error {
+  constructor() {
+    super("Telemetry refresh superseded by a newer request or configuration")
+    this.name = "TelemetryRefreshSupersededError"
+  }
+}
+
 /** Provider protocol values shared by telemetry adapters and parsers. */
 export const TELEMETRY_PROVIDER_PROTOCOL = {
-  currencies: { Cny: "CNY", Usd: "USD", Jpy: "JPY" },
+  currencies: { Cny: CURRENCIES.CNY, Usd: CURRENCIES.USD, Jpy: "JPY" },
   glm: {
     limitTypes: {
       Tokens: "TOKENS_LIMIT",
@@ -37,24 +51,41 @@ export const TELEMETRY_PROVIDER_PROTOCOL = {
  * uses the unit-aware `facts` model instead.
  */
 export type TelemetryPatch = {
+  kimiInference?: { payload: unknown; currency: "CNY" | "USD" }
+  availability?: boolean
+  budget?: {
+    asset: Asset
+    source?: EvidenceRef
+    limit?: unknown
+    used?: unknown
+    remaining?: unknown
+    unlimited?: boolean
+    remainingDerived?: boolean
+    window?: BudgetWindow
+  }
+
+  /** User-confirmed meaning of custom financial paths. */
+  financialMapping?: ApiCredentialTelemetryFinancialMapping
+  balanceAsset?: Asset
+  balanceCoverage?: (typeof FINANCIAL_COVERAGE)[keyof typeof FINANCIAL_COVERAGE]
   /** Provider-native balance when the response contains one currency. */
   balance?: ApiCredentialTelemetryBalance
   /** Provider-native balances when a response contains multiple currencies. */
   balances?: ApiCredentialTelemetryBalance[]
   /** Provider-native quota windows normalized to remaining capacity. */
   quota?: ApiCredentialTelemetryQuota
-  /** USD-denominated or USD-equivalent balance reported by the adapter. */
-  balanceUsd?: number
-  /** USD-denominated cost accumulated today. */
-  todayCostUsd?: number
+  /** Legacy path name; the field alone establishes neither asset nor role. */
+  balanceUsd?: number | string
+  /** Today's cost; its asset is known only through an explicit mapping. */
+  todayCostUsd?: number | string
   todayRequests?: number
   todayTokens?: ApiCredentialTelemetryTokenUsage
   unlimitedQuota?: boolean
-  /** USD-denominated or USD-equivalent cumulative usage. */
-  totalUsedUsd?: number
-  /** USD-denominated or USD-equivalent cumulative grant. */
-  totalGrantedUsd?: number
-  /** USD-denominated or USD-equivalent cumulative availability. */
-  totalAvailableUsd?: number
+  /** Cumulative usage in the mapped asset, otherwise unverified. */
+  totalUsedUsd?: number | string
+  /** Mapped budget limit or legacy grant observation. */
+  totalGrantedUsd?: number | string
+  /** Availability in the mapped asset, otherwise unverified. */
+  totalAvailableUsd?: number | string
   expiresAt?: number
 }

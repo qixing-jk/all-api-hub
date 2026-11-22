@@ -26,29 +26,34 @@ describe("api credential telemetry parsers", () => {
         ],
       }),
     ).toEqual({
+      availability: true,
+      balanceCoverage: "partial",
       balances: [
         {
-          amount: 12.5,
+          amount: "12.5",
           currency: "USD",
-          grantedAmount: 2,
-          toppedUpAmount: 10.5,
+          grantedAmount: "2",
+          toppedUpAmount: "10.5",
           isAvailable: true,
         },
+        { amount: undefined, currency: "USD", isAvailable: true },
       ],
     })
   })
 
-  it("uses the provider currency fallback and preserves empty balance responses", () => {
+  it("preserves unknown currencies and does not invent a wallet for empty balance responses", () => {
     expect(
       parseDeepSeekBalance({
         is_available: false,
         balance_infos: [{ total_balance: "3.5" }],
       }),
     ).toEqual({
+      availability: false,
+      balanceCoverage: "partial",
       balances: [
         expect.objectContaining({
-          amount: 3.5,
-          currency: "CNY",
+          amount: "3.5",
+          currency: "",
           isAvailable: false,
         }),
       ],
@@ -56,7 +61,9 @@ describe("api credential telemetry parsers", () => {
     expect(
       parseDeepSeekBalance({ is_available: true, balance_infos: [] }),
     ).toEqual({
-      balance: { amount: 0, currency: "CNY", isAvailable: true },
+      availability: true,
+      balances: [],
+      balanceCoverage: "complete",
     })
   })
 
@@ -117,7 +124,7 @@ describe("api credential telemetry parsers", () => {
     })
   })
 
-  it("derives a limit when a quota window reports only remaining capacity", () => {
+  it("keeps the total and percentage unknown when only remaining capacity is reported", () => {
     const result = parseKimiQuota({
       usage: {
         limit: undefined,
@@ -130,12 +137,12 @@ describe("api credential telemetry parsers", () => {
     expect(result.quota?.windows).toEqual([
       expect.objectContaining({
         type: "weekly",
-        limit: 7500,
-        used: 0,
         remaining: 7500,
-        percentRemaining: 100,
       }),
     ])
+    expect(result.quota?.windows[0]).not.toHaveProperty("limit")
+    expect(result.quota?.windows[0]).not.toHaveProperty("used")
+    expect(result.quota?.windows[0]).not.toHaveProperty("percentRemaining")
   })
 
   it("adopts slot types when GLM fallback windows fill five-hour and weekly", () => {
@@ -195,9 +202,6 @@ describe("api credential telemetry parsers", () => {
           expect.objectContaining({
             type: "monthly",
             unit: "percent",
-            limit: 100,
-            used: 25,
-            remaining: 75,
             percentRemaining: 75,
             resetTime: 1_800_000_000_000,
           }),
@@ -236,19 +240,25 @@ describe("api credential telemetry parsers", () => {
         { hard_limit_usd: 1_000_000_000 },
         { total_usage: 1234 },
       ),
-    ).toEqual({ totalUsedUsd: 12.34 })
+    ).toEqual({
+      budget: { asset: { kind: "currency", code: "USD" }, used: "12.34" },
+    })
   })
 
   it("prefers explicit OpenAI balance and derives ordinary subscription balance", () => {
     expect(parseOpenAiBillingUsage({ balance: 4.25 }, {})).toEqual({
-      balanceUsd: 4.25,
+      balance: { amount: "4.25", currency: "USD" },
     })
     expect(
       parseOpenAiBillingUsage({ hard_limit_usd: 20 }, { used_usd: 7.5 }),
     ).toEqual({
-      balanceUsd: 12.5,
-      totalGrantedUsd: 20,
-      totalUsedUsd: 7.5,
+      budget: {
+        asset: { kind: "currency", code: "USD" },
+        limit: "20",
+        used: "7.5",
+        remaining: "12.5",
+        remainingDerived: true,
+      },
     })
   })
 
@@ -272,7 +282,7 @@ describe("api credential telemetry parsers", () => {
         },
       ),
     ).toEqual({
-      balanceUsd: 0,
+      balanceUsd: "0",
       todayTokens: { upload: 0, download: 4 },
     })
   })
@@ -302,11 +312,11 @@ describe("api credential telemetry parsers", () => {
       ),
     ).toEqual({
       balanceUsd: undefined,
-      todayCostUsd: 1.5,
+      todayCostUsd: "1.5",
       todayRequests: 3,
-      totalUsedUsd: 4,
-      totalGrantedUsd: 10,
-      totalAvailableUsd: 6,
+      totalUsedUsd: "4",
+      totalGrantedUsd: "10",
+      totalAvailableUsd: "6",
       expiresAt: 1_800_000_000_000,
     })
   })

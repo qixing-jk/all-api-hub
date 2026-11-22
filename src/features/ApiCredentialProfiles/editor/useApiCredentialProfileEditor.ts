@@ -9,9 +9,11 @@ import {
 import type { ApiCredentialProfileDialogProps } from "~/features/ApiCredentialProfiles/editor/apiCredentialProfileDialogContracts"
 import toast from "~/lib/notify"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
 import {
   coerceApiCredentialTelemetryJsonPathMap,
   isSupportedApiCredentialTelemetryEndpoint,
+  telemetryFinancialMappingSchema,
   type ApiCredentialTelemetryJsonPathField,
 } from "~/services/apiCredentialProfiles/telemetry/config"
 import { normalizeHeaderOverrides } from "~/services/apiTransport/headerOverrides"
@@ -33,17 +35,22 @@ import {
 import type {
   ApiCredentialTelemetryCapabilityMode,
   ApiCredentialTelemetryConfig,
+  ApiCredentialTelemetryFinancialMapping,
   ApiCredentialTelemetryJsonPathMap,
 } from "~/types/apiCredentialProfiles"
 import {
   API_CREDENTIAL_TELEMETRY_MODES,
   DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG,
+  TELEMETRY_FINANCIAL_ROLES,
+  TELEMETRY_FINANCIAL_SCOPES,
 } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ApiCredentialProfileDialog")
 const dialogSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog
+
+export const LEGACY_TELEMETRY_ASSET = "legacy"
 /**
  * Normalizes a profile baseUrl for safe persistence based on the selected API type.
  */
@@ -102,6 +109,44 @@ export function useApiCredentialProfileEditor({
     useState<ApiCredentialTelemetryCapabilityMode>(
       DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode,
     )
+  const [customAssetKind, setCustomAssetKind] = useState(LEGACY_TELEMETRY_ASSET)
+  const [customAssetCode, setCustomAssetCode] = useState("")
+  const [customBalanceRole, setCustomBalanceRole] = useState<
+    ApiCredentialTelemetryFinancialMapping["role"]
+  >(TELEMETRY_FINANCIAL_ROLES.Available)
+  const [customBalanceScope, setCustomBalanceScope] = useState<
+    ApiCredentialTelemetryFinancialMapping["scope"]
+  >(TELEMETRY_FINANCIAL_SCOPES.Unknown)
+  const buildFinancialMapping = ():
+    ApiCredentialTelemetryFinancialMapping | undefined => {
+    if (customAssetKind === LEGACY_TELEMETRY_ASSET) return undefined
+    const code = customAssetCode.trim()
+    const originalAsset =
+      profile?.telemetryConfig?.customEndpoint?.financialMapping?.asset
+    const originalCode =
+      originalAsset?.kind === ASSET_KINDS.Currency
+        ? originalAsset.code
+        : originalAsset?.id
+    const asset =
+      originalAsset?.kind === customAssetKind && originalCode === code
+        ? originalAsset
+        : customAssetKind === ASSET_KINDS.Crypto
+          ? { kind: ASSET_KINDS.Crypto, id: "XNO" }
+          : customAssetKind === ASSET_KINDS.Currency
+            ? { kind: ASSET_KINDS.Currency, code: code.toUpperCase() }
+            : {
+                kind: ASSET_KINDS.Quota,
+                id: code,
+                label: code,
+                displayScale: 1,
+                displayLabel: code,
+              }
+    return telemetryFinancialMappingSchema.parse({
+      asset,
+      role: customBalanceRole,
+      scope: customBalanceScope,
+    })
+  }
   const [customEndpoint, setCustomEndpoint] = useState("")
   const [customBearerToken, setCustomBearerToken] = useState("")
   const [customJsonPaths, setCustomJsonPaths] =
@@ -122,6 +167,18 @@ export function useApiCredentialProfileEditor({
     if (!isOpen) return
 
     setErrors({})
+    const mapping = profile?.telemetryConfig?.customEndpoint?.financialMapping
+    setCustomAssetKind(mapping?.asset.kind ?? LEGACY_TELEMETRY_ASSET)
+    setCustomAssetCode(
+      mapping?.asset.kind === ASSET_KINDS.Currency
+        ? mapping.asset.code
+        : mapping?.asset.kind === ASSET_KINDS.Quota ||
+            mapping?.asset.kind === ASSET_KINDS.Crypto
+          ? mapping.asset.id
+          : "",
+    )
+    setCustomBalanceRole(mapping?.role ?? TELEMETRY_FINANCIAL_ROLES.Available)
+    setCustomBalanceScope(mapping?.scope ?? TELEMETRY_FINANCIAL_SCOPES.Unknown)
 
     if (profile) {
       setName(profile.name ?? "")
@@ -223,6 +280,26 @@ export function useApiCredentialProfileEditor({
         )
       }
 
+      try {
+        const mapping = buildFinancialMapping()
+        const hasFinancialPaths = [
+          customJsonPaths.balanceUsd,
+          customJsonPaths.todayCostUsd,
+          customJsonPaths.totalUsedUsd,
+          customJsonPaths.totalGrantedUsd,
+          customJsonPaths.totalAvailableUsd,
+        ].some((value) => value?.trim())
+        if (
+          !mapping &&
+          hasFinancialPaths &&
+          !profile?.telemetryConfig?.customEndpoint
+        )
+          throw new Error("Explicit financial mapping required")
+      } catch {
+        nextErrors.telemetryJsonPaths = t(
+          "apiCredentialProfiles:dialog.financialMapping.invalid",
+        )
+      }
       const jsonPaths = coerceApiCredentialTelemetryJsonPathMap(customJsonPaths)
       const rawJsonPathCount = Object.values(customJsonPaths).filter(
         (value) => typeof value === "string" && value.trim(),
@@ -264,6 +341,9 @@ export function useApiCredentialProfileEditor({
           ? { bearerToken: customBearerToken.trim() }
           : {}),
         jsonPaths: coerceApiCredentialTelemetryJsonPathMap(customJsonPaths),
+        ...(buildFinancialMapping()
+          ? { financialMapping: buildFinancialMapping() }
+          : {}),
       },
     }
   }
@@ -369,6 +449,14 @@ export function useApiCredentialProfileEditor({
     setExpiresAtInput,
     telemetryMode,
     setTelemetryMode,
+    customAssetKind,
+    setCustomAssetKind,
+    customAssetCode,
+    setCustomAssetCode,
+    customBalanceRole,
+    setCustomBalanceRole,
+    customBalanceScope,
+    setCustomBalanceScope,
     customEndpoint,
     setCustomEndpoint,
     customBearerToken,

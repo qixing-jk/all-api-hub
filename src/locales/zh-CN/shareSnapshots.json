@@ -3,6 +3,10 @@
     "shareAccountSnapshot": "分享账号快照",
     "shareOverviewSnapshot": "分享总览快照"
   },
+  "financial": {
+    "complete": "完整覆盖",
+    "partial": "部分覆盖"
+  },
   "labels": {
     "accounts": "账号数",
     "asOf": "截止",

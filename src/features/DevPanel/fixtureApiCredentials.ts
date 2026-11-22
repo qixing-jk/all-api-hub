@@ -136,7 +136,7 @@ export async function addDevAllowanceFixtures(): Promise<number> {
         telemetryConfig: { mode: API_CREDENTIAL_TELEMETRY_MODES.Disabled },
       })
 
-    const snapshot = fixture.buildSnapshot(now)
+    const snapshot = fixture.buildSnapshot(now, profile.id)
     try {
       if (snapshot) {
         await apiCredentialProfilesStorage.updateTelemetrySnapshot(

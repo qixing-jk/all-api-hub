@@ -2,9 +2,18 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { BodySmall, Caption } from "~/components/ui"
+import { CURRENCIES } from "~/constants/money"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { projectCredentialFinancialStats } from "~/features/ApiCredentialProfiles/allowance/credentialFinancialStats"
+import { useAllowanceClock } from "~/features/ApiCredentialProfiles/allowance/useAllowanceClock"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles"
 import { cn } from "~/lib/utils"
+import { assetIdentity } from "~/services/amounts/assets"
+import {
+  ASSET_KINDS,
+  FINANCIAL_COVERAGE,
+} from "~/services/amounts/financialConstants"
+import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -14,9 +23,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
-import { SiteHealthStatus } from "~/types"
-import { API_CREDENTIAL_TELEMETRY_FACT_UNITS } from "~/types/apiCredentialProfiles"
-import { formatTelemetryMoney } from "~/utils/core/money"
+import { formatAssetAmount, formatBalanceAmount } from "~/utils/core/money"
 
 import { AnimatedStatValue } from "./AnimatedStatValue"
 
@@ -26,9 +33,16 @@ const moneyValueClassName = "block text-base font-semibold"
  * Popup API credential profile statistics summary for the API Credentials view.
  */
 export default function ApiCredentialProfilesStatsSection() {
-  const { t } = useTranslation(["apiCredentialProfiles"])
+  const { t, i18n } = useTranslation([
+    "apiCredentialProfiles",
+    "account",
+    "shareSnapshots",
+  ])
   const { profiles, isLoading } = useApiCredentialProfiles()
-  const { currencyType } = useUserPreferencesContext()
+  const { currencyType, currencyDisplay = currencyType } =
+    useUserPreferencesContext()
+  const displayCurrency = getDisplayCurrency(currencyDisplay, currencyType)
+  const minute = useAllowanceClock()
   const [hasLoaded, setHasLoaded] = useState(false)
 
   useEffect(() => {
@@ -57,70 +71,28 @@ export default function ApiCredentialProfilesStatsSection() {
     return tagIds.size
   }, [profiles])
 
-  const telemetryStats = useMemo(() => {
-    const stats = profiles.reduce(
-      (acc, profile) => {
-        const snapshot = profile.telemetrySnapshot
-        if (!snapshot) return acc
-        if (snapshot.health.status === SiteHealthStatus.Healthy) {
-          acc.healthyCount += 1
-        } else {
-          acc.unhealthyTelemetryCount += 1
-        }
-        const usdCashBalances = snapshot.facts?.balances?.filter(
-          (balance) =>
-            balance.unit.kind ===
-              API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money &&
-            balance.unit.currency ===
-              API_CREDENTIAL_TELEMETRY_FACT_UNITS.currencies.Usd &&
-            balance.semantics ===
-              API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Cash,
-        )
-        if (usdCashBalances && usdCashBalances.length > 0) {
-          acc.balanceUsd += usdCashBalances.reduce(
-            (total, balance) => total + balance.amount,
-            0,
-          )
-          acc.balanceSources += 1
-        }
-        const todayCost = snapshot.facts?.usage?.todayCost
-        if (
-          todayCost?.unit.kind ===
-            API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Money &&
-          todayCost.unit.currency ===
-            API_CREDENTIAL_TELEMETRY_FACT_UNITS.currencies.Usd
-        ) {
-          acc.todayUsageUsd += todayCost.value
-          acc.todayUsageSources += 1
-        }
-        return acc
-      },
-      {
-        healthyCount: 0,
-        balanceUsd: 0,
-        balanceSources: 0,
-        unhealthyTelemetryCount: 0,
-        todayUsageSources: 0,
-        todayUsageUsd: 0,
-      },
-    )
-
-    return {
-      ...stats,
-      balanceUsd: stats.balanceSources > 0 ? stats.balanceUsd : undefined,
-      todayUsageUsd:
-        stats.todayUsageSources > 0 ? stats.todayUsageUsd : undefined,
-    }
-  }, [profiles])
-
-  const balanceText =
-    telemetryStats.balanceUsd === undefined
-      ? t("apiCredentialProfiles:telemetry.notProvided")
-      : formatTelemetryMoney(telemetryStats.balanceUsd, currencyType)
+  const { telemetryStats, portfolio } = useMemo(() => {
+    // The shared minute is a wake-up signal; newly received observations use the current clock.
+    void minute
+    return projectCredentialFinancialStats(profiles, Date.now())
+  }, [profiles, minute])
+  const formatAmount = (amount: Parameters<typeof formatAssetAmount>[0]) =>
+    displayCurrency !== undefined &&
+    amount.asset.kind === ASSET_KINDS.Currency &&
+    (amount.asset.code === CURRENCIES.USD ||
+      amount.asset.code === CURRENCIES.CNY) &&
+    amount.asset.code !== displayCurrency
+      ? formatBalanceAmount(amount, i18n.language, displayCurrency)
+      : formatAssetAmount(amount, i18n.language)
+  const formatUsd = (value: string) =>
+    formatAmount({
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      value,
+    })
   const todayUsageText =
     telemetryStats.todayUsageUsd === undefined
       ? t("apiCredentialProfiles:telemetry.notProvided")
-      : formatTelemetryMoney(telemetryStats.todayUsageUsd, currencyType)
+      : formatUsd(telemetryStats.todayUsageUsd)
 
   useEffect(() => {
     if (isLoading) return
@@ -154,7 +126,7 @@ export default function ApiCredentialProfilesStatsSection() {
 
   return (
     <div className="space-y-density-3">
-      <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
+      <div className="flex items-center justify-between gap-x-3 gap-y-density-3">
         <BodySmall className="font-medium">
           {t("apiCredentialProfiles:stats.totalProfiles")}
         </BodySmall>
@@ -164,7 +136,7 @@ export default function ApiCredentialProfilesStatsSection() {
         />
       </div>
 
-      <div className="gap-y-density-3 grid grid-cols-2 gap-x-3">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-density-3">
         <div className="space-y-density-1">
           <Caption className="font-medium">
             {t("apiCredentialProfiles:stats.baseUrls")}
@@ -187,7 +159,7 @@ export default function ApiCredentialProfilesStatsSection() {
         </div>
       </div>
 
-      <div className="gap-y-density-3 grid grid-cols-3 gap-x-3">
+      <div className="grid grid-cols-3 gap-x-3 gap-y-density-3">
         <div className="space-y-density-1">
           <Caption className="font-medium">
             {t("apiCredentialProfiles:stats.healthyProfiles")}
@@ -200,32 +172,85 @@ export default function ApiCredentialProfilesStatsSection() {
         </div>
         <div className="space-y-density-1">
           <Caption className="font-medium">
-            {t("apiCredentialProfiles:stats.totalBalance")}
+            {t("account:financial.availableTotal")}
           </Caption>
           <span
             className={cn(
               moneyValueClassName,
-              telemetryStats.balanceUsd === undefined &&
-                "text-muted-foreground",
+              portfolio.amounts.length === 0 && "text-muted-foreground",
             )}
           >
-            {balanceText}
+            {portfolio.amounts.length
+              ? portfolio.amounts.map((amount) => (
+                  <span className="block" key={assetIdentity(amount.asset)}>
+                    {formatAmount(amount)}
+                  </span>
+                ))
+              : t("apiCredentialProfiles:telemetry.notProvided")}
           </span>
+          <Caption>
+            {t("apiCredentialProfiles:stats.financialCoverage", {
+              included: portfolio.includedCount,
+              total: portfolio.eligibleCount,
+            })}{" "}
+            ·{" "}
+            {portfolio.coverage === FINANCIAL_COVERAGE.Complete
+              ? t("shareSnapshots:financial.complete")
+              : t("shareSnapshots:financial.partial")}
+          </Caption>
+          {portfolio.potentialDuplicateCount > 0 ? (
+            <Caption className="block">
+              {t("account:financial.potentialDuplicates", {
+                count: portfolio.potentialDuplicateCount,
+              })}
+            </Caption>
+          ) : null}
+          {profiles.some(
+            (profile) => profile.telemetrySnapshot?.facts?.balances?.length,
+          ) ? (
+            <Caption>
+              {t("apiCredentialProfiles:telemetry.balanceSemantics.legacy")}
+            </Caption>
+          ) : null}
         </div>
         <div className="space-y-density-1">
           <Caption className="font-medium">
             {t("apiCredentialProfiles:stats.todayUsage")}
           </Caption>
-          <span
-            className={cn(
-              moneyValueClassName,
-              telemetryStats.todayUsageUsd === undefined
-                ? "text-muted-foreground"
-                : "text-cashflow-expense",
-            )}
-          >
-            {todayUsageText}
-          </span>
+          {telemetryStats.todayUsageUsd === undefined &&
+          telemetryStats.reportedTodayCosts.length > 0 ? (
+            <>
+              <ul className="space-y-1">
+                {telemetryStats.reportedTodayCosts.map(
+                  ({ id, name, amount }) => (
+                    <li key={id}>
+                      <Caption className="block break-words">{name}</Caption>
+                      <span
+                        className={cn(
+                          moneyValueClassName,
+                          "text-cashflow-expense",
+                        )}
+                      >
+                        {formatAmount(amount)}
+                      </span>
+                    </li>
+                  ),
+                )}
+              </ul>
+              <Caption>{t("shareSnapshots:financial.partial")}</Caption>
+            </>
+          ) : (
+            <span
+              className={cn(
+                moneyValueClassName,
+                telemetryStats.todayUsageUsd === undefined
+                  ? "text-muted-foreground"
+                  : "text-cashflow-expense",
+              )}
+            >
+              {todayUsageText}
+            </span>
+          )}
         </div>
       </div>
     </div>

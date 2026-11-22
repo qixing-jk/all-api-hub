@@ -3,6 +3,10 @@
     "shareAccountSnapshot": "Chia sẻ ảnh chụp tài khoản",
     "shareOverviewSnapshot": "Chia sẻ ảnh chụp tổng quan"
   },
+  "financial": {
+    "complete": "Phạm vi đầy đủ",
+    "partial": "Phạm vi một phần"
+  },
   "labels": {
     "accounts": "Số tài khoản",
     "asOf": "Tính đến",

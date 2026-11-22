@@ -6,6 +6,7 @@ import ApiCredentialProfiles from "~/features/ApiCredentialProfiles/ApiCredentia
 import { API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY } from "~/features/ApiCredentialProfiles/contracts"
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesListView"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import { MEASUREMENT_UNIT_KINDS } from "~/services/amounts/financialConstants"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -902,7 +903,11 @@ describe("ApiCredentialProfilesListView", () => {
             facts: {
               quota: {
                 windows: [
-                  { type: "fiveHour", remainingPercent: 80, unit: "percent" },
+                  {
+                    type: "fiveHour",
+                    remainingPercent: 80,
+                    unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
+                  },
                 ],
               },
             },
@@ -976,7 +981,7 @@ describe("ApiCredentialProfilesListView", () => {
         },
         {
           id: "profile-2",
-          name: "Draining Balance",
+          name: "Low Plan",
           apiType: "openai",
           baseUrl: "https://wallet.example.com",
           apiKey: "sk-wallet",
@@ -987,18 +992,14 @@ describe("ApiCredentialProfilesListView", () => {
             health: { status: "healthy" },
             lastSyncTime: 1,
             facts: {
-              balances: [
-                {
-                  amount: 2,
-                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
-                  semantics: "cash",
-                },
-              ],
-              usage: {
-                todayCost: {
-                  value: 1,
-                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
-                },
+              quota: {
+                windows: [
+                  {
+                    type: "fiveHour",
+                    remainingPercent: 2,
+                    unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
+                  },
+                ],
               },
             },
           },

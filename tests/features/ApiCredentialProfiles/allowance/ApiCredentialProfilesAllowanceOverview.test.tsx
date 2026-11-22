@@ -4,10 +4,19 @@ import type { ReactElement } from "react"
 import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import { ApiCredentialProfilesAllowanceOverview } from "~/features/ApiCredentialProfiles/allowance/ApiCredentialProfilesAllowanceOverview"
 import en from "~/locales/en/apiCredentialProfiles.json"
 import es from "~/locales/es-419/apiCredentialProfiles.json"
 import pt from "~/locales/pt-BR/apiCredentialProfiles.json"
+import {
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+  MEASUREMENT_UNIT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
@@ -21,6 +30,27 @@ function renderOverview(ui: ReactElement) {
   })
 }
 
+const scope = {
+  subject: { kind: FINANCIAL_SUBJECT_KINDS.Credential, profileId: "test" },
+  authority: "https://test.example",
+  projects: { kind: SCOPE_SELECTION_KINDS.All },
+  keys: { kind: SCOPE_SELECTION_KINDS.All },
+  models: { kind: SCOPE_SELECTION_KINDS.All },
+  groups: { kind: SCOPE_SELECTION_KINDS.All },
+} as const
+const costEvidence = {
+  scope,
+  source: {
+    adapter: "test",
+    operation: "daily-billing",
+    contractVersion: "1",
+    kind: EVIDENCE_KINDS.Reported,
+  },
+  observedAt: 172800000,
+  window: { start: 86400000, end: 172800000, timeZone: "UTC" },
+  coverage: FINANCIAL_COVERAGE.Complete,
+  status: OBSERVATION_STATUSES.Known,
+} as const
 /** Builds a monitored profile with a known or unknown balance runway. */
 function profile(amount: number, spend?: number): ApiCredentialProfile {
   return {
@@ -41,7 +71,14 @@ function profile(amount: number, spend?: number): ApiCredentialProfile {
         balances: [
           {
             amount,
-            unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+            scope,
+            status: OBSERVATION_STATUSES.Known,
+            observedAt: 172800000,
+            unit: {
+              kind: MEASUREMENT_UNIT_KINDS.Money,
+              currency: CURRENCIES.USD,
+              decimalPlaces: 2,
+            },
             semantics: "cash",
           },
         ],
@@ -51,7 +88,12 @@ function profile(amount: number, spend?: number): ApiCredentialProfile {
               usage: {
                 todayCost: {
                   value: spend,
-                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  ...costEvidence,
+                  unit: {
+                    kind: MEASUREMENT_UNIT_KINDS.Money,
+                    currency: CURRENCIES.USD,
+                    decimalPlaces: 2,
+                  },
                 },
               },
             }),

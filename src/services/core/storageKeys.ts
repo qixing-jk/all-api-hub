@@ -174,6 +174,8 @@ export const STORAGE_LOCKS = {
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
+  /** Local admission clock; backup imports never restore this key. */
+  BALANCE_GENERATION: "accountBalanceRefreshGeneration",
   ACCOUNTS: "site_accounts",
 } as const
 
@@ -228,6 +230,8 @@ const DAILY_BALANCE_HISTORY_STORAGE_KEYS = {
 
 export const API_CREDENTIAL_PROFILES_STORAGE_KEYS = {
   API_CREDENTIAL_PROFILES: "api_credential_profiles",
+  /** Local admission clock; never restored from a credential backup. */
+  TELEMETRY_GENERATION: "api_credential_telemetry_generation",
 } as const
 
 export const CHANNEL_CONFIG_STORAGE_KEYS = {

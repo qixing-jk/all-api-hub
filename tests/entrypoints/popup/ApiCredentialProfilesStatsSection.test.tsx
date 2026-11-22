@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import ApiCredentialProfilesStatsSection from "~/entrypoints/popup/components/ApiCredentialProfilesStatsSection"
+import {
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SUBJECT_KINDS,
+  MEASUREMENT_UNIT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
+import { normalizeTelemetryPatchToFacts } from "~/services/apiCredentialProfiles/telemetry/facts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -70,12 +80,140 @@ function buildProfile(
 }
 
 describe("ApiCredentialProfilesStatsSection", () => {
+  it.each([true, false])(
+    "aggregates today's complete counters only when their intervals match: %s",
+    (sameWindow) => {
+      const now = Date.now()
+      const day = new Date(now)
+      const start = Date.UTC(
+        day.getUTCFullYear(),
+        day.getUTCMonth(),
+        day.getUTCDate(),
+      )
+      const profiles = [1, 2].map((value, index) =>
+        buildProfile({
+          id: `usage-${index}`,
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: SiteHealthStatus.Healthy },
+            lastSyncTime: now,
+            facts: {
+              usage: {
+                todayCost: {
+                  value,
+                  unit: {
+                    kind: MEASUREMENT_UNIT_KINDS.Money,
+                    currency: CURRENCIES.USD,
+                    decimalPlaces: 2,
+                  },
+                  status: OBSERVATION_STATUSES.Known,
+                  source: {
+                    adapter: "test",
+                    contractVersion: "2",
+                    operation: "billing",
+                    kind: EVIDENCE_KINDS.Reported,
+                  },
+                  coverage: FINANCIAL_COVERAGE.Complete,
+                  scope: {
+                    subject: {
+                      kind: FINANCIAL_SUBJECT_KINDS.Credential,
+                      profileId: `usage-${index}`,
+                    },
+                    authority: `https://site${index}.example`,
+                    projects: { kind: SCOPE_SELECTION_KINDS.All },
+                    keys: { kind: SCOPE_SELECTION_KINDS.All },
+                    models: { kind: SCOPE_SELECTION_KINDS.All },
+                    groups: { kind: SCOPE_SELECTION_KINDS.All },
+                  },
+                  observedAt: now,
+                  window: {
+                    start,
+                    end: now - (sameWindow ? 0 : index * 1000),
+                    timeZone: "UTC",
+                  },
+                },
+              },
+            },
+          },
+        }),
+      )
+      mockUseUserPreferencesContext.mockReturnValue({
+        currencyType: CURRENCIES.USD,
+      })
+      mockUseApiCredentialProfiles.mockReturnValue({
+        isLoading: false,
+        profiles,
+      })
+      render(<ApiCredentialProfilesStatsSection />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      if (sameWindow) expect(screen.getByText(/USD\s+3$/)).toBeInTheDocument()
+      else expect(screen.queryByText(/USD\s+3$/)).not.toBeInTheDocument()
+    },
+  )
+  it("uses native available totals without adding their components", () => {
+    const facts = normalizeTelemetryPatchToFacts(
+      {
+        balances: [
+          {
+            amount: "110",
+            currency: CURRENCIES.CNY,
+            grantedAmount: "10",
+            toppedUpAmount: "100",
+          },
+        ],
+        balanceCoverage: "complete",
+      },
+      "deepSeekBalance",
+      {
+        profileId: "profile-1",
+        baseUrl: "https://api.example.com",
+        observedAt: 1000,
+      },
+    )
+    for (const p of facts.balanceSnapshot!.positions) {
+      p.scope.projects = { kind: SCOPE_SELECTION_KINDS.All }
+      p.scope.keys = { kind: SCOPE_SELECTION_KINDS.All }
+      p.scope.models = { kind: SCOPE_SELECTION_KINDS.All }
+      p.scope.groups = { kind: SCOPE_SELECTION_KINDS.All }
+    }
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+      currencyDisplay: CURRENCY_DISPLAY_MODES.Original,
+    })
+    mockUseApiCredentialProfiles.mockReturnValue({
+      isLoading: false,
+      profiles: [
+        buildProfile({
+          telemetrySnapshot: {
+            schemaVersion: 2,
+            health: { status: SiteHealthStatus.Healthy },
+            lastSyncTime: 1000,
+            attempts: [],
+            facts,
+          },
+        }),
+      ],
+    })
+    render(<ApiCredentialProfilesStatsSection />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    expect(screen.getByText(/CNY\s+110$/)).toBeInTheDocument()
+    expect(
+      screen.getByText("account:financial.availableTotal"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/220/)).not.toBeInTheDocument()
+  })
   beforeEach(() => {
     trackProductAnalyticsEventMock.mockReset()
   })
 
-  it("shows telemetry totals when refreshed snapshots are available", () => {
-    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+  it("does not aggregate legacy monetary observations without verified scope", () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+    })
     mockUseApiCredentialProfiles.mockReturnValue({
       isLoading: false,
       profiles: [
@@ -90,14 +228,22 @@ describe("ApiCredentialProfilesStatsSection", () => {
               balances: [
                 {
                   amount: 12.5,
-                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  unit: {
+                    kind: MEASUREMENT_UNIT_KINDS.Money,
+                    currency: CURRENCIES.USD,
+                    decimalPlaces: 2,
+                  },
                   semantics: "cash",
                 },
               ],
               usage: {
                 todayCost: {
                   value: 1.25,
-                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  unit: {
+                    kind: MEASUREMENT_UNIT_KINDS.Money,
+                    currency: CURRENCIES.USD,
+                    decimalPlaces: 2,
+                  },
                 },
               },
             },
@@ -115,7 +261,11 @@ describe("ApiCredentialProfilesStatsSection", () => {
               balances: [
                 {
                   amount: 2,
-                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  unit: {
+                    kind: MEASUREMENT_UNIT_KINDS.Money,
+                    currency: CURRENCIES.USD,
+                    decimalPlaces: 2,
+                  },
                   semantics: "cash",
                 },
               ],
@@ -131,12 +281,19 @@ describe("ApiCredentialProfilesStatsSection", () => {
       withUserPreferencesProvider: false,
     })
 
-    expect(screen.getByText("$14.50")).toBeInTheDocument()
-    expect(screen.getByText("$1.25")).toBeInTheDocument()
+    expect(screen.queryByText(/USD\s*14\.50/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/USD\s*1\.25/)).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "apiCredentialProfiles:telemetry.balanceSemantics.legacy",
+      ),
+    ).toBeInTheDocument()
   })
 
   it("does not present missing telemetry as a zero balance", () => {
-    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+    })
     mockUseApiCredentialProfiles.mockReturnValue({
       isLoading: false,
       profiles: [buildProfile()],
@@ -157,8 +314,10 @@ describe("ApiCredentialProfilesStatsSection", () => {
     expect(placeholders[1]).toHaveClass("block")
   })
 
-  it("aggregates multiple cash balances in the same currency", () => {
-    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+  it("excludes historical cash labels from financial totals", () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+    })
     mockUseApiCredentialProfiles.mockReturnValue({
       isLoading: false,
       profiles: [
@@ -171,12 +330,20 @@ describe("ApiCredentialProfilesStatsSection", () => {
               balances: [
                 {
                   amount: 4,
-                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  unit: {
+                    kind: MEASUREMENT_UNIT_KINDS.Money,
+                    currency: CURRENCIES.USD,
+                    decimalPlaces: 2,
+                  },
                   semantics: "cash",
                 },
                 {
                   amount: 6,
-                  unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                  unit: {
+                    kind: MEASUREMENT_UNIT_KINDS.Money,
+                    currency: CURRENCIES.USD,
+                    decimalPlaces: 2,
+                  },
                   semantics: "cash",
                 },
               ],
@@ -192,11 +359,13 @@ describe("ApiCredentialProfilesStatsSection", () => {
       withUserPreferencesProvider: false,
     })
 
-    expect(screen.getByText("$10.00")).toBeInTheDocument()
+    expect(screen.queryByText(/USD\s*10\.00/)).not.toBeInTheDocument()
   })
 
   it("does not present refreshed snapshots without balance as a zero balance", () => {
-    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+    })
     mockUseApiCredentialProfiles.mockReturnValue({
       isLoading: false,
       profiles: [
@@ -219,7 +388,7 @@ describe("ApiCredentialProfilesStatsSection", () => {
       withUserPreferencesProvider: false,
     })
 
-    expect(screen.queryByText("$0.00")).not.toBeInTheDocument()
+    expect(screen.queryByText(/USD\s*0\.00/)).not.toBeInTheDocument()
     const placeholders = screen.getAllByText(
       "apiCredentialProfiles:telemetry.notProvided",
     )
@@ -230,7 +399,9 @@ describe("ApiCredentialProfilesStatsSection", () => {
   })
 
   it("renders missing money stats as neutral values on their own line", () => {
-    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+    })
     mockUseApiCredentialProfiles.mockReturnValue({
       isLoading: false,
       profiles: [
@@ -262,7 +433,9 @@ describe("ApiCredentialProfilesStatsSection", () => {
   })
 
   it("tracks anonymous inventory buckets without raw counts", () => {
-    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+    })
     mockUseApiCredentialProfiles.mockReturnValue({
       isLoading: false,
       profiles: [
@@ -320,7 +493,9 @@ describe("ApiCredentialProfilesStatsSection", () => {
   })
 
   it("tracks only unhealthy telemetry snapshots as failures", () => {
-    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: CURRENCIES.USD,
+    })
     mockUseApiCredentialProfiles.mockReturnValue({
       isLoading: false,
       profiles: [

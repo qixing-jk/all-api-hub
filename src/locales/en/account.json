@@ -151,11 +151,14 @@
     "income": "Today's income"
   },
   "financial": {
+    "availableTotal": "Balance",
     "derived": "Derived from reported fields",
     "expires": "Expires: {{date}}",
     "lastKnown": "Last known value",
     "manual": "Manual balance",
     "olderRecord": "Recorded by an older version",
+    "potentialDuplicates_one": "Possible duplicate balances: {{count}}",
+    "potentialDuplicates_other": "Possible duplicate balances: {{count}}",
     "reported": "Reported by site",
     "scopeUnknown": "Usage scope unverified",
     "technicalDetails": "Technical details (debug)",

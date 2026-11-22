@@ -1,10 +1,32 @@
-import { QUOTA_PER_USD } from "~/constants/money"
+import { CURRENCIES } from "~/constants/money"
+import {
+  normalizeDecimalUnits,
+  parseDecimal,
+  scaleDecimal,
+  subtractDecimal,
+} from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  FINANCIAL_COVERAGE,
+} from "~/services/amounts/financialConstants"
 import {
   TELEMETRY_PROVIDER_PROTOCOL,
   type TelemetryPatch,
 } from "~/services/apiCredentialProfiles/telemetry/contracts"
-import type { ApiCredentialTelemetryJsonPathMap } from "~/types/apiCredentialProfiles"
-import { API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES } from "~/types/apiCredentialProfiles"
+import {
+  KIMI_FINANCIAL_SOURCES,
+  readKimiFinancialPayload,
+} from "~/services/apiService/kimiOpenPlatform/balance"
+import type {
+  ApiCredentialTelemetryFinancialMapping,
+  ApiCredentialTelemetryJsonPathMap,
+  ApiCredentialTelemetryQuotaWindow,
+} from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES,
+  TELEMETRY_FINANCIAL_ROLES,
+  TELEMETRY_QUOTA_UNIT_HINTS,
+} from "~/types/apiCredentialProfiles"
 
 const OPENAI_BILLING_LIMIT_BALANCE_MAX_USD = 1_000_000
 
@@ -28,30 +50,21 @@ export function dataLike(value: unknown): Record<string, unknown> {
  * Reads a finite number from numeric or numeric-string response fields.
  */
 export function readNumber(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    (!Number.isInteger(value) || Number.isSafeInteger(value))
+  )
+    return value
   if (typeof value === "string" && value.trim()) {
     const parsed = Number(value)
-    if (Number.isFinite(parsed)) return parsed
+    if (
+      Number.isFinite(parsed) &&
+      (!Number.isInteger(parsed) || Number.isSafeInteger(parsed))
+    )
+      return parsed
   }
   return undefined
-}
-
-/**
- * Converts One API quota units into USD.
- */
-function quotaToUsd(value: number | undefined): number | undefined {
-  if (value === undefined) return undefined
-  return value / QUOTA_PER_USD
-}
-
-/**
- * Converts quota units into a non-negative USD amount.
- */
-export function nonNegativeQuotaToUsd(
-  value: number | undefined,
-): number | undefined {
-  if (value === undefined) return undefined
-  return quotaToUsd(Math.max(0, value))
 }
 
 /**
@@ -68,42 +81,46 @@ export function parseDeepSeekBalance(json: unknown): TelemetryPatch {
   const record = dataLike(json)
   if (!Array.isArray(record.balance_infos)) return {}
   const infos = record.balance_infos.filter(isRecord)
-  if (record.balance_infos.length === 0) {
-    return {
-      balance: {
-        amount: 0,
-        currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny,
-        isAvailable: record.is_available === true,
-      },
-    }
-  }
 
   const balances = infos.flatMap((item) => {
-    const amount = readNumber(item.total_balance)
-    if (amount === undefined) return []
-    const grantedAmount = readNumber(item.granted_balance)
-    const toppedUpAmount = readNumber(item.topped_up_balance)
+    const amount = parseDecimal(item.total_balance)
+    const grantedAmount = parseDecimal(item.granted_balance)
+    const toppedUpAmount = parseDecimal(item.topped_up_balance)
     const currency =
       typeof item.currency === "string" && item.currency.trim()
         ? item.currency.trim()
-        : TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny
+        : ""
     return [
       {
         amount,
         currency,
         ...(grantedAmount !== undefined ? { grantedAmount } : {}),
         ...(toppedUpAmount !== undefined ? { toppedUpAmount } : {}),
-        isAvailable: record.is_available === true,
+        ...(typeof record.is_available === "boolean"
+          ? { isAvailable: record.is_available }
+          : {}),
       },
     ]
   })
 
-  return balances.length > 0 ? { balances } : {}
+  return {
+    balances,
+    ...(typeof record.is_available === "boolean"
+      ? { availability: record.is_available }
+      : {}),
+    balanceCoverage:
+      infos.length === record.balance_infos.length &&
+      balances.every((balance) => /^[A-Z]{3}$/.test(balance.currency)) &&
+      new Set(balances.map((balance) => balance.currency)).size ===
+        balances.length
+        ? FINANCIAL_COVERAGE.Complete
+        : FINANCIAL_COVERAGE.Partial,
+  }
 }
 
 type QuotaWindowInput = {
   type: (typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES)[keyof typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES]
-  unit?: "percent" | "provider"
+  unit?: ApiCredentialTelemetryQuotaWindow["unit"]
   limit?: unknown
   used?: unknown
   remaining?: unknown
@@ -126,41 +143,42 @@ function buildQuotaWindow(input: QuotaWindowInput) {
     return undefined
   }
 
-  // Without an explicit limit, derive one from the remaining capacity so a
-  // window that only reports `remaining` does not collapse to fully exhausted.
-  const normalizedLimit = Math.max(
-    0,
+  const normalizedLimit =
     limit ??
-      (percentUsed !== undefined
-        ? 100
-        : used !== undefined || remaining !== undefined
-          ? (used ?? 0) + (remaining ?? 0)
-          : 0),
-  )
-  const normalizedUsed = Math.min(
-    normalizedLimit,
-    Math.max(
-      0,
-      used ??
-        (percentUsed === undefined
-          ? Math.max(0, normalizedLimit - (remaining ?? 0))
-          : (normalizedLimit * Math.min(100, Math.max(0, percentUsed))) / 100),
-    ),
-  )
-  const normalizedRemaining = Math.min(
-    normalizedLimit,
-    Math.max(0, remaining ?? normalizedLimit - normalizedUsed),
-  )
+    (used !== undefined && remaining !== undefined
+      ? used + remaining
+      : undefined)
+  const normalizedUsed =
+    used ??
+    (normalizedLimit !== undefined && remaining !== undefined
+      ? normalizedLimit - remaining
+      : undefined)
+  const normalizedRemaining =
+    remaining ??
+    (normalizedLimit !== undefined && normalizedUsed !== undefined
+      ? normalizedLimit - normalizedUsed
+      : undefined)
+  const percentRemaining =
+    percentUsed !== undefined
+      ? 100 - percentUsed
+      : normalizedLimit !== undefined &&
+          normalizedLimit > 0 &&
+          normalizedRemaining !== undefined
+        ? (normalizedRemaining / normalizedLimit) * 100
+        : undefined
   const resetTime = normalizeTimestamp(input.resetTime)
 
   return {
     type: input.type,
     ...(input.unit ? { unit: input.unit } : {}),
-    used: normalizedUsed,
-    limit: normalizedLimit,
-    remaining: normalizedRemaining,
-    percentRemaining:
-      normalizedLimit > 0 ? (normalizedRemaining / normalizedLimit) * 100 : 0,
+    ...(normalizedUsed !== undefined ? { used: normalizedUsed } : {}),
+    ...(normalizedLimit !== undefined ? { limit: normalizedLimit } : {}),
+    ...(normalizedRemaining !== undefined
+      ? { remaining: normalizedRemaining }
+      : {}),
+    ...(percentRemaining !== undefined
+      ? { percentRemaining: Math.max(0, Math.min(100, percentRemaining)) }
+      : {}),
     ...(resetTime !== undefined ? { resetTime } : {}),
   }
 }
@@ -203,8 +221,8 @@ export function parseGlmQuota(json: unknown): TelemetryPatch {
           row.usage !== undefined ||
           row.currentValue !== undefined ||
           row.remaining !== undefined
-            ? "provider"
-            : "percent",
+            ? TELEMETRY_QUOTA_UNIT_HINTS.Provider
+            : TELEMETRY_QUOTA_UNIT_HINTS.Percent,
         limit: row.usage,
         used: row.currentValue,
         remaining: row.remaining,
@@ -227,8 +245,8 @@ export function parseGlmQuota(json: unknown): TelemetryPatch {
         row.usage !== undefined ||
         row.currentValue !== undefined ||
         row.remaining !== undefined
-          ? "provider"
-          : "percent",
+          ? TELEMETRY_QUOTA_UNIT_HINTS.Provider
+          : TELEMETRY_QUOTA_UNIT_HINTS.Percent,
       limit: row.usage,
       used: row.currentValue,
       remaining: row.remaining,
@@ -292,7 +310,7 @@ export function parseKimiQuota(json: unknown): TelemetryPatch {
   const weekly = usage
     ? buildQuotaWindow({
         type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Weekly,
-        unit: "provider",
+        unit: TELEMETRY_QUOTA_UNIT_HINTS.Provider,
         limit: usage.limit,
         used: usage.used,
         remaining: usage.remaining,
@@ -317,7 +335,7 @@ export function parseKimiQuota(json: unknown): TelemetryPatch {
   const fiveHour = fiveHourDetail
     ? buildQuotaWindow({
         type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.FiveHour,
-        unit: "provider",
+        unit: TELEMETRY_QUOTA_UNIT_HINTS.Provider,
         limit: fiveHourDetail.limit,
         used: fiveHourDetail.used,
         remaining: fiveHourDetail.remaining,
@@ -330,7 +348,7 @@ export function parseKimiQuota(json: unknown): TelemetryPatch {
   const total = totalQuota
     ? buildQuotaWindow({
         type: API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES.Total,
-        unit: "provider",
+        unit: TELEMETRY_QUOTA_UNIT_HINTS.Provider,
         limit: totalQuota.limit,
         remaining: totalQuota.remaining,
       })
@@ -356,18 +374,17 @@ export function parseKimiQuota(json: unknown): TelemetryPatch {
       : ""
   const boosterBalance =
     boosterWallet && isRecord(boosterWallet.balance)
-      ? readNumber(boosterWallet.balance.amountLeft)
+      ? normalizeDecimalUnits(
+          boosterWallet.balance.amountLeft,
+          TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterCreditsPerUnit,
+        )
       : undefined
   const balance = TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterStatuses.includes(
     boosterStatus as (typeof TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterStatuses)[number],
   )
     ? boosterBalance !== undefined
       ? {
-          amount: Math.max(
-            0,
-            boosterBalance /
-              TELEMETRY_PROVIDER_PROTOCOL.kimi.boosterCreditsPerUnit,
-          ),
+          amount: boosterBalance,
           currency: TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny,
           isAvailable: true,
         }
@@ -430,7 +447,7 @@ export function parseOpenCodeGoUsage(json: unknown): TelemetryPatch {
 
     const window = buildQuotaWindow({
       type,
-      unit: "percent",
+      unit: TELEMETRY_QUOTA_UNIT_HINTS.Percent,
       percentUsed: percent,
       resetTime: parseIsoTimestamp(item?.resetsAt),
     })
@@ -450,26 +467,23 @@ export function parseKimiOpenPlatformBalance(
     | typeof TELEMETRY_PROVIDER_PROTOCOL.currencies.Cny
     | typeof TELEMETRY_PROVIDER_PROTOCOL.currencies.Usd,
 ): TelemetryPatch {
-  const envelope = isRecord(json) ? json : {}
+  let record: Record<string, unknown>
+  try {
+    record = readKimiFinancialPayload(json, KIMI_FINANCIAL_SOURCES.Inference)
+  } catch {
+    return {}
+  }
+  const available = parseDecimal(record.available_balance)
   if (
-    envelope.status !== true ||
-    (envelope.code !== 0 && envelope.code !== "0")
+    available === undefined &&
+    parseDecimal(record.cash_balance) === undefined &&
+    parseDecimal(record.voucher_balance) === undefined
   )
     return {}
-  const record = dataLike(json)
-  const available = readNumber(record.available_balance)
-  if (available === undefined) return {}
-
-  const voucher = readNumber(record.voucher_balance)
-  const cash = readNumber(record.cash_balance)
   return {
-    balance: {
-      amount: available,
-      currency,
-      ...(voucher !== undefined ? { grantedAmount: voucher } : {}),
-      ...(cash !== undefined ? { toppedUpAmount: cash } : {}),
-      isAvailable: available > 0,
-    },
+    kimiInference: { payload: json, currency },
+    balanceCoverage: FINANCIAL_COVERAGE.Complete,
+    ...(available !== undefined ? { availability: Number(available) > 0 } : {}),
   }
 }
 
@@ -500,33 +514,33 @@ export function parseOpenAiBillingUsage(
 ): TelemetryPatch {
   const sub = dataLike(subscription)
   const usageRecord = dataLike(usage)
-  const hardLimit = readNumber(sub.hard_limit_usd)
-  const balance = readNumber(sub.balance)
-  const totalUsageRaw = readNumber(usageRecord.total_usage)
+  const hardLimit = parseDecimal(sub.hard_limit_usd)
+  const balance = parseDecimal(sub.balance)
+  const totalUsageRaw = parseDecimal(usageRecord.total_usage)
   const usedUsd =
     totalUsageRaw === undefined
-      ? readNumber(usageRecord.used_usd)
-      : totalUsageRaw / 100
-
-  if (balance !== undefined) {
-    return { balanceUsd: balance }
-  }
-
-  // Many compatible gateways return huge hard limits as compatibility sentinels
-  // rather than real user balance. Do not surface those as spendable balance.
-  if (
+      ? parseDecimal(usageRecord.used_usd)
+      : scaleDecimal(totalUsageRaw, -2)
+  if (balance !== undefined)
+    return { balance: { amount: balance, currency: CURRENCIES.USD } }
+  const effectiveLimit =
     hardLimit !== undefined &&
-    hardLimit >= OPENAI_BILLING_LIMIT_BALANCE_MAX_USD
-  ) {
-    return usedUsd !== undefined ? { totalUsedUsd: usedUsd } : {}
-  }
-
+    Number(hardLimit) < OPENAI_BILLING_LIMIT_BALANCE_MAX_USD
+      ? hardLimit
+      : undefined
+  if (effectiveLimit === undefined && usedUsd === undefined) return {}
   return {
-    ...(hardLimit !== undefined && usedUsd !== undefined
-      ? { balanceUsd: Math.max(0, hardLimit - usedUsd) }
-      : {}),
-    ...(hardLimit !== undefined ? { totalGrantedUsd: hardLimit } : {}),
-    ...(usedUsd !== undefined ? { totalUsedUsd: usedUsd } : {}),
+    budget: {
+      asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+      ...(effectiveLimit !== undefined ? { limit: effectiveLimit } : {}),
+      ...(usedUsd !== undefined ? { used: usedUsd } : {}),
+      ...(effectiveLimit !== undefined && usedUsd !== undefined
+        ? {
+            remaining: subtractDecimal(effectiveLimit, usedUsd),
+            remainingDerived: true,
+          }
+        : {}),
+    },
   }
 }
 
@@ -556,6 +570,7 @@ export function mapTodayTokenUsage(input: {
 export function mapCustomJson(
   json: unknown,
   paths: ApiCredentialTelemetryJsonPathMap,
+  financialMapping?: ApiCredentialTelemetryFinancialMapping,
 ): TelemetryPatch {
   const todayPromptTokens = paths.todayPromptTokens
     ? readNumber(getPathValue(json, paths.todayPromptTokens))
@@ -572,30 +587,81 @@ export function mapCustomJson(
     total: todayTotalTokens,
   })
 
+  const mappedBalance = paths.balanceUsd
+    ? parseDecimal(getPathValue(json, paths.balanceUsd))
+    : undefined
+  const mappedLimit = paths.totalGrantedUsd
+    ? parseDecimal(getPathValue(json, paths.totalGrantedUsd))
+    : undefined
+  const mappedUsed = paths.totalUsedUsd
+    ? parseDecimal(getPathValue(json, paths.totalUsedUsd))
+    : undefined
+  const mappedAvailable = paths.totalAvailableUsd
+    ? parseDecimal(getPathValue(json, paths.totalAvailableUsd))
+    : undefined
+  if (financialMapping) {
+    const counters = mapCustomJson(json, {
+      ...paths,
+      balanceUsd: undefined,
+      totalGrantedUsd: undefined,
+      totalUsedUsd: undefined,
+      totalAvailableUsd: undefined,
+    })
+    return {
+      ...counters,
+      financialMapping,
+      ...(financialMapping.role === TELEMETRY_FINANCIAL_ROLES.BudgetRemaining
+        ? {
+            budget: {
+              asset: financialMapping.asset,
+              limit: mappedLimit,
+              used: mappedUsed,
+              remaining: mappedBalance ?? mappedAvailable,
+            },
+          }
+        : {
+            ...(mappedBalance !== undefined
+              ? {
+                  balance: {
+                    amount: mappedBalance,
+                    currency:
+                      financialMapping.asset.kind === ASSET_KINDS.Currency
+                        ? financialMapping.asset.code
+                        : "",
+                  },
+                }
+              : {}),
+            balanceAsset: financialMapping.asset,
+            totalUsedUsd: mappedUsed,
+            totalGrantedUsd: mappedLimit,
+            totalAvailableUsd: mappedAvailable,
+          }),
+    }
+  }
   return {
     ...(paths.balanceUsd
-      ? { balanceUsd: readNumber(getPathValue(json, paths.balanceUsd)) }
+      ? { balanceUsd: parseDecimal(getPathValue(json, paths.balanceUsd)) }
       : {}),
     ...(paths.todayCostUsd
-      ? { todayCostUsd: readNumber(getPathValue(json, paths.todayCostUsd)) }
+      ? { todayCostUsd: parseDecimal(getPathValue(json, paths.todayCostUsd)) }
       : {}),
     ...(paths.todayRequests
       ? { todayRequests: readNumber(getPathValue(json, paths.todayRequests)) }
       : {}),
     ...(todayTokens ? { todayTokens } : {}),
     ...(paths.totalUsedUsd
-      ? { totalUsedUsd: readNumber(getPathValue(json, paths.totalUsedUsd)) }
+      ? { totalUsedUsd: parseDecimal(getPathValue(json, paths.totalUsedUsd)) }
       : {}),
     ...(paths.totalGrantedUsd
       ? {
-          totalGrantedUsd: readNumber(
+          totalGrantedUsd: parseDecimal(
             getPathValue(json, paths.totalGrantedUsd),
           ),
         }
       : {}),
     ...(paths.totalAvailableUsd
       ? {
-          totalAvailableUsd: readNumber(
+          totalAvailableUsd: parseDecimal(
             getPathValue(json, paths.totalAvailableUsd),
           ),
         }

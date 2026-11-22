@@ -1,6 +1,22 @@
+import { CURRENCIES } from "~/constants/money"
+import {
+  balanceSnapshotSchema,
+  evidenceSchema,
+  isKnownOrStaleObservation,
+  observationWindowSchema,
+  usageScopeSchema,
+} from "~/services/amounts/balance"
+import { budgetConstraintSchema } from "~/services/amounts/budgets"
+import { parseDecimal } from "~/services/amounts/decimal"
+import {
+  FINANCIAL_COVERAGE,
+  MEASUREMENT_UNIT_KINDS,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
 import { SiteHealthStatus } from "~/types"
 import type {
   ApiCredentialTelemetryAttempt,
+  ApiCredentialTelemetryBalanceFact,
   ApiCredentialTelemetryFacts,
   ApiCredentialTelemetrySnapshot,
   ApiCredentialTelemetrySource,
@@ -11,6 +27,7 @@ import {
   API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES,
   API_CREDENTIAL_TELEMETRY_SOURCES,
 } from "~/types/apiCredentialProfiles"
+import { toOptionalFiniteNumber } from "~/utils/core/number"
 
 /** Persisted flat fields accepted only when migrating pre-facts snapshots. */
 type LegacyTelemetrySnapshotFields = {
@@ -26,14 +43,24 @@ type LegacyTelemetrySnapshotFields = {
   models?: unknown
 }
 
-/** Coerces a numeric-like value into a finite number. */
-function coerceFiniteNumber(raw: unknown): number | undefined {
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw
-  if (typeof raw === "string" && raw.trim()) {
-    const parsed = Number(raw)
-    if (Number.isFinite(parsed)) return parsed
+/** Canonical and legacy snapshots retain the same optional token counters. */
+function coerceTelemetryTokenUsage(
+  rawTokens: Record<string, unknown> | null | undefined,
+): NonNullable<ApiCredentialTelemetryFacts["usage"]>["todayTokens"] {
+  const upload = toOptionalFiniteNumber(rawTokens?.upload)
+  const download = toOptionalFiniteNumber(rawTokens?.download)
+  const total = toOptionalFiniteNumber(rawTokens?.total)
+  if (upload === undefined && download === undefined && total === undefined)
+    return undefined
+  return {
+    ...(upload !== undefined ? { upload } : {}),
+    ...(download !== undefined ? { download } : {}),
+    ...(total !== undefined ? { total } : {}),
+    unit: {
+      kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
+      code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.Tokens,
+    },
   }
-  return undefined
 }
 
 /** Normalizes persisted model facts with finite counts and capped previews. */
@@ -42,7 +69,7 @@ function coerceTelemetryModelsFact(
 ): ApiCredentialTelemetryFacts["models"] | undefined {
   if (!rawModels || typeof rawModels !== "object") return undefined
   const models = rawModels as Record<string, unknown>
-  const count = coerceFiniteNumber(models.count)
+  const count = toOptionalFiniteNumber(models.count)
   if (count === undefined) return undefined
   return {
     count: Math.max(0, Math.trunc(count)),
@@ -116,6 +143,17 @@ function coerceTelemetryFacts(
   if (!raw || typeof raw !== "object") return undefined
   const obj = raw as Record<string, unknown>
   const facts: ApiCredentialTelemetryFacts = {}
+  if (obj.balanceSnapshot !== undefined) {
+    const result = balanceSnapshotSchema.safeParse(obj.balanceSnapshot)
+    if (!result.success)
+      throw new Error("Invalid canonical credential balance snapshot")
+    facts.balanceSnapshot = result.data
+  }
+  if (obj.budgets !== undefined) {
+    const result = budgetConstraintSchema.array().safeParse(obj.budgets)
+    if (!result.success) throw new Error("Invalid canonical credential budgets")
+    facts.budgets = result.data
+  }
 
   const rawBalances = Array.isArray(obj.balances) ? obj.balances : []
   const balances = rawBalances
@@ -123,7 +161,7 @@ function coerceTelemetryFacts(
       Boolean(item && typeof item === "object"),
     )
     .map((item) => {
-      const amount = coerceFiniteNumber(item.amount)
+      const amount = toOptionalFiniteNumber(item.amount)
       const unit =
         item.unit && typeof item.unit === "object"
           ? (item.unit as Record<string, unknown>)
@@ -132,40 +170,48 @@ function coerceTelemetryFacts(
         typeof unit?.currency === "string" ? unit.currency.trim() : ""
       const code = typeof unit?.code === "string" ? unit.code.trim() : ""
       const label = typeof unit?.label === "string" ? unit.label.trim() : ""
-      const decimalPlaces = coerceFiniteNumber(unit?.decimalPlaces)
+      const decimalPlaces = toOptionalFiniteNumber(unit?.decimalPlaces)
       const semantics = item.semantics
       if (
         amount === undefined ||
-        (unit?.kind === "money" &&
+        (unit?.kind === MEASUREMENT_UNIT_KINDS.Money &&
           (!currency || decimalPlaces === undefined)) ||
-        (unit?.kind === "quota" && (!code || !label)) ||
-        (unit?.kind !== "money" && unit?.kind !== "quota") ||
-        !["cash", "provider-wallet", "budget-equivalent", "legacy"].includes(
-          String(semantics),
-        )
+        (unit?.kind === MEASUREMENT_UNIT_KINDS.Quota && (!code || !label)) ||
+        (unit?.kind !== MEASUREMENT_UNIT_KINDS.Money &&
+          unit?.kind !== MEASUREMENT_UNIT_KINDS.Quota) ||
+        !(
+          Object.values(
+            API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics,
+          ) as readonly string[]
+        ).includes(String(semantics))
       ) {
         return null
       }
       return {
         amount,
+        ...(isKnownOrStaleObservation(item)
+          ? {
+              status: item.status as (typeof OBSERVATION_STATUSES)[
+                "Known" | "Stale"],
+            }
+          : {}),
+        ...(toOptionalFiniteNumber(item.observedAt) !== undefined
+          ? { observedAt: toOptionalFiniteNumber(item.observedAt) }
+          : {}),
         unit:
-          unit.kind === "quota"
-            ? { kind: "quota" as const, code, label }
+          unit.kind === MEASUREMENT_UNIT_KINDS.Quota
+            ? { kind: MEASUREMENT_UNIT_KINDS.Quota, code, label }
             : {
-                kind: "money" as const,
+                kind: MEASUREMENT_UNIT_KINDS.Money,
                 currency,
                 decimalPlaces: decimalPlaces ?? 2,
               },
-        semantics: semantics as
-          | "cash"
-          | "provider-wallet"
-          | "budget-equivalent"
-          | "legacy",
-        ...(coerceFiniteNumber(item.grantedAmount) !== undefined
-          ? { grantedAmount: coerceFiniteNumber(item.grantedAmount) }
+        semantics: semantics as ApiCredentialTelemetryBalanceFact["semantics"],
+        ...(toOptionalFiniteNumber(item.grantedAmount) !== undefined
+          ? { grantedAmount: toOptionalFiniteNumber(item.grantedAmount) }
           : {}),
-        ...(coerceFiniteNumber(item.toppedUpAmount) !== undefined
-          ? { toppedUpAmount: coerceFiniteNumber(item.toppedUpAmount) }
+        ...(toOptionalFiniteNumber(item.toppedUpAmount) !== undefined
+          ? { toppedUpAmount: toOptionalFiniteNumber(item.toppedUpAmount) }
           : {}),
         ...(typeof item.isAvailable === "boolean"
           ? { isAvailable: item.isAvailable }
@@ -199,41 +245,88 @@ function coerceTelemetryFacts(
         ) as (typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES)[keyof typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES],
       )
       const validUnit =
-        unitKind === "percent" ||
-        (unitKind === "quota" &&
+        unitKind === MEASUREMENT_UNIT_KINDS.Percent ||
+        (unitKind === MEASUREMENT_UNIT_KINDS.Quota &&
           typeof unit?.code === "string" &&
           typeof unit.label === "string")
-      const remainingPercent = coerceFiniteNumber(item.remainingPercent)
+      const remainingPercent = toOptionalFiniteNumber(item.remainingPercent)
+      const retainedAmounts: NonNullable<
+        import("~/types/apiCredentialProfiles").ApiCredentialTelemetryQuotaWindowFact["retainedAmounts"]
+      > = {}
+      if (item.retainedAmounts && typeof item.retainedAmounts === "object") {
+        const retained = item.retainedAmounts as Record<string, unknown>
+        for (const field of [
+          "used",
+          "limit",
+          "remaining",
+          "remainingPercent",
+        ] as const) {
+          const rawAmount = retained[field]
+          if (!rawAmount || typeof rawAmount !== "object") continue
+          const amount = rawAmount as Record<string, unknown>
+          const value = toOptionalFiniteNumber(amount.value)
+          const observedAt = toOptionalFiniteNumber(amount.observedAt)
+          if (
+            amount.status !== OBSERVATION_STATUSES.Stale ||
+            value === undefined ||
+            observedAt === undefined ||
+            (field === "remainingPercent" && (value < 0 || value > 100))
+          )
+            continue
+          const source = evidenceSchema.safeParse(amount.source)
+          retainedAmounts[field] = {
+            status: OBSERVATION_STATUSES.Stale,
+            value,
+            observedAt,
+            ...(source.success ? { source: source.data } : {}),
+          }
+        }
+      }
       if (
         !validType ||
         !validUnit ||
-        remainingPercent === undefined ||
-        remainingPercent < 0 ||
-        remainingPercent > 100
+        (remainingPercent !== undefined &&
+          (remainingPercent < 0 || remainingPercent > 100))
       )
         return null
       return {
         type: type as (typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES)[keyof typeof API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES],
+        ...(isKnownOrStaleObservation(item)
+          ? {
+              status: item.status as (typeof OBSERVATION_STATUSES)[
+                "Known" | "Stale"],
+            }
+          : {}),
         unit:
-          unitKind === "percent"
-            ? { kind: "percent" as const }
+          unitKind === MEASUREMENT_UNIT_KINDS.Percent
+            ? { kind: MEASUREMENT_UNIT_KINDS.Percent }
             : {
-                kind: "quota" as const,
+                kind: MEASUREMENT_UNIT_KINDS.Quota,
                 code: String(unit?.code),
                 label: String(unit?.label),
               },
-        ...(coerceFiniteNumber(item.used) !== undefined
-          ? { used: coerceFiniteNumber(item.used) }
+        ...(toOptionalFiniteNumber(item.used) !== undefined
+          ? { used: toOptionalFiniteNumber(item.used) }
           : {}),
-        ...(coerceFiniteNumber(item.limit) !== undefined
-          ? { limit: coerceFiniteNumber(item.limit) }
+        ...(toOptionalFiniteNumber(item.limit) !== undefined
+          ? { limit: toOptionalFiniteNumber(item.limit) }
           : {}),
-        ...(coerceFiniteNumber(item.remaining) !== undefined
-          ? { remaining: coerceFiniteNumber(item.remaining) }
+        ...(toOptionalFiniteNumber(item.remaining) !== undefined
+          ? { remaining: toOptionalFiniteNumber(item.remaining) }
           : {}),
-        remainingPercent,
-        ...(coerceFiniteNumber(item.resetTime) !== undefined
-          ? { resetTime: coerceFiniteNumber(item.resetTime) }
+        ...(remainingPercent !== undefined ? { remainingPercent } : {}),
+        ...(Object.keys(retainedAmounts).length ? { retainedAmounts } : {}),
+        ...(evidenceSchema.safeParse(item.source).success
+          ? { source: evidenceSchema.parse(item.source) }
+          : {}),
+        ...(usageScopeSchema.safeParse(item.scope).success
+          ? { scope: usageScopeSchema.parse(item.scope) }
+          : {}),
+        ...(toOptionalFiniteNumber(item.observedAt) !== undefined
+          ? { observedAt: toOptionalFiniteNumber(item.observedAt) }
+          : {}),
+        ...(toOptionalFiniteNumber(item.resetTime) !== undefined
+          ? { resetTime: toOptionalFiniteNumber(item.resetTime) }
           : {}),
       }
     })
@@ -259,34 +352,99 @@ function coerceTelemetryFacts(
     const coerceAmount = (rawAmount: unknown) => {
       if (!rawAmount || typeof rawAmount !== "object") return undefined
       const amount = rawAmount as Record<string, unknown>
-      const value = coerceFiniteNumber(amount.value)
+      const value =
+        typeof amount.value === "string"
+          ? parseDecimal(amount.value)
+          : toOptionalFiniteNumber(amount.value)
+      const source = evidenceSchema.safeParse(amount.source)
+      const scope = usageScopeSchema.safeParse(amount.scope)
+      const window = observationWindowSchema.safeParse(amount.window)
+      const metadata = {
+        ...(isKnownOrStaleObservation(amount)
+          ? {
+              status: amount.status as (typeof OBSERVATION_STATUSES)[
+                "Known" | "Stale"],
+            }
+          : {}),
+        ...(window.success ? { window: window.data } : {}),
+        ...(source.success ? { source: source.data } : {}),
+        ...(scope.success ? { scope: scope.data } : {}),
+        ...(toOptionalFiniteNumber(amount.observedAt) !== undefined
+          ? { observedAt: toOptionalFiniteNumber(amount.observedAt) }
+          : {}),
+        ...((Object.values(FINANCIAL_COVERAGE) as readonly string[]).includes(
+          String(amount.coverage),
+        )
+          ? {
+              coverage:
+                amount.coverage as (typeof FINANCIAL_COVERAGE)[keyof typeof FINANCIAL_COVERAGE],
+            }
+          : {}),
+      }
       const unit =
         amount.unit && typeof amount.unit === "object"
           ? (amount.unit as Record<string, unknown>)
           : null
       if (value === undefined || !unit?.kind) return undefined
-      if (unit.kind === "money" && typeof unit.currency === "string") {
+      if (unit.kind === MEASUREMENT_UNIT_KINDS.Unknown)
         return {
           value,
+          unit: { kind: MEASUREMENT_UNIT_KINDS.Unknown },
+          ...metadata,
+        }
+      if (unit.kind === MEASUREMENT_UNIT_KINDS.Crypto && unit.id === "XNO")
+        return {
+          value,
+          unit: { kind: MEASUREMENT_UNIT_KINDS.Crypto, id: "XNO" as const },
+          ...metadata,
+        }
+      if (
+        unit.kind === MEASUREMENT_UNIT_KINDS.Money &&
+        typeof unit.currency === "string"
+      ) {
+        return {
+          value,
+          ...metadata,
           unit: {
-            kind: "money" as const,
+            kind: MEASUREMENT_UNIT_KINDS.Money,
             currency: unit.currency,
-            decimalPlaces: coerceFiniteNumber(unit.decimalPlaces) ?? 2,
+            decimalPlaces: toOptionalFiniteNumber(unit.decimalPlaces) ?? 2,
           },
         }
       }
       if (
-        unit.kind === "quota" &&
+        unit.kind === MEASUREMENT_UNIT_KINDS.Quota &&
         typeof unit.code === "string" &&
         typeof unit.label === "string"
       ) {
         return {
           value,
-          unit: { kind: "quota" as const, code: unit.code, label: unit.label },
+          ...metadata,
+          unit: {
+            kind: MEASUREMENT_UNIT_KINDS.Quota,
+            code: unit.code,
+            label: unit.label,
+            ...(typeof unit.displayScale === "number" &&
+            Number.isFinite(unit.displayScale) &&
+            unit.displayScale > 0
+              ? { displayScale: unit.displayScale }
+              : {}),
+            ...(typeof unit.displayLabel === "string" &&
+            unit.displayLabel.trim()
+              ? { displayLabel: unit.displayLabel.trim() }
+              : {}),
+          },
         }
       }
-      if (unit.kind === "count" && typeof unit.code === "string") {
-        return { value, unit: { kind: "count" as const, code: unit.code } }
+      if (
+        unit.kind === MEASUREMENT_UNIT_KINDS.Count &&
+        typeof unit.code === "string"
+      ) {
+        return {
+          value,
+          ...metadata,
+          unit: { kind: MEASUREMENT_UNIT_KINDS.Count, code: unit.code },
+        }
       }
       return undefined
     }
@@ -302,26 +460,14 @@ function coerceTelemetryFacts(
     if (totalAvailable) usage.totalAvailable = totalAvailable
     if (typeof rawUsage.unlimited === "boolean")
       usage.unlimited = rawUsage.unlimited
-    if (coerceFiniteNumber(rawUsage.expiresAt) !== undefined)
-      usage.expiresAt = coerceFiniteNumber(rawUsage.expiresAt)
+    if (toOptionalFiniteNumber(rawUsage.expiresAt) !== undefined)
+      usage.expiresAt = toOptionalFiniteNumber(rawUsage.expiresAt)
     const rawTokens =
       rawUsage.todayTokens && typeof rawUsage.todayTokens === "object"
         ? (rawUsage.todayTokens as Record<string, unknown>)
         : null
-    const upload = coerceFiniteNumber(rawTokens?.upload)
-    const download = coerceFiniteNumber(rawTokens?.download)
-    const total = coerceFiniteNumber(rawTokens?.total)
-    if (upload !== undefined || download !== undefined || total !== undefined) {
-      usage.todayTokens = {
-        ...(upload !== undefined ? { upload } : {}),
-        ...(download !== undefined ? { download } : {}),
-        ...(total !== undefined ? { total } : {}),
-        unit: {
-          kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
-          code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.Tokens,
-        },
-      }
-    }
+    const todayTokens = coerceTelemetryTokenUsage(rawTokens)
+    if (todayTokens) usage.todayTokens = todayTokens
     if (Object.keys(usage).length > 0) facts.usage = usage
   }
 
@@ -342,7 +488,7 @@ function migrateLegacyTelemetryFacts(
   source: ApiCredentialTelemetrySource | undefined,
 ): ApiCredentialTelemetryFacts {
   const facts: ApiCredentialTelemetryFacts = {}
-  const balanceUsd = coerceFiniteNumber(obj.balanceUsd)
+  const balanceUsd = toOptionalFiniteNumber(obj.balanceUsd)
   if (balanceUsd !== undefined) {
     facts.balances = [
       {
@@ -351,14 +497,18 @@ function migrateLegacyTelemetryFacts(
           source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
           source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
             ? {
-                kind: "quota",
+                kind: MEASUREMENT_UNIT_KINDS.Quota,
                 code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent,
                 label: API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.UsdEquivalent,
               }
-            : { kind: "money", currency: "USD", decimalPlaces: 2 },
+            : {
+                kind: MEASUREMENT_UNIT_KINDS.Money,
+                currency: CURRENCIES.USD,
+                decimalPlaces: 2,
+              },
         semantics:
           source === API_CREDENTIAL_TELEMETRY_SOURCES.OpenAiBilling
-            ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Cash
+            ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Legacy
             : source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
                 source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
               ? API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.BudgetEquivalent
@@ -367,12 +517,16 @@ function migrateLegacyTelemetryFacts(
     ]
   }
   const usage: NonNullable<ApiCredentialTelemetryFacts["usage"]> = {}
-  const todayCostUsd = coerceFiniteNumber(obj.todayCostUsd)
-  const todayRequests = coerceFiniteNumber(obj.todayRequests)
+  const todayCostUsd = toOptionalFiniteNumber(obj.todayCostUsd)
+  const todayRequests = toOptionalFiniteNumber(obj.todayRequests)
   if (todayCostUsd !== undefined) {
     usage.todayCost = {
       value: todayCostUsd,
-      unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+      unit: {
+        kind: MEASUREMENT_UNIT_KINDS.Money,
+        currency: CURRENCIES.USD,
+        decimalPlaces: 2,
+      },
     }
   }
   if (todayRequests !== undefined) {
@@ -385,41 +539,33 @@ function migrateLegacyTelemetryFacts(
     }
   }
   const rawTokens = obj.todayTokens as Record<string, unknown> | undefined
-  const upload = coerceFiniteNumber(rawTokens?.upload)
-  const download = coerceFiniteNumber(rawTokens?.download)
-  const total = coerceFiniteNumber(rawTokens?.total)
-  if (upload !== undefined || download !== undefined || total !== undefined) {
-    usage.todayTokens = {
-      ...(upload !== undefined ? { upload } : {}),
-      ...(download !== undefined ? { download } : {}),
-      ...(total !== undefined ? { total } : {}),
-      unit: {
-        kind: API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Count,
-        code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.Tokens,
-      },
-    }
-  }
+  const todayTokens = coerceTelemetryTokenUsage(rawTokens)
+  if (todayTokens) usage.todayTokens = todayTokens
   const budgetUnit =
     source === API_CREDENTIAL_TELEMETRY_SOURCES.NewApiTokenUsage ||
     source === API_CREDENTIAL_TELEMETRY_SOURCES.Sub2ApiUsage
       ? {
-          kind: "quota" as const,
+          kind: MEASUREMENT_UNIT_KINDS.Quota,
           code: API_CREDENTIAL_TELEMETRY_FACT_UNITS.codes.UsdEquivalent,
           label: API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.UsdEquivalent,
         }
-      : { kind: "money" as const, currency: "USD", decimalPlaces: 2 }
+      : {
+          kind: MEASUREMENT_UNIT_KINDS.Money,
+          currency: CURRENCIES.USD,
+          decimalPlaces: 2,
+        }
   for (const [key, field] of [
     ["totalUsed", "totalUsedUsd"],
     ["totalGranted", "totalGrantedUsd"],
     ["totalAvailable", "totalAvailableUsd"],
   ] as const) {
-    const value = coerceFiniteNumber(obj[field])
+    const value = toOptionalFiniteNumber(obj[field])
     if (value !== undefined) usage[key] = { value, unit: budgetUnit }
   }
   if (typeof obj.unlimitedQuota === "boolean")
     usage.unlimited = obj.unlimitedQuota
-  if (coerceFiniteNumber(obj.expiresAt) !== undefined)
-    usage.expiresAt = coerceFiniteNumber(obj.expiresAt)
+  if (toOptionalFiniteNumber(obj.expiresAt) !== undefined)
+    usage.expiresAt = toOptionalFiniteNumber(obj.expiresAt)
   if (Object.keys(usage).length > 0) facts.usage = usage
 
   const modelsFact = coerceTelemetryModelsFact(obj.models)
@@ -437,7 +583,15 @@ export function coerceTelemetrySnapshot(
 ): ApiCredentialTelemetrySnapshot | undefined {
   const obj =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
-  const lastSyncTime = coerceFiniteNumber(obj.lastSyncTime)
+  if (obj.schemaVersion !== undefined && obj.schemaVersion !== 2)
+    throw new Error("Unsupported credential telemetry snapshot version")
+  if (
+    obj.schemaVersion === 2 &&
+    obj.facts !== undefined &&
+    (!obj.facts || typeof obj.facts !== "object" || Array.isArray(obj.facts))
+  )
+    throw new Error("Invalid canonical credential telemetry facts")
+  const lastSyncTime = toOptionalFiniteNumber(obj.lastSyncTime)
   if (!lastSyncTime || lastSyncTime <= 0) return undefined
 
   const rawHealth =
@@ -460,13 +614,22 @@ export function coerceTelemetrySnapshot(
     : undefined
 
   const facts =
-    coerceTelemetryFacts(obj.facts) ?? migrateLegacyTelemetryFacts(obj, source)
+    obj.facts !== undefined
+      ? coerceTelemetryFacts(obj.facts)
+      : migrateLegacyTelemetryFacts(obj, source)
+
+  if (facts?.balances && obj.schemaVersion === undefined)
+    facts.balances = facts.balances.map((balance) => ({
+      ...balance,
+      semantics: API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Legacy,
+    }))
 
   return {
+    ...(obj.schemaVersion === 2 ? { schemaVersion: 2 as const } : {}),
     health,
     lastSyncTime,
-    ...(coerceFiniteNumber(obj.lastSuccessTime)
-      ? { lastSuccessTime: coerceFiniteNumber(obj.lastSuccessTime) }
+    ...(toOptionalFiniteNumber(obj.lastSuccessTime)
+      ? { lastSuccessTime: toOptionalFiniteNumber(obj.lastSuccessTime) }
       : {}),
     ...(typeof obj.lastError === "string" && obj.lastError.trim()
       ? { lastError: obj.lastError.trim() }

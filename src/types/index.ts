@@ -10,6 +10,10 @@ import {
   DATA_TYPE_INCOME,
   DATA_TYPE_NAME,
 } from "~/constants"
+import {
+  type CURRENCY_DISPLAY_TYPES,
+  type CURRENCY_TYPES,
+} from "~/constants/money"
 import type { AccountSiteType } from "~/constants/siteType"
 import type { QuotaAsset } from "~/services/quotaAssets/quotaAsset"
 import type {
@@ -42,8 +46,7 @@ export interface HealthStatus {
  * Subset of health status codes that the UI can act on (e.g., open Settings).
  */
 export type HealthStatusCode =
-  | TempWindowHealthStatusCode
-  | AccountAuthHealthStatusCode
+  TempWindowHealthStatusCode | AccountAuthHealthStatusCode
 
 export type AccountIdentity = string
 
@@ -454,7 +457,9 @@ export const SORT_ORDERS = ["asc", "desc"] as const
 export type SortOrder = (typeof SORT_ORDERS)[number]
 
 // 货币类型
-export const CURRENCY_TYPES = ["USD", "CNY"] as const
+export { CURRENCY_TYPES } from "~/constants/money"
+
+export type CurrencyDisplay = (typeof CURRENCY_DISPLAY_TYPES)[number]
 export type CurrencyType = (typeof CURRENCY_TYPES)[number]
 
 export type CurrencyAmount = { USD: number; CNY: number }

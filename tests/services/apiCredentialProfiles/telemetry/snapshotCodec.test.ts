@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
+import { MEASUREMENT_UNIT_KINDS } from "~/services/amounts/financialConstants"
 import { coerceTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/snapshotCodec"
 import { SiteHealthStatus } from "~/types"
 import {
@@ -8,6 +10,70 @@ import {
 } from "~/types/apiCredentialProfiles"
 
 describe("api credential telemetry snapshot codec", () => {
+  it("keeps historical quota balances and topped-up operands without changing their unit", () => {
+    const snapshot = coerceTelemetrySnapshot({
+      lastSyncTime: 2000,
+      facts: {
+        balances: [
+          {
+            amount: 50,
+            unit: { kind: "quota", code: "credits", label: "Credits" },
+            semantics: "legacy",
+            toppedUpAmount: 45,
+            status: "stale",
+            observedAt: 1000,
+          },
+        ],
+      },
+    })!
+    expect(snapshot.facts?.balances).toEqual([
+      {
+        amount: 50,
+        unit: { kind: "quota", code: "credits", label: "Credits" },
+        semantics: "legacy",
+        toppedUpAmount: 45,
+        status: "stale",
+        observedAt: 1000,
+      },
+    ])
+  })
+  it.each([
+    { displayScale: 0, displayLabel: " " },
+    { displayScale: -1, displayLabel: 9 },
+    { displayScale: Infinity, displayLabel: null },
+  ])(
+    "discards invalid display metadata without discarding native cost %j",
+    (metadata) => {
+      const snapshot = coerceTelemetrySnapshot({
+        lastSyncTime: 2000,
+        facts: {
+          usage: {
+            todayCost: {
+              value: "250",
+              unit: {
+                kind: "quota",
+                code: "credits",
+                label: "Credits",
+                ...metadata,
+              },
+            },
+            todayRequests: { value: 3, unit: { kind: "count", code: 7 } },
+          },
+        },
+      })!
+      expect(snapshot.facts?.usage?.todayCost).toMatchObject({
+        value: "250",
+        unit: { kind: "quota", code: "credits", label: "Credits" },
+      })
+      expect(snapshot.facts?.usage?.todayCost?.unit).not.toHaveProperty(
+        "displayScale",
+      )
+      expect(snapshot.facts?.usage?.todayCost?.unit).not.toHaveProperty(
+        "displayLabel",
+      )
+      expect(snapshot.facts?.usage?.todayRequests).toBeUndefined()
+    },
+  )
   it("preserves membership-only quota facts", () => {
     expect(
       coerceTelemetrySnapshot({
@@ -38,32 +104,47 @@ describe("api credential telemetry snapshot codec", () => {
         balances: [
           {
             amount: "4.5",
-            unit: { kind: "money", currency: "USD", decimalPlaces: "2" },
+            unit: {
+              kind: MEASUREMENT_UNIT_KINDS.Money,
+              currency: CURRENCIES.USD,
+              decimalPlaces: "2",
+            },
             semantics: "cash",
             grantedAmount: "1",
             isAvailable: true,
           },
-          { amount: "bad", unit: { kind: "money" }, semantics: "cash" },
+          {
+            amount: "bad",
+            unit: { kind: MEASUREMENT_UNIT_KINDS.Money },
+            semantics: "cash",
+          },
         ],
         quota: {
           windows: [
             {
               type: "weekly",
-              unit: { kind: "percent" },
+              unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
               remainingPercent: "75",
               resetTime: "1800000000000",
             },
-            { type: "bad", unit: { kind: "percent" }, remainingPercent: 5 },
+            {
+              type: "bad",
+              unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
+              remainingPercent: 5,
+            },
           ],
         },
         usage: {
           todayCost: {
             value: "1.25",
-            unit: { kind: "money", currency: "USD" },
+            unit: {
+              kind: MEASUREMENT_UNIT_KINDS.Money,
+              currency: CURRENCIES.USD,
+            },
           },
           todayRequests: {
             value: 3,
-            unit: { kind: "count", code: "requests" },
+            unit: { kind: MEASUREMENT_UNIT_KINDS.Count, code: "requests" },
           },
           todayTokens: { upload: "10" },
           unlimited: false,
@@ -90,7 +171,7 @@ describe("api credential telemetry snapshot codec", () => {
           {
             amount: 4.5,
             unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
-            semantics: "cash",
+            semantics: "legacy",
             grantedAmount: 1,
             isAvailable: true,
           },
@@ -107,7 +188,7 @@ describe("api credential telemetry snapshot codec", () => {
         },
         usage: {
           todayCost: {
-            value: 1.25,
+            value: "1.25",
             unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
           },
           todayRequests: {
@@ -159,7 +240,7 @@ describe("api credential telemetry snapshot codec", () => {
               code: "usd-equivalent",
               label: "USD-equivalent budget",
             },
-            semantics: "budget-equivalent",
+            semantics: "legacy",
           },
         ],
         usage: {

@@ -5,6 +5,7 @@ import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContex
 import { type useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles"
 import toast from "~/lib/notify"
 import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
+import { TelemetryRefreshSupersededError } from "~/services/apiCredentialProfiles/telemetry/contracts"
 import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionCompleted,
@@ -150,10 +151,12 @@ const analyticsStatusByHealthStatus: Record<
 function hasTelemetryUsageData(snapshot: ApiCredentialTelemetrySnapshot) {
   const facts = snapshot.facts
   return Boolean(
+    facts?.balanceSnapshot ||
+    facts?.budgets?.length ||
     facts?.balances?.length ||
-      facts?.quota?.windows?.length ||
-      facts?.usage ||
-      facts?.models,
+    facts?.quota?.windows?.length ||
+    facts?.usage ||
+    facts?.models,
   )
 }
 
@@ -333,6 +336,10 @@ export function useApiCredentialProfileCommands({
           loading: t("apiCredentialProfiles:telemetry.messages.refreshing"),
           success: t("apiCredentialProfiles:telemetry.messages.refreshed"),
           error: (error) => {
+            if (error instanceof TelemetryRefreshSupersededError)
+              return t(
+                "apiCredentialProfiles:telemetry.messages.refreshSuperseded",
+              )
             logger.warn("Telemetry refresh failed", error)
             return t("apiCredentialProfiles:telemetry.messages.refreshFailed")
           },
@@ -353,6 +360,10 @@ export function useApiCredentialProfileCommands({
           })
         }
       } catch (error) {
+        if (error instanceof TelemetryRefreshSupersededError) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          return
+        }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
@@ -382,6 +393,18 @@ export function useApiCredentialProfileCommands({
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingProfile) return
     const startedAt = Date.now()
+    const reportDeleteFailure = () => {
+      toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
+      void trackProductAnalyticsActionCompleted({
+        featureId: apiCredentialProfilesFeature,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+        surfaceId: apiCredentialProfilesRefreshSurface,
+        entrypoint: optionsEntrypoint,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        durationMs: Date.now() - startedAt,
+      })
+    }
     setIsDeleting(true)
     try {
       const deleted = await deleteProfile(deletingProfile.id)
@@ -396,29 +419,11 @@ export function useApiCredentialProfileCommands({
           durationMs: Date.now() - startedAt,
         })
       } else {
-        toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
-        void trackProductAnalyticsActionCompleted({
-          featureId: apiCredentialProfilesFeature,
-          actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
-          surfaceId: apiCredentialProfilesRefreshSurface,
-          entrypoint: optionsEntrypoint,
-          result: PRODUCT_ANALYTICS_RESULTS.Failure,
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          durationMs: Date.now() - startedAt,
-        })
+        reportDeleteFailure()
       }
       setDeletingProfile(null)
     } catch {
-      toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
-      void trackProductAnalyticsActionCompleted({
-        featureId: apiCredentialProfilesFeature,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
-        surfaceId: apiCredentialProfilesRefreshSurface,
-        entrypoint: optionsEntrypoint,
-        result: PRODUCT_ANALYTICS_RESULTS.Failure,
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        durationMs: Date.now() - startedAt,
-      })
+      reportDeleteFailure()
     } finally {
       setIsDeleting(false)
     }

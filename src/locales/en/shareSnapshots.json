@@ -3,6 +3,10 @@
     "shareAccountSnapshot": "Share account snapshot",
     "shareOverviewSnapshot": "Share overview snapshot"
   },
+  "financial": {
+    "complete": "Complete coverage",
+    "partial": "Partial coverage"
+  },
   "labels": {
     "accounts": "Accounts",
     "asOf": "As of",

@@ -255,6 +255,12 @@ for (const scenario of [
     page,
     profileSite,
   }) => {
+    // CI completes this multiwindow flow plus authenticated model validation in
+    // about 64s. Add 30s to its body budget while keeping the fixture's startup
+    // allowance and every action/assertion timeout unchanged. Preserve unlimited
+    // runs when the caller selects --timeout=0.
+    const currentTimeout = test.info().timeout
+    if (currentTimeout > 0) test.setTimeout(currentTimeout + 30_000)
     const { tokenPagePath, openTokenSettingsLabel, siteType } = scenario
     const baseUrl = scenario.baseUrl ?? profileSite
     const tokenFailureStatus =

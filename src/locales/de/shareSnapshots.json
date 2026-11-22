@@ -3,6 +3,10 @@
     "shareAccountSnapshot": "Konto-Snapshot teilen",
     "shareOverviewSnapshot": "Übersichts-Schnappschuss teilen"
   },
+  "financial": {
+    "complete": "Vollständige Abdeckung",
+    "partial": "Teilweise Abdeckung"
+  },
   "labels": {
     "accounts": "Konten",
     "asOf": "Stand",

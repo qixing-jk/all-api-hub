@@ -10,14 +10,25 @@ export const CURRENCIES = {
   CNY: "CNY",
 } as const
 
-export const CURRENCY_SYMBOLS = {
-  USD: "$",
-  CNY: "¥",
+export const CURRENCY_DISPLAY_MODES = {
+  Original: "original",
+  ...CURRENCIES,
 } as const
+
+export const CURRENCY_TYPES = [CURRENCIES.USD, CURRENCIES.CNY] as const
+export const CURRENCY_DISPLAY_TYPES = [
+  CURRENCY_DISPLAY_MODES.Original,
+  ...CURRENCY_TYPES,
+] as const
 
 /** Recognize the exact supported pair without widening arbitrary upstream codes. */
 export function isSupportedCurrency(
   value: unknown,
-): value is (typeof CURRENCIES)[keyof typeof CURRENCIES] {
-  return Object.values(CURRENCIES).some((currency) => currency === value)
+): value is (typeof CURRENCY_TYPES)[number] {
+  return CURRENCY_TYPES.some((currency) => currency === value)
 }
+
+export const CURRENCY_SYMBOLS = {
+  USD: "$",
+  CNY: "¥",
+} as const

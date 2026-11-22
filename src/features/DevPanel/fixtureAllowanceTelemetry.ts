@@ -11,6 +11,7 @@
  * countdown never starts out already expired.
  */
 
+import { balancePosition, type UsageScope } from "~/services/amounts/balance"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialTelemetrySnapshot } from "~/types/apiCredentialProfiles"
 
@@ -34,8 +35,20 @@ function snapshot(
   endpoint: string,
   facts: ApiCredentialTelemetrySnapshot["facts"],
   now: number,
+  profileId = "dev-allowance",
 ): ApiCredentialTelemetrySnapshot {
+  const observedAt = now - 3 * MINUTE
+  const scope: UsageScope = {
+    subject: { kind: "credential", profileId },
+    authority: "https://dev-allowance.invalid",
+    projects: { kind: "all" },
+    keys: { kind: "all" },
+    models: { kind: "all" },
+    groups: { kind: "all" },
+  }
+  const { balances, ...nativeFacts } = facts ?? {}
   return {
+    schemaVersion: 2,
     attempts: [
       {
         source: source!,
@@ -48,7 +61,64 @@ function snapshot(
     lastSyncTime: now - 3 * MINUTE,
     lastSuccessTime: now - 3 * MINUTE,
     source,
-    facts,
+    facts: {
+      ...nativeFacts,
+      ...(balances
+        ? {
+            balanceSnapshot: {
+              schemaVersion: 2,
+              subject: scope.subject,
+              capturedAt: observedAt,
+              coverage: "complete",
+              positions: balances.map((balance, index) =>
+                balancePosition({
+                  id: `fixture-wallet:${index}`,
+                  scope,
+                  asset:
+                    balance.unit.kind === "money"
+                      ? { kind: "currency", code: balance.unit.currency }
+                      : { kind: "unknown" },
+                  value: balance.amount,
+                  observedAt,
+                  cashClassification:
+                    balance.semantics === "cash" ? "reported-cash" : "unknown",
+                  source: {
+                    kind: "reported",
+                    adapter: source!,
+                    operation: endpoint,
+                    contractVersion: "dev-fixture/1",
+                  },
+                }),
+              ),
+            },
+          }
+        : {}),
+      ...(facts?.usage?.todayCost
+        ? {
+            usage: {
+              ...facts.usage,
+              todayCost: {
+                ...facts.usage.todayCost,
+                scope,
+                status: "known",
+                observedAt,
+                coverage: "complete",
+                source: {
+                  kind: "reported",
+                  adapter: source!,
+                  operation: endpoint,
+                  contractVersion: "dev-fixture/1",
+                },
+                window: {
+                  start: observedAt - DAY,
+                  end: observedAt,
+                  timeZone: "UTC",
+                },
+              },
+            },
+          }
+        : {}),
+    },
   }
 }
 
@@ -61,7 +131,10 @@ export type DevAllowanceFixtureDefinition = {
    * Builds this fixture's snapshot, or `undefined` for the state where the
    * provider reports nothing at all.
    */
-  buildSnapshot: (now: number) => ApiCredentialTelemetrySnapshot | undefined
+  buildSnapshot: (
+    now: number,
+    profileId?: string,
+  ) => ApiCredentialTelemetrySnapshot | undefined
 }
 
 export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
@@ -71,7 +144,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
       name: "Dev Allowance: 5h critical, weekly low",
       notes:
         "Dev fixture: synthetic coding-plan telemetry; this endpoint cannot be reached.",
-      buildSnapshot: (now) =>
+      buildSnapshot: (now, profileId) =>
         snapshot(
           "kimiQuota",
           "/coding/v1/usages",
@@ -112,6 +185,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             models: { count: 12, preview: ["claude-sonnet-5", "kimi-k2"] },
           },
           now,
+          profileId,
         ),
     },
     {
@@ -119,7 +193,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
       name: "Dev Allowance: monthly healthy",
       notes:
         "Dev fixture: synthetic coding-plan telemetry; this endpoint cannot be reached.",
-      buildSnapshot: (now) =>
+      buildSnapshot: (now, profileId) =>
         snapshot(
           "glmQuota",
           "/api/monitor/usage/quota/limit",
@@ -143,6 +217,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             },
           },
           now,
+          profileId,
         ),
     },
     {
@@ -150,7 +225,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
       name: "Dev Allowance: balance runway critical",
       notes:
         "Dev fixture: synthetic wallet telemetry; this endpoint cannot be reached.",
-      buildSnapshot: (now) =>
+      buildSnapshot: (now, profileId) =>
         snapshot(
           "newApiTokenUsage",
           "/api/usage/token/",
@@ -165,6 +240,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             models: { count: 34, preview: ["gpt-5", "claude-sonnet-5"] },
           },
           now,
+          profileId,
         ),
     },
     {
@@ -172,7 +248,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
       name: "Dev Allowance: balance without spend",
       notes:
         "Dev fixture: synthetic wallet telemetry with no cost reported, so no runway is estimated.",
-      buildSnapshot: (now) =>
+      buildSnapshot: (now, profileId) =>
         snapshot(
           "deepSeekBalance",
           "/user/balance",
@@ -181,6 +257,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             usage: { todayRequests: { value: 12, unit: REQUESTS } },
           },
           now,
+          profileId,
         ),
     },
     {
@@ -188,7 +265,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
       name: "Dev Allowance: percent-only window",
       notes:
         "Dev fixture: synthetic telemetry that reports a percentage without absolute amounts.",
-      buildSnapshot: (now) =>
+      buildSnapshot: (now, profileId) =>
         snapshot(
           "openCodeGoUsage",
           "/v1/usage",
@@ -205,6 +282,7 @@ export const DEV_ALLOWANCE_FIXTURES: readonly DevAllowanceFixtureDefinition[] =
             },
           },
           now,
+          profileId,
         ),
     },
     {

@@ -11,6 +11,7 @@ import {
   vi,
 } from "vitest"
 
+import { CURRENCIES } from "~/constants/money"
 import {
   API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
   type ApiCredentialProfileAssociatedKeyState,
@@ -23,6 +24,7 @@ import {
   getApiCredentialProfileRowTestId,
 } from "~/features/ApiCredentialProfiles/testIds"
 import enApiCredentialProfiles from "~/locales/en/apiCredentialProfiles.json"
+import { MEASUREMENT_UNIT_KINDS } from "~/services/amounts/financialConstants"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -64,12 +66,10 @@ vi.mock("~/components/icons/ManagedSiteIcon", () => ({
 
 vi.mock("~/components/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/components/ui")>()
-  const { useProductAnalyticsScope } = await import(
-    "~/contexts/ProductAnalyticsScopeContext"
-  )
-  const { resolveProductAnalyticsActionContext } = await import(
-    "~/services/productAnalytics/actionConfig"
-  )
+  const { useProductAnalyticsScope } =
+    await import("~/contexts/ProductAnalyticsScopeContext")
+  const { resolveProductAnalyticsActionContext } =
+    await import("~/services/productAnalytics/actionConfig")
 
   return {
     ...actual,
@@ -126,15 +126,15 @@ vi.mock("~/components/ui/dropdown-menu", () => ({
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: () => ({ currencyType: "USD" }),
+  useUserPreferencesContext: () => ({ currencyType: CURRENCIES.USD }),
 }))
 
 const USD_MONEY_UNIT = {
-  kind: "money",
-  currency: "USD",
+  kind: MEASUREMENT_UNIT_KINDS.Money,
+  currency: CURRENCIES.USD,
   decimalPlaces: 2,
 } as const
-const PERCENT_UNIT = { kind: "percent" } as const
+const PERCENT_UNIT = { kind: MEASUREMENT_UNIT_KINDS.Percent } as const
 
 function buildProfile(
   overrides: Partial<ApiCredentialProfile> = {},
@@ -160,7 +160,7 @@ function buildProfile(
           totalUsed: {
             value: 1.88131,
             unit: {
-              kind: "quota",
+              kind: MEASUREMENT_UNIT_KINDS.Quota,
               code: "usd-equivalent",
               label: "USD-equivalent budget",
             },
@@ -852,7 +852,7 @@ describe("ApiCredentialProfileListItem", () => {
             usage: {
               todayRequests: {
                 value: 42,
-                unit: { kind: "count", code: "requests" },
+                unit: { kind: MEASUREMENT_UNIT_KINDS.Count, code: "requests" },
               },
             },
           },
@@ -878,7 +878,11 @@ describe("ApiCredentialProfileListItem", () => {
             balances: [
               {
                 amount: 12.34,
-                unit: { kind: "money", currency: "CNY", decimalPlaces: 2 },
+                unit: {
+                  kind: MEASUREMENT_UNIT_KINDS.Money,
+                  currency: CURRENCIES.CNY,
+                  decimalPlaces: 2,
+                },
                 semantics: "cash",
                 grantedAmount: 2,
                 toppedUpAmount: 10.34,
@@ -915,7 +919,7 @@ describe("ApiCredentialProfileListItem", () => {
                   remaining: 75,
                   remainingPercent: 75,
                   unit: {
-                    kind: "quota",
+                    kind: MEASUREMENT_UNIT_KINDS.Quota,
                     code: "provider-quota",
                     label: "Provider quota",
                   },
@@ -927,7 +931,7 @@ describe("ApiCredentialProfileListItem", () => {
                   remaining: 800,
                   remainingPercent: 80,
                   unit: {
-                    kind: "quota",
+                    kind: MEASUREMENT_UNIT_KINDS.Quota,
                     code: "provider-quota",
                     label: "Provider quota",
                   },
@@ -966,7 +970,7 @@ describe("ApiCredentialProfileListItem", () => {
                   type: "weekly",
                   remainingPercent: 15,
                   resetTime: Date.now() + 60 * 60_000,
-                  unit: { kind: "percent" },
+                  unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
                 },
               ],
             },
@@ -999,7 +1003,7 @@ describe("ApiCredentialProfileListItem", () => {
                   type: "fiveHour",
                   remainingPercent: 75,
                   resetTime,
-                  unit: { kind: "percent" },
+                  unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
                 },
               ],
             },
@@ -1073,7 +1077,7 @@ describe("ApiCredentialProfileListItem", () => {
     ).toBeNull()
   })
 
-  it("estimates how long a balance lasts at today's spend", () => {
+  it("does not estimate runway from today's spend without scope and interval evidence", () => {
     renderListItem(
       buildProfile({
         telemetrySnapshot: {
@@ -1089,10 +1093,10 @@ describe("ApiCredentialProfileListItem", () => {
     )
 
     expect(
-      screen.getByTestId(
+      screen.queryByTestId(
         API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalanceRunway,
       ),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.allowance.runwayHint")
+    ).not.toBeInTheDocument()
   })
 
   it("omits the balance runway when today's spend is unknown", () => {
@@ -1131,7 +1135,7 @@ describe("ApiCredentialProfileListItem", () => {
               windows: [
                 {
                   type: "monthly",
-                  unit: { kind: "percent" },
+                  unit: { kind: MEASUREMENT_UNIT_KINDS.Percent },
                   remainingPercent: NaN,
                 },
               ],
@@ -1146,9 +1150,7 @@ describe("ApiCredentialProfileListItem", () => {
     expect(quota).toHaveTextContent(
       "apiCredentialProfiles:telemetry.notProvided",
     )
-    expect(quota.querySelector('[data-slot="progress-indicator"]')).toHaveClass(
-      "bg-neutral-indicator",
-    )
+    expect(within(quota).queryByRole("progressbar")).not.toBeInTheDocument()
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.allowanceBadge),
     ).not.toHaveTextContent(
@@ -1184,7 +1186,7 @@ describe("ApiCredentialProfileListItem", () => {
         "apiCredentialProfiles:telemetry.allowance.balanceRunway",
       )
       expect(badge.querySelector('span[aria-hidden="true"]')).toHaveClass(
-        "bg-destructive-indicator",
+        "bg-neutral-indicator",
       )
     },
   )
@@ -1200,7 +1202,7 @@ describe("ApiCredentialProfileListItem", () => {
             usage: {
               todayRequests: {
                 value: 0,
-                unit: { kind: "count", code: "requests" },
+                unit: { kind: MEASUREMENT_UNIT_KINDS.Count, code: "requests" },
               },
             },
           },
@@ -1231,7 +1233,7 @@ describe("ApiCredentialProfileListItem", () => {
             usage: {
               todayTokens: {
                 total: 12_000,
-                unit: { kind: "count", code: "tokens" },
+                unit: { kind: MEASUREMENT_UNIT_KINDS.Count, code: "tokens" },
               },
             },
           },
@@ -1359,7 +1361,7 @@ describe("ApiCredentialProfileListItem", () => {
                 {
                   amount: 7.5,
                   unit: {
-                    kind: "quota",
+                    kind: MEASUREMENT_UNIT_KINDS.Quota,
                     code: "usd-equivalent",
                     label: "USD-equivalent budget",
                   },

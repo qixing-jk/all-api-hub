@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useApiCredentialProfilesController } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfilesController"
+import { TelemetryRefreshSupersededError } from "~/services/apiCredentialProfiles/telemetry/contracts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
@@ -186,6 +187,39 @@ function renderScopedController(entrypoint: ProductAnalyticsEntrypoint) {
 }
 
 describe("useApiCredentialProfilesController", () => {
+  it("reports a superseded refresh as skipped without a refreshed notification", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    refreshTelemetryMock.mockRejectedValueOnce(
+      new TelemetryRefreshSupersededError(),
+    )
+    toastPromiseMock.mockImplementation(
+      async (
+        promise: Promise<unknown>,
+        options: { error: (error: unknown) => string },
+      ) => {
+        try {
+          await promise
+        } catch (error) {
+          expect(options.error(error)).toBe(
+            "apiCredentialProfiles:telemetry.messages.refreshSuperseded",
+          )
+          throw error
+        }
+      },
+    )
+    const { result } = renderHook(() => useApiCredentialProfilesController(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    await act(async () => {
+      await result.current.handleRefreshTelemetry(buildProfile())
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
+    expect(result.current.refreshingTelemetryProfileIds).toEqual([])
+  })
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
     createProfileMock.mockReset()
@@ -550,6 +584,32 @@ describe("useApiCredentialProfilesController", () => {
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       durationMs: expect.any(Number),
     })
+    expect(result.current.deletingProfile).toBeNull()
+    expect(result.current.isDeleting).toBe(false)
+  })
+
+  it("keeps the delete dialog available for retry after storage throws", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    deleteProfileMock.mockRejectedValue(new Error("storage unavailable"))
+    const profile = buildProfile()
+    const { result } = renderController()
+
+    act(() => {
+      result.current.handleRequestDelete(profile)
+    })
+    await act(async () => {
+      await result.current.handleConfirmDelete()
+    })
+
+    expect(result.current.deletingProfile).toEqual(profile)
+    expect(result.current.isDeleting).toBe(false)
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      }),
+    )
   })
 
   it("tracks Cherry Studio export success after opening a profile", async () => {

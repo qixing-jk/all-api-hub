@@ -1,0 +1,270 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
+import { acceptTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/acceptance"
+import { runUsageAdapter } from "~/services/apiCredentialProfiles/telemetry/adapters"
+import { normalizeTelemetryPatchToFacts } from "~/services/apiCredentialProfiles/telemetry/facts"
+import { hasTelemetryUsageData } from "~/services/apiCredentialProfiles/telemetry/modePlanner"
+import { fetchTelemetryJson } from "~/services/apiCredentialProfiles/telemetry/transport"
+import { SiteHealthStatus } from "~/types"
+import type {
+  ApiCredentialProfile,
+  ApiCredentialTelemetrySnapshot,
+} from "~/types/apiCredentialProfiles"
+import { API_CREDENTIAL_TELEMETRY_MODES } from "~/types/apiCredentialProfiles"
+
+vi.mock("~/services/apiCredentialProfiles/telemetry/transport", () => ({
+  fetchTelemetryJson: vi.fn(),
+}))
+const profile: ApiCredentialProfile = {
+  id: "key",
+  name: "key",
+  apiType: "openai-compatible",
+  apiKey: "secret",
+  baseUrl: "https://gateway.example",
+  tagIds: [],
+  notes: "",
+  createdAt: 1,
+  updatedAt: 1,
+}
+
+describe("billing adapters retain financial contracts", () => {
+  beforeEach(() => vi.mocked(fetchTelemetryJson).mockReset())
+  it("keeps a valid New API limit when a raw usage amount cannot be converted within decimal bounds", async () => {
+    const rawUsed = "0." + "0".repeat(253) + "1"
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/usage/token",
+      json: { data: { total_granted: "500000", total_used: rawUsed } },
+    })
+    const result = await runUsageAdapter(profile, "newApiTokenUsage", {
+      mode: "newApiTokenUsage",
+    })
+    const facts = normalizeTelemetryPatchToFacts(result.data, result.source, {
+      profileId: profile.id,
+      baseUrl: profile.baseUrl,
+      observedAt: 1000,
+    })
+    expect(facts.budgets?.[0]).toMatchObject({
+      limit: { status: "known", value: "1" },
+      used: { status: "unavailable" },
+      remaining: { status: "unknown" },
+    })
+    expect(facts.budgets?.[0]?.used.source.amountInputs?.total_used).toBe(
+      rawUsed,
+    )
+  })
+  it("preserves native lifetime spending independently of today's reported cost", async () => {
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/v1/usage",
+      json: {
+        usage: {
+          today: { cost: "3.000000001" },
+          total: { cost: "9007199254740993.00000001" },
+        },
+      },
+    })
+    const result = await runUsageAdapter(
+      profile,
+      API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+      { mode: API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage },
+    )
+    const facts = normalizeTelemetryPatchToFacts(result.data, result.source, {
+      profileId: profile.id,
+      baseUrl: profile.baseUrl,
+      observedAt: 1000,
+    })
+    expect(facts.usage?.todayCost).toMatchObject({
+      value: "3.000000001",
+      unit: { kind: "money", currency: "USD" },
+      observedAt: 1000,
+    })
+    expect(facts.usage?.totalUsed).toMatchObject({
+      value: "9007199254740993.00000001",
+      unit: { kind: "money", currency: "USD" },
+      observedAt: 1000,
+    })
+  })
+  it("propagates usage failure when the subscription contains no financial limit", async () => {
+    vi.mocked(fetchTelemetryJson)
+      .mockResolvedValueOnce({
+        endpoint: "/dashboard/billing/subscription",
+        json: {},
+      })
+      .mockRejectedValueOnce(new Error("usage unavailable"))
+    await expect(
+      runUsageAdapter(profile, "openaiBilling", { mode: "openaiBilling" }),
+    ).rejects.toThrow("usage unavailable")
+  })
+  it("discards malformed total spending while retaining independent Sub2API values", async () => {
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/v1/usage",
+      json: {
+        balance: "12",
+        usage: { today: { cost: "3" }, total: { cost: "invalid" } },
+      },
+    })
+    const result = await runUsageAdapter(
+      profile,
+      API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+      { mode: API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage },
+    )
+    expect(result.data.balance?.amount).toBe("12")
+    expect(result.data.todayCostUsd).toBe("3")
+    expect(result.data.totalUsedUsd).toBeUndefined()
+  })
+  it("keeps the subscription limit and usage failure from the same billing refresh", async () => {
+    vi.mocked(fetchTelemetryJson)
+      .mockResolvedValueOnce({
+        endpoint: "/dashboard/billing/subscription",
+        json: { hard_limit_usd: "30" },
+      })
+      .mockRejectedValueOnce(new Error("usage unavailable"))
+    const result = await runUsageAdapter(
+      profile,
+      API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+      { mode: API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling },
+    )
+    const facts = normalizeTelemetryPatchToFacts(result.data, result.source, {
+      profileId: profile.id,
+      baseUrl: profile.baseUrl,
+      observedAt: 2000,
+    })
+    expect(facts.budgets?.[0]).toMatchObject({
+      limit: { value: "30", observedAt: 2000 },
+      remaining: { status: "unknown" },
+      used: { status: "unknown" },
+    })
+    expect(result.attempts).toContainEqual(
+      expect.objectContaining({
+        source: API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+        status: "error",
+        message: "usage unavailable",
+      }),
+    )
+  })
+  it("retains the documented USD unit for Sub2API balances", async () => {
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/v1/usage",
+      json: { balance: "12.50" },
+    })
+    const result = await runUsageAdapter(
+      profile,
+      API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+      { mode: API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage },
+    )
+    expect(
+      normalizeTelemetryPatchToFacts(result.data, result.source, {
+        profileId: profile.id,
+        baseUrl: profile.baseUrl,
+        observedAt: 1000,
+      }).balanceSnapshot?.positions[0],
+    ).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "12.5" },
+    })
+  })
+  it("leaves an unrelated New API endpoint response unsupported so Auto can continue", async () => {
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/usage/token",
+      json: { data: { message: "not usage" } },
+    })
+    const result = await runUsageAdapter(profile, "newApiTokenUsage", {
+      mode: "auto",
+    })
+    expect(hasTelemetryUsageData(result.data)).toBe(false)
+  })
+  it("uses the default New API USD key budget while retaining the raw quota operands", async () => {
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/usage/token",
+      json: {
+        data: {
+          total_granted: "50000000",
+          total_used: "15000000",
+          total_available: "35000000.0000000001",
+        },
+      },
+    })
+    const result = await runUsageAdapter(profile, "newApiTokenUsage", {
+      mode: "newApiTokenUsage",
+    })
+    expect(hasTelemetryUsageData(result.data)).toBe(true)
+    const facts = normalizeTelemetryPatchToFacts(result.data, result.source, {
+      profileId: profile.id,
+      baseUrl: profile.baseUrl,
+      observedAt: 1000,
+    })
+    expect(facts.budgets?.[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      scope: { keys: { kind: "restricted", ids: ["key"] } },
+      remaining: {
+        value: "70.0000000000000002",
+        source: {
+          contractVersion: "standard-usd/v1",
+          amountInputs: {
+            total_granted: "50000000",
+            total_used: "15000000",
+            total_available: "35000000.0000000001",
+          },
+        },
+      },
+    })
+    expect(facts.balanceSnapshot).toBeUndefined()
+    const old = structuredClone(facts.budgets![0]!)
+    old.asset = {
+      kind: ASSET_KINDS.Quota,
+      id: `${profile.baseUrl}:new-api-quota`,
+      label: "quota",
+      displayScale: 1,
+      displayLabel: "quota",
+    }
+    for (const field of ["limit", "used", "remaining"] as const)
+      old[field].source.contractVersion = "2"
+    const snapshot: ApiCredentialTelemetrySnapshot = {
+      health: { status: SiteHealthStatus.Healthy },
+      lastSyncTime: 1000,
+      source: "newApiTokenUsage",
+      facts,
+      attempts: [],
+    }
+    expect(
+      acceptTelemetrySnapshot(
+        { ...snapshot, facts: { budgets: [old] } },
+        snapshot,
+      ).facts?.budgets,
+    ).toHaveLength(1)
+    const otherOperation = structuredClone(old)
+    for (const field of ["limit", "used", "remaining"] as const)
+      otherOperation[field].source.operation = "/api/other-key-budget"
+    expect(
+      acceptTelemetrySnapshot(
+        { ...snapshot, facts: { budgets: [otherOperation] } },
+        snapshot,
+      ).facts?.budgets,
+    ).toHaveLength(2)
+    vi.mocked(fetchTelemetryJson).mockResolvedValueOnce({
+      endpoint: "/api/usage/token",
+      json: { data: { total_used: "15000000" } },
+    })
+    const partialResult = await runUsageAdapter(profile, "newApiTokenUsage", {
+      mode: "newApiTokenUsage",
+    })
+    const partialFacts = normalizeTelemetryPatchToFacts(
+      partialResult.data,
+      partialResult.source,
+      { profileId: profile.id, baseUrl: profile.baseUrl, observedAt: 2000 },
+    )
+    expect(partialFacts.budgets?.[0]).toMatchObject({
+      used: { status: "known", value: "30" },
+      stateObservation: { status: "unknown" },
+    })
+    const migrated = acceptTelemetrySnapshot(
+      { ...snapshot, facts: { budgets: [old] } },
+      { ...snapshot, lastSyncTime: 2000, facts: partialFacts },
+    )
+    expect(migrated.facts?.budgets).toHaveLength(1)
+    expect(migrated.facts?.budgets?.[0]?.asset).toEqual({
+      kind: "currency",
+      code: "USD",
+    })
+  })
+})

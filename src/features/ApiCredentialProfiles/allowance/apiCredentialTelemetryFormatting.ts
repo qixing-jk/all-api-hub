@@ -14,13 +14,59 @@ import {
   type ApiCredentialAllowanceCountdown,
   type ApiCredentialAllowanceSignal,
 } from "~/features/ApiCredentialProfiles/allowance/apiCredentialAllowance"
+import { parseDecimal } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  BUDGET_LIMIT_STATES,
+  EVIDENCE_KINDS,
+  MEASUREMENT_UNIT_KINDS,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
 import {
   API_CREDENTIAL_TELEMETRY_FACT_UNITS,
   API_CREDENTIAL_TELEMETRY_QUOTA_WINDOW_TYPES,
+  type ApiCredentialTelemetryAmount,
   type ApiCredentialTelemetryBalanceFact,
   type ApiCredentialTelemetryQuotaWindowFact,
   type ApiCredentialTelemetryQuotaWindowType,
 } from "~/types/apiCredentialProfiles"
+import { formatExactDecimal } from "~/utils/core/decimalFormatting"
+import { formatAssetAmount } from "~/utils/core/money"
+
+/** Spending uses the source decimal and its own unit at the display boundary. */
+export function formatTelemetryAmount(
+  amount: ApiCredentialTelemetryAmount,
+  t: TFunction,
+): string {
+  const value = parseDecimal(amount.value)
+  if (value === undefined)
+    return t("apiCredentialProfiles:telemetry.notProvided")
+  const unit = amount.unit
+  if (unit.kind === MEASUREMENT_UNIT_KINDS.Money) {
+    try {
+      return formatAssetAmount({
+        asset: { kind: ASSET_KINDS.Currency, code: unit.currency },
+        value,
+      })
+    } catch {
+      return `${unit.currency} ${formatExactDecimal(value)}`
+    }
+  }
+  if (unit.kind === MEASUREMENT_UNIT_KINDS.Crypto)
+    return formatAssetAmount({ asset: unit, value })
+  if (unit.kind === MEASUREMENT_UNIT_KINDS.Quota)
+    return formatAssetAmount({
+      asset: {
+        kind: ASSET_KINDS.Quota,
+        id: unit.code,
+        label: unit.label,
+        displayLabel: unit.displayLabel ?? unit.label,
+        displayScale: unit.displayScale ?? 1,
+      },
+      value,
+    })
+  return formatExactDecimal(value)
+}
 
 /** Returns the localized name of a quota window slot. */
 export function formatQuotaWindowLabel(
@@ -44,6 +90,37 @@ export function formatProviderBalance(
   balance: ApiCredentialTelemetryBalanceFact,
   t: TFunction,
 ): string {
+  if (balance.budget?.limitState === BUDGET_LIMIT_STATES.Unlimited)
+    return t("common:quota.unlimited")
+  if (!Number.isFinite(balance.amount)) {
+    const unit =
+      balance.unit.kind === MEASUREMENT_UNIT_KINDS.Money
+        ? balance.unit.currency
+        : balance.unit.kind === ASSET_KINDS.Quota
+          ? balance.unit.label
+          : balance.unit.kind === ASSET_KINDS.Crypto
+            ? balance.unit.id
+            : ""
+    return [unit, t("apiCredentialProfiles:telemetry.notProvided")]
+      .filter(Boolean)
+      .join(" ")
+  }
+  const asset = balance.position?.asset ?? balance.budget?.asset
+  const observed = balance.position?.amount ?? balance.budget?.remaining
+  if (
+    asset &&
+    asset.kind !== ASSET_KINDS.Unknown &&
+    observed &&
+    "value" in observed
+  )
+    return formatAssetAmount({ asset, value: observed.value })
+  if (balance.unit.kind === MEASUREMENT_UNIT_KINDS.Unknown)
+    return balance.amount.toLocaleString()
+  if (balance.unit.kind === MEASUREMENT_UNIT_KINDS.Crypto)
+    return formatAssetAmount({
+      asset: balance.unit,
+      value: String(balance.amount),
+    })
   if (balance.unit.kind === API_CREDENTIAL_TELEMETRY_FACT_UNITS.kinds.Quota) {
     const label =
       balance.unit.code ===
@@ -69,6 +146,11 @@ export function getBalanceSemanticsLabel(
   t: TFunction,
 ): string | null {
   if (
+    balance.position?.amount.source.kind === EVIDENCE_KINDS.Manual ||
+    balance.budget?.remaining.source.kind === EVIDENCE_KINDS.Manual
+  )
+    return t("apiCredentialProfiles:telemetry.balanceSemantics.manual")
+  if (
     balance.semantics === API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Cash
   ) {
     return t("apiCredentialProfiles:telemetry.balanceSemantics.cash")
@@ -79,6 +161,12 @@ export function getBalanceSemanticsLabel(
   ) {
     return t("apiCredentialProfiles:telemetry.balanceSemantics.providerWallet")
   }
+  if (
+    balance.semantics === API_CREDENTIAL_TELEMETRY_FACT_UNITS.semantics.Legacy
+  )
+    return t("apiCredentialProfiles:telemetry.balanceSemantics.legacy")
+  if (balance.budget)
+    return t("apiCredentialProfiles:telemetry.balanceSemantics.budget")
   // formatProviderBalance already appends the budget-equivalent label for
   // this unit, so a second identical suffix would render it twice.
   if (
@@ -115,7 +203,11 @@ function getQuotaWindowUnitLabel(
       "apiCredentialProfiles:telemetry.balanceSemantics.budgetEquivalent",
     )
   }
-  return t("apiCredentialProfiles:telemetry.quota")
+  return window.unit.label &&
+    window.unit.label !==
+      API_CREDENTIAL_TELEMETRY_FACT_UNITS.labels.ProviderQuota
+    ? window.unit.label
+    : t("apiCredentialProfiles:telemetry.quota")
 }
 
 /**
@@ -127,11 +219,16 @@ export function formatQuotaWindowAmount(
   t: TFunction,
 ): string | null {
   if (window.remaining === undefined) return null
-  return t("apiCredentialProfiles:telemetry.quotaWindows.remainingAmount", {
-    remaining: window.remaining.toLocaleString(),
-    limit: window.limit?.toLocaleString() ?? "-",
-    unit: getQuotaWindowUnitLabel(window, t),
-  })
+  return t(
+    window.limit === undefined
+      ? "apiCredentialProfiles:telemetry.quotaWindows.remainingOnlyAmount"
+      : "apiCredentialProfiles:telemetry.quotaWindows.remainingAmount",
+    {
+      remaining: window.remaining.toLocaleString(),
+      limit: window.limit?.toLocaleString() ?? "-",
+      unit: getQuotaWindowUnitLabel(window, t),
+    },
+  )
 }
 
 /**
@@ -180,7 +277,8 @@ export function formatAllowanceSignalLabel(
   signal: ApiCredentialAllowanceSignal,
 ): string {
   if (signal.kind === "quota-window") {
-    return Number.isFinite(signal.remainingPercent)
+    return signal.remainingPercent !== undefined &&
+      Number.isFinite(signal.remainingPercent)
       ? t("apiCredentialProfiles:telemetry.allowance.quotaRemaining", {
           window: formatQuotaWindowLabel(t, signal.windowType),
           percent: Math.round(signal.remainingPercent),
@@ -189,6 +287,13 @@ export function formatAllowanceSignalLabel(
   }
 
   const balanceLabel = formatProviderBalance(signal, t)
+  if (
+    signal.budget?.stateObservation?.status === OBSERVATION_STATUSES.Stale ||
+    signal.budget?.remaining.status === OBSERVATION_STATUSES.Stale ||
+    signal.position?.amount.status === OBSERVATION_STATUSES.Stale
+  ) {
+    return `${balanceLabel} (${t("apiCredentialProfiles:telemetry.balanceSemantics.stale")})`
+  }
   return signal.runwayDays === undefined || signal.runwayDays <= 0
     ? balanceLabel
     : t("apiCredentialProfiles:telemetry.allowance.balanceRunway", {
