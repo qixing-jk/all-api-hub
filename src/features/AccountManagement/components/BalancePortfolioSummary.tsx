@@ -176,7 +176,7 @@ export function BalancePortfolioSummary({
       className={cn(
         "min-w-0",
         inline
-          ? "space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0"
+          ? "space-y-1 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:row-span-2 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid-rows-subgrid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:space-y-0 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0"
           : compact
             ? showAccountBreakdown
               ? "space-y-1"

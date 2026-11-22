@@ -158,6 +158,20 @@ describe("dev fixture accounts", () => {
     expect(readRegistry()).toEqual(["existing-fixture"])
   })
 
+  it("preserves both storage errors when fixture rollback fails", async () => {
+    const cleanupError = new Error("accounts temporarily read-only")
+    deleteAccountsMock.mockRejectedValueOnce(cleanupError)
+    storageSetShouldThrow = true
+
+    await expect(addDevFinancialFixtureAccounts()).rejects.toMatchObject({
+      cause: cleanupError,
+      errors: [
+        expect.objectContaining({ message: "registry write failed" }),
+        cleanupError,
+      ],
+    })
+  })
+
   it("generates distinguishable balance and plan scenarios without legacy cashflow or automatic check-in", async () => {
     let serial = 0
     addAccountMock.mockImplementation(async () => `financial-${++serial}`)

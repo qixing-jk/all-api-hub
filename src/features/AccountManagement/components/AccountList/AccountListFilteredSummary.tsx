@@ -12,6 +12,11 @@ import type { DisplaySiteData } from "~/types"
 
 import { FilteredTodayMetric } from "./FilteredTodayMetric"
 
+// Share the tallest label row below the desktop layout. Older engines use
+// the label minimum heights and keep the same grid columns.
+const compactMetricRows =
+  "[@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:row-span-2 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid-rows-subgrid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:space-y-0"
+
 interface AccountListFilteredSummaryProps {
   sites: DisplaySiteData[]
   consumption: ConsumptionProjection
@@ -42,7 +47,7 @@ export function AccountListFilteredSummary({
       </span>
       <div
         className={cn(
-          "col-span-full col-start-1 row-start-2 grid min-w-0 gap-x-3 [@container(min-width:40rem)]:col-span-1 [@container(min-width:40rem)]:col-start-2 [@container(min-width:40rem)]:row-start-1",
+          "col-span-full col-start-1 row-start-2 grid min-w-0 gap-x-3 gap-y-1 [@container(min-width:40rem)]:col-span-1 [@container(min-width:40rem)]:col-start-2 [@container(min-width:40rem)]:row-start-1",
           showTodayCashflow
             ? "grid-cols-3 [@container(min-width:56rem)]:grid-cols-[repeat(3,minmax(0,max-content))] [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-x-3"
             : "grid-cols-1",
@@ -51,7 +56,10 @@ export function AccountListFilteredSummary({
         <div
           role="group"
           aria-label={t("account:financial.availableTotal")}
-          className="min-w-0 [@container(min-width:56rem)]:border-l [@container(min-width:56rem)]:border-border/70 [@container(min-width:56rem)]:pl-2"
+          className={cn(
+            compactMetricRows,
+            "min-w-0 [@container(min-width:56rem)]:border-l [@container(min-width:56rem)]:border-border/70 [@container(min-width:56rem)]:pl-2",
+          )}
         >
           <BalancePortfolioSummary sites={sites} inline />
         </div>
@@ -60,7 +68,10 @@ export function AccountListFilteredSummary({
             <div
               role="group"
               aria-label={t("account:filteredTotals.consumption")}
-              className="min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2"
+              className={cn(
+                compactMetricRows,
+                "min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2",
+              )}
             >
               <Caption className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4">
                 <FinancialMetricLabel
@@ -85,7 +96,10 @@ export function AccountListFilteredSummary({
             <div
               role="group"
               aria-label={t("account:filteredTotals.income")}
-              className="min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2"
+              className={cn(
+                compactMetricRows,
+                "min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2",
+              )}
             >
               <Caption className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4">
                 <FinancialMetricLabel

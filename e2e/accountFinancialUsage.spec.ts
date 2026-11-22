@@ -97,10 +97,10 @@ test("renders signed and sub-cent native cashflow without changing its stored am
     })
     const income = row.getByRole("button", { name: /refresh today's income/i })
     await expect(consumption).toHaveText(
-      id === "refund" ? /\+\$0\.25/ : /-.*<.*0\.01/,
+      id === "refund" ? /^\+\s*\$0\.25$/u : /^-\s*<\s*\$0\.01$/u,
     )
     await expect(income).toHaveText(
-      id === "refund" ? /-\$0\.25/ : /\+.*<.*0\.01/,
+      id === "refund" ? /^-\s*\$0\.25$/u : /^\+\s*<\s*\$0\.01$/u,
     )
     await captureVisualViews({
       page,
@@ -844,7 +844,7 @@ testInUtc(
       name: "Period consumption · USD 0.12",
       exact: true,
     })
-    const observationTime = details.locator("time").first()
+    const observationTime = observation.locator("time")
     await expect(observationTime).toContainText("ago")
     await expect(observationTime).toHaveAttribute(
       "datetime",
@@ -888,8 +888,7 @@ testInUtc(
         "Consumption labels have a nearby decorative metric icon",
       ).toBe(true)
     }
-    const consumptionTime = observation.locator("time")
-    await consumptionTime.click()
+    await observationTime.click()
     await expect(page.getByRole("tooltip")).toContainText("Observed at")
     await captureVisualViews({
       page,
@@ -1073,6 +1072,17 @@ testInUtc(
           "Count, metric names and Details share a text baseline",
         ).toBeLessThan(1)
       }
+      // Exercise an additional label line even when the platform font is narrow.
+      const consumptionLabel = summary.getByText("Today's consumption", {
+        exact: true,
+      })
+      if (width === 320) {
+        await consumptionLabel.evaluate((label) => {
+          label.style.display = "inline-block"
+          label.style.maxWidth = "60px"
+          label.style.overflowWrap = "anywhere"
+        })
+      }
       const amountBottoms = await Promise.all(
         ["$7.00", "USD 0.12", "25 Credits"].map((value) =>
           summary.getByText(value, { exact: true }).evaluate((element) => {
@@ -1092,6 +1102,13 @@ testInUtc(
         Math.max(...amountBottoms) - Math.min(...amountBottoms),
         "Filtered amount text shares a baseline even when its labels wrap",
       ).toBeLessThan(1)
+      if (width === 320) {
+        await consumptionLabel.evaluate((label) => {
+          label.style.removeProperty("display")
+          label.style.removeProperty("max-width")
+          label.style.removeProperty("overflow-wrap")
+        })
+      }
       expect(
         await summary.evaluate(
           (element) => element.scrollWidth <= element.clientWidth + 1,
@@ -1189,10 +1206,17 @@ testInUtc(
     const caption = page.getByTestId(SHARE_SNAPSHOT_TEST_IDS.captionTextarea)
     await expect(caption).toHaveValue(/0\.123456789012345678/)
     await expect(caption).toHaveValue(/25 Credits/)
-    // The offset provider period is shared under its own site-day label, outside local-day totals.
-    await expect(caption).toHaveValue(
-      /Usage by site day:.*12 Credits.*Partial daily statistic/,
-    )
+    const lines = (await caption.inputValue()).split("\n")
+    expect(
+      lines.filter((line) => line.includes("Today's Consumption:")),
+    ).toEqual([
+      expect.stringMatching(
+        /Today's Consumption:\s*USD\s+0\.123456789012345678$/u,
+      ),
+    ])
+    expect(
+      lines.filter((line) => line.startsWith("Usage by site day:")),
+    ).toEqual([expect.stringMatching(/12 Credits.*Partial daily statistic/u)])
     await captureVisualViews({
       page,
       ready: caption,

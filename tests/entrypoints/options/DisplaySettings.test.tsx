@@ -54,9 +54,12 @@ describe("DisplaySettings", () => {
       </I18nextProvider>,
     )
 
-  it.each([CURRENCIES.USD, CURRENCIES.CNY] as const)(
-    "disables reset for original default mode with remembered %s",
-    (currencyType) => {
+  it.each([
+    [CURRENCIES.USD, true],
+    [CURRENCIES.CNY, false],
+  ] as const)(
+    "reflects the remembered %s reference currency in reset availability",
+    (currencyType, disabled) => {
       const context = vi.mocked(useUserPreferencesContext)()
       vi.mocked(useUserPreferencesContext).mockReturnValue({
         ...context,
@@ -66,9 +69,26 @@ describe("DisplaySettings", () => {
       renderSubject()
       expect(
         screen.getByRole("button", { name: "common:actions.reset" }),
-      ).toBeDisabled()
+      ).toHaveProperty("disabled", disabled)
     },
   )
+
+  it("accepts Original while the previous currency selection is pending", () => {
+    const updateCurrencyDisplay = vi.fn(() => new Promise(() => {}))
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      ...vi.mocked(useUserPreferencesContext)(),
+      updateCurrencyDisplay,
+    })
+    renderSubject()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "settings:display.usd" }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "settings:display.original" }),
+    )
+    expect(updateCurrencyDisplay.mock.calls).toEqual([["USD"], ["original"]])
+  })
 
   it("offers the interface language beside the display preferences", () => {
     renderSubject()

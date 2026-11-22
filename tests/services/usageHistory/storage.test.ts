@@ -565,6 +565,24 @@ describe("usageHistoryStorage", () => {
     await expect(usageHistoryStorage.getStore()).rejects.toThrow("read failed")
   })
 
+  it("retains the old payload when the locked migration read fails", async () => {
+    const storage = new Storage({ area: "local" })
+    const saved = { schemaVersion: 1, accounts: {} }
+    await storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, saved)
+    vi.spyOn((usageHistoryStorage as any).storage, "get")
+      .mockResolvedValueOnce(saved)
+      .mockRejectedValueOnce(new Error("locked read failed"))
+
+    await expect(usageHistoryStorage.getStore()).rejects.toThrow(
+      "locked read failed",
+    )
+    expect(await storage.get(USAGE_HISTORY_STORAGE_KEYS.STORE)).toEqual(saved)
+    await expect(usageHistoryStorage.getStore()).resolves.toEqual({
+      schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
+      accounts: {},
+    })
+  })
+
   it("does not update or overwrite usage history when the read fails", async () => {
     const updater = vi.fn()
     const set = vi.spyOn((usageHistoryStorage as any).storage, "set")

@@ -2040,7 +2040,7 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
     await expect(preview).toHaveCount(0)
   }
   await page.evaluate(() => document.documentElement.classList.remove("dark"))
-  // Amounts retain their details gutter; narrow cashflow uses the full supplemental row.
+  // Amounts and supplemental cashflow share the same value edge.
   const accountSearch = page.getByRole("textbox", {
     name: "Enter site information or account information to search",
   })
@@ -2068,14 +2068,9 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
       if (!primary || !income || !detailsButton)
         throw new Error("Missing financial row layout")
       const contentRight = primary.x + primary.width
-      const actionsRight = await accountRow
-        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
-        .boundingBox()
-      const cashflowRight =
-        width <= 390 ? actionsRight!.x + actionsRight!.width : contentRight
       contentEdges.push(contentRight)
       expect(
-        Math.abs(income.x + income.width - cashflowRight),
+        Math.abs(income.x + income.width - contentRight),
         `${account.site_name} cashflow at ${width}px`,
       ).toBeLessThanOrEqual(1)
       expect(

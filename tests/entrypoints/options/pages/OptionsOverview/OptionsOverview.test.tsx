@@ -733,6 +733,40 @@ describe("OptionsOverview", () => {
     ).not.toBeInTheDocument()
   })
 
+  it.each([false, true])(
+    "opens the usage report when local usage is present: %s",
+    async (hasTodayUsageData) => {
+      const onNavigate = vi.fn()
+      const snapshot = {
+        ...setupViewModel.usageSnapshot,
+        hasUsageData: true,
+        hasTodayUsageData,
+        siteDayUsage: [
+          {
+            id: "provider-usage",
+            label: "Provider usage",
+            lastKnown: true,
+            observedAt: Date.UTC(2026, 0, 1, 12),
+            requests: 1,
+          },
+        ],
+      }
+      render(
+        <OverviewUsageSnapshot
+          snapshot={snapshot}
+          t={((key: string) => key) as TFunction}
+          onNavigate={onNavigate}
+        />,
+        { withThemeProvider: false, withUserPreferencesProvider: false },
+      )
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "optionsOverview:actions.open" }),
+      )
+      expect(onNavigate).toHaveBeenCalledExactlyOnceWith(snapshot.target)
+    },
+  )
+
   it("presents recent usage as a full-width trend summary", () => {
     useOptionsOverviewDataMock.mockReturnValue({
       isLoading: false,

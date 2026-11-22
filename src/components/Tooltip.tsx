@@ -313,7 +313,8 @@ export default function Tooltip({
               (details.reason === "trigger-hover" &&
                 (isClickOpen ||
                   (pointerTransparent &&
-                    anchorRef.current?.querySelector(":focus-visible")))))
+                    (anchorRef.current?.matches(":focus-visible") ||
+                      anchorRef.current?.querySelector(":focus-visible"))))))
           ) {
             details.cancel()
             return

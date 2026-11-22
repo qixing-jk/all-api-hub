@@ -60,6 +60,28 @@ describe("fixture accounts dev section", () => {
     clearDevFixtureAccountsMock.mockResolvedValue(0)
   })
 
+  it("adds native observation states and refreshes the cleanup count", async () => {
+    countDevFixtureAccountsMock
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(121)
+    addDevFinancialFixtureAccountsMock.mockResolvedValueOnce(121)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Dev: Add native zero, missing and stale scenarios",
+      }),
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "Dev: Clear fixture accounts (121)",
+      }),
+    ).toBeEnabled()
+    expect(addDevFinancialFixtureAccountsMock).toHaveBeenCalledWith(
+      "site-states",
+    )
+  })
+
   it("generates balance scenarios and makes the updated cleanup count and list entry available", async () => {
     renderDevPanelSection(() => useFixtureAccountsDevSection(true))
     await waitFor(() =>

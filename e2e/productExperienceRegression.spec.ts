@@ -165,8 +165,8 @@ for (const { path, width } of [
       {
         mode: "original",
         total: "$2.00",
-        dayFourteen: /CNY\s*140/,
-        daySeven: /CNY\s*140/,
+        dayFourteen: /^CNY\s*140(?:\.00)?$/u,
+        daySeven: /^CNY\s*140(?:\.00)?$/u,
         net: undefined,
         cost: undefined,
         income: undefined,
@@ -174,8 +174,8 @@ for (const { path, width } of [
       {
         mode: "USD",
         total: "$12.00",
-        dayFourteen: /USD\s*10(?:\.00)?/,
-        daySeven: /USD\s*20(?:\.00)?/,
+        dayFourteen: /^USD\s*10(?:\.00)?$/u,
+        daySeven: /^USD\s*20(?:\.00)?$/u,
         net: /Net\s+USD\s*2(?:\.00)?\b/,
         cost: /^USD\s*2(?:\.00)?$/,
         income: /^USD\s*4(?:\.00)?$/,
@@ -183,8 +183,8 @@ for (const { path, width } of [
       {
         mode: "CNY",
         total: "¥154.00",
-        dayFourteen: /CNY\s*140/,
-        daySeven: /CNY\s*140/,
+        dayFourteen: /^CNY\s*140(?:\.00)?$/u,
+        daySeven: /^CNY\s*140(?:\.00)?$/u,
         net: /Net\s+CNY\s*21(?:\.00)?\b/,
         cost: /^CNY\s*21(?:\.00)?$/,
         income: /^CNY\s*42(?:\.00)?$/,
@@ -218,7 +218,7 @@ for (const { path, width } of [
           .getByText(name, { exact: true })
           .locator("..")
           .filter({ hasText: "Requests" })
-        await expect(reportedDay).toContainText(amount)
+        await expect(reportedDay.getByText(amount)).toBeVisible()
       }
       await expect(day).toContainText("2026-11-17")
       if (cost && income) {
