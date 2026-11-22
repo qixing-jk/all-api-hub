@@ -6,6 +6,7 @@ import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DisplaySettings from "~/features/BasicSettings/components/tabs/General/DisplaySettings"
+import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
@@ -74,7 +75,9 @@ describe("DisplaySettings", () => {
   )
 
   it("accepts Original while the previous currency selection is pending", () => {
-    const updateCurrencyDisplay = vi.fn(() => new Promise(() => {}))
+    const updateCurrencyDisplay = vi.fn(
+      () => new Promise<PreferenceWriteResult>(() => {}),
+    )
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       ...vi.mocked(useUserPreferencesContext)(),
       updateCurrencyDisplay,
