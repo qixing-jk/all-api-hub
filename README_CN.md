@@ -137,30 +137,6 @@ GitHub Stable 和 Nightly 属于手动安装通道。必须从 GitHub 安装时�
 > [想出现在这里？](mailto:street-anime-olive@duck.com)
 
 <div>
-  <a href="https://s.qiniu.com/qE3eai">
-    <img src="resources/partners/qiniu.png" alt="七牛云AI" width="180" align="left" hspace="10" vspace="4">
-  </a>
-  <p>
-    七牛云AI 是七牛云（02567.HK）旗下企业级大模型 MaaS 平台，一站式调用全球 150+ 主流模型，兼容全球主流模型厂商协议，覆盖文本、图像、音频、视频、文件处理等全模态处理能力，服务超过 169 万企业及开发者用户。
-    企业用户可通过<a href="https://s.qiniu.com/qE3eai">此链接</a>免费领取 1200 万 Token，邀请好友最高可得百亿 Token。
-  </p>
-</div>
-
-<hr>
-
-<div>
-  <a href="https://api.fenno.ai/s/DCGC">
-    <img src="resources/partners/fennoai.jpg" alt="FennoAI" width="180" align="left" hspace="10" vspace="4">
-  </a>
-  <p>
-    FennoAI 是一家稳定、高效的 API 中转服务商，目前主要提供 Codex 中转服务，兼容 OpenAI 及 Anthropic 协议，可灵活接入 Codex、Claude Code、OpenCode 等主流编程工具，可稳定支撑千亿 Token/日的企业级调用需求，支持国内及海外主体公对公结算、开票。
-    FennoAI 为 All API Hub 用户提供专属福利：通过<a href="https://api.fenno.ai/s/DCGC">专属链接</a>购买订阅，仅需 1.99 美元即可获得价值 50 美元的 Coding Plan 额度。同时支持邀请奖励，邀请好友购买最高可获得 20% 返佣，邀请越多，奖励越高（<a href="https://all-api-hub.qixing1217.top/service-guides/fenno.html">使用教程</a>）。
-  </p>
-</div>
-
-<hr>
-
-<div>
   <a href="https://www.packyapi.ai/register?aff=all-api-hub">
     <img src="resources/partners/packycode.png" alt="PackyCode" width="128" align="left" hspace="10" vspace="4">
   </a>

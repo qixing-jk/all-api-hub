@@ -62,28 +62,6 @@
 
 <div class="sponsor-list">
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://s.qiniu.com/qE3eai">
-      <img src="../../resources/partners/qiniu.png" alt="七牛云AI">
-    </a>
-    <p>
-      <strong>七牛云AI</strong> 七牛云（02567.HK）旗下企业级大模型 MaaS 平台，一站式调用全球 150+ 主流模型，兼容全球主流模型厂商协议，覆盖文本、图像、音频、视频、文件处理等全模态处理能力。企业用户可通过<a href="https://s.qiniu.com/qE3eai">此链接</a>免费领取 <strong>1200 万 Token</strong>，邀请好友最高可得百亿 Token。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://api.fenno.ai/s/DCGC">
-      <img src="../../resources/partners/fennoai.jpg" alt="FennoAI">
-    </a>
-    <p>
-      <strong>FennoAI</strong> 是一家稳定、高效的 API 中转服务商，主要提供 Codex 中转服务，兼容 OpenAI 及 Anthropic 协议，可接入 Codex、Claude Code、OpenCode 等主流编程工具，稳定支撑千亿 Token/日的企业级调用需求，并支持国内及海外主体公对公结算、开票。通过<a href="https://api.fenno.ai/s/DCGC">专属链接</a>购买订阅，仅需 <strong>1.99 美元</strong>即可获得价值 50 美元的 Coding Plan 额度；邀请好友购买最高可获得 20% 返佣，邀请越多，奖励越高（<a href="./service-guides/fenno.md">使用教程</a>）。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
     <a class="sponsor-logo" href="https://www.packyapi.ai/register?aff=all-api-hub">
       <img src="../../resources/partners/packycode.png" alt="PackyCode">
     </a>
