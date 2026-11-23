@@ -17,6 +17,7 @@ import {
 } from "~/services/apiService/newApiFamily/variants/xingyaCheckInProtocol"
 import { PMAPI_ENDPOINTS } from "~/services/apiService/pmapi/constants"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
+import { createApiKeyCasaDailyCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckInProtocol"
 import {
   createBaiApiCheckInStatusEndpoint,
   resolveBaiApiCheckInTimezone,
@@ -116,6 +117,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "sidrune"
   | "nexavlinks"
   | "xingya"
+  | "apiKeyCasa"
   | "agentRouter"}`
 
 export type CheckInMethodPresentationMetadata = {
@@ -148,7 +150,7 @@ interface AutoCheckinMethodDefinitionBase {
   readonly supportsRouteOverride?: boolean
 }
 
-/** Hiyo can award again; DaiGua/Sidrune/FreeAPI/Xingya duplicate guarantees are unverified. Never queue replays. */
+/** These methods can award again or lack a verified duplicate guarantee. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
@@ -156,6 +158,7 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
   ])
 
 /**
@@ -658,6 +661,23 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       {
         path: createBaiApiCheckInStatusEndpoint(resolveBaiApiCheckInTimezone()),
       },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: {
+    // Public dashboard contract observed at https://apikey.casa/redeem.
+    discoveryOrigins: ["https://apikey.casa"],
+    presentation: { sourceNameKey: "methods.sources.apiKeyCasa" },
+    id: AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "ApiKey Casa",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createApiKeyCasaDailyCheckInStatusEndpoint() },
     ],
     legacy: false,
     newAccountCompatibility: false,

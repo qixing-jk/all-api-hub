@@ -1,0 +1,218 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  fetchApiKeyCasaDailyCheckInStatus,
+  performApiKeyCasaDailyCheckIn,
+} from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn"
+import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
+import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
+import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/apiKeyCasa"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { AuthTypeEnum } from "~/types"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
+
+vi.mock(
+  "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn")
+    >()),
+    fetchApiKeyCasaDailyCheckInStatus: vi.fn(),
+    performApiKeyCasaDailyCheckIn: vi.fn(),
+  }),
+)
+
+const METHOD_ID = AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn
+
+const createAccount = () =>
+  buildSiteAccount({
+    id: "apikey-casa-account",
+    site_url: "https://apikey.casa",
+    site_type: SITE_TYPES.SUB2API,
+    authType: AuthTypeEnum.AccessToken,
+    account_info: {
+      id: "42",
+      username: "Example User",
+      access_token: "example-access-token",
+      quota: 0,
+      today_quota_consumption: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 0,
+      today_income: 0,
+    },
+    checkIn: {
+      automaticExecutionEnabled: true,
+      methodKnowledge: {
+        methods: {
+          [METHOD_ID]: {
+            detection: {
+              outcome: "matched",
+              evidence: { source: "probe", observedAt: 100 },
+            },
+          },
+        },
+      },
+      selection: { mode: "automatic", methodId: METHOD_ID },
+    },
+  })
+
+const executionContext = () => ({
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
+})
+
+const notCheckedStatus = {
+  outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+  availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+  today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+  evidence: { source: "probe" as const, observedAt: 200 },
+}
+
+describe("ApiKey Casa check-in provider", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(fetchApiKeyCasaDailyCheckInStatus).mockResolvedValue({
+      enabled: true,
+      checkedInToday: false,
+    })
+    vi.mocked(performApiKeyCasaDailyCheckIn).mockResolvedValue(undefined)
+  })
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it("offers the method to Sub2API accounts", () => {
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.SUB2API, "https://apikey.casa/redeem")
+        .map((candidate) => candidate.id),
+    ).toContain(METHOD_ID)
+
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.SUB2API, "https://another.example")
+        .map((candidate) => candidate.id),
+    ).toContain(METHOD_ID)
+
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://apikey.casa")
+        .map((candidate) => candidate.id),
+    ).not.toContain(METHOD_ID)
+  })
+
+  it("discovers status without submitting a claim", async () => {
+    await expect(
+      apiKeyCasaProvider.detect?.({
+        account: createAccount(),
+        observedAt: 200,
+      }),
+    ).resolves.toMatchObject({ detection: { outcome: "matched" } })
+    expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenCalledOnce()
+    expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("blocks submission unless the current status proves an enabled unchecked claim", async () => {
+    await expect(
+      apiKeyCasaProvider.checkIn(createAccount(), executionContext()),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+    })
+    expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
+
+    await expect(
+      apiKeyCasaProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: {
+          ...notCheckedStatus,
+          today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+        },
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+    })
+    expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("confirms the completed day without attributing the advertised reward", async () => {
+    const execution = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: executionContext(),
+    })
+    expect(execution).toMatchObject({
+      kind: "executed",
+      result: { status: CHECKIN_RESULT_STATUS.SUCCESS },
+    })
+    expect(execution).not.toHaveProperty("result.awards")
+    expect(performApiKeyCasaDailyCheckIn).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    { enabled: true, checkedInToday: true, reason: "already_checked" },
+    { enabled: false, checkedInToday: false, reason: "method_disabled" },
+  ])(
+    "skips the claim when the server reports $reason",
+    async ({ enabled, checkedInToday, reason }) => {
+      vi.mocked(fetchApiKeyCasaDailyCheckInStatus).mockResolvedValue({
+        enabled,
+        checkedInToday,
+      })
+      await expect(
+        executeSelectedCheckIn({
+          account: createAccount(),
+          globalAutomaticExecutionEnabled: true,
+          context: executionContext(),
+        }),
+      ).resolves.toMatchObject({ kind: "skipped", reason })
+      expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([true, false])(
+    "reads status after a lost response without replay (checked=%s)",
+    async (checkedInToday) => {
+      vi.mocked(fetchApiKeyCasaDailyCheckInStatus)
+        .mockResolvedValueOnce({ enabled: true, checkedInToday: false })
+        .mockResolvedValue({ enabled: true, checkedInToday })
+      vi.mocked(performApiKeyCasaDailyCheckIn).mockImplementation(
+        async (request) => {
+          request.observer?.onDispatch()
+          throw new TypeError("Failed to fetch")
+        },
+      )
+      const result = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      })
+      expect(result).toMatchObject({ kind: "executed", retryable: false })
+      if (!checkedInToday)
+        expect(result).not.toMatchObject({
+          result: { status: CHECKIN_RESULT_STATUS.SUCCESS },
+        })
+      expect(result).not.toHaveProperty("result.awards")
+      expect(
+        vi.mocked(fetchApiKeyCasaDailyCheckInStatus).mock.calls.length,
+      ).toBeGreaterThanOrEqual(2)
+      expect(performApiKeyCasaDailyCheckIn).toHaveBeenCalledOnce()
+    },
+  )
+})

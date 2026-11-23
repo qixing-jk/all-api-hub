@@ -14,7 +14,7 @@ const getHttpErrorCode = (status: number) => {
 }
 
 /**
- * Parses the code/message/data envelope shared by FreeAPI and Clawhud.
+ * Parses the code/message/data envelope shared by Sub2API check-in providers.
  * Keep reason precedence, HTTP classification and source-specific copy here;
  * deployment status fields and mutation results remain with each adapter.
  */
@@ -32,7 +32,12 @@ export function createCheckInCodeEnvelopeParser(sourceName: string) {
     endpoint: string,
   ): Record<string, unknown> => {
     const envelope = toRecord(response.body)
-    if (!envelope) {
+    if (
+      !envelope ||
+      (typeof envelope.code !== "string" &&
+        typeof envelope.code !== "number") ||
+      typeof envelope.message !== "string"
+    ) {
       if (!response.ok) {
         throw new ApiError(
           `${sourceName} daily check-in request failed with HTTP ${response.status}`,
@@ -41,14 +46,6 @@ export function createCheckInCodeEnvelopeParser(sourceName: string) {
           getHttpErrorCode(response.status),
         )
       }
-      throw invalidResponse(endpoint)
-    }
-
-    if (
-      (typeof envelope.code !== "string" &&
-        typeof envelope.code !== "number") ||
-      typeof envelope.message !== "string"
-    ) {
       throw invalidResponse(endpoint)
     }
 

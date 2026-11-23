@@ -34,6 +34,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   DayaDailyCheckIn: "daya:daily-checkin",
   PmApiDailyCheckIn: "pmapi:daily-checkin",
   BaiApiDailyCheckIn: "bai-api:daily-checkin",
+  ApiKeyCasaDailyCheckIn: "apikey-casa:daily-checkin",
   XingyaDailyCheckIn: "xingya:daily-checkin",
 } as const
 
