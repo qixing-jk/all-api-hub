@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest"
 
 import { parseClawhudDailyCheckInStatusResponse } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
 import { parseFreeApiDailyCheckInStatusResponse } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
+import { parseXingchiDailyCheckInStatusResponse } from "~/services/apiService/sub2api/checkin/xingchiCheckIn"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 
 describe.each([
+  ["Xingchi", "/api/v1/user/checkin", parseXingchiDailyCheckInStatusResponse],
   ["FreeAPI", "/api/v1/user/checkin", parseFreeApiDailyCheckInStatusResponse],
   [
     "Clawhud",

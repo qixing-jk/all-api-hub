@@ -37,6 +37,7 @@ const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
     vi.fn(),
     vi.fn(),
     vi.fn(),
+    vi.fn(),
   ],
   checkIn: vi.fn(),
 }))
@@ -55,9 +56,8 @@ vi.mock("@plasmohq/storage", () => ({
 vi.mock("~/services/checkin/autoCheckin/providers", async () => {
   const { AUTO_CHECKIN_METHOD_IDS } = await import("~/constants/checkIn")
   const { SITE_TYPES } = await import("~/constants/siteType")
-  const { createAutoCheckinMethodRegistry } = await import(
-    "~/services/checkin/autoCheckin/providers/registry"
-  )
+  const { createAutoCheckinMethodRegistry } =
+    await import("~/services/checkin/autoCheckin/providers/registry")
   // Candidate IDs come from the real registry, so this fixture has to mirror
   // every Sub2API candidate or an unlisted one resolves with no detector.
   return {
@@ -72,6 +72,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
         // BaiApi is declared after Emrank in the real registry, but this

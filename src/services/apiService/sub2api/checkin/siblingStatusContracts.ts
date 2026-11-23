@@ -1,6 +1,7 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { FREE_API_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/freeApiCheckInProtocol"
 import { USER_CHECK_IN_STATUS_ENDPOINT } from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
+import { XINGCHI_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/xingchiCheckInProtocol"
 import type { CheckInMethodId } from "~/types/checkIn"
 
 /**
@@ -45,15 +46,26 @@ export interface SiblingStatusDtoDiscriminator {
 }
 
 /**
- * Three deployments serve the `/api/v1/user/checkin(/status)` family with
+ * These deployments serve the `/api/v1/user/checkin(/status)` family with
  * distinct DTOs: FreeAPI and Clawhud read `checked_in_today`, the Genius
  * Programmer fork reads `today_checked_in`. FreeAPI's reward window
  * (`min_amount`) and Clawhud's totals (`total_count`) separate the two
  * `checked_in_today` shapes; a payload that carries only
  * `{enabled, checked_in_today}` matches neither fingerprint and stays
- * `unknown` rather than claiming either contract.
+ * `unknown` rather than claiming either contract. Xingchi reads `claimed_today`
+ * on the shared path.
  */
 export const SIBLING_STATUS_DTO_DISCRIMINATORS = [
+  {
+    methodId: AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn,
+    endpoint: XINGCHI_CHECK_IN_ENDPOINT,
+    ownDtoMatches: (data) =>
+      typeof data.enabled === "boolean" &&
+      typeof data.claimed_today === "boolean" &&
+      !Object.hasOwn(data, "checked_in_today") &&
+      !Object.hasOwn(data, "today_checked_in"),
+    siblingDtoSample: { enabled: true, checked_in_today: false },
+  },
   {
     methodId: AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     endpoint: FREE_API_CHECK_IN_ENDPOINT,

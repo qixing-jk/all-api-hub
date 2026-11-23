@@ -45,6 +45,10 @@ import {
   createUserCheckInStatusEndpoint,
   resolveUserCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
+import {
+  createXingchiDailyCheckInStatusEndpoint,
+  resolveXingchiCheckInTimezone,
+} from "~/services/apiService/sub2api/checkin/xingchiCheckInProtocol"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"
@@ -107,6 +111,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "xiaobaiCode"
   | "clawhud"
   | "freeApi"
+  | "xingchi"
   | "baiApi"
   | "sub2apiPro"
   | "toolcode"
@@ -148,13 +153,14 @@ interface AutoCheckinMethodDefinitionBase {
   readonly supportsRouteOverride?: boolean
 }
 
-/** Hiyo can award again; DaiGua/Sidrune/FreeAPI/Xingya duplicate guarantees are unverified. Never queue replays. */
+/** Hiyo can award again; DaiGua/Sidrune/FreeAPI/Xingchi/Xingya duplicate guarantees are unverified. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
   ])
 
@@ -584,6 +590,26 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: "/api/v1/welfare/profile" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.xingchi" },
+    discoveryOrigins: ["https://xingchiapi.com"],
+    id: AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "星驰",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      {
+        path: createXingchiDailyCheckInStatusEndpoint(
+          resolveXingchiCheckInTimezone(),
+        ),
+      },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },
