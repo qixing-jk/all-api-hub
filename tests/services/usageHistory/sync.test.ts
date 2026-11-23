@@ -3,11 +3,15 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { type Storage } from "@plasmohq/storage"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
+import {
+  syncUsageHistoryForAccount,
+  USAGE_HISTORY_SYNC_TRIGGERS,
+} from "~/services/history/usageHistory/sync"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -57,7 +61,7 @@ function createConsumeLogItem(
  */
 async function createTestAccount(
   baseUrl: string,
-  siteType: SiteAccount["site_type"] = "new-api",
+  siteType: SiteAccount["site_type"] = SITE_TYPES.NEW_API,
 ): Promise<string> {
   const accountData: Omit<
     SiteAccount,
@@ -101,7 +105,7 @@ describe("usageHistory sync (MSW)", () => {
     expect(
       await syncUsageHistoryForAccount({
         accountId,
-        trigger: "manual",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         force: true,
       }),
     ).toMatchObject({ status: "unsupported", ingestedCount: 0 })
@@ -152,7 +156,7 @@ describe("usageHistory sync (MSW)", () => {
     }
     const params = {
       accountId,
-      trigger: "manual" as const,
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       timeZone: "UTC",
       config,
@@ -230,7 +234,7 @@ describe("usageHistory sync (MSW)", () => {
     await expect(
       syncUsageHistoryForAccount({
         accountId,
-        trigger: "manual",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         force: true,
         timeZone: "UTC",
         config,
@@ -273,7 +277,11 @@ describe("usageHistory sync (MSW)", () => {
         store.status.lastSyncAt = now - intervalMs + 1
       })
       await expect(
-        syncUsageHistoryForAccount({ accountId, trigger: "alarm", config }),
+        syncUsageHistoryForAccount({
+          accountId,
+          trigger: USAGE_HISTORY_SYNC_TRIGGERS.Alarm,
+          config,
+        }),
       ).resolves.toMatchObject({ status: "skipped" })
       expect(request).not.toHaveBeenCalled()
 
@@ -281,7 +289,11 @@ describe("usageHistory sync (MSW)", () => {
         store.status.lastSyncAt = now - intervalMs
       })
       await expect(
-        syncUsageHistoryForAccount({ accountId, trigger: "alarm", config }),
+        syncUsageHistoryForAccount({
+          accountId,
+          trigger: USAGE_HISTORY_SYNC_TRIGGERS.Alarm,
+          config,
+        }),
       ).resolves.toMatchObject({ status: "success" })
       expect(request).toHaveBeenCalledOnce()
     },
@@ -308,7 +320,7 @@ describe("usageHistory sync (MSW)", () => {
       )
       const result = await syncUsageHistoryForAccount({
         accountId,
-        trigger: "manual",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         force: true,
       })
       expect(result.status).toBe("error")
@@ -341,7 +353,7 @@ describe("usageHistory sync (MSW)", () => {
     expect(
       await syncUsageHistoryForAccount({
         accountId,
-        trigger: "manual",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         force: true,
       }),
     ).toMatchObject({
@@ -368,7 +380,7 @@ describe("usageHistory sync (MSW)", () => {
     expect(
       await syncUsageHistoryForAccount({
         accountId,
-        trigger: "manual",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         force: true,
       }),
     ).toMatchObject({ status: "success", ingestedCount: 1 })
@@ -388,7 +400,11 @@ describe("usageHistory sync (MSW)", () => {
       .spyOn(storage, "set")
       .mockRejectedValue(new Error("history write failed"))
     await expect(
-      syncUsageHistoryForAccount({ accountId, trigger: "manual", force: true }),
+      syncUsageHistoryForAccount({
+        accountId,
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
+        force: true,
+      }),
     ).resolves.toMatchObject({ status: "error" })
     expect(write).toHaveBeenCalledTimes(2)
   })
@@ -437,7 +453,7 @@ describe("usageHistory sync (MSW)", () => {
     })
     const running = syncUsageHistoryForAccount({
       accountId,
-      trigger: "manual",
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       timeZone: "UTC",
       config,
@@ -485,7 +501,7 @@ describe("usageHistory sync (MSW)", () => {
       .mockResolvedValue({ items, total: items.length })
     const params = {
       accountId,
-      trigger: "manual" as const,
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       timeZone: "UTC",
     }
@@ -537,7 +553,7 @@ describe("usageHistory sync (MSW)", () => {
     )
     const params = {
       accountId,
-      trigger: "manual" as const,
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       timeZone: "UTC",
       config: {
@@ -585,33 +601,36 @@ describe("usageHistory sync (MSW)", () => {
     })
   })
 
-  it("routes log pages through the New API-family request seam", async () => {
-    const baseUrl = "https://usage-history.example.invalid"
-    const accountId = await createTestAccount(baseUrl)
-    const dataSpy = vi
-      .spyOn(newApiFamilyRequests, "data")
-      .mockResolvedValue({ items: [], total: 0 })
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.SHELL_API] as const)(
+    "routes %s log pages through the common request seam",
+    async (siteType) => {
+      const baseUrl = "https://usage-history.example.invalid"
+      const accountId = await createTestAccount(baseUrl, siteType)
+      const dataSpy = vi
+        .spyOn(newApiFamilyRequests, "data")
+        .mockResolvedValue({ items: [], total: 0 })
 
-    await syncUsageHistoryForAccount({
-      accountId,
-      trigger: "manual",
-      force: true,
-      config: {
-        enabled: true,
-        retentionDays: 30,
-        scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
-        syncIntervalMinutes: 60,
-      },
-    })
+      await syncUsageHistoryForAccount({
+        accountId,
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
+        force: true,
+        config: {
+          enabled: true,
+          retentionDays: 30,
+          scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+          syncIntervalMinutes: 60,
+        },
+      })
 
-    expect(dataSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ baseUrl }),
-      expect.objectContaining({
-        endpoint: expect.stringContaining("/api/log/self?"),
-      }),
-    )
-    dataSpy.mockRestore()
-  })
+      expect(dataSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl }),
+        expect.objectContaining({
+          endpoint: expect.stringContaining("/api/log/self?"),
+        }),
+      )
+      dataSpy.mockRestore()
+    },
+  )
 
   it("skips disabled sync and mismatched scheduled triggers before loading accounts", async () => {
     const disabledConfig: UsageHistoryPreferences = {
@@ -624,7 +643,7 @@ describe("usageHistory sync (MSW)", () => {
     await expect(
       syncUsageHistoryForAccount({
         accountId: "missing-disabled",
-        trigger: "manual",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         config: disabledConfig,
       }),
     ).resolves.toMatchObject({
@@ -643,7 +662,7 @@ describe("usageHistory sync (MSW)", () => {
     await expect(
       syncUsageHistoryForAccount({
         accountId: "missing-after-refresh",
-        trigger: "afterRefresh",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.AfterRefresh,
         config: afterRefreshConfig,
       }),
     ).resolves.toMatchObject({
@@ -662,7 +681,7 @@ describe("usageHistory sync (MSW)", () => {
     await expect(
       syncUsageHistoryForAccount({
         accountId: "missing-alarm",
-        trigger: "alarm",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Alarm,
         config: alarmConfig,
       }),
     ).resolves.toMatchObject({
@@ -682,7 +701,7 @@ describe("usageHistory sync (MSW)", () => {
 
     const result = await syncUsageHistoryForAccount({
       accountId: "missing-account",
-      trigger: "manual",
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       config,
     })
 
@@ -754,7 +773,7 @@ describe("usageHistory sync (MSW)", () => {
 
     const first = await syncUsageHistoryForAccount({
       accountId,
-      trigger: "manual",
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       timeZone: "UTC",
       config,
@@ -801,7 +820,7 @@ describe("usageHistory sync (MSW)", () => {
     // Second run: should not double-count boundary items.
     const second = await syncUsageHistoryForAccount({
       accountId,
-      trigger: "manual",
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       timeZone: "UTC",
       config,
@@ -886,7 +905,7 @@ describe("usageHistory sync (MSW)", () => {
 
     await syncUsageHistoryForAccount({
       accountId,
-      trigger: "manual",
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       timeZone: "UTC",
       config,
@@ -912,7 +931,7 @@ describe("usageHistory sync (MSW)", () => {
 
     await syncUsageHistoryForAccount({
       accountId,
-      trigger: "manual",
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       timeZone: "UTC",
       config,
@@ -927,55 +946,58 @@ describe("usageHistory sync (MSW)", () => {
     ).toBe(afterRequests)
   })
 
-  it("marks unsupported endpoints and then respects the cooldown window", async () => {
-    const baseUrl = "https://api-unsupported.example.com"
-    const accountId = await createTestAccount(baseUrl)
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.SHELL_API] as const)(
+    "marks %s unsupported endpoints and then respects the cooldown window",
+    async (siteType) => {
+      const baseUrl = "https://api-unsupported.example.com"
+      const accountId = await createTestAccount(baseUrl, siteType)
 
-    server.use(
-      http.get(`${baseUrl}/api/log/self`, () =>
-        HttpResponse.json(
-          { success: false, message: "not found" },
-          { status: 404 },
+      server.use(
+        http.get(`${baseUrl}/api/log/self`, () =>
+          HttpResponse.json(
+            { success: false, message: "not found" },
+            { status: 404 },
+          ),
         ),
-      ),
-    )
+      )
 
-    const config: UsageHistoryPreferences = {
-      enabled: true,
-      retentionDays: 30,
-      scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
-      syncIntervalMinutes: 60,
-    }
+      const config: UsageHistoryPreferences = {
+        enabled: true,
+        retentionDays: 30,
+        scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+        syncIntervalMinutes: 60,
+      }
 
-    const first = await syncUsageHistoryForAccount({
-      accountId,
-      trigger: "manual",
-      force: true,
-      config,
-    })
+      const first = await syncUsageHistoryForAccount({
+        accountId,
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
+        force: true,
+        config,
+      })
 
-    expect(first.status).toBe("unsupported")
-    expect(first.error).toBeTruthy()
+      expect(first.status).toBe("unsupported")
+      expect(first.error).toBeTruthy()
 
-    const storeAfterFailure =
-      await usageHistoryStorage.getAccountStore(accountId)
-    expect(storeAfterFailure.status.state).toBe("unsupported")
-    expect(storeAfterFailure.status.unsupportedUntil).toBeGreaterThan(
-      Date.now(),
-    )
+      const storeAfterFailure =
+        await usageHistoryStorage.getAccountStore(accountId)
+      expect(storeAfterFailure.status.state).toBe("unsupported")
+      expect(storeAfterFailure.status.unsupportedUntil).toBeGreaterThan(
+        Date.now(),
+      )
 
-    const skipped = await syncUsageHistoryForAccount({
-      accountId,
-      trigger: "manual",
-      config,
-    })
+      const skipped = await syncUsageHistoryForAccount({
+        accountId,
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
+        config,
+      })
 
-    expect(skipped).toMatchObject({
-      accountId,
-      status: "skipped",
-      partial: false,
-    })
-  })
+      expect(skipped).toMatchObject({
+        accountId,
+        status: "skipped",
+        partial: false,
+      })
+    },
+  )
 
   it("records generic fetch failures without marking the endpoint unsupported", async () => {
     const baseUrl = "https://api-error.example.com"
@@ -999,7 +1021,7 @@ describe("usageHistory sync (MSW)", () => {
 
     const result = await syncUsageHistoryForAccount({
       accountId,
-      trigger: "manual",
+      trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
       force: true,
       config,
     })
@@ -1011,6 +1033,57 @@ describe("usageHistory sync (MSW)", () => {
     expect(store.status.state).toBe("error")
     expect(store.status.unsupportedUntil).toBeUndefined()
   })
+
+  it.each([
+    ["native-array", (row: LogItem) => [row]],
+    ["missing-items", () => ({ total: 1 })],
+    ["missing-total", (row: LogItem) => ({ items: [row] })],
+    ["negative-total", (row: LogItem) => ({ items: [row], total: -1 })],
+    ["fractional-total", (row: LogItem) => ({ items: [row], total: 0.5 })],
+    ["string-total", (row: LogItem) => ({ items: [row], total: "1" })],
+  ])(
+    "rejects %s history pages without committing an empty successful sync",
+    async (_label, malformedPage) => {
+      const baseUrl = "https://shell-history.example.com"
+      const accountId = await createTestAccount(baseUrl, SITE_TYPES.SHELL_API)
+      const row = createConsumeLogItem({
+        created_at: Math.floor(Date.now() / 1000) - 60,
+      })
+      let data: unknown = { items: [row], total: 1 }
+      server.use(
+        http.get(`${baseUrl}/api/log/self`, () =>
+          HttpResponse.json({ success: true, data }),
+        ),
+      )
+      const params = {
+        accountId,
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
+        force: true,
+        config: {
+          enabled: true,
+          retentionDays: 30,
+          scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+          syncIntervalMinutes: 60,
+        },
+      }
+      await expect(syncUsageHistoryForAccount(params)).resolves.toMatchObject({
+        status: "success",
+        ingestedCount: 1,
+      })
+      const before = await usageHistoryStorage.getAccountStore(accountId)
+      data = malformedPage(row)
+      await expect(syncUsageHistoryForAccount(params)).resolves.toMatchObject({
+        status: "error",
+        ingestedCount: 0,
+      })
+      const after = await usageHistoryStorage.getAccountStore(accountId)
+      expect(after.cursor).toEqual(before.cursor)
+      expect(after.daily).toEqual(before.daily)
+      expect(after.status.state).toBe("error")
+      expect(after.status.lastSuccessAt).toBe(before.status.lastSuccessAt)
+      expect(after.status.unsupportedUntil).toBeUndefined()
+    },
+  )
 
   it("keeps the item safety cap", async () => {
     const baseUrl = "https://api-item-cap.example.com"
@@ -1028,6 +1101,7 @@ describe("usageHistory sync (MSW)", () => {
               createConsumeLogItem({ id: 1, created_at: nowUnixSeconds - 2 }),
               createConsumeLogItem({ id: 2, created_at: nowUnixSeconds - 1 }),
             ],
+            total: 2,
           },
         }),
       ),
@@ -1038,7 +1112,7 @@ describe("usageHistory sync (MSW)", () => {
 
       const result = await syncUsageHistoryForAccount({
         accountId,
-        trigger: "manual",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         force: true,
         config: {
           enabled: true,
@@ -1103,7 +1177,7 @@ describe("usageHistory sync (MSW)", () => {
 
       const result = await syncUsageHistoryForAccount({
         accountId,
-        trigger: "manual",
+        trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         force: true,
         config: {
           enabled: true,

@@ -757,7 +757,8 @@ export default function AccountForm({
                 ? t("siteInfo.authMethodSelectedForSite", {
                     siteType: sitePolicy.siteTypeLabel,
                   })
-                : sitePolicy.usesBrowserCookieSession
+                : sitePolicy.usesBrowserCookieSession &&
+                    authType === AuthTypeEnum.Cookie
                   ? t("siteInfo.browserCookieSession")
                   : continuous
                     ? undefined

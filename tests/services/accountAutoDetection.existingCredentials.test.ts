@@ -95,9 +95,24 @@ describe("account detection with existing credentials", () => {
     },
   )
 
-  it.each([SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.APIYI])(
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.ONE_API,
+    SITE_TYPES.APIYI,
+    SITE_TYPES.LAOZHANG,
+    SITE_TYPES.SHELL_API,
+  ])(
     "reuses a valid %s form credential without reading account storage",
     async (siteType) => {
+      detectBrowserAccount.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "7",
+          user: { id: 7, username: "alice" },
+          siteType:
+            siteType === SITE_TYPES.ONE_API ? SITE_TYPES.NEW_API : siteType,
+        },
+      })
       const storageArea: {
         get(keys: string[]): Promise<Record<string, unknown>>
       } = browser.storage.local

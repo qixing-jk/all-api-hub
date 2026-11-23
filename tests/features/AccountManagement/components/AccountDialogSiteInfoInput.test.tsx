@@ -30,6 +30,29 @@ describe("AccountDialog SiteInfoInput", () => {
       }),
     ).toBeInTheDocument()
   })
+  it.each([AuthTypeEnum.Cookie, AuthTypeEnum.AccessToken])(
+    "describes the selected Shell authentication method (%s)",
+    async (authType) => {
+      const props = createAddModeProps()
+      props.testSiteType = SITE_TYPES.SHELL_API
+      props.authType = authType
+      render(<SiteInfoInput {...withSitePolicy(props)} />)
+      const helpKey =
+        authType === AuthTypeEnum.Cookie
+          ? "accountDialog:siteInfo.browserCookieSession"
+          : "accountDialog:siteInfo.cookieWarning"
+      expect(
+        await screen.findByRole("button", { name: helpKey }),
+      ).toBeInTheDocument()
+      if (authType === AuthTypeEnum.AccessToken) {
+        expect(
+          screen.queryByRole("button", {
+            name: "accountDialog:siteInfo.browserCookieSession",
+          }),
+        ).not.toBeInTheDocument()
+      }
+    },
+  )
   beforeEach(() => {
     mockGetAllTabs.mockReset().mockResolvedValue([])
   })

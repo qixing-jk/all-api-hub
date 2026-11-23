@@ -43,6 +43,11 @@
     "prepareFailed": "无法暂存当前表单。请先复制需要保留的信息，再从完整页面重新打开账号表单。",
     "restoreFailed": "无法恢复未完成的表单，可能已过期。请重新打开账号表单。",
     "rotationWarning": "仅适用于显示 Generate / Regenerate 的旧版站点：重新生成会使旧令牌失效，其他使用旧令牌的工具也需要更新。创建带权限的访问令牌不会使已有令牌失效。",
+    "shellApi": {
+      "generateStep": "使用已有的 System token，或前往站点的个人设置 → System token 完成验证，再返回粘贴。",
+      "openProfile": "打开个人设置",
+      "openProfileFailed": "无法打开页面。请在站点的个人设置 → System token 完成验证，再返回粘贴。"
+    },
     "title": "手动填写 Access Token",
     "vercel": {
       "generateStep": "在 Vercel 账户的令牌页面创建令牌，作用域选择拥有 AI Gateway 的团队，并按 Vercel 要求完成邮箱验证。令牌只显示一次，请立即复制。",

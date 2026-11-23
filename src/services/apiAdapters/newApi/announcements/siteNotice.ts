@@ -1,6 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { getCompatibleAccountVariant } from "~/services/apiAdapters/compatibleAccountVariant"
 import type { SiteNoticeCapability } from "~/services/apiAdapters/contracts/siteNotice"
-import { getNewApiVariantRegistration } from "~/services/apiAdapters/newApi/variantRegistration"
 import { fetchSiteNotice } from "~/services/apiService/newApiFamily/default/siteNotice"
 
 export const newApiSiteNotice: SiteNoticeCapability = { fetch: fetchSiteNotice }
@@ -8,5 +8,5 @@ export const newApiSiteNotice: SiteNoticeCapability = { fetch: fetchSiteNotice }
 export function createNewApiSiteNotice(
   siteType: AccountSiteType,
 ): SiteNoticeCapability {
-  return getNewApiVariantRegistration(siteType).notice ?? newApiSiteNotice
+  return getCompatibleAccountVariant(siteType).notice ?? newApiSiteNotice
 }

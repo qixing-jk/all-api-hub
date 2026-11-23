@@ -41,7 +41,10 @@ import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisionin
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import { resolveLoginProviderClaims } from "~/services/accountLogin/providerClaims"
 import { isAccessTokenRecoveryError } from "~/services/accounts/utils/autoDetectUtils"
-import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import {
+  ACCOUNT_SITE_ACCESS_TOKEN_GUIDES,
+  getAccountSiteDefinition,
+} from "~/services/accountSiteDefinitions"
 import {
   isCanonicalAimlApiUrl,
   isCanonicalOpenRouterUrl,
@@ -246,7 +249,8 @@ export default function AccountDialog({
     credentialVerification?.status === "error" &&
     state.novitaCredentialOperation !== "account" &&
     getAccountSiteDefinition(state.siteType)?.onboarding
-      ?.accessTokenVerificationGuide?.copy === "novita"
+      ?.accessTokenVerificationGuide?.copy ===
+      ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Novita
 
   const manualAddGuideAnchor = getAccountSiteDefinition(state.siteType)
     ?.onboarding?.manualAddGuideAnchor
@@ -617,7 +621,8 @@ export default function AccountDialog({
                 onAccessTokenChange={setters.setAccessToken}
                 novitaCredentialActions={
                   getAccountSiteDefinition(state.siteType)?.onboarding
-                    ?.accessTokenVerificationGuide?.copy === "novita"
+                    ?.accessTokenVerificationGuide?.copy ===
+                  ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Novita
                     ? {
                         onAcquireConsole: () =>
                           void handlers.handleAcquireNovitaConsole(),

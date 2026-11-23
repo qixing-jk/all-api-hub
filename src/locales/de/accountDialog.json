@@ -43,6 +43,11 @@
     "prepareFailed": "Das Formular konnte nicht zwischengespeichert werden. Kopieren Sie wichtige Angaben und öffnen Sie das Kontoformular auf der vollständigen Seite erneut.",
     "restoreFailed": "Das unvollständige Formular konnte nicht wiederhergestellt werden. Es ist möglicherweise abgelaufen. Öffne das Kontoformular erneut.",
     "rotationWarning": "Nur auf älteren Sites mit Generate / Regenerate: Die Neugenerierung macht das alte Token ungültig. Aktualisiere andere Tools, die es nutzen. Ein neues Zugriffstoken mit Berechtigungen macht vorhandene Tokens nicht ungültig.",
+    "shellApi": {
+      "generateStep": "Verwenden Sie einen vorhandenen System token oder öffnen Sie auf der Website Profil → System token, schließen Sie die Verifizierung ab und fügen Sie ihn hier ein.",
+      "openProfile": "Kontoprofil öffnen",
+      "openProfileFailed": "Die Seite konnte nicht geöffnet werden. Öffnen Sie Profil → System token auf der Website, schließen Sie die Verifizierung ab und fügen Sie ihn hier ein."
+    },
     "title": "Access Token manuell eingeben",
     "vercel": {
       "generateStep": "Öffne in deinem Vercel-Konto die Seite „Tokens“, erstelle ein Token für das Team, dem AI Gateway gehört, und schließe die von Vercel verlangte E-Mail-Bestätigung ab. Kopiere das Token sofort, denn es wird nur einmal angezeigt.",

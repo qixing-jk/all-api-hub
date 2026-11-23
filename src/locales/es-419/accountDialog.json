@@ -43,6 +43,11 @@
     "prepareFailed": "No se pudo guardar temporalmente el formulario. Copia la información que necesites conservar y vuelve a abrir el formulario en la página completa.",
     "restoreFailed": "No se pudo recuperar el formulario sin terminar. Es posible que haya vencido. Vuelve a abrir el formulario de cuenta.",
     "rotationWarning": "Solo en sitios antiguos con Generate / Regenerate: regenerar invalida el token anterior; actualiza las herramientas que lo usen. Crear un token de acceso con permisos no invalida los tokens existentes.",
+    "shellApi": {
+      "generateStep": "Usa un System token existente o abre Perfil → System token en el sitio, completa la verificación y vuelve aquí para pegarlo.",
+      "openProfile": "Abrir perfil de la cuenta",
+      "openProfileFailed": "No se pudo abrir la página. Abre Perfil → System token en el sitio, completa la verificación y vuelve aquí para pegarlo."
+    },
     "title": "Ingresa un Access Token manualmente",
     "vercel": {
       "generateStep": "Abre la página de tokens de tu cuenta de Vercel, crea un token para el equipo propietario de AI Gateway y completa la verificación por correo que pida Vercel. Copia el token de inmediato, porque solo se muestra una vez.",

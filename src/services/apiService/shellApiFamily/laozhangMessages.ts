@@ -13,13 +13,11 @@ const MESSAGE_PAGE_SIZE = 20
 function normalizeMessage(value: unknown): SiteAnnouncement | null {
   if (!value || typeof value !== "object") return null
   const item = value as Record<string, unknown>
-  if (
-    !(
-      typeof item.id === "number" &&
-      Number.isSafeInteger(item.id) &&
-      item.id > 0
-    )
-  )
+  if (!(
+    typeof item.id === "number" &&
+    Number.isSafeInteger(item.id) &&
+    item.id > 0
+  ))
     return null
   const title = typeof item.title === "string" ? item.title : ""
   const content = typeof item.content === "string" ? item.content : ""

@@ -9,7 +9,10 @@ import {
   type DetectedAccountIdentity,
 } from "~/services/accounts/autoDetectCompletion/types"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  getAccountSiteDefinition,
+  isCompatibleAccountFamily,
+} from "~/services/accountSiteDefinitions"
 import type { NovitaCredentialMode } from "~/services/apiService/novita/constants"
 
 export interface AccountAutoDetectExistingAccount {
@@ -32,7 +35,18 @@ function getCredentialScope(url: string): string | null {
   }
 }
 
-/** Checks deployment, identity, and adapter-family bindings without reading storage. */
+/** Shell sites share a protocol while keeping their credential sources separate. */
+function hasCompatibleCredentialSource(
+  saved: AccountSiteType,
+  detected: AccountSiteType,
+): boolean {
+  const family = getAccountSiteDefinition(detected)?.adapterFamily
+  return family === ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily
+    ? saved === detected
+    : getAccountSiteDefinition(saved)?.adapterFamily === family
+}
+
+/** Checks deployment, identity, and protocol bindings without reading storage. */
 export function getExistingAccountAccessToken(
   url: string,
   detected: DetectedAccountIdentity,
@@ -45,8 +59,10 @@ export function getExistingAccountAccessToken(
       getCredentialScope(existingAccount.url) !== scope ||
       normalizeAccountIdentity(existingAccount.userId) !==
         normalizeAccountIdentity(detected.userId) ||
-      getSiteTypeCapabilities(existingAccount.siteType).family !==
-        getSiteTypeCapabilities(detected.siteType).family)
+      !hasCompatibleCredentialSource(
+        existingAccount.siteType,
+        detected.siteType,
+      ))
   ) {
     throw new AutoDetectCompletionError(
       AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
@@ -61,10 +77,8 @@ export async function findSavedAccountAccessTokens(
   url: string,
   detected: DetectedAccountIdentity,
 ): Promise<string[]> {
-  if (
-    getSiteTypeCapabilities(detected.siteType).family !==
-    ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
-  ) {
+  const family = getAccountSiteDefinition(detected.siteType)?.adapterFamily
+  if (!isCompatibleAccountFamily(family)) {
     return []
   }
   const scope = getCredentialScope(url)
@@ -74,8 +88,7 @@ export async function findSavedAccountAccessTokens(
   return accounts
     .filter(
       (account) =>
-        getSiteTypeCapabilities(account.site_type).family ===
-          ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily &&
+        hasCompatibleCredentialSource(account.site_type, detected.siteType) &&
         getCredentialScope(account.site_url) === scope &&
         normalizeAccountIdentity(account.account_info.id) ===
           normalizeAccountIdentity(detected.userId),

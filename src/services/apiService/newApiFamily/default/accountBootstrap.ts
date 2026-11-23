@@ -15,6 +15,7 @@ import { API_OPERATION_SEMANTICS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
+import { isRecord } from "~/utils/core/object"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -70,24 +71,30 @@ interface AccountBootstrapImplementation {
   ) => number | null
 }
 
-/**
- * Fetch default New API-family site status (includes pricing/exchange data).
- * Always treated as a public endpoint.
- */
+/** Reads the shared public status protocol, leaving transport failures to the caller. */
+export async function readPublicSiteStatus(
+  request: ApiServiceRequest,
+  signal?: AbortSignal,
+): Promise<(SiteStatusInfo & Record<string, unknown>) | null> {
+  const response = await newApiFamilyRequests.envelope<unknown>(
+    { ...request, auth: { authType: AuthTypeEnum.None } },
+    {
+      endpoint: "/api/status",
+      ...(signal ? { options: { signal } } : {}),
+    },
+  )
+  return response?.success === true && isRecord(response.data)
+    ? response.data
+    : null
+}
+
+/** Fetches optional status metadata for account bootstrap. */
 export async function fetchSiteStatus(
   request: ApiServiceRequest,
   signal?: AbortSignal,
 ): Promise<SiteStatusInfo | null> {
-  const publicRequest: ApiServiceRequest = {
-    ...request,
-    auth: { authType: AuthTypeEnum.None },
-  }
-
   try {
-    return await newApiFamilyRequests.data<SiteStatusInfo>(publicRequest, {
-      endpoint: "/api/status",
-      ...(signal ? { options: { signal } } : {}),
-    })
+    return await readPublicSiteStatus(request, signal)
   } catch (error) {
     logger.warn("获取站点状态信息失败", error)
     return null
@@ -166,15 +173,19 @@ export function extractLoginProviders(
 export async function fetchUserInfo(
   request: ApiServiceRequest,
   expectedIdentity?: string,
+  options?: Pick<RequestInit, "redirect">,
 ): Promise<{
   id: string
   username: string
   access_token: string
   loginProviders?: readonly AccountLoginProvider[]
-  user: UserInfo
+  user: UserInfo & { quota?: unknown }
 }> {
-  const userData = await newApiFamilyRequests.data<UserInfo>(request, {
+  const userData = await newApiFamilyRequests.data<
+    UserInfo & { quota?: unknown }
+  >(request, {
     endpoint: "/api/user/self",
+    ...(options ? { options } : {}),
     credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
   })
   const userId = normalizeAccountIdentity(userData.id)

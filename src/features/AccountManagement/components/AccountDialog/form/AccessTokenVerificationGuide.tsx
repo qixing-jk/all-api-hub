@@ -14,6 +14,7 @@ import {
 } from "~/services/accounts/utils/siteRouteResolver"
 import {
   getAccountSiteDefinition,
+  ACCOUNT_SITE_ACCESS_TOKEN_GUIDES as GUIDE_COPIES,
   type AccountSiteAccessTokenVerificationGuide,
   type AccountSiteManualAddGuideAnchor,
 } from "~/services/accountSiteDefinitions"
@@ -76,14 +77,14 @@ export function AccessTokenVerificationGuide({
   const guide =
     getAccountSiteDefinition(siteType)?.onboarding?.accessTokenVerificationGuide
   const guideCopy = {
-    aimlapi: {
+    [GUIDE_COPIES.AiMlApi]: {
       title: t("form.aimlApiManagementKeyGuidanceTitle"),
       generateStep: t("form.aimlApiManagementKeyGuidance"),
       pasteStep: t("accessTokenVerification.aimlapi.pasteStep"),
       openPage: t("accessTokenVerification.aimlapi.openPage"),
       openPageFailed: t("accessTokenVerification.aimlapi.openPageFailed"),
     },
-    nanogpt: {
+    [GUIDE_COPIES.NanoGpt]: {
       description: t("accessTokenVerification.nanogpt.description"),
       title: t("form.nanoGptApiKeyGuidanceTitle"),
       generateStep: t("form.nanoGptApiKeyGuidance"),
@@ -91,27 +92,32 @@ export function AccessTokenVerificationGuide({
       openPage: t("accessTokenVerification.nanogpt.openPage"),
       openPageFailed: t("accessTokenVerification.nanogpt.openPageFailed"),
     },
-    security: {
+    [GUIDE_COPIES.Security]: {
       generateStep: t("accessTokenVerification.generateStep"),
       openPage: t("accessTokenVerification.openSecurity"),
       openPageFailed: t("accessTokenVerification.openSecurityFailed"),
     },
-    apiyi: {
+    [GUIDE_COPIES.ApiYi]: {
       generateStep: t("accessTokenVerification.apiyi.generateStep"),
       openPage: t("accessTokenVerification.apiyi.openProfile"),
       openPageFailed: t("accessTokenVerification.apiyi.openProfileFailed"),
     },
-    laozhang: {
+    [GUIDE_COPIES.ShellApi]: {
+      generateStep: t("accessTokenVerification.shellApi.generateStep"),
+      openPage: t("accessTokenVerification.shellApi.openProfile"),
+      openPageFailed: t("accessTokenVerification.shellApi.openProfileFailed"),
+    },
+    [GUIDE_COPIES.LaoZhang]: {
       generateStep: t("accessTokenVerification.laozhang.generateStep"),
       openPage: t("accessTokenVerification.laozhang.openProfile"),
       openPageFailed: t("accessTokenVerification.laozhang.openProfileFailed"),
     },
-    vercel: {
+    [GUIDE_COPIES.Vercel]: {
       generateStep: t("accessTokenVerification.vercel.generateStep"),
       openPage: t("accessTokenVerification.vercel.openPage"),
       openPageFailed: t("accessTokenVerification.vercel.openPageFailed"),
     },
-    novita: {
+    [GUIDE_COPIES.Novita]: {
       title: t("accessTokenVerification.novita.title"),
       pasteStep: t("accessTokenVerification.novita.pasteStep"),
       generateStep: t("accessTokenVerification.novita.generateStep"),
@@ -133,7 +139,7 @@ export function AccessTokenVerificationGuide({
     description: undefined as string | undefined,
     title: t("accessTokenVerification.title"),
     pasteStep: t("accessTokenVerification.pasteStep"),
-    ...guideCopy[guide?.copy ?? "security"],
+    ...guideCopy[guide?.copy ?? GUIDE_COPIES.Security],
   }
 
   const openAccessTokenPage = async () => {

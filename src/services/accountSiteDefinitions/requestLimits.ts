@@ -28,6 +28,7 @@ const budgets = {
   [SITE_TYPES.NEW_API]: budget(108),
   [SITE_TYPES.APIYI]: fallback,
   [SITE_TYPES.LAOZHANG]: fallback,
+  [SITE_TYPES.SHELL_API]: fallback,
   [SITE_TYPES.MODELFLARE]: fallback,
   [SITE_TYPES.ANYROUTER]: fallback,
   [SITE_TYPES.VELOERA]: fallback,

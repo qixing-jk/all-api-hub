@@ -1,10 +1,10 @@
 import * as veloera from "~/services/apiService/newApiFamily/variants/veloera"
 import * as veloeraCheckIn from "~/services/apiService/newApiFamily/variants/veloeraCheckIn"
 
+import type { CompatibleAccountVariant } from "../../compatibleAccountVariantContract"
 import { veloeraTokenInventoryOverrides } from "../variantOperations/key"
-import type { NewApiVariantRegistration } from "../variantRegistration"
 
-export const veloeraVariant: NewApiVariantRegistration = {
+export const veloeraVariant: CompatibleAccountVariant = {
   key: { transport: veloeraTokenInventoryOverrides },
   data: {
     fetchAccountData: veloera.fetchAccountData,
