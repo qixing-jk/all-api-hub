@@ -37,6 +37,7 @@ const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
     vi.fn(),
     vi.fn(),
     vi.fn(),
+    vi.fn(),
   ],
   checkIn: vi.fn(),
 }))
@@ -55,9 +56,8 @@ vi.mock("@plasmohq/storage", () => ({
 vi.mock("~/services/checkin/autoCheckin/providers", async () => {
   const { AUTO_CHECKIN_METHOD_IDS } = await import("~/constants/checkIn")
   const { SITE_TYPES } = await import("~/constants/siteType")
-  const { createAutoCheckinMethodRegistry } = await import(
-    "~/services/checkin/autoCheckin/providers/registry"
-  )
+  const { createAutoCheckinMethodRegistry } =
+    await import("~/services/checkin/autoCheckin/providers/registry")
   // Candidate IDs come from the real registry, so this fixture has to mirror
   // every Sub2API candidate or an unlisted one resolves with no detector.
   return {
@@ -78,6 +78,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         // fixture only covers Sub2API candidates; order still maps to
         // detectors by index, so it stays last.
         AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],

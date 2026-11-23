@@ -111,6 +111,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "sub2apiPro"
   | "toolcode"
   | "hiyo"
+  | "bizDecipher"
   | "aiRouter"
   | "daigua"
   | "sidrune"
@@ -148,9 +149,10 @@ interface AutoCheckinMethodDefinitionBase {
   readonly supportsRouteOverride?: boolean
 }
 
-/** Hiyo can award again; DaiGua/Sidrune/FreeAPI/Xingya duplicate guarantees are unverified. Never queue replays. */
+/** Repeatable rewards or unverified duplicate guarantees must never queue a new claim. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
+    AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
@@ -491,6 +493,22 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     supportsStatusReadback: true,
     feedbackStatusRoutes: (): FeedbackStatusRoutes => [
       { path: createHiyoCheckInStatusEndpoint(resolveHiyoCheckInTimezone()) },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.bizDecipher" },
+    discoveryOrigins: ["https://bizdecipher.com"],
+    id: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "BizDecipher (free)",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createUserCheckInStatusEndpoint(resolveUserCheckInTimezone()) },
     ],
     legacy: false,
     newAccountCompatibility: false,

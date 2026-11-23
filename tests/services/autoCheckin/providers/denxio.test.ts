@@ -111,6 +111,13 @@ vi.mock(
   }),
 )
 
+vi.mock("~/services/apiService/sub2api/checkin/bizdecipherCheckIn", () => ({
+  fetchBizDecipherDailyCheckInStatus: vi
+    .fn()
+    .mockRejectedValue(new ApiError("unsupported BizDecipher protocol", 404)),
+  performBizDecipherDailyCheckIn: vi.fn(),
+}))
+
 vi.mock(
   "~/services/apiService/sub2api/checkin/clawhudCheckIn",
   async (importOriginal) => ({
