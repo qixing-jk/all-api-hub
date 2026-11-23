@@ -527,6 +527,61 @@ describe("inspectCheckInMethods", () => {
     },
   )
 
+  it.each(["probe", "execution"] as const)(
+    "expires ChatflowsAI %s status at Beijing noon, independently of the local day",
+    (source) => {
+      const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+      const config = createConfig({ [methodId]: matched })
+      config.selection = { mode: "automatic", methodId }
+      config.methodKnowledge.methods[methodId]!.status = {
+        outcome: "known",
+        today: "checked",
+        evidence: { source, observedAt: Date.parse("2026-11-24T03:59:00Z") },
+      }
+      const inspect = (now: string) =>
+        inspectCheckInMethods({
+          config,
+          candidateMethodIds: [methodId],
+          now: Date.parse(now),
+          timeZone: "Asia/Singapore",
+        }).executionEligibility
+      expect(inspect("2026-11-24T03:59:30Z")).toEqual({
+        eligible: false,
+        skipReason: "already_checked",
+      })
+      expect(inspect("2026-11-24T04:00:00Z")).toEqual({
+        eligible: true,
+        methodId,
+      })
+      expect(inspect("2026-11-24T04:01:00Z")).toEqual({
+        eligible: true,
+        methodId,
+      })
+    },
+  )
+
+  it("keeps a ChatflowsAI claim current across calendar midnight until noon", () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+    const config = createConfig({ [methodId]: matched })
+    config.selection = { mode: "automatic", methodId }
+    config.methodKnowledge.methods[methodId]!.status = {
+      outcome: "known",
+      today: "checked",
+      evidence: {
+        source: "probe",
+        observedAt: Date.parse("2026-11-23T06:12:16Z"),
+      },
+    }
+    expect(
+      inspectCheckInMethods({
+        config,
+        candidateMethodIds: [methodId],
+        now: Date.parse("2026-11-24T03:59:00Z"),
+        timeZone: "Asia/Singapore",
+      }).executionEligibility,
+    ).toEqual({ eligible: false, skipReason: "already_checked" })
+  })
+
   it.each([
     {
       name: "account disabled",

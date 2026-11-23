@@ -124,6 +124,20 @@ describe("ChatflowsAI public check-in contract", () => {
     ).toMatchObject({ checkedInToday: false })
   })
 
+  it.each([
+    { period_key: "yesterday" },
+    { period_key: "2026-02-30" },
+    { period_key: "2026-11-22" },
+    { period_key: "2026-11-24" },
+    { period_key: "2026-11-22", next_reset_at: "2027-01-01T12:00:00+08:00" },
+    { next_reset_at: "2026-11-24T12:01:00+08:00" },
+    { next_reset_at: "2026-11-25T12:00:00+08:00" },
+  ])("rejects a mismatched period or noon reset %j", (fields) => {
+    expect(() =>
+      parseChatflowsCheckInStatusResponse(success(statusData(fields))),
+    ).toThrow()
+  })
+
   it.each([401, 403, 404, 405, 500])(
     "preserves HTTP %s even without JSON",
     (status) => {

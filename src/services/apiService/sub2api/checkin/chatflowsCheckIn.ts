@@ -3,6 +3,7 @@ import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2ap
 import {
   CHATFLOWS_CHECK_IN_ENDPOINT,
   CHATFLOWS_CHECK_IN_STATUS_ENDPOINT,
+  getChatflowsCheckInPeriodBounds,
 } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import {
@@ -50,16 +51,15 @@ export function parseChatflowsCheckInStatusResponse(
   response: ApiTransportResponse<unknown>,
 ) {
   const data = parseData(response, CHATFLOWS_CHECK_IN_STATUS_ENDPOINT)
+  const currentPeriod = getChatflowsCheckInPeriodBounds(Date.now())
   const nextResetAt =
     typeof data.next_reset_at === "string"
       ? Date.parse(data.next_reset_at)
       : Number.NaN
   if (
     typeof data.can_checkin !== "boolean" ||
-    typeof data.period_key !== "string" ||
-    !data.period_key.trim() ||
-    !Number.isFinite(nextResetAt) ||
-    nextResetAt <= Date.now()
+    data.period_key !== currentPeriod.periodKey ||
+    nextResetAt !== currentPeriod.nextResetAt
   ) {
     throw invalidResponse(CHATFLOWS_CHECK_IN_STATUS_ENDPOINT)
   }

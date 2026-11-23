@@ -37,5 +37,27 @@ the raw API field types, a new grant, or extension execution. Raw API validation
 remains pending. Keep this site in "missing adaptation", not verification-blocked.
 
 The existing global daily schedule is reused. It does not add an extra run at
-the provider's noon reset; choose a schedule after noon Beijing time when the
-desired behavior is to claim the newly opened period the same calendar day.
+the provider's noon reset. Its settings use the computer's local timezone, not
+the provider's timezone. With an Asia/Singapore or Asia/Shanghai computer clock,
+use fixed `13:00` inside a `12:05`–`23:00` window, or choose a random time inside
+that afternoon-only window. In other timezones, convert Beijing noon first.
+The fixed time must be inside the configured window. An earlier window can
+still trigger an early daily run when `pretriggerDailyOnUiOpen` is enabled;
+use the afternoon window or disable that early-trigger option.
+
+A random `09:00`–`23:00` window can hit one noon period twice on adjacent local
+dates and miss another period. The scheduler does not catch that up at noon,
+and browser downtime can still miss a period. This adaptation does not rewrite
+the shared scheduler or change saved user preferences.
+
+Cache validity uses the method registry's optional `statusPeriodKey` policy.
+Only ChatflowsAI declares the noon rule; other methods retain their existing
+local-day eligibility and display rules. This also expires older cached
+ChatflowsAI probe/execution states using their retained observation timestamp,
+without a storage migration. Expired snapshots show unknown and may enter the
+batch's fresh GET path. The parser verifies both the current opening date and
+its exact next-noon reset; a stale period with a distant future reset is invalid.
+
+The regression tests first reproduced the noon cache skip and weak period
+validation, then passed with the scoped policy and parser changes. Raw API
+field types and live extension execution remain unverified.

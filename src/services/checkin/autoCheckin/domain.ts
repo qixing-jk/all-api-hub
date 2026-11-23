@@ -13,7 +13,10 @@ import {
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
-import { getCheckInDiscoveryPriority } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getCheckInDiscoveryPriority,
+  getCheckInMethodStatusPeriodKey,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -339,17 +342,14 @@ const deriveExecutionEligibility = (
       ? knownStatus.evidence.observedAt
       : undefined
   const statusControlsExecution = statusObservedAt !== undefined
+  const statusPeriodKey = (timestamp: number) =>
+    getCheckInMethodStatusPeriodKey(methodId, timestamp) ??
+    getDayKeyFromUnixSeconds(Math.floor(timestamp / 1000), input.timeZone)
   const checkedStatusIsCurrent =
     statusControlsExecution &&
     knownStatus?.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked &&
-    getDayKeyFromUnixSeconds(
-      Math.floor(statusObservedAt / 1000),
-      input.timeZone,
-    ) ===
-      getDayKeyFromUnixSeconds(
-        Math.floor((input.now ?? Date.now()) / 1000),
-        input.timeZone,
-      )
+    statusPeriodKey(statusObservedAt) ===
+      statusPeriodKey(input.now ?? Date.now())
   if (
     statusControlsExecution &&
     knownStatus?.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled

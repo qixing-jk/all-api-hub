@@ -21,7 +21,10 @@ import {
   createBaiApiCheckInStatusEndpoint,
   resolveBaiApiCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
-import { CHATFLOWS_CHECK_IN_STATUS_ENDPOINT } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
+import {
+  CHATFLOWS_CHECK_IN_STATUS_ENDPOINT,
+  getChatflowsCheckInPeriod,
+} from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
 import {
   createDaiguaCheckInStatusEndpoint,
   resolveDaiguaCheckInTimezone,
@@ -147,6 +150,8 @@ interface AutoCheckinMethodDefinitionBase {
    * loading executable providers.
    */
   readonly supportsRouteOverride?: boolean
+  /** A verified non-calendar reset; omitted methods retain local-day cache rules. */
+  readonly statusPeriodKey?: (timestamp: number) => string | number
 }
 
 /** Hiyo can award again; DaiGua/Sidrune/FreeAPI/Xingya duplicate guarantees are unverified. Never queue replays. */
@@ -665,6 +670,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
   },
   [AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn,
+    statusPeriodKey: getChatflowsCheckInPeriod,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
@@ -714,6 +720,16 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
+
+/** Returns an explicit protocol period, or leaves existing caller cache rules intact. */
+export function getCheckInMethodStatusPeriodKey(
+  methodId: CheckInMethodId,
+  timestamp: number,
+): string | number | undefined {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.statusPeriodKey?.(timestamp)
+}
 
 /** Unranked protocols remain peers; generic protocols are automatic-selection fallbacks. */
 export function getCheckInDiscoveryPriority(methodId: CheckInMethodId): number {

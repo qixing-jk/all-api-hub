@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import {
   AUTO_CHECKIN_METHOD_IDS,
@@ -105,6 +105,63 @@ describe("current check-in readiness", () => {
     expect(updated?.skipReason).toBe("auto_checkin_disabled")
     expect(refreshAutoCheckinAccountSnapshots([old], [])).toEqual([old])
   })
+
+  it.each(["probe", "execution"] as const)(
+    "lets the batch reconsider ChatflowsAI after its cached %s period ends",
+    (source) => {
+      const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+      const checked = structuredClone(account)
+      checked.site_type = SITE_TYPES.SUB2API
+      checked.authType = AuthTypeEnum.AccessToken
+      checked.account_info.id = "42"
+      checked.account_info.access_token = "example-token"
+      checked.checkIn = buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        selection: { mode: "automatic", methodId },
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: 1 },
+              },
+              status: {
+                outcome: "known",
+                availability: "enabled",
+                today: "checked",
+                evidence: {
+                  source,
+                  observedAt: Date.parse("2026-11-24T03:59:00Z"),
+                },
+              },
+            },
+          },
+        },
+      })
+      const clock = vi
+        .spyOn(Date, "now")
+        .mockReturnValue(Date.parse("2026-11-24T03:59:30Z"))
+      try {
+        expect(
+          refreshAutoCheckinAccountSnapshots([old], [checked])[0],
+        ).toMatchObject({
+          providerAvailable: true,
+          skipReason: "already_checked_today",
+          isCheckedInToday: true,
+        })
+        clock.mockReturnValue(Date.parse("2026-11-24T04:01:00Z"))
+        const refreshed = refreshAutoCheckinAccountSnapshots(
+          [old],
+          [checked],
+        )[0]
+        expect(refreshed?.providerAvailable).toBe(true)
+        expect(refreshed?.skipReason).toBeUndefined()
+        expect(refreshed?.isCheckedInToday).toBeUndefined()
+      } finally {
+        clock.mockRestore()
+      }
+    },
+  )
   it("keeps readiness blocked when global automatic execution is disabled", () => {
     const [updated] = refreshAutoCheckinAccountSnapshots(
       [old],
