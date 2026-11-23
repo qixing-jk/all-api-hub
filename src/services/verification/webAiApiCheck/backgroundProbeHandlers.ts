@@ -7,7 +7,6 @@ import {
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
-import { runApiVerificationProbe } from "~/services/verification/aiApiVerification/apiVerificationService"
 import {
   getVerificationRequestProfileOptions,
   isVerificationRequestProfile,
@@ -16,9 +15,12 @@ import {
   buildSafeProbeFailureDiagnostics,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
+import {
+  runApiVerificationProbe,
+  runPelicanTest,
+  runQuestionAnswerTest,
+} from "~/services/verification/lazyRunners"
 import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
-import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
-import { runQuestionAnswerTest } from "~/services/verification/modelQuality/questionAnswer"
 import { normalizeProbeBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 
 import { probeRuns } from "./backgroundRunState"

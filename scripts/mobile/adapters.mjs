@@ -15,7 +15,7 @@ export function selectTarget(targets, context = "background", targetId) {
       ? target.id === targetId
       : context === "options"
         ? /\/options\.html(?:[?#]|$)/.test(target.url)
-        : /\/(?:background(?:\.js|\/)|_generated_background_page\.html)/.test(
+        : /\/(?:background(?:\.(?:js|html)|\/)|_generated_background_page\.html)/.test(
             target.url,
           ),
   )

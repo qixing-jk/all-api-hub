@@ -3,6 +3,7 @@ import {
   toVersionedProtocolMount,
 } from "~/services/aiApi/protocolAddress"
 import { WEB_AI_API_CHECK_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { runNeedleTest } from "~/services/verification/lazyRunners"
 import {
   NEEDLE_OUTCOMES,
   NEEDLE_RUN_REASONS,
@@ -13,10 +14,9 @@ import {
   selectNeedleCells,
 } from "~/services/verification/modelQuality/needlePlan"
 import { coerceNeedleResult } from "~/services/verification/modelQuality/needleResultCodec"
-import {
-  runNeedleTest,
-  type NeedleResult,
-  type RunNeedleParams,
+import type {
+  NeedleResult,
+  RunNeedleParams,
 } from "~/services/verification/modelQuality/needleRun"
 import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import {

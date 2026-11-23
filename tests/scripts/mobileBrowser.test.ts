@@ -56,6 +56,14 @@ describe("mobile browser discovery", () => {
     expect(commands.flat()).not.toContain("--remove-all")
   })
 
+  it("finds the Firefox background page alongside the options page", () => {
+    const targets = [
+      { id: "options", url: "moz-extension://one/options.html" },
+      { id: "background", url: "moz-extension://one/background.html" },
+    ]
+    expect(selectTarget(targets)).toEqual(targets[1])
+  })
+
   it("refuses ambiguous extension contexts rather than evaluating in the wrong one", () => {
     const targets = [
       { id: "worker", url: "chrome-extension://one/background.js" },

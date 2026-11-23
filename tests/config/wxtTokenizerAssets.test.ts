@@ -8,7 +8,7 @@ it("packages tokenizer data below AMO's file limit with the original token ranks
   const hook = (wxtConfig.hooks as Partial<WxtHooks>)?.["build:publicAssets"]
   if (typeof hook !== "function") throw new Error("Expected public asset hook")
   const assets: ResolvedPublicFile[] = []
-  await hook({} as Wxt, assets)
+  await hook({ config: { browser: "chrome" } } as Wxt, assets)
   expect(assets.map((asset) => asset.relativeDest)).toEqual([
     "tokenizers/cl100k_base.json",
     "tokenizers/o200k_base.json",

@@ -87,6 +87,15 @@ const requestedMode = readWxtCliMode()
 const isTestBuild = requestedMode === "test"
 const e2eBuildVariant = readE2eBuildVariant()
 const defaultCrxBuildTime = new Date().toISOString()
+const FIREFOX_BACKGROUND_PAGE = "background.html"
+
+function usesFirefoxModuleBackground({
+  browser,
+  command,
+  manifestVersion,
+}: Pick<ConfigEnv, "browser" | "command" | "manifestVersion">) {
+  return browser === "firefox" && command === "build" && manifestVersion === 2
+}
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -118,7 +127,14 @@ export default defineConfig({
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   hooks: {
-    "build:publicAssets": async (_wxt, assets) => {
+    "build:publicAssets": async (wxt, assets) => {
+      if (usesFirefoxModuleBackground(wxt.config)) {
+        assets.push({
+          relativeDest: FIREFOX_BACKGROUND_PAGE,
+          contents:
+            '<!doctype html><meta charset="utf-8"><title>All API Hub</title><script type="module" src="./background.js"></script>',
+        })
+      }
       // IIFE background/content builds inline dynamic imports. Keep the large
       // vocabularies as data so AMO can parse every JavaScript file (<5 MB).
       const [{ default: cl100k }, { default: o200k }] = await Promise.all([
@@ -179,6 +195,28 @@ export default defineConfig({
         (entry) => entry.name === "account-detection-test",
       )
       if (probeIndex >= 0) entrypoints.splice(probeIndex, 1)
+    },
+    "entrypoints:resolved": (wxt, entrypoints) => {
+      if (!usesFirefoxModuleBackground(wxt.config)) return
+      const background = entrypoints.find(
+        (entry) => entry.type === "background",
+      )
+      if (background) background.options.type = "module"
+    },
+    "build:manifestGenerated": (wxt, manifest) => {
+      const background = manifest.background
+      if (
+        !usesFirefoxModuleBackground(wxt.config) ||
+        !background ||
+        "service_worker" in background
+      )
+        return
+      // WXT generates classic MV2 scripts. An explicit page can load modules
+      // on Firefox 104, which predates manifest background.type support.
+      manifest.background = {
+        page: FIREFOX_BACKGROUND_PAGE,
+        persistent: background.persistent,
+      }
     },
   },
   webExt: {

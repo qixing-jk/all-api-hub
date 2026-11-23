@@ -3,11 +3,49 @@ import type { AddressInfo } from "node:net"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS as IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
+import { WebAiApiCheckMessageTypes } from "~/services/verification/webAiApiCheck/messaging"
 import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialProfiles"
 import { createStoredApiCredentialProfile } from "~~/e2e/utils/commonUserFlows"
 import { createDrawingServer } from "~~/e2e/utils/verificationDrawingServer"
 
 import { expect, test } from "./extensionTest"
+
+test("Firefox answers a webpage verification message in the background", async ({
+  firefoxExtension,
+}) => {
+  const fixture = createDrawingServer({ textResponse: () => "Paris" })
+  await new Promise<void>((resolve) =>
+    fixture.server.listen(0, "127.0.0.1", resolve),
+  )
+  try {
+    await firefoxExtension.driver.executeScript("Services.io.offline = false")
+    const options = firefoxExtension.page("options.html")
+    await options.openInTab("#overview")
+    const message = {
+      id: 1,
+      type: WebAiApiCheckMessageTypes.RunQuestionAnswer,
+      data: {
+        runId: "firefox-background-qa",
+        apiType: "openai-compatible",
+        baseUrl: `http://127.0.0.1:${(fixture.server.address() as AddressInfo).port}`,
+        apiKey: "synthetic-key",
+        modelId: "gpt-quality",
+        question: "What is the capital of France?",
+        referenceAnswer: "Paris",
+      },
+    }
+    const response = await options.evaluateAsync(
+      `browser.runtime.sendMessage({... ${JSON.stringify(message)}, timestamp: Date.now()})`,
+    )
+    expect(response).toMatchObject({
+      res: { success: true, result: { answer: "Paris", outcome: "matched" } },
+    })
+    expect(fixture.requests).toHaveLength(1)
+  } finally {
+    fixture.server.closeAllConnections()
+    await new Promise<void>((resolve) => fixture.server.close(() => resolve()))
+  }
+})
 
 test("Firefox runs agent JavaScript and renders the workspace SVG", async ({
   firefoxExtension,
