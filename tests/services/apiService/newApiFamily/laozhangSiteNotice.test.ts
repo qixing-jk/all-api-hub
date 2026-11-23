@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { fetchLaoZhangSiteNotice } from "~/services/apiService/newApiFamily/variants/laozhangSiteNotice"
+import { fetchLaoZhangSiteNotice } from "~/services/apiService/shellApiFamily/laozhangSiteNotice"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 

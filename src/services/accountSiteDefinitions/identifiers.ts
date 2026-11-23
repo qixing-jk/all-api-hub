@@ -12,6 +12,7 @@ export const SITE_TYPES = {
   NEW_API: "new-api",
   APIYI: "apiyi",
   LAOZHANG: "laozhang",
+  SHELL_API: "shell-api",
   MODELFLARE: "ModelFlare",
   ANYROUTER: "anyrouter",
   VELOERA: "Veloera",

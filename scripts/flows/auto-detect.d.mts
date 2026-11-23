@@ -1,5 +1,10 @@
 import type { Locator, Page } from "@playwright/test"
 
+export function settleAccountSaveForCleanup(
+  page: Page,
+  options?: { timeoutMs?: number },
+): Promise<void>
+
 export function closeAccountDraft(
   page: Page,
   options?: { timeoutMs?: number },

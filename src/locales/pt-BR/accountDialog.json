@@ -43,6 +43,11 @@
     "prepareFailed": "Não foi possível salvar o formulário temporariamente. Copie as informações que precisa manter e reabra o formulário na página completa.",
     "restoreFailed": "Não foi possível restaurar o formulário incompleto. Ele pode ter expirado. Reabra o formulário de conta.",
     "rotationWarning": "Somente em sites antigos com Generate / Regenerate: gerar novamente invalida o token anterior; atualize as ferramentas que o utilizam. Criar um token de acesso com permissões não invalida os tokens existentes.",
+    "shellApi": {
+      "generateStep": "Use um System token existente ou abra Perfil → System token no site, conclua a verificação e volte aqui para colá-lo.",
+      "openProfile": "Abrir perfil da conta",
+      "openProfileFailed": "Não foi possível abrir a página. Abra Perfil → System token no site, conclua a verificação e volte aqui para colá-lo."
+    },
     "title": "Insira um Access Token manualmente",
     "vercel": {
       "generateStep": "Abra a página de tokens da sua conta Vercel, crie um token para a equipe proprietária do AI Gateway e conclua a verificação por e-mail solicitada pela Vercel. Copie o token imediatamente, pois ele é exibido apenas uma vez.",

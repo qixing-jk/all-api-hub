@@ -43,6 +43,11 @@
     "prepareFailed": "Unable to stage the current form. Copy any information you need to keep, then reopen the account form in the full page.",
     "restoreFailed": "Could not restore the unfinished form. It may have expired. Please reopen the account form.",
     "rotationWarning": "Only on legacy sites with Generate / Regenerate: regenerating invalidates the old token, so update other tools that use it. Creating a scoped access token does not invalidate existing tokens.",
+    "shellApi": {
+      "generateStep": "Use an existing System token, or open Profile → System token on the site, complete verification, and return here to paste it.",
+      "openProfile": "Open account profile",
+      "openProfileFailed": "Could not open the page. Open Profile → System token on the site, complete verification, then return here to paste it."
+    },
     "title": "Enter an Access Token manually",
     "vercel": {
       "generateStep": "Open your Vercel account Tokens page, create a token for the team that owns AI Gateway, and complete the email verification Vercel asks for. Copy the token immediately, because it is shown only once.",

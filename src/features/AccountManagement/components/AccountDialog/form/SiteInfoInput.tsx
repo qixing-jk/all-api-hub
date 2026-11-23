@@ -58,8 +58,7 @@ type SiteInfoInputWithoutAuthSelectorProps = SiteInfoInputBaseProps & {
 }
 
 type SiteInfoInputProps =
-  | SiteInfoInputWithAuthSelectorProps
-  | SiteInfoInputWithoutAuthSelectorProps
+  SiteInfoInputWithAuthSelectorProps | SiteInfoInputWithoutAuthSelectorProps
 
 /**
  * Site information section displaying the URL input with contextual helpers
@@ -105,7 +104,9 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
     ? t("siteInfo.authMethodSelectedForSite", {
         siteType: props.sitePolicy.siteTypeLabel,
       })
-    : props.sitePolicy.usesBrowserCookieSession
+    : props.sitePolicy.usesBrowserCookieSession &&
+        props.showAuthTypeSelector &&
+        props.authType === AuthTypeEnum.Cookie
       ? t("siteInfo.browserCookieSession")
       : t("siteInfo.cookieWarning")
 
@@ -124,14 +125,14 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
         >
           <div
             data-layout="site-auth-url-layout"
-            className="gap-y-density-2 grid gap-x-2 [@container(min-width:28rem)]:grid-cols-[minmax(0,1fr)_auto] [@container(min-width:28rem)]:items-end"
+            className="grid gap-x-2 gap-y-density-2 [@container(min-width:28rem)]:grid-cols-[minmax(0,1fr)_auto] [@container(min-width:28rem)]:items-end"
           >
             <div
               data-layout="auth-type-field"
               className="order-1 max-w-full [@container(min-width:28rem)]:order-2"
             >
-              <div className="mb-density-1 gap-y-density-1-5 flex items-center gap-x-1.5">
-                <label className="text-secondary-foreground text-sm font-medium">
+              <div className="mb-density-1 flex items-center gap-x-1.5 gap-y-density-1-5">
+                <label className="text-sm font-medium text-secondary-foreground">
                   {t("siteInfo.authMethod")}
                 </label>
                 <Tooltip
@@ -141,7 +142,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                   <button
                     type="button"
                     aria-label={authTypeHelpText}
-                    className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-faint-foreground transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-none dark:text-muted-foreground dark:hover:text-secondary-foreground"
                   >
                     <HelpHintIcon className="h-4 w-4" aria-hidden="true" />
                   </button>
@@ -166,14 +167,14 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 </SelectTrigger>
                 <SelectContent align="end" className="min-w-48">
                   <SelectItem value={AuthTypeEnum.AccessToken}>
-                    <div className="gap-y-density-2 flex items-center gap-x-2">
+                    <div className="flex items-center gap-x-2 gap-y-density-2">
                       <KeyRound className="h-4 w-4" />
                       <span>{t("siteInfo.authType.accessToken")}</span>
                     </div>
                   </SelectItem>
                   {canUseCookieAuth && (
                     <SelectItem value={AuthTypeEnum.Cookie}>
-                      <div className="gap-y-density-2 flex items-center gap-x-2">
+                      <div className="flex items-center gap-x-2 gap-y-density-2">
                         <Cookie className="h-4 w-4" />
                         <span>{t("siteInfo.authType.cookieAuth")}</span>
                       </div>
@@ -188,7 +189,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
             >
               <label
                 htmlFor="site-url"
-                className="text-secondary-foreground mb-density-1 block text-sm font-medium"
+                className="mb-density-1 block text-sm font-medium text-secondary-foreground"
               >
                 {t("siteInfo.siteUrl")}
               </label>
@@ -210,7 +211,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
         <>
           <label
             htmlFor="site-url"
-            className="text-secondary-foreground block text-sm font-medium"
+            className="block text-sm font-medium text-secondary-foreground"
           >
             {t("siteInfo.siteUrl")}
           </label>
@@ -229,7 +230,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           </div>
         </>
       )}
-      <div className="gap-y-density-2 flex flex-col justify-between text-xs empty:hidden">
+      <div className="flex flex-col justify-between gap-y-density-2 text-xs empty:hidden">
         {shouldShowCookiePermissionRecommendation && (
           <CookieAuthPermissionRecommendation
             cookieAuthPermissionsGranted={props.cookieAuthPermissionsGranted}
@@ -242,13 +243,13 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           />
         )}
         {canUseSub2ApiRefreshToken && (
-          <div className="bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-2 flex w-full items-start gap-x-2 rounded-md px-2 text-xs">
+          <div className="flex w-full items-start gap-x-2 gap-y-density-2 rounded-md bg-primary-soft px-2 py-density-2 text-xs text-primary-soft-foreground">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{t("siteInfo.sub2apiHint")}</span>
           </div>
         )}
         {isCurrentSiteAdded && (
-          <div className="bg-warning-soft text-warning-soft-foreground py-density-2 flex w-full items-center justify-between rounded-md px-2 text-xs">
+          <div className="flex w-full items-center justify-between rounded-md bg-warning-soft px-2 py-density-2 text-xs text-warning-soft-foreground">
             <div className="flex items-center">
               <TriangleAlert className="mr-1.5 h-4 w-4 shrink-0" />
               {/* Distinguish "site exists" vs "current login matches an existing account" for multi-account sites. */}

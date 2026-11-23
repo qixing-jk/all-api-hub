@@ -1718,7 +1718,7 @@ for (const phase of [
             })
             .fill("Dev Balance:")
           const filteredSummary = page.getByRole("region", {
-            name: "40 accounts",
+            name: `${ACCOUNT_SITE_TYPE_VALUES.length} accounts`,
             exact: true,
           })
           await expect(filteredSummary).toBeVisible()
@@ -1739,7 +1739,7 @@ for (const phase of [
               exact: true,
             })
           : page.getByRole("region", { name: "Financial totals", exact: true })
-        await expect(summary).toContainText("¥2,853.94")
+        await expect(summary).toContainText("¥2,925.94")
         await captureVisualViews({
           page,
           ready: summary,
@@ -1822,7 +1822,7 @@ for (const phase of [
         })
         await search.fill("Dev Balance:")
         const summary = page.getByRole("region", {
-          name: "40 accounts",
+          name: `${ACCOUNT_SITE_TYPE_VALUES.length} accounts`,
           exact: true,
         })
         await expect(summary).toBeVisible()
@@ -1833,7 +1833,7 @@ for (const phase of [
           "Filtered summary stays within the account panel",
         ).toBe(true)
         await expect(summary.getByRole("combobox")).toHaveCount(0)
-        await expect(summary).toContainText("¥2,853.94")
+        await expect(summary).toContainText("¥2,925.94")
         await captureVisualViews({
           page,
           ready: summary,
@@ -1849,7 +1849,7 @@ for (const phase of [
           name: "Filtered subtotals",
           exact: true,
         })
-        const amount = totals.getByText("¥2,853.94", { exact: true })
+        const amount = totals.getByText("¥2,925.94", { exact: true })
         await expect(amount).toBeVisible()
         expect(
           await amount.evaluate(
@@ -2374,7 +2374,9 @@ for (const phase of [
       })
       .click()
     await expect(
-      panel.getByRole("button", { name: "Dev: Clear fixture accounts (40)" }),
+      panel.getByRole("button", {
+        name: `Dev: Clear fixture accounts (${ACCOUNT_SITE_TYPE_VALUES.length})`,
+      }),
     ).toBeEnabled()
     const config = await getPlasmoStorageJsonValue<AccountStorageConfig>(
       worker,
@@ -2722,7 +2724,9 @@ for (const phase of [
     await waitForExtensionRoot(page)
     await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
     await panel
-      .getByRole("button", { name: "Dev: Clear fixture accounts (40)" })
+      .getByRole("button", {
+        name: `Dev: Clear fixture accounts (${ACCOUNT_SITE_TYPE_VALUES.length})`,
+      })
       .click()
     await expect(
       panel.getByRole("button", { name: "Dev: Clear fixture accounts (0)" }),
@@ -2765,7 +2769,9 @@ test("dev native observation states persist for every type and distinguish missi
     })
     .click()
   await expect(
-    panel.getByRole("button", { name: "Dev: Clear fixture accounts (121)" }),
+    panel.getByRole("button", {
+      name: `Dev: Clear fixture accounts (${ACCOUNT_SITE_TYPE_VALUES.length * 3 + 1})`,
+    }),
   ).toBeEnabled()
   const config = await getPlasmoStorageJsonValue<AccountStorageConfig>(
     worker,
@@ -2773,7 +2779,7 @@ test("dev native observation states persist for every type and distinguish missi
   )
   if (!config) throw new Error("Missing persisted state scenarios")
   const fixtures = config.accounts.filter((a) => a.id !== "keep-real")
-  expect(fixtures).toHaveLength(121)
+  expect(fixtures).toHaveLength(ACCOUNT_SITE_TYPE_VALUES.length * 3 + 1)
   await panel
     .getByRole("button", { name: "Dev: View account list", exact: true })
     .click()
@@ -2844,7 +2850,9 @@ test("dev native observation states persist for every type and distinguish missi
   }
   await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
   await panel
-    .getByRole("button", { name: "Dev: Clear fixture accounts (121)" })
+    .getByRole("button", {
+      name: `Dev: Clear fixture accounts (${ACCOUNT_SITE_TYPE_VALUES.length * 3 + 1})`,
+    })
     .click()
   await expect(
     panel.getByRole("button", { name: "Dev: Clear fixture accounts (0)" }),

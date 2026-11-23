@@ -2,11 +2,11 @@ import { applyFamilyGroupEvidence } from "~/services/apiAdapters/newApi/account/
 import * as doneHub from "~/services/apiService/newApiFamily/variants/doneHub"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
 
+import type { CompatibleAccountVariant } from "../../compatibleAccountVariantContract"
 import { oneHubOverrides } from "../variantOperations/key"
 import { bindModelPricing } from "../variantOperations/pricing"
-import type { NewApiVariantRegistration } from "../variantRegistration"
 
-export const doneHubVariant: NewApiVariantRegistration = {
+export const doneHubVariant: CompatibleAccountVariant = {
   key: { transport: oneHubOverrides },
   data: {
     fetchAccountData: doneHub.fetchAccountData,

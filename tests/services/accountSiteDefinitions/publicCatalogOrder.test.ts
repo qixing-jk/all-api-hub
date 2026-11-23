@@ -11,6 +11,7 @@ const architectures = [
   "Veloera",
   "VoAPI / VoAPI v2",
   "DoneHub",
+  "Shell API",
   "Super-API",
 ]
 const gateways = [

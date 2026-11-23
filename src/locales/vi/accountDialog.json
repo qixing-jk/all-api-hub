@@ -43,6 +43,11 @@
     "prepareFailed": "Không thể lưu tạm biểu mẫu. Sao chép thông tin cần giữ rồi mở lại biểu mẫu tài khoản ở trang đầy đủ.",
     "restoreFailed": "Không khôi phục được biểu mẫu chưa hoàn tất. Biểu mẫu có thể đã hết hạn. Hãy mở lại biểu mẫu tài khoản.",
     "rotationWarning": "Chỉ áp dụng cho trang cũ có Generate / Regenerate: tạo lại sẽ làm mã cũ mất hiệu lực; hãy cập nhật các công cụ đang dùng mã đó. Tạo mã truy cập có phạm vi quyền không làm các mã hiện có mất hiệu lực.",
+    "shellApi": {
+      "generateStep": "Dùng System token hiện có hoặc mở Hồ sơ → System token trên trang web, hoàn tất xác minh rồi quay lại đây để dán.",
+      "openProfile": "Mở hồ sơ tài khoản",
+      "openProfileFailed": "Không thể mở trang. Hãy mở Hồ sơ → System token trên trang web, hoàn tất xác minh rồi quay lại đây để dán."
+    },
     "title": "Nhập Access Token thủ công",
     "vercel": {
       "generateStep": "Mở trang mã truy cập trong tài khoản Vercel, tạo mã cho nhóm sở hữu AI Gateway và hoàn tất bước xác minh email mà Vercel yêu cầu. Sao chép mã ngay vì mã chỉ hiển thị một lần.",

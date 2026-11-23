@@ -26,7 +26,7 @@ vi.mock(
       ...actual,
       newApiFamilyRequests: {
         ...actual.newApiFamilyRequests,
-        data: siteStatusRequest,
+        envelope: siteStatusRequest,
       },
     }
   },
@@ -69,7 +69,10 @@ describe("site type detection under a bypass context", () => {
   })
 
   it("reads the public status name under the caller's execution", async () => {
-    siteStatusRequest.mockResolvedValue({ system_name: "Veloera" })
+    siteStatusRequest.mockResolvedValue({
+      success: true,
+      data: { system_name: "Veloera" },
+    })
 
     await expect(
       getAccountSiteType("https://example.com", RUN_BYPASS),
@@ -82,7 +85,10 @@ describe("site type detection under a bypass context", () => {
   })
 
   it("reads the public status name without one when the caller has none", async () => {
-    siteStatusRequest.mockResolvedValue({ system_name: "Veloera" })
+    siteStatusRequest.mockResolvedValue({
+      success: true,
+      data: { system_name: "Veloera" },
+    })
 
     await expect(getAccountSiteType("https://example.com")).resolves.toBe(
       SITE_TYPES.VELOERA,

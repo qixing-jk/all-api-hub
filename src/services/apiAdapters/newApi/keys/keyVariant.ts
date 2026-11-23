@@ -1,9 +1,9 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { getCompatibleAccountVariant } from "~/services/apiAdapters/compatibleAccountVariant"
 import {
   createNewApiKeyVariant,
   type NewApiKeyVariant,
 } from "~/services/apiAdapters/newApi/variantOperations/key"
-import { getNewApiVariantRegistration } from "~/services/apiAdapters/newApi/variantRegistration"
 
 export type {
   NewApiFamilyTokenTransport,
@@ -13,5 +13,5 @@ export type {
 export function resolveNewApiKeyVariant(
   siteType?: AccountSiteType,
 ): NewApiKeyVariant {
-  return createNewApiKeyVariant(getNewApiVariantRegistration(siteType).key)
+  return createNewApiKeyVariant(getCompatibleAccountVariant(siteType).key)
 }

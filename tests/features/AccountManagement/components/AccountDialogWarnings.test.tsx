@@ -17,7 +17,10 @@ import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/comp
 import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/saving/DuplicateAccountWarningDialog"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import * as siteRouteResolver from "~/services/accounts/utils/siteRouteResolver"
-import { ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS } from "~/services/accountSiteDefinitions"
+import {
+  ACCOUNT_SITE_ACCESS_TOKEN_GUIDES,
+  ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS,
+} from "~/services/accountSiteDefinitions"
 import * as accountSiteDefinitions from "~/services/accountSiteDefinitions"
 import { clearSiteRouteFactsCacheForTests } from "~/services/apiAdapters/newApi/account/accountRoutes"
 import {
@@ -371,7 +374,7 @@ describe("AccountDialog warnings", () => {
       SITE_TYPES.MODELFLARE,
     )!
     definition.onboarding!.accessTokenVerificationGuide = {
-      copy: "laozhang",
+      copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.LaoZhang,
       showRotationWarning: true,
     }
     const lookup = vi

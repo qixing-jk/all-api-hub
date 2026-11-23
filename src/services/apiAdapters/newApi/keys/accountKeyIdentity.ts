@@ -3,9 +3,14 @@ import { type NewApiAccountKeyResourceConfig } from "~/services/apiAdapters/newA
 
 export const ACCOUNT_SCOPE_KEY = "account"
 
+export const ACCOUNT_KEY_IDENTITY_ERRORS = {
+  InvalidTokenId: "invalid_token_id",
+  TokenIdentityMismatch: "token_identity_mismatch",
+} as const
+
 export const requireTokenId = (value: unknown): number => {
   if (!Number.isSafeInteger(value) || (value as number) <= 0) {
-    throw new Error("invalid_token_id")
+    throw new Error(ACCOUNT_KEY_IDENTITY_ERRORS.InvalidTokenId)
   }
   return value as number
 }
@@ -14,7 +19,8 @@ export const encodeTokenId = (tokenId: number): string =>
   String(requireTokenId(tokenId))
 
 export const decodeTokenId = (resourceId: string): number => {
-  if (!/^[1-9]\d*$/.test(resourceId)) throw new Error("invalid_token_id")
+  if (!/^[1-9]\d*$/.test(resourceId))
+    throw new Error(ACCOUNT_KEY_IDENTITY_ERRORS.InvalidTokenId)
   return requireTokenId(Number(resourceId))
 }
 
