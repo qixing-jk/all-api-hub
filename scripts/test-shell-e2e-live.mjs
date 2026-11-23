@@ -12,7 +12,6 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS as ids,
 } from "../src/features/AccountManagement/testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
-import { AuthTypeEnum } from "../src/types/auth.ts"
 import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { runLiveSuites } from "./cdp/live-suites.mjs"
@@ -306,7 +305,7 @@ async function runSite(config) {
         (!detectionVerified && "Extension identity detection has not passed"),
       run: async () => {
         const dialog = ui.getByTestId(ids.accountDialog)
-        let expectedAuthType = AuthTypeEnum.AccessToken
+        let expectedAuthType = "access_token"
         if (config.accessToken) {
           await fillSecret(
             dialog.getByTestId(ids.accessTokenInput),
@@ -329,7 +328,7 @@ async function runSite(config) {
             .getByRole("option", { name: "Cookie Authentication", exact: true })
             .click()
           environment.credentialSource = "explicit-cookie-alternative"
-          expectedAuthType = AuthTypeEnum.Cookie
+          expectedAuthType = "cookie"
           const grant = dialog.getByTestId(ids.cookiePermissionGrantButton)
           if (await grant.isVisible()) {
             await grant.click()
