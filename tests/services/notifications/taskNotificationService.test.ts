@@ -37,10 +37,6 @@ const {
   openOrFocusOptionsMenuItemMock: vi.fn(),
 }))
 
-vi.mock("~/assets/icon.png", () => ({
-  default: "icon.png",
-}))
-
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: getPreferencesMock,
@@ -126,6 +122,11 @@ describe("taskNotificationService", () => {
     vi.clearAllMocks()
     translationCalls.length = 0
     vi.stubGlobal("fetch", fetchMock)
+    vi.stubGlobal("browser", {
+      runtime: {
+        getURL: (path: string) => `moz-extension://test/${path}`,
+      },
+    })
     __resetTaskNotificationServiceForTesting()
     getPreferencesMock.mockResolvedValue({
       taskNotifications: DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -281,7 +282,7 @@ describe("taskNotificationService", () => {
       getTaskNotificationId(TASK_NOTIFICATION_TASKS.AutoCheckin),
       expect.objectContaining({
         type: "basic",
-        iconUrl: "icon.png",
+        iconUrl: "moz-extension://test/icons/128.png",
         isClickable: true,
         title:
           "settings:taskNotifications.notification.title.partialSuccess:settings:taskNotifications.tasks.autoCheckin",
@@ -1072,8 +1073,7 @@ describe("taskNotificationService", () => {
 
     initializeTaskNotificationService()
     const handler = onNotificationClickedMock.mock.calls[0]?.[0] as
-      | ((notificationId: string) => void | Promise<void>)
-      | undefined
+      ((notificationId: string) => void | Promise<void>) | undefined
     if (!handler) {
       throw new Error("Expected notification click handler to be registered")
     }
@@ -1092,8 +1092,7 @@ describe("taskNotificationService", () => {
   it("opens the site announcements page when a site announcement task notification is clicked", async () => {
     initializeTaskNotificationService()
     const handler = onNotificationClickedMock.mock.calls[0]?.[0] as
-      | ((notificationId: string) => void | Promise<void>)
-      | undefined
+      ((notificationId: string) => void | Promise<void>) | undefined
     if (!handler) {
       throw new Error("Expected notification click handler to be registered")
     }
@@ -2230,8 +2229,7 @@ describe("taskNotificationService", () => {
     onNotificationClickedMock.mockReturnValueOnce(undefined)
     initializeTaskNotificationService()
     const handler = onNotificationClickedMock.mock.calls[0]?.[0] as
-      | ((notificationId: string) => void | Promise<void>)
-      | undefined
+      ((notificationId: string) => void | Promise<void>) | undefined
 
     if (!handler) {
       throw new Error("Expected notification click handler to be registered")
@@ -2250,8 +2248,7 @@ describe("taskNotificationService", () => {
 
     initializeTaskNotificationService()
     const handler = onNotificationClickedMock.mock.calls[0]?.[0] as
-      | ((notificationId: string) => void | Promise<void>)
-      | undefined
+      ((notificationId: string) => void | Promise<void>) | undefined
 
     if (!handler) {
       throw new Error("Expected notification click handler to be registered")

@@ -1,4 +1,4 @@
-/** Page callers load provider SDKs only after the user starts verification. */
+/** Defer loading the verification executor until a caller starts a probe. */
 export const runApiVerificationProbe: typeof import("./aiApiVerification/apiVerificationService").runApiVerificationProbe =
   async (...args) => {
     const runner = await import("./aiApiVerification/apiVerificationService")
@@ -12,7 +12,7 @@ export const runQuestionAnswerTest: typeof import("./modelQuality/questionAnswer
     return runner.runQuestionAnswerTest(...args)
   }
 
-/** Keep context probing and its tokenizer out of page startup. */
+/** Keep context probing and its tokenizer out of startup. */
 export const runContextCapacity: typeof import("./modelQuality/contextCapacityRun").runContextCapacity =
   async (...args) => {
     const runner = await import("./modelQuality/contextCapacityRun")
@@ -24,4 +24,11 @@ export const runPelicanTest: typeof import("./modelQuality/pelican").runPelicanT
   async (...args) => {
     const runner = await import("./modelQuality/pelican")
     return runner.runPelicanTest(...args)
+  }
+
+/** Keep retrieval execution out of checkpoint and history initialization. */
+export const runNeedleTest: typeof import("./modelQuality/needleRun").runNeedleTest =
+  async (...args) => {
+    const runner = await import("./modelQuality/needleRun")
+    return runner.runNeedleTest(...args)
   }

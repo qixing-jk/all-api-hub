@@ -92,13 +92,14 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
   {
-    // Page verification defers provider SDKs and quality executors until a test runs.
+    // Verification defers provider SDKs and quality executors until a test runs.
     file: "src/services/verification/lazyRunners.ts",
     imports: [
       "./aiApiVerification/apiVerificationService",
       "./modelQuality/questionAnswer",
       "./modelQuality/contextCapacityRun",
       "./modelQuality/pelican",
+      "./modelQuality/needleRun",
     ],
   },
   {

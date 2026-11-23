@@ -402,20 +402,23 @@ extensionTest(
       )
 
       const content = page.locator('[data-testid="options-content-card"]')
+      const activeContent = content.locator(
+        ':scope > [aria-hidden="false"] > [data-options-page-content]',
+      )
       await expect(page).toHaveURL(/#balanceHistory$/)
       await expect(
         page.locator('aside button[aria-current="page"]'),
       ).toHaveText("Balance History")
       await expect(
-        content.locator("[data-page-motion-item] h2").first(),
+        activeContent.locator("[data-page-motion-item] h2").first(),
       ).toHaveText("Balance History")
-      await expect(content.locator(":scope > div > div")).toHaveCSS(
-        "opacity",
-        "1",
-      )
+      await expect(activeContent).toHaveCSS("opacity", "1")
       await page.waitForTimeout(600)
+      await expect(content.locator("[data-options-page-fallback]")).toHaveCount(
+        0,
+      )
       await expect(
-        content.locator("[data-page-motion-item] h2").first(),
+        activeContent.locator("[data-page-motion-item] h2").first(),
       ).toHaveText("Balance History")
     }
   },
@@ -490,11 +493,7 @@ extensionTest(
               )
             })
             .filter((card) => {
-              for (
-                let node: Element | null = card;
-                node && node !== content;
-
-              ) {
+              for (let node: Element | null = card; node && node !== content;) {
                 if (
                   node instanceof HTMLElement &&
                   (node.style.opacity || node.style.transform)

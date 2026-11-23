@@ -460,7 +460,10 @@ describe("tempWindowPool Turnstile assist turns", () => {
     })
     expect(notificationCreateMock).toHaveBeenCalledWith(
       "all-api-hub:turnstile-assist:req-both",
-      expect.objectContaining({ isClickable: true }),
+      expect.objectContaining({
+        iconUrl: "chrome-extension://test/icons/128.png",
+        isClickable: true,
+      }),
     )
     expect(focusedWindowIds()).toEqual([])
     await finish(task)
@@ -508,9 +511,8 @@ describe("tempWindowPool Turnstile assist turns", () => {
       focused: false,
     })
     expect(focusedWindowIds()).toEqual([])
-    const { setupTempWindowListeners } = await import(
-      "./tempWindowPoolTestAdapter"
-    )
+    const { setupTempWindowListeners } =
+      await import("./tempWindowPoolTestAdapter")
     setupTempWindowListeners()
     notificationClickListeners.forEach((listener) =>
       listener("all-api-hub:turnstile-assist:req-click"),
@@ -634,9 +636,8 @@ describe("tempWindowPool Turnstile assist turns", () => {
   })
 
   it("handles turnstile assist runtime messages for assist requests, probe api, and user click open", async () => {
-    const { setupTempWindowListeners } = await import(
-      "./tempWindowPoolTestAdapter"
-    )
+    const { setupTempWindowListeners } =
+      await import("./tempWindowPoolTestAdapter")
     setupTempWindowListeners()
     const handler = runtimeMessageListeners[0]!
 
@@ -772,9 +773,8 @@ describe("tempWindowPool Turnstile assist turns", () => {
   })
 
   it("ignores notification clicks with unrelated notification IDs", async () => {
-    const { setupTempWindowListeners } = await import(
-      "./tempWindowPoolTestAdapter"
-    )
+    const { setupTempWindowListeners } =
+      await import("./tempWindowPoolTestAdapter")
     setupTempWindowListeners()
     notificationClickListeners.forEach((listener) =>
       listener("unrelated-notification-id"),
@@ -872,9 +872,8 @@ describe("tempWindowPool Turnstile assist turns", () => {
     "delivers the matching native login reminder for %s",
     async (reason) => {
       turnstileAssistPresentation = TURNSTILE_ASSIST_PRESENTATIONS.Notify
-      const { createTempContextTurnstileAssist: createAssist } = await import(
-        "~/services/browsingContext/tempPage/turnstileAssist"
-      )
+      const { createTempContextTurnstileAssist: createAssist } =
+        await import("~/services/browsingContext/tempPage/turnstileAssist")
       const assist = createAssist({
         getRequestContext: () => ({ tabId: 304, ownerWindowId: 999, reason }),
         hasTab: () => true,

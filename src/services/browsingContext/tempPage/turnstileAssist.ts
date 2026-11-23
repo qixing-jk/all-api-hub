@@ -1,4 +1,4 @@
-import iconUrl from "~/assets/icon.png"
+import { APP_NOTIFICATION_ICON_PATH } from "~/constants/branding"
 import { LOGIN_VERIFICATION_REASONS } from "~/constants/browserLogin"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { VerificationContext } from "~/services/browserLogin/verificationContexts"
@@ -10,6 +10,7 @@ import {
 } from "~/services/notifications/browserNotificationAvailability"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { getExtensionResourceUrl } from "~/utils/browser/extensionResourceUrl"
 import {
   clearNotification,
   createNotification,
@@ -125,7 +126,7 @@ export function createTempContextTurnstileAssist({
       `${TURNSTILE_ASSIST_NOTIFICATION_PREFIX}${requestId}`,
       {
         type: "basic",
-        iconUrl,
+        iconUrl: getExtensionResourceUrl(APP_NOTIFICATION_ICON_PATH),
         title: t("shieldBypass:notification.turnstileAssistTitle"),
         message:
           getRequestContext(requestId)?.reason ===

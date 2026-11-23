@@ -1,4 +1,4 @@
-import iconUrl from "~/assets/icon.png"
+import { APP_NOTIFICATION_ICON_PATH } from "~/constants/branding"
 import type {
   TaskNotificationContent,
   TaskNotificationPayload,
@@ -8,6 +8,7 @@ import {
   OPTIONAL_PERMISSION_IDS,
 } from "~/services/permissions/permissionManager"
 import { getTaskNotificationId } from "~/types/taskNotifications"
+import { getExtensionResourceUrl } from "~/utils/browser/extensionResourceUrl"
 import {
   createNotification,
   hasNotificationsAPI,
@@ -42,7 +43,7 @@ export async function sendBrowserNotification(
     getTaskNotificationId(payload.task),
     {
       type: "basic",
-      iconUrl,
+      iconUrl: getExtensionResourceUrl(APP_NOTIFICATION_ICON_PATH),
       title: content.title,
       message: content.message,
       isClickable: true,

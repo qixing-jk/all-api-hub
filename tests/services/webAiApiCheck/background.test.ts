@@ -1058,13 +1058,15 @@ describe("webAiApiCheck background handlers", () => {
           requestProfileEnhanced: true,
         },
       })
-      expect(spy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          executionMode: PELICAN_EXECUTION_MODES.Agent,
-          requestProfile: "codex",
-          requestProfileEnhanced: true,
-          abortSignal: expect.any(AbortSignal),
-        }),
+      await vi.waitFor(() =>
+        expect(spy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            executionMode: PELICAN_EXECUTION_MODES.Agent,
+            requestProfile: "codex",
+            requestProfileEnhanced: true,
+            abortSignal: expect.any(AbortSignal),
+          }),
+        ),
       )
       expect(
         await background.resolveWebAiApiCheckCancelRunProbeMessage({
@@ -1116,6 +1118,7 @@ describe("webAiApiCheck background handlers", () => {
 
       const closingTabRun = startRun("closing-tab-run", 42, "closing-model")
       const otherTabRun = startRun("other-tab-run", 7, "other-model")
+      await vi.waitFor(() => expect(runSignals.size).toBe(2))
 
       tabRemovedListeners.forEach((listener) => listener(42))
       expect(runSignals.get("closing-model")?.aborted).toBe(true)
@@ -1679,6 +1682,7 @@ describe("webAiApiCheck background handlers", () => {
           modelId: "test",
         },
       })
+      await vi.waitFor(() => expect(spy).toHaveBeenCalledOnce())
       await expect(
         background.resolveWebAiApiCheckCancelRunProbeMessage({
           runId: "senderless-run",

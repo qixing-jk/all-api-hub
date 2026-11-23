@@ -1,13 +1,13 @@
 import { WEB_AI_API_CHECK_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { runContextCapacity } from "~/services/verification/lazyRunners"
 import {
   CONTEXT_ATTEMPT_FAILURE_REASONS,
   CONTEXT_ATTEMPT_OUTCOMES,
   CONTEXT_CAPACITY_REASONS,
 } from "~/services/verification/modelQuality/contextCapacityConstants"
-import {
-  runContextCapacity,
-  type ContextCapacityCheckpoint,
-  type RunContextCapacityParams,
+import type {
+  ContextCapacityCheckpoint,
+  RunContextCapacityParams,
 } from "~/services/verification/modelQuality/contextCapacityRun"
 import { contextCapacityHistory } from "~/services/verification/verificationResultHistory/contextCapacityHistory"
 import { getVerificationScopeKey } from "~/services/verification/verificationResultHistory/requestIdentity"
