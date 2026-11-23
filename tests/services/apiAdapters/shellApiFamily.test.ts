@@ -369,7 +369,7 @@ describe("Shell API family", () => {
       account.bootstrap!.loadBootstrapFacts(cookieRequest),
     ).resolves.toEqual({ displayName: "Shell" })
     await expect(
-      account.refresh!.fetchCheckInSupport(cookieRequest),
+      account.refresh!.fetchCheckInSupport!(cookieRequest),
     ).resolves.toBeUndefined()
   })
 
