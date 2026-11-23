@@ -63,7 +63,9 @@ describe("dailyBatch", () => {
     async (now, runnable) => {
       vi.useFakeTimers({ toFake: ["Date"] })
       vi.setSystemTime(new Date(now))
-      onTestFinished(() => vi.useRealTimers())
+      onTestFinished(() => {
+        vi.useRealTimers()
+      })
       const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
       const account = buildSiteAccount({
         id: "chatflows-noon",
