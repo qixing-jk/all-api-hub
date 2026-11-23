@@ -178,6 +178,19 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/services/apiService/sub2api/checkin/loxoCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/loxoCheckIn")
+    >()),
+    fetchLoxoCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported Loxo protocol", 404)),
+    performLoxoCheckIn: vi.fn(),
+  }),
+)
+
 const createAccount = (automaticExecutionEnabled = true) =>
   buildSiteAccount({
     id: "sub2api-account",
