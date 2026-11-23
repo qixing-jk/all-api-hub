@@ -227,14 +227,42 @@ describe("FreeGG daily allowance", () => {
     envelope
       .mockResolvedValueOnce(logs([]))
       .mockRejectedValueOnce(new Error("response lost"))
+      .mockResolvedValueOnce(logs([]))
     const result = await freeggProvider.checkIn(account(), context)
     expect(result).toMatchObject({ status: "uncertain" })
-    expect(envelope).toHaveBeenCalledTimes(2)
+    expect(envelope).toHaveBeenCalledTimes(3)
     expect(
       canAutomaticallyRetryCheckinResult(
         result,
         AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
       ),
     ).toBe(false)
+  })
+
+  it("confirms a lost trigger response using one account-matched new allowance log", async () => {
+    envelope
+      .mockResolvedValueOnce(logs([]))
+      .mockRejectedValueOnce(new Error("response lost"))
+      .mockResolvedValueOnce(logs([log()]))
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "success",
+      awards: [expect.any(Object)],
+    })
+    expect(envelope.mock.calls.map(([, options]) => options.endpoint)).toEqual([
+      "/api/log/self?p=1&page_size=30&type=4",
+      "/api/user/self",
+      "/api/log/self?p=1&page_size=30&type=4",
+    ])
+  })
+
+  it("keeps a lost trigger uncertain when the new log cannot prove account identity", async () => {
+    envelope
+      .mockResolvedValueOnce(logs([]))
+      .mockRejectedValueOnce(new Error("response lost"))
+      .mockResolvedValueOnce(logs([log({ user_id: undefined })]))
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "uncertain",
+    })
+    expect(envelope).toHaveBeenCalledTimes(3)
   })
 })

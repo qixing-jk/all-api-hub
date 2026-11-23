@@ -132,14 +132,39 @@ export const freeggProvider: AutoCheckinProvider = {
       const previousIds = new Set(before.map((item) => freeggLogId(item.id)))
       const startedAt = Math.floor(Date.now() / 1000)
       triggerAttempted = true
-      const identity = await triggerFreeggDailyAllowance({
-        ...request,
-        observer: context.mutationLifecycle,
-      })
-      if (!identity || String(identity) !== String(account.account_info.id)) {
+      let identity: unknown
+      let triggerResponseLost = false
+      try {
+        identity = await triggerFreeggDailyAllowance({
+          ...request,
+          observer: context.mutationLifecycle,
+        })
+      } catch {
+        // A lost response may have credited the grant. Read logs once below;
+        // never replay self and never assume its missing identity matched.
+        triggerResponseLost = true
+      }
+      const expectedIdentity = String(account.account_info.id)
+      if (
+        !triggerResponseLost &&
+        (!identity || String(identity) !== expectedIdentity)
+      ) {
         return createUnconfirmedCheckInResult(account)
       }
       const after = await fetchFreeggAllowanceLogs(request)
+      if (
+        after.some(
+          (item) =>
+            item.user_id !== undefined &&
+            String(item.user_id) !== expectedIdentity,
+        ) ||
+        (triggerResponseLost &&
+          ![...before, ...after].some(
+            (item) => String(item.user_id) === expectedIdentity,
+          ))
+      ) {
+        return createUnconfirmedCheckInResult(account)
+      }
       const completedAt = Math.floor(Date.now() / 1000)
       const record = after.find((item) => {
         const id = freeggLogId(item.id)
@@ -148,7 +173,7 @@ export const freeggProvider: AutoCheckinProvider = {
           !previousIds.has(id) &&
           isFreeggAllowanceRecord(item) &&
           (item.user_id === undefined ||
-            String(item.user_id) === String(identity)) &&
+            String(item.user_id) === expectedIdentity) &&
           typeof item.created_at === "number" &&
           Number.isInteger(item.created_at) &&
           item.created_at >= startedAt &&
