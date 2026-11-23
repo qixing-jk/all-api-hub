@@ -2223,9 +2223,31 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
     a.site_name.startsWith("Dev Balance:"),
   )
   expect(fixtures).toHaveLength(9)
-  const savedPlans = fixtures.find(
-    (account) => account.site_name === "Dev Balance: Independent plans",
-  )?.account_info.allowances?.entries
+  const savedFixture = (label: string) => {
+    const account = fixtures.find(
+      (account) => account.site_name === `Dev Balance: ${label}`,
+    )
+    if (!account) throw new Error(`Missing saved scenario ${label}`)
+    return account
+  }
+  for (const [label, amount] of [
+    ["USD wallet", { status: "known", value: "120.5" }],
+    ["Zero balance", { status: "known", value: "0" }],
+    ["Negative balance", { status: "known", value: "-8.25" }],
+    ["Stale balance", { status: "stale", value: "64.8" }],
+    ["Unavailable balance", { status: "unavailable" }],
+  ] as const) {
+    expect(
+      savedFixture(label).account_info.balance?.positions[0]?.amount,
+    ).toMatchObject(amount)
+  }
+  expect(
+    savedFixture("Multiple assets").account_info.balance?.positions.map(
+      (position) => position.asset,
+    ),
+  ).toContainEqual(expect.objectContaining({ kind: "currency", code: "GBP" }))
+  const savedPlans =
+    savedFixture("Independent plans").account_info.allowances?.entries
   expect(savedPlans).toMatchObject([
     {
       id: "plan:day",
@@ -2266,13 +2288,8 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
         accountId: account.id,
       })
   }
-  const row = (label: string) => {
-    const account = fixtures.find(
-      (a) => a.site_name === `Dev Balance: ${label}`,
-    )
-    if (!account) throw new Error(`Missing scenario ${label}`)
-    return page.getByTestId(getAccountManagementListItemTestId(account.id))
-  }
+  const row = (label: string) =>
+    page.getByTestId(getAccountManagementListItemTestId(savedFixture(label).id))
   const accountSearch = page.getByRole("textbox", {
     name: "Enter site information or account information to search",
   })
