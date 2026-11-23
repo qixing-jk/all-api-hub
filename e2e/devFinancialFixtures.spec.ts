@@ -2223,6 +2223,32 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
     a.site_name.startsWith("Dev Balance:"),
   )
   expect(fixtures).toHaveLength(9)
+  const savedPlans = fixtures.find(
+    (account) => account.site_name === "Dev Balance: Independent plans",
+  )?.account_info.allowances?.entries
+  expect(savedPlans).toMatchObject([
+    {
+      id: "plan:day",
+      label: "Daily plan",
+      constraint: {
+        limitState: "finite",
+        remaining: { status: "known", value: "8" },
+      },
+    },
+    {
+      id: "plan:week",
+      label: "Weekly plan",
+      constraint: {
+        limitState: "finite",
+        remaining: { status: "known", value: "65" },
+      },
+    },
+    {
+      id: "plan:month",
+      label: "Unlimited plan",
+      constraint: { limitState: "unlimited" },
+    },
+  ])
   for (const account of fixtures) {
     expect(account.checkIn.automaticExecutionEnabled).toBe(false)
     expect(account.account_info.balance?.subject).toEqual({
