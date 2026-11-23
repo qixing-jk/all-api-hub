@@ -11,6 +11,7 @@ import {
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
+import { FREEGG_DAILY_ALLOWANCE_ORIGINS } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
 import {
   XINGYA_CHECK_IN_ORIGINS,
   XINGYA_CHECK_IN_STATUS_ENDPOINT,
@@ -156,6 +157,7 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
   ])
 
 /**
@@ -351,6 +353,20 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     feedbackStatusRoutes: [],
     legacy: true,
     newAccountCompatibility: true,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance]: {
+    id: AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
+    discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Specific,
+    siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN],
+    origins: FREEGG_DAILY_ALLOWANCE_ORIGINS,
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "FreeGG",
+    },
+    supportsStatusReadback: false,
+    feedbackStatusRoutes: [{ path: "/api/status", public: true }],
+    legacy: false,
+    newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
