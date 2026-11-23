@@ -278,6 +278,26 @@ describe("Xingchi check-in integration", () => {
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
   })
 
+  it("preserves the native duplicate response as already checked", async () => {
+    vi.mocked(performXingchiDailyCheckIn).mockRejectedValue(
+      new ApiError(
+        "Already claimed",
+        409,
+        "/api/v1/user/checkin",
+        "BUSINESS_ERROR",
+        "CHECKIN_ALREADY_CLAIMED",
+      ),
+    )
+    await expect(
+      xingchiProvider.checkIn(createAccount(), {
+        ...executionContext(),
+        statusProof: notCheckedStatus,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    })
+  })
+
   it("keeps the native reward without guessing its currency", async () => {
     const result = await xingchiProvider.checkIn(createAccount(), {
       ...executionContext(),

@@ -7,6 +7,7 @@ import {
   fetchXingchiDailyCheckInStatus,
   performXingchiDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/xingchiCheckIn"
+import { ApiError } from "~/services/apiTransport/errors"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -72,6 +73,19 @@ export const xingchiProvider: AutoCheckinProvider = {
         data,
       }
     } catch (error) {
+      // The native endpoint reports a duplicate as a business conflict. Keep
+      // the explicit "already claimed" meaning instead of reducing it to an
+      // uncertain transport result and later relabeling it as success.
+      if (
+        error instanceof ApiError &&
+        error.upstreamCode === "CHECKIN_ALREADY_CLAIMED"
+      ) {
+        return {
+          status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+        }
+      }
       return mapSub2ApiCheckInMutationError(
         error,
         context,
