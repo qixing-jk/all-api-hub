@@ -21,6 +21,7 @@ import {
   createBaiApiCheckInStatusEndpoint,
   resolveBaiApiCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
+import { CHATFLOWS_CHECK_IN_STATUS_ENDPOINT } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
 import {
   createDaiguaCheckInStatusEndpoint,
   resolveDaiguaCheckInTimezone,
@@ -659,6 +660,18 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
         path: createBaiApiCheckInStatusEndpoint(resolveBaiApiCheckInTimezone()),
       },
     ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "ChatflowsAI",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: CHATFLOWS_CHECK_IN_STATUS_ENDPOINT }],
     legacy: false,
     newAccountCompatibility: false,
   },

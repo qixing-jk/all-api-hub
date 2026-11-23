@@ -113,6 +113,19 @@ vi.mock(
 )
 
 vi.mock(
+  "~/services/apiService/sub2api/checkin/chatflowsCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/chatflowsCheckIn")
+    >()),
+    fetchChatflowsCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported ChatflowsAI protocol", 404)),
+    performChatflowsCheckIn: vi.fn(),
+  }),
+)
+
+vi.mock(
   "~/services/apiService/sub2api/checkin/hiyoCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<

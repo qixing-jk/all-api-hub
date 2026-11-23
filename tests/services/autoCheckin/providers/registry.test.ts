@@ -107,7 +107,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(25)
+    expect(registrationContracts).toHaveLength(26)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -400,6 +400,7 @@ describe("autoCheckinMethodRegistry", () => {
       AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn,
     ])
     expect(
       autoCheckinMethodRegistry
