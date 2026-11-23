@@ -30,6 +30,7 @@ const COMPAT_USER_ID_HEADER_MESSAGE_RULES =
     ),
   }))
 const VOAPI_V2_USER_INFO_ENDPOINT = "/api/user/info"
+const PUBLIC_STATUS_TIMEOUT_MS = 5_000
 
 /**
  * Fetch the raw HTML title from the site root.
@@ -343,6 +344,7 @@ async function fetchPublicSiteStatusSignals(
         {
           baseUrl: new URL("/", url).toString(),
           auth: { authType: AuthTypeEnum.None },
+          requestTimeoutMs: PUBLIC_STATUS_TIMEOUT_MS,
           ...(attempt ? { protectionBypassExecution: attempt } : {}),
         },
         API_DIRECT_REQUEST_REASONS.CallerManaged,

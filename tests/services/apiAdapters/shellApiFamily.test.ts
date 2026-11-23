@@ -69,6 +69,28 @@ describe("Shell API family", () => {
     )
   })
 
+  it.each([null, "  ", 123])(
+    "does not dispatch token verification when a Shell profile token is unusable (%j)",
+    async (accessToken) => {
+      const authorization: (string | null)[] = []
+      server.use(
+        http.get(origin + "/api/user/self", ({ request }) => {
+          authorization.push(request.headers.get("authorization"))
+          return HttpResponse.json({
+            success: true,
+            data: { id: "7", username: "alice", access_token: accessToken },
+          })
+        }),
+      )
+      const bootstrap =
+        getSiteTypeCapabilities(genericShell).account!.bootstrap!
+      await expect(
+        bootstrap.getOrCreateAccessToken(cookieRequest),
+      ).resolves.toMatchObject({ id: "7", access_token: "" })
+      expect(authorization).toEqual([null])
+    },
+  )
+
   it.each(["7", "8", "rejected"])(
     "verifies a generic profile token independently before completing onboarding (%s)",
     async (verifiedId) => {
@@ -331,6 +353,32 @@ describe("Shell API family", () => {
       expect(result.data?.balance?.positions[0]?.amount).toMatchObject({
         value: "1.5",
       })
+  })
+
+  it("keeps generic Shell check-in unsupported even when public status advertises it", async () => {
+    server.use(
+      http.get(origin + "/api/status", () =>
+        HttpResponse.json({
+          success: true,
+          data: { system_name: "Shell", checkin_enabled: true },
+        }),
+      ),
+    )
+    const account = getSiteTypeCapabilities(genericShell).account!
+    await expect(
+      account.bootstrap!.loadBootstrapFacts(cookieRequest),
+    ).resolves.toEqual({ displayName: "Shell" })
+    await expect(
+      account.refresh!.fetchCheckInSupport(cookieRequest),
+    ).resolves.toBeUndefined()
+  })
+
+  it("reports a failed refresh when the authenticated Shell identity changes", async () => {
+    serveProfile("8")
+    const refresh = getSiteTypeCapabilities(genericShell).account!.refresh!
+    const result = await refresh.refreshAccount(cookieRequest)
+    expect(result).toMatchObject({ success: false })
+    expect(result).not.toHaveProperty("data")
   })
 
   it("collects every native Shell log page even when each page is shorter than requested", async () => {

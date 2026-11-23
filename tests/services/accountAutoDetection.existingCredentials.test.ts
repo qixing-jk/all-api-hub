@@ -7,6 +7,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { findSavedAccountAccessTokens } from "~/services/accounts/autoDetect/existingCredentials"
 import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -60,6 +61,21 @@ beforeEach(() => {
 })
 
 describe("account detection with existing credentials", () => {
+  it("does not read saved compatible credentials for an independent account family", async () => {
+    const query = vi.spyOn(accountQueries, "getAllAccountsOrThrow")
+    try {
+      await expect(
+        findSavedAccountAccessTokens(baseUrl, {
+          siteType: SITE_TYPES.SUB2API,
+          userId: "7",
+        }),
+      ).resolves.toEqual([])
+      expect(query).not.toHaveBeenCalled()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
   it.each([
     { url: baseUrl, userId: "8" },
     { url: "https://another.example.invalid", userId: "7" },

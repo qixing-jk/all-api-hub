@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw"
+import { delay, http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -80,6 +80,23 @@ describe("Shell API public status detection", () => {
     status({ success: true, data: { [marker]: true } })
     await expect(getAccountSiteType(origin)).resolves.toBe(SITE_TYPES.UNKNOWN)
   })
+
+  it("returns the protected Sub2API match when public status stalls", async () => {
+    server.use(
+      http.get(origin + "/api/v1/auth/me", () =>
+        HttpResponse.json(
+          { code: "UNAUTHORIZED", message: "Authorization header is required" },
+          { status: 401 },
+        ),
+      ),
+      http.get(origin + "/api/status", async () => {
+        await delay("infinite")
+        return HttpResponse.json({ success: true, data: { [marker]: true } })
+      }),
+    )
+
+    await expect(getAccountSiteType(origin)).resolves.toBe(SITE_TYPES.SUB2API)
+  }, 8_000)
 
   it.each([
     ["string", { [marker]: "false" }],

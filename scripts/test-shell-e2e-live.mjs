@@ -12,6 +12,7 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS as ids,
 } from "../src/features/AccountManagement/testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
+import { AuthTypeEnum } from "../src/types/auth.ts"
 import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { runLiveSuites } from "./cdp/live-suites.mjs"
@@ -46,11 +47,7 @@ loadLocalEnv({ envFile: values["env-file"] })
 applyIsolateFlag(process.argv)
 const targets = readShellLiveConfig(values.site)
 const evidenceRoot = path.resolve(values["evidence-dir"])
-execFileSync("git", [
-  "check-ignore",
-  "--quiet",
-  path.join(evidenceRoot, "report.json"),
-])
+execFileSync("git", ["check-ignore", "--quiet", evidenceRoot + path.sep])
 await fs.mkdir(evidenceRoot, { recursive: true })
 const extensionPath = path.resolve(values["extension-path"])
 const dev = await connectWorktreeExtension({ extensionPath })
@@ -80,6 +77,7 @@ async function runSite(config) {
     user,
     account,
     capture,
+    saveStarted = false,
     identityVerified = false,
     detectionVerified = false,
     accountVerified = false
@@ -112,23 +110,30 @@ async function runSite(config) {
   }
   // Keep only identity/balance facts from the site's ordinary profile request.
   const observations = new Set()
-  const observe = (response) => {
+  const isNativeProfile = (response) => {
     const url = new URL(response.url())
-    if (url.origin !== origin || url.pathname !== "/api/user/self") return
-    const pending = response
-      .json()
-      .then((body) => {
-        if (
-          response.ok() &&
-          body.success === true &&
-          body.data?.id &&
-          body.data?.username
-        )
-          user = {
-            id: String(body.data.id),
-            username: body.data.username,
-            quota: body.data.quota,
-          }
+    return url.origin === origin && url.pathname === "/api/user/self"
+  }
+  const readNativeProfile = async (response) => {
+    const body = await response.json()
+    if (
+      response.ok() &&
+      body.success === true &&
+      body.data?.id &&
+      body.data?.username
+    ) {
+      return {
+        id: String(body.data.id),
+        username: body.data.username,
+        quota: body.data.quota,
+      }
+    }
+  }
+  const observe = (response) => {
+    if (!isNativeProfile(response)) return
+    const pending = readNativeProfile(response)
+      .then((profile) => {
+        if (profile) user = profile
       })
       .catch(() => {})
       .finally(() => observations.delete(pending))
@@ -301,6 +306,7 @@ async function runSite(config) {
         (!detectionVerified && "Extension identity detection has not passed"),
       run: async () => {
         const dialog = ui.getByTestId(ids.accountDialog)
+        let expectedAuthType = AuthTypeEnum.AccessToken
         if (config.accessToken) {
           await fillSecret(
             dialog.getByTestId(ids.accessTokenInput),
@@ -323,6 +329,7 @@ async function runSite(config) {
             .getByRole("option", { name: "Cookie Authentication", exact: true })
             .click()
           environment.credentialSource = "explicit-cookie-alternative"
+          expectedAuthType = AuthTypeEnum.Cookie
           const grant = dialog.getByTestId(ids.cookiePermissionGrantButton)
           if (await grant.isVisible()) {
             await grant.click()
@@ -350,8 +357,10 @@ async function runSite(config) {
         await expect(dialog.getByTestId(ids.confirmAddButton)).toBeEnabled({
           timeout: 30_000,
         })
+        saveStarted = true
         await dialog.getByTestId(ids.confirmAddButton).click()
         await expect(dialog).toBeHidden({ timeout: 60_000 })
+        saveStarted = false
         await expect
           .poll(async () => {
             account = (await getAccounts(dev.serviceWorker)).find(
@@ -360,6 +369,7 @@ async function runSite(config) {
             return !!account
           })
           .toBe(true)
+        assert.equal(account.authType, expectedAuthType)
         const card = accountRow()
         await card.getByTestId(ids.rowMoreActionsButton).click()
         await ui.getByTestId(ids.rowRefreshMenuItem).click()
@@ -380,28 +390,38 @@ async function runSite(config) {
           .toBe(true)
         assert.equal(account.site_type, id)
         assert.equal(String(account.account_info.id), user.id)
+        const [profileResponse] = await Promise.all([
+          site.waitForResponse(isNativeProfile, { timeout: 30_000 }),
+          site.reload({ waitUntil: "domcontentloaded" }),
+        ])
+        const refreshedProfile = await readNativeProfile(profileResponse)
+        assert.equal(refreshedProfile?.id, String(account.account_info.id))
         const usd = account.account_info.balance?.positions.find(
           (p) => p.asset.kind === "currency" && p.asset.code === "USD",
         )
         assert.ok(
-          usd && Number.isFinite(Number(user.quota)),
+          usd &&
+            refreshedProfile.quota != null &&
+            Number.isFinite(Number(refreshedProfile.quota)),
           "Native quota and normalized USD balance are required",
         )
         assert.equal(
           Number(usd.amount.value),
-          Number(user.quota) / 500000,
+          Number(refreshedProfile.quota) / 500000,
           "Saved USD balance must match native quota",
         )
         await capture("account", card)
         await card.hover()
         await card.getByTestId(ids.rowEditButton).click()
-        await expect(dialog.getByTestId(ids.userIdInput)).toHaveValue(user.id)
+        await expect(dialog.getByTestId(ids.userIdInput)).toHaveValue(
+          refreshedProfile.id,
+        )
         await expect(dialog.getByTestId(ids.usernameInput)).toHaveValue(
-          user.username,
+          refreshedProfile.username,
         )
         await expect(dialog.getByTestId(ids.authTypeTrigger)).toHaveAttribute(
           "data-auth-type",
-          account.authType,
+          expectedAuthType,
         )
         await closeAccountDraft(ui)
         accountVerified = true
@@ -516,6 +536,12 @@ async function runSite(config) {
   }
 
   async function cleanup() {
+    if (saveStarted) {
+      const busySave = ui.locator(
+        `[data-testid="${ids.confirmAddButton}"][aria-busy="true"]`,
+      )
+      await expect(busySave).toBeHidden({ timeout: 60_000 })
+    }
     const owned = (await getAccounts(dev.serviceWorker)).filter(
       (a) => !before.has(a.id) && a.site_name === accountName,
     )

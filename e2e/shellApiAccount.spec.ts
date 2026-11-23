@@ -45,11 +45,16 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
     })
 
     const requests: string[] = []
-    const profileAuth: { cookie: boolean; bearer: boolean }[] = []
+    const profileAuth: {
+      cookie: boolean
+      hasAuthorization: boolean
+      bearer: boolean
+    }[] = []
+    const logPages: (string | null)[] = []
     let quota = 750000
     let token: Record<string, unknown> | undefined
     await context.route(origin + "/**", async (route) => {
-      const { pathname } = new URL(route.request().url())
+      const { pathname, searchParams } = new URL(route.request().url())
       requests.push(route.request().method() + " " + pathname)
       if (pathname === "/" || pathname === "/account/profile")
         return route.fulfill({
@@ -71,7 +76,11 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
         const cookie =
           headers.cookie?.includes("session=shell-fixture") === true
         const bearer = headers.authorization === `Bearer ${systemToken}`
-        profileAuth.push({ cookie, bearer })
+        profileAuth.push({
+          cookie,
+          hasAuthorization: headers.authorization !== undefined,
+          bearer,
+        })
         if (!cookie && !bearer)
           return route.fulfill({ status: 401, json: { success: false } })
         return route.fulfill({
@@ -89,6 +98,11 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
             },
           },
         })
+      }
+      if (pathname.startsWith("/api/token/")) {
+        const { authorization } = await route.request().allHeaders()
+        if (authorization !== `Bearer ${systemToken}`)
+          return route.fulfill({ status: 401, json: { success: false } })
       }
       if (pathname === "/api/token/" && route.request().method() === "POST") {
         token = {
@@ -121,6 +135,15 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
         })
       if (pathname === "/api/user/available_model/")
         return route.fulfill({ json: { success: true, data: ["shell-model"] } })
+      if (pathname === "/api/log/self" && searchParams.has("pageSize")) {
+        const page = searchParams.get("p")
+        logPages.push(page)
+        return route.fulfill(
+          page === "0"
+            ? { json: { success: true, data: [] } }
+            : { status: 400, json: { success: false } },
+        )
+      }
       if (pathname === "/api/pricing")
         return route.fulfill({
           json: {
@@ -292,14 +315,30 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
 
     expect(requests).toContain("GET /api/status")
     expect(requests).toContain("GET /api/user/self")
-    expect(profileAuth).toContainEqual({ cookie: true, bearer: false })
-    expect(profileAuth.some(({ bearer }) => bearer)).toBe(!useCookie)
-    if (!useCookie)
-      expect(profileAuth).toContainEqual({ cookie: false, bearer: true })
+    expect(profileAuth).toContainEqual({
+      cookie: true,
+      hasAuthorization: false,
+      bearer: false,
+    })
+    if (useCookie) {
+      expect(profileAuth.some(({ hasAuthorization }) => hasAuthorization)).toBe(
+        false,
+      )
+    } else {
+      expect(profileAuth).toContainEqual({
+        cookie: false,
+        hasAuthorization: true,
+        bearer: true,
+      })
+      expect(
+        profileAuth.every(
+          ({ hasAuthorization, bearer }) => !hasAuthorization || bearer,
+        ),
+      ).toBe(true)
+    }
     expect(requests).not.toContain("GET /api/user/token")
-    expect(requests.some((request) => request.includes("/api/log/self"))).toBe(
-      true,
-    )
+    expect(logPages.length).toBeGreaterThan(0)
+    expect([...new Set(logPages)]).toEqual(["0"])
     expect(requests.every((request) => request.startsWith("GET "))).toBe(true)
 
     if (mode === "token") {

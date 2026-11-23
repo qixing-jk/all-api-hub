@@ -366,14 +366,16 @@ describe("usageHistory sync (MSW)", () => {
     ).toEqual({})
   })
 
-  it("skips non-consume items before interpreting their timestamp", async () => {
+  it("keeps raw quota for unclassified sites and skips non-consume logs", async () => {
     const accountId = await createTestAccount(
       "https://history-non-consume.example.invalid",
+      SITE_TYPES.UNKNOWN,
     )
+    const createdAt = Math.floor(Date.now() / 1000) - 1
     vi.spyOn(newApiFamilyRequests, "data").mockResolvedValue({
       items: [
         createConsumeLogItem({ type: LogType.Topup, created_at: Number.NaN }),
-        createConsumeLogItem({ created_at: Math.floor(Date.now() / 1000) - 1 }),
+        createConsumeLogItem({ created_at: createdAt, quota: 42 }),
       ],
       total: 2,
     })
@@ -382,8 +384,15 @@ describe("usageHistory sync (MSW)", () => {
         accountId,
         trigger: USAGE_HISTORY_SYNC_TRIGGERS.Manual,
         force: true,
+        timeZone: "UTC",
       }),
     ).toMatchObject({ status: "success", ingestedCount: 1 })
+    const store = await usageHistoryStorage.getAccountStore(accountId)
+    expect(
+      store.daily[getDayKeyFromUnixSeconds(createdAt, "UTC")],
+    ).toMatchObject({
+      consumption: [{ asset: { kind: "quota" }, amount: { value: "42" } }],
+    })
   })
 
   it("reports a persistence error even when saving the error status also fails", async () => {

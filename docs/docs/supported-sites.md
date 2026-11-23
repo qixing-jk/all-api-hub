@@ -19,7 +19,7 @@
 | Veloera       | 本项目已停止维护。                                                                                                                                                                                                                                                                                                                                                                                        | [GitHub](https://github.com/Veloera/Veloera)                                                                                                                     |
 | VoAPI / VoAPI v2 | 新版 VoAPI 公益站是基于原 VoAPI 二次开发的新一代 AI 模型管理与分发系统，兼顾旧版本部署兼容性。 | [GitHub](https://github.com/VoAPI/VoAPI) |
 | DoneHub       | 本项目是基于 one-hub 二次开发而来的。                                                                                                                                                                                                                                                                                                                                                                     | [GitHub](https://github.com/deanxv/done-hub)                                                                                                                     |
-| Shell API | 默认尝试 System Token 或 Cookie 认证、余额与消费收入、密钥管理、模型定价、邀请和兑换等共同协议；额度按 500,000 quota/USD 换算。功能可用性取决于部署，接口失败会显示错误或不可用状态。 | [公开仓库](https://github.com/akl7777777/shell-api) |
+| Shell API | 基于 One API 开发的 AI 模型 API 管理与分发系统。 | [公开仓库](https://github.com/akl7777777/shell-api) |
 | Super-API     | Super-Api 全新 AI 模型接口管理与分发系统，基于 NewAPI 开发。 | [GitHub](https://github.com/SuperAI-Api/Super-API) |
 | API易 | 采用 Shell API 兼容协议的商业 AI 模型中转服务。 | — |
 | ModelFlare    | 基于 New API 衍生的高性能 AI 模型中转平台。 | — |

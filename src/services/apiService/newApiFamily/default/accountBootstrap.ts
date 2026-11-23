@@ -94,7 +94,13 @@ export async function fetchSiteStatus(
   signal?: AbortSignal,
 ): Promise<SiteStatusInfo | null> {
   try {
-    return await readPublicSiteStatus(request, signal)
+    return await newApiFamilyRequests.data<SiteStatusInfo>(
+      { ...request, auth: { authType: AuthTypeEnum.None } },
+      {
+        endpoint: "/api/status",
+        ...(signal ? { options: { signal } } : {}),
+      },
+    )
   } catch (error) {
     logger.warn("获取站点状态信息失败", error)
     return null
