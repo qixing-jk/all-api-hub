@@ -17,13 +17,16 @@ import type {
   OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_VALUE_TYPES,
   OPTIONS_OVERVIEW_CONFIGURATION_STATUSES,
   OPTIONS_OVERVIEW_CONFIGURATION_SUB_ITEM_IDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
   OPTIONS_OVERVIEW_STATUS_CARD_IDS,
   OPTIONS_OVERVIEW_WIDGET_IDS,
 } from "./ids"
 
 type ValueOf<T> = T[keyof T]
 
-export type OptionsOverviewSeverity = "error" | "warning" | "info" | "success"
+export type OptionsOverviewSeverity = ValueOf<
+  typeof OPTIONS_OVERVIEW_SEVERITIES
+>
 
 export type OptionsOverviewWidgetId = ValueOf<
   typeof OPTIONS_OVERVIEW_WIDGET_IDS
@@ -69,16 +72,22 @@ export interface OptionsOverviewAttentionItem {
   id: string
   kind: OptionsOverviewAttentionKind
   category: OptionsOverviewAttentionCategory
-  severity: Exclude<OptionsOverviewSeverity, "success">
+  severity: Exclude<
+    OptionsOverviewSeverity,
+    typeof OPTIONS_OVERVIEW_SEVERITIES.Success
+  >
   titleOptions?: Record<string, unknown>
   descriptionOptions?: Record<string, unknown>
   target: OptionsOverviewNavigationTarget
 }
 
 export interface OptionsOverviewUsageSnapshot {
+  siteDayUsage?: import("~/types").AccountStats["siteDayUsage"]
   todayRequests: number
   todayTokens: number
   todayCostText: string
+  todayReferenceCost?: { text: string; coverage: AccountMetricCoverage }
+  todayCostGroups?: import("~/services/accounts/metrics/consumptionProjection").ConsumptionProjection["groups"]
   todayRequestsCoverage: AccountMetricCoverage
   todayTokensCoverage: AccountMetricCoverage
   todayCostCoverage: AccountMetricCoverage

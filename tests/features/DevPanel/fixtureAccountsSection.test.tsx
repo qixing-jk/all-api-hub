@@ -8,11 +8,13 @@ import { renderDevPanelSection } from "~~/tests/test-utils/devPanelSection"
 const {
   addDevFixtureAccountsMock,
   addDevCheckInFixtureAccountsMock,
+  addDevFinancialFixtureAccountsMock,
   clearDevFixtureAccountsMock,
   countDevFixtureAccountsMock,
 } = vi.hoisted(() => ({
   addDevFixtureAccountsMock: vi.fn(),
   addDevCheckInFixtureAccountsMock: vi.fn(),
+  addDevFinancialFixtureAccountsMock: vi.fn(),
   clearDevFixtureAccountsMock: vi.fn(),
   countDevFixtureAccountsMock: vi.fn(),
 }))
@@ -20,6 +22,7 @@ const {
 vi.mock("~/features/DevPanel/fixtureAccounts", () => ({
   addDevFixtureAccounts: addDevFixtureAccountsMock,
   addDevCheckInFixtureAccounts: addDevCheckInFixtureAccountsMock,
+  addDevFinancialFixtureAccounts: addDevFinancialFixtureAccountsMock,
   clearDevFixtureAccounts: clearDevFixtureAccountsMock,
   countDevFixtureAccounts: countDevFixtureAccountsMock,
 }))
@@ -35,12 +38,75 @@ vi.mock("~/lib/notify", () => {
 })
 
 describe("fixture accounts dev section", () => {
+  it("offers native site balance mocks through the dev panel", async () => {
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Dev: Add native site balance scenarios",
+      }),
+    )
+    await waitFor(() =>
+      expect(addDevFinancialFixtureAccountsMock).toHaveBeenCalledWith(
+        "site-types",
+      ),
+    )
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     countDevFixtureAccountsMock.mockResolvedValue(0)
     addDevFixtureAccountsMock.mockResolvedValue(5)
     addDevCheckInFixtureAccountsMock.mockResolvedValue(5)
+    addDevFinancialFixtureAccountsMock.mockResolvedValue(9)
     clearDevFixtureAccountsMock.mockResolvedValue(0)
+  })
+
+  it("adds native observation states and refreshes the cleanup count", async () => {
+    countDevFixtureAccountsMock
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(121)
+    addDevFinancialFixtureAccountsMock.mockResolvedValueOnce(121)
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Dev: Add native zero, missing and stale scenarios",
+      }),
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "Dev: Clear fixture accounts (121)",
+      }),
+    ).toBeEnabled()
+    expect(addDevFinancialFixtureAccountsMock).toHaveBeenCalledWith(
+      "site-states",
+    )
+  })
+
+  it("generates balance scenarios and makes the updated cleanup count and list entry available", async () => {
+    renderDevPanelSection(() => useFixtureAccountsDevSection(true))
+    await waitFor(() =>
+      expect(countDevFixtureAccountsMock).toHaveBeenCalledOnce(),
+    )
+    countDevFixtureAccountsMock.mockResolvedValue(9)
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Dev: Add balance and plan scenarios",
+      }),
+    )
+    await waitFor(() =>
+      expect(addDevFinancialFixtureAccountsMock).toHaveBeenCalledOnce(),
+    )
+    expect(toast.success).toHaveBeenCalledWith(
+      "Dev: added 9 balance scenario account(s)",
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "Dev: Clear fixture accounts (9)",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "Dev: View account list" }),
+    ).toBeEnabled()
   })
 
   it("adds fixtures, reports the count, and refreshes the label", async () => {

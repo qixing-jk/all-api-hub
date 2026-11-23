@@ -149,6 +149,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       savePreferencesWithResult: vi.fn(),
       updateActiveTab: vi.fn(),
       updateCurrencyType: vi.fn(),
+      updateCurrencyDisplay: vi.fn(),
       updateSortConfig: vi.fn(),
       setSortingPriorityConfig: vi.fn(),
       updateOpenChangelogOnUpdate: vi.fn(),
@@ -435,6 +436,15 @@ describe("UserPreferencesContext", () => {
     )
     mockedUserPreferences.updateCurrencyType.mockImplementation(
       async (currencyType) => applyPersistedUpdate({ currencyType }),
+    )
+    mockedUserPreferences.updateCurrencyDisplay.mockImplementation(
+      async (currencyDisplay) =>
+        applyPersistedUpdate({
+          currencyDisplay,
+          ...(currencyDisplay === "original"
+            ? {}
+            : { currencyType: currencyDisplay }),
+        }),
     )
     mockedUserPreferences.updateSortConfig.mockImplementation(
       async (sortField, sortOrder) =>
@@ -879,6 +889,18 @@ describe("UserPreferencesContext", () => {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
         autoCheckin: false,
       },
+    })
+  })
+
+  it("preserves the last conversion currency when returning to Original", async () => {
+    const context = await renderProvider()
+    await act(async () => {
+      await context.updateCurrencyDisplay("CNY")
+      await context.updateCurrencyDisplay("original")
+    })
+    expect(latestContext).toMatchObject({
+      currencyDisplay: "original",
+      currencyType: "CNY",
     })
   })
 

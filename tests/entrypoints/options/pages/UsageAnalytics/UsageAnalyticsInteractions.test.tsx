@@ -125,7 +125,7 @@ describe("UsageAnalytics chart interactions", () => {
         promptTokens: 10,
         completionTokens: 5,
         totalTokens: 15,
-        quotaConsumed: 3,
+        referenceCostUsd: 0.000006,
       }
       accountStore.dailyByModel["gpt-4"] ??= {}
       accountStore.dailyByModel["gpt-4"][dayKey] = {
@@ -195,14 +195,14 @@ describe("UsageAnalytics chart interactions", () => {
       promptTokens: 10,
       completionTokens: 5,
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     }
     accountStore.daily["2026-01-02"] = {
       requests: 1,
       promptTokens: 7,
       completionTokens: 3,
       totalTokens: 10,
-      quotaConsumed: 2,
+      referenceCostUsd: 0.000004,
     }
     accountStore.dailyByModel["gpt-4"] = {
       "2026-01-01": { ...accountStore.daily["2026-01-01"] },

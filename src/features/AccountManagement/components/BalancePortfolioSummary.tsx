@@ -11,7 +11,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
-import { CURRENCIES } from "~/constants/money"
+import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useBalanceAsOf } from "~/features/AccountManagement/data/useBalanceAsOf"
 import { cn } from "~/lib/utils"
@@ -27,7 +27,10 @@ import {
   FINANCIAL_ACCOUNT_EXCLUSION_REASONS,
   FINANCIAL_COVERAGE,
 } from "~/services/amounts/financialConstants"
-import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
+import {
+  getDisplayCurrency,
+  getNextCurrencyDisplay,
+} from "~/services/preferences/currencyDisplay"
 import type { DisplaySiteData } from "~/types"
 import {
   formatAssetAmount,
@@ -65,7 +68,7 @@ export function BalancePortfolioSummary({
   const {
     currencyType,
     currencyDisplay = currencyType,
-    updateCurrencyType,
+    updateCurrencyDisplay,
   } = useUserPreferencesContext()
   const displayCurrency = getDisplayCurrency(currencyDisplay, currencyType)
   const referenceCurrency = displayCurrency ?? CURRENCIES.USD
@@ -111,14 +114,8 @@ export function BalancePortfolioSummary({
   const primaryText = primaryAmount
     ? formatBalanceAmount(primaryAmount, i18n.language)
     : undefined
-  const nextCurrencyDisplay =
-    currencyType === CURRENCIES.USD ? CURRENCIES.CNY : CURRENCIES.USD
-  const currencyToggleLabel = t("common:currency.clickToSwitch", {
-    currency:
-      nextCurrencyDisplay === CURRENCIES.USD
-        ? t("common:currency.usd")
-        : t("common:currency.cny"),
-  })
+  const nextCurrencyDisplay = getNextCurrencyDisplay(currencyDisplay)
+  const currencyToggleLabel = `${t("settings:display.currencyUnit")} · ${nextCurrencyDisplay === CURRENCY_DISPLAY_MODES.Original ? t("settings:display.original") : nextCurrencyDisplay}`
   const BalanceValue = canToggleCurrency ? "button" : "div"
   const assetLabel = (asset: Asset) => {
     if (asset.kind !== ASSET_KINDS.Quota) return getAssetLabel(asset)
@@ -179,7 +176,7 @@ export function BalancePortfolioSummary({
       className={cn(
         "min-w-0",
         inline
-          ? "space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0"
+          ? "space-y-1 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:row-span-2 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid-rows-subgrid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:space-y-0 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0"
           : compact
             ? showAccountBreakdown
               ? "space-y-1"
@@ -247,7 +244,7 @@ export function BalancePortfolioSummary({
                       type: "button",
                       "aria-label": `${primaryText}. ${currencyToggleLabel}`,
                       onClick: () =>
-                        void updateCurrencyType(nextCurrencyDisplay),
+                        void updateCurrencyDisplay(nextCurrencyDisplay),
                     }
                   : {})}
                 className={cn(

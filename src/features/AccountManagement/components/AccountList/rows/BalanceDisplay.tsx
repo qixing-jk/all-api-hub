@@ -497,7 +497,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
       />
 
       {(showTodayCashflow || showAccountUsageSummary || showSiteDayStats) && (
-        <div className="contents @max-sm/account-row:col-span-2 @max-sm/account-row:col-start-2 @max-sm/account-row:row-start-3 @max-sm/account-row:grid @max-sm/account-row:grid-cols-1 @max-sm/account-row:items-start @max-sm/account-row:gap-y-0.5 @max-sm/account-row:border-t @max-sm/account-row:border-border/50 @max-sm/account-row:pt-1 @max-sm/account-row:[&_.text-3xs]:text-xs">
+        <div className="contents @max-sm/account-row:col-span-2 @max-sm/account-row:col-start-2 @max-sm/account-row:row-start-3 @max-sm/account-row:grid @max-sm/account-row:grid-cols-1 @max-sm/account-row:items-start @max-sm/account-row:gap-y-0.5 @max-sm/account-row:border-t @max-sm/account-row:border-border/50 @max-sm/account-row:pt-1 @max-sm/account-row:pr-10 @max-sm/account-row:[&_.text-3xs]:text-xs">
           {/* Today's Statistics */}
           {showTodayCashflow && (
             <div className="col-start-1 flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5 justify-self-end">
@@ -652,11 +652,11 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 <div
                   key={index}
                   role="group"
-                  aria-label={t("account:financial.siteDay")}
+                  aria-label={t("optionsOverview:usage.siteDay")}
                   className="col-start-1 flex flex-wrap justify-end gap-x-1.5 text-3xs text-muted-foreground sm:text-xs"
                 >
                   <span>
-                    {siteDay.reportedDay ?? t("account:financial.siteDay")}
+                    {siteDay.reportedDay ?? t("optionsOverview:usage.siteDay")}
                   </span>
                   {siteDayReading?.lastKnown && (
                     <span>{t("financial.lastKnown")}</span>

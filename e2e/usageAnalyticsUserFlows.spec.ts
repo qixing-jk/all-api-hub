@@ -3,10 +3,20 @@ import fs from "node:fs/promises"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { USAGE_ANALYTICS_TEST_IDS } from "~/features/UsageAnalytics/testIds"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import { STORAGE_LOCKS } from "~/services/core/storageKeys"
+import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
+import { ingestConsumeLogItems } from "~/services/history/usageHistory/core"
+import {
+  LogType,
+  type LogItem,
+} from "~/services/history/usageHistory/usageLogModel"
+import { AuthTypeEnum } from "~/types"
 import type {
   UsageHistoryAggregate,
   UsageHistoryExport,
   UsageHistoryLatencyAggregate,
+  UsageHistoryStore,
 } from "~/types/usageHistory"
 import {
   getDayKeyFromUnixSeconds,
@@ -20,13 +30,17 @@ import {
   installExtensionPageGuards,
   seedStoredAccounts,
   seedUsageHistoryStore,
+  seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
+  getPlasmoStorageJsonValue,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const USAGE_ANALYTICS_URL = (extensionId: string) =>
@@ -42,7 +56,7 @@ const aggregate = (
   promptTokens,
   completionTokens,
   totalTokens: promptTokens + completionTokens,
-  quotaConsumed,
+  ...(quotaConsumed > 0 ? { referenceCostUsd: quotaConsumed / 500_000 } : {}),
 })
 
 const latency = (
@@ -201,6 +215,292 @@ test.beforeEach(async ({ context, page }) => {
   await stubLlmMetadataIndex(context)
 })
 
+test("shows native settled charges and migrated reference costs", async ({
+  context,
+  extensionId,
+  extensionDir,
+  page,
+}, testInfo) => {
+  const worker = await getServiceWorker(context)
+  const now = Date.now()
+  const dayKey = getDayKeyFromUnixSeconds(now / 1000)
+  const scope = accountBalanceScope({
+    baseUrl: "https://native-usage.example",
+    accountId: "native",
+    auth: { authType: AuthTypeEnum.AccessToken },
+  })
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "native",
+      site_name: "Native usage",
+      site_url: scope.authority,
+    }),
+  ])
+  await seedUserPreferences(worker, { currencyType: "USD" })
+  const account = createUsageHistoryAccountStore()
+  const day = {
+    ...aggregate(2, 100, 200, 0),
+    quotaConsumed: 500_000,
+    consumption: [
+      {
+        asset: { kind: "currency", code: "CNY" },
+        amount: {
+          status: "known",
+          value: "3.25",
+          observedAt: now,
+          source: {
+            adapter: "fixture",
+            operation: "settled-log",
+            contractVersion: "2",
+            kind: "reported",
+          },
+        },
+        scope,
+        window: { start: now - 3600000, end: now, timeZone: "UTC" },
+        settlement: "settled",
+        coverage: "partial",
+      },
+    ],
+  }
+  await setPlasmoStorageValue(
+    worker,
+    USAGE_HISTORY_STORAGE_KEYS.STORE,
+    {
+      schemaVersion: 2,
+      accounts: {
+        native: {
+          ...account,
+          daily: { [dayKey]: day },
+          dailyByModel: { "example-model": { [dayKey]: day } },
+        },
+      },
+    },
+    { lock: STORAGE_LOCKS.USAGE_HISTORY },
+  )
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto(USAGE_ANALYTICS_URL(extensionId))
+  await waitForExtensionRoot(page)
+  await expect(page.getByText("CNY 3.25", { exact: true })).toBeVisible()
+  await expect(page.getByText("Reference costs", { exact: true })).toBeVisible()
+  await expect(page.getByText("$1.00", { exact: true })).toBeVisible()
+  const migrated = await getPlasmoStorageJsonValue<UsageHistoryStore>(
+    worker,
+    USAGE_HISTORY_STORAGE_KEYS.STORE,
+  )
+  expect(migrated?.schemaVersion).toBe(3)
+  expect(migrated?.accounts.native?.daily[dayKey]).toMatchObject({
+    referenceCostUsd: 1,
+  })
+  expect(migrated?.accounts.native?.daily[dayKey]).not.toHaveProperty(
+    "quotaConsumed",
+  )
+  await expect(
+    page.getByText("Some charges may be missing.", { exact: true }),
+  ).toBeVisible()
+  const summary = page
+    .locator('[data-slot="card"]')
+    .filter({ has: page.getByText("Recorded costs", { exact: true }) })
+  await summary.screenshot({
+    path: testInfo.outputPath("native-usage-summary.png"),
+    animations: "disabled",
+  })
+  await captureVisualViews({
+    page,
+    extensionDir,
+    id: "native-usage-summary",
+    ready: summary,
+    captureTarget: summary,
+  })
+  for (const [id, name] of [
+    ["usage-reference-trend", "Daily overview"],
+    ["usage-model-costs", "Model consumption"],
+  ] as const) {
+    const chart = page.locator('[data-slot="card"]').filter({
+      has: page.getByText(name, { exact: true }),
+    })
+    await expect(chart.locator("canvas").first()).toBeVisible()
+    await captureVisualViews({
+      page,
+      extensionDir,
+      id,
+      ready: chart,
+      captureTarget: chart,
+    })
+  }
+  await seedUsageHistoryStore(worker, {
+    native: createUsageHistoryAccountStore({
+      daily: { [dayKey]: aggregate(2, 100, 200, 500000) },
+    }),
+  })
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await expect(
+    page.getByText("Reference costs", {
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(page.getByText("$1.00", { exact: true })).toBeVisible()
+  await expect(page.getByText("CNY 3.25", { exact: true })).toHaveCount(0)
+  const referenceSummary = page.locator('[data-slot="card"]').filter({
+    has: page.getByText("Reference costs", { exact: true }),
+  })
+  await captureVisualViews({
+    page,
+    extensionDir,
+    id: "usage-reference-only",
+    ready: referenceSummary,
+    captureTarget: referenceSummary,
+    views: [{ id: "mobile", theme: "light", width: 390, height: 900 }],
+  })
+
+  const zeroDay = { ...aggregate(1, 20, 30, 0), quotaConsumed: 0 }
+  await setPlasmoStorageValue(
+    worker,
+    USAGE_HISTORY_STORAGE_KEYS.STORE,
+    {
+      schemaVersion: 1,
+      accounts: {
+        native: {
+          ...account,
+          daily: { [dayKey]: zeroDay },
+          dailyByModel: { "free-model": { [dayKey]: zeroDay } },
+        },
+      },
+    },
+    { lock: STORAGE_LOCKS.USAGE_HISTORY },
+  )
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await expect(referenceSummary.getByText("$0", { exact: true })).toBeVisible()
+  const zeroCostModelChart = page.locator('[data-slot="card"]').filter({
+    has: page.getByText("Model consumption", { exact: true }),
+  })
+  await expect(zeroCostModelChart.locator("canvas")).toBeVisible()
+  await expect(
+    zeroCostModelChart.getByRole("button", { name: "Pie" }),
+  ).toBeDisabled()
+  await expect(
+    zeroCostModelChart.getByRole("button", { name: "Histogram" }),
+  ).toHaveAttribute("aria-pressed", "true")
+  await captureVisualViews({
+    page,
+    extensionDir,
+    id: "usage-zero-reference",
+    ready: zeroCostModelChart,
+    captureTarget: zeroCostModelChart,
+  })
+  const recordedDay = (value: string, requests = 1): UsageHistoryAggregate => ({
+    requests,
+    promptTokens: 20,
+    completionTokens: 30,
+    totalTokens: 50,
+    consumption: [
+      {
+        asset: { kind: "currency", code: "USD" },
+        scope,
+        amount: {
+          status: "known",
+          value,
+          observedAt: now,
+          source: {
+            adapter: "fixture",
+            operation: "settled-log",
+            contractVersion: "2",
+            kind: "reported",
+          },
+        },
+        window: { start: now - 3600000, end: now, timeZone: "UTC" },
+        settlement: "settled",
+        coverage: "partial",
+      },
+    ],
+  })
+  const nativeZero = recordedDay("0")
+  await seedUsageHistoryStore(worker, {
+    native: createUsageHistoryAccountStore({
+      daily: { [dayKey]: nativeZero },
+      dailyByModel: { "free-native-model": { [dayKey]: nativeZero } },
+    }),
+  })
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await expect(
+    zeroCostModelChart.getByRole("button", { name: "Pie" }),
+  ).toBeDisabled()
+  await expect(
+    zeroCostModelChart.getByRole("button", { name: "Histogram" }),
+  ).toHaveAttribute("aria-pressed", "true")
+  await expect(
+    page
+      .getByRole("region", { name: "Recorded costs" })
+      .getByText(/^USD\s+0$/u),
+  ).toBeVisible()
+  await captureVisualViews({
+    page,
+    extensionDir,
+    id: "usage-zero-native",
+    ready: zeroCostModelChart,
+    captureTarget: zeroCostModelChart,
+  })
+  const signedModels = Object.fromEntries([
+    ...Array.from({ length: 12 }, (_, index) => [
+      `paid-${index}`,
+      { [dayKey]: recordedDay("1") },
+    ]),
+    ["refund-model", { [dayKey]: recordedDay("-1") }],
+  ])
+  await seedUsageHistoryStore(worker, {
+    native: createUsageHistoryAccountStore({
+      daily: { [dayKey]: recordedDay("11", 13) },
+      dailyByModel: signedModels,
+    }),
+  })
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await expect(
+    page
+      .getByRole("region", { name: "Recorded costs" })
+      .getByText(/^USD\s+11$/u),
+  ).toBeVisible()
+  await expect(
+    zeroCostModelChart.getByRole("button", { name: "Pie" }),
+  ).toBeDisabled()
+  await expect(
+    zeroCostModelChart.getByRole("button", { name: "Histogram" }),
+  ).toHaveAttribute("aria-pressed", "true")
+  await captureVisualViews({
+    page,
+    extensionDir,
+    id: "usage-signed-model-tail",
+    ready: zeroCostModelChart,
+    captureTarget: zeroCostModelChart,
+  })
+
+  const freshAccount = createUsageHistoryAccountStore()
+  ingestConsumeLogItems({
+    accountStore: freshAccount,
+    items: [
+      {
+        id: 1,
+        type: LogType.Consume,
+        model_name: "fresh-free-model",
+        created_at: Date.parse(`${dayKey}T12:00:00Z`) / 1000,
+        prompt_tokens: 20,
+        completion_tokens: 30,
+        quota: 0,
+      } as LogItem,
+    ],
+    startCursor: freshAccount.cursor,
+    cursorCandidate: freshAccount.cursor,
+    timeZone: "UTC",
+  })
+  await seedUsageHistoryStore(worker, { native: freshAccount })
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await expect(referenceSummary.getByText("$0", { exact: true })).toBeVisible()
+  await expect(zeroCostModelChart.locator("canvas")).toBeVisible()
+})
+
 test("filters usage analytics by site, account, token, and opens usage settings", async ({
   context,
   extensionId,
@@ -288,7 +588,7 @@ test("exports the selected usage analytics account range as JSON", async ({
     await fs.readFile(downloadPath, "utf8"),
   ) as UsageHistoryExport
 
-  expect(exported.schemaVersion).toBe(1)
+  expect(exported.schemaVersion).toBe(3)
   expect(exported.selection).toEqual({
     accountIds: ["usage-account-a"],
     startDay: yesterdayKey,
@@ -301,14 +601,14 @@ test("exports the selected usage analytics account range as JSON", async ({
       promptTokens: 1_000,
       completionTokens: 2_000,
       totalTokens: 3_000,
-      quotaConsumed: 300_000,
+      referenceCostUsd: 0.6,
     },
     [todayKey]: {
       requests: 5,
       promptTokens: 2_000,
       completionTokens: 4_000,
       totalTokens: 6_000,
-      quotaConsumed: 600_000,
+      referenceCostUsd: 1.2,
     },
   })
   expect(atIndex(exported.accounts, "usage-account-a").tokenNamesById).toEqual({

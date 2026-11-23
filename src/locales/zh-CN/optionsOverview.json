@@ -384,13 +384,16 @@
       "title": "还没有用量记录"
     },
     "noRecentActivity": "暂无近期用量记录。",
+    "requests": "请求",
     "requestShare": "请求占比",
     "sevenDayRequests": "近 7 日请求",
     "sevenDayTokens": "近 7 日 Token",
+    "siteDay": "按站点统计日的用量",
     "todayCost": "今日消耗",
     "todayRequests": "今日请求",
     "todayShare": "今日在近 7 日中的占比",
     "todayTokens": "今日 Token",
+    "tokens": "Token",
     "tokenShare": "Token 占比"
   }
 }

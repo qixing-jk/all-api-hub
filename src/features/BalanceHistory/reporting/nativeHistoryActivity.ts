@@ -156,8 +156,8 @@ export function presentNativeHistoryActivity({
               ? t("balanceHistory:metrics.estimatedIncome")
               : "siteDay" in first && first.siteDay
                 ? "latestReading" in first && first.latestReading
-                  ? `${t("account:financial.siteDay")} · ${t("balanceHistory:native.latest")}`
-                  : t("account:financial.siteDay")
+                  ? `${t("optionsOverview:usage.siteDay")} · ${t("balanceHistory:native.latest")}`
+                  : t("optionsOverview:usage.siteDay")
                 : t("balanceHistory:native.recordedSpending")
       const estimated = kind === FINANCIAL_HISTORY_ACTIVITY_KINDS.Estimate
       const metricKind =

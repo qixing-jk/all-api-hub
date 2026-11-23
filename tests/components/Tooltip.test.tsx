@@ -419,6 +419,26 @@ describe("Tooltip", () => {
     )
   })
 
+  it("preserves a focused child hint when the pointer leaves the anchor", async () => {
+    const user = userEvent.setup()
+    render(
+      <Tooltip
+        content={<span>Exact amount</span>}
+        anchorAsChild
+        pointerTransparent
+      >
+        <button type="button">Inspect amount</button>
+      </Tooltip>,
+    )
+    const anchor = screen.getByRole("button", { name: "Inspect amount" })
+    await user.hover(anchor)
+    await screen.findByRole("tooltip")
+    await user.tab()
+    expect(anchor).toHaveFocus()
+    await user.unhover(anchor)
+    await waitFor(() => expect(screen.getByRole("tooltip")).toBeVisible())
+  })
+
   it("keeps a rich-content child as the focusable anchor and opens its tooltip", async () => {
     const user = userEvent.setup()
 

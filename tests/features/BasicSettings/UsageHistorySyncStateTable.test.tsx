@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import UsageHistorySyncStateTable from "~/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncStateTable"
+import { USAGE_HISTORY_SYNC_STATES } from "~/types/usageHistory"
 import { render, screen, within } from "~~/tests/test-utils/render"
 
 const createDeferred = <T,>() => {
@@ -24,14 +25,14 @@ describe("UsageHistorySyncStateTable", () => {
           {
             id: "account-1",
             accountName: "Example Account 1",
-            state: "never",
+            state: USAGE_HISTORY_SYNC_STATES.Never,
             lastSyncAtMs: null,
             lastSyncAtLabel: "Never",
           },
           {
             id: "account-2",
             accountName: "Example Account 2",
-            state: "never",
+            state: USAGE_HISTORY_SYNC_STATES.Never,
             lastSyncAtMs: null,
             lastSyncAtLabel: "Never",
           },
@@ -85,14 +86,14 @@ describe("UsageHistorySyncStateTable", () => {
           {
             id: "account-1",
             accountName: "Example Account 1",
-            state: "never",
+            state: USAGE_HISTORY_SYNC_STATES.Never,
             lastSyncAtMs: null,
             lastSyncAtLabel: "Never",
           },
           {
             id: "account-2",
             accountName: "Example Account 2",
-            state: "never",
+            state: USAGE_HISTORY_SYNC_STATES.Never,
             lastSyncAtMs: null,
             lastSyncAtLabel: "Never",
           },

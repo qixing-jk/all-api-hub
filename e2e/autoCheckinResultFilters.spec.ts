@@ -3,6 +3,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import enCheckin from "~/locales/en/autoCheckin.json" with { type: "json" }
 import zhCheckin from "~/locales/zh-CN/autoCheckin.json" with { type: "json" }
+import type { ConfirmedAward } from "~/services/amounts/awards"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -20,6 +21,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const RESULT_CASES: {
   name: string
@@ -89,6 +91,304 @@ const RESULT_CASES: {
     },
   },
 ]
+
+test("preserves original award assets and fulfillment alongside partial check-in outcomes", async ({
+  context,
+  extensionId,
+  extensionDir,
+  page,
+}, testInfo) => {
+  const worker = await getServiceWorker(context)
+  const observedAt = Date.UTC(2026, 10, 11)
+  const award = (
+    accountId: string,
+    value: string,
+    asset: ConfirmedAward["asset"],
+    overrides: Partial<ConfirmedAward> = {},
+  ): ConfirmedAward => ({
+    id: "daily-grant",
+    asset,
+    amount: {
+      status: "known",
+      value,
+      observedAt,
+      source: {
+        adapter: "fixture",
+        operation: "/daily/claim",
+        contractVersion: "1",
+        kind: "reported",
+        inputs: ["granted_amount"],
+      },
+    },
+    scope: {
+      subject: { kind: "account", accountId },
+      authority: "https://awards.example.invalid",
+      walletId: "welfare",
+      projects: { kind: "unknown" },
+      keys: { kind: "unknown" },
+      models: { kind: "restricted", ids: ["model-a"] },
+      groups: { kind: "unknown" },
+    },
+    validity: { kind: "expires", at: Date.UTC(2026, 10, 12) },
+    target: "wallet",
+    fulfillment: "credited",
+    ...overrides,
+  })
+  const points = {
+    kind: "quota",
+    id: "fixture:welfare",
+    label: "credits",
+    displayScale: 1,
+    displayLabel: "credits",
+  } as const
+  const cases: { name: string; result: AutoCheckinAccountResultFixture }[] = [
+    {
+      name: "Partial campaigns",
+      result: {
+        status: "failed",
+        reasonCode: "network_error",
+        retryable: false,
+        rawMessage: "Second campaign failed; first grant confirmed",
+        awards: [
+          award("Partial campaigns", "2", { kind: "currency", code: "USD" }),
+          award(
+            "Partial campaigns",
+            "0",
+            { kind: "currency", code: "CNY" },
+            { id: "zero-grant" },
+          ),
+        ],
+      },
+    },
+    {
+      name: "Welfare wallet",
+      result: {
+        status: "success",
+        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+        awards: [
+          award("Welfare wallet", "42", points, {
+            fulfillment: "pending-redemption",
+          }),
+        ],
+      },
+    },
+    {
+      name: "Amount unknown",
+      result: {
+        status: "uncertain",
+        reconciliation: "unknown",
+        reasonCode: "checkin_unconfirmed",
+        retryable: false,
+        awards: [
+          award("Amount unknown", "0", points, {
+            amount: {
+              status: "unknown",
+              reason: "response-omitted-amount",
+              source: {
+                adapter: "fixture",
+                operation: "/daily/claim",
+                contractVersion: "1",
+                kind: "reported",
+              },
+            },
+          }),
+        ],
+      },
+    },
+    {
+      name: "Legacy reward",
+      result: {
+        status: "success",
+        reward: { quota: 500000 },
+        messageKey: "autoCheckin:providerFallback.checkinSuccessful",
+      },
+    },
+  ]
+  await stubLlmMetadataIndex(context)
+  await seedUserPreferences(worker, {
+    currencyType: "CNY",
+    autoCheckin: {
+      ...DEFAULT_PREFERENCES.autoCheckin!,
+      globalEnabled: false,
+      pretriggerDailyOnUiOpen: false,
+    },
+  })
+  await seedStoredAccounts(
+    worker,
+    cases.map(({ name }) =>
+      createStoredAccount({
+        id: name,
+        site_name: name,
+        site_url: "https://awards.example.invalid",
+        site_type: SITE_TYPES.NEW_API,
+        exchange_rate: 7,
+      }),
+    ),
+  )
+  await seedAutoCheckinStatus(worker, {
+    lastRunAt: new Date(observedAt).toISOString(),
+    lastRunResult: "partial",
+    perAccount: Object.fromEntries(
+      cases.map(({ name, result }) => [
+        name,
+        {
+          accountId: name,
+          accountName: name,
+          timestamp: observedAt,
+          ...result,
+        },
+      ]),
+    ),
+    summary: {
+      totalEligible: 4,
+      executed: 4,
+      successCount: 2,
+      failedCount: 1,
+      uncertainCount: 1,
+      skippedCount: 0,
+      needsRetry: false,
+    },
+  })
+  installExtensionPageGuards(page)
+  await forceExtensionLanguage(page, "en")
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.setViewportSize({ width: 1600, height: 1000 })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.AUTO_CHECKIN}`,
+  )
+  await waitForExtensionRoot(page)
+  const row = (name: string) => page.getByRole("row").filter({ hasText: name })
+  for (const { name } of cases) await expect(row(name)).toBeVisible()
+  const table = page.getByRole("table").filter({ hasText: "Partial campaigns" })
+  await captureVisualViews({
+    page,
+    ready: table,
+    id: "checkin-awards",
+    extensionDir,
+  })
+  await expect(row("Partial campaigns")).toContainText("USD")
+  await expect(row("Partial campaigns")).toContainText("CNY")
+  await expect(row("Welfare wallet")).toContainText("42 credits")
+  await expect(row("Welfare wallet")).toContainText("Pending redemption")
+  await expect(row("Amount unknown")).toContainText("Amount unknown · credits")
+  await expect(row("Legacy reward")).toContainText(
+    "Recorded by an older version",
+  )
+  await expect(row("Legacy reward")).toContainText("¥7.00")
+  for (const { mode, monetary, legacy } of [
+    { mode: "original", monetary: "+USD 2", legacy: "+500,000 quota" },
+    { mode: "USD", monetary: "+$2.00", legacy: "+$1.00" },
+    { mode: "CNY", monetary: "+¥14.00", legacy: "+¥7.00" },
+  ] as const) {
+    await seedUserPreferences(worker, {
+      currencyDisplay: mode,
+      currencyType: mode === "original" ? "CNY" : mode,
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: false,
+        pretriggerDailyOnUiOpen: false,
+      },
+    })
+    await page.reload()
+    await waitForExtensionRoot(page)
+    const campaigns = row("Partial campaigns")
+    if (mode === "original") {
+      await expect(campaigns.getByText("+USD 2", { exact: true })).toBeVisible()
+      await expect(campaigns.getByText("+CNY 0", { exact: true })).toBeVisible()
+    } else {
+      await expect(campaigns).toContainText(monetary)
+    }
+    await expect(row("Legacy reward")).toContainText(legacy)
+    await expect(row("Welfare wallet")).toContainText("+42 credits")
+    await table.screenshot({
+      path: testInfo.outputPath(`awards-${mode}.png`),
+      animations: "disabled",
+    })
+  }
+  await row("Welfare wallet")
+    .getByText("Award details", { exact: true })
+    .click()
+  await expect(row("Welfare wallet")).toContainText("model-a")
+  await expect(row("Welfare wallet")).not.toContainText(
+    "https://awards.example.invalid",
+  )
+  await expect(row("Welfare wallet")).not.toContainText(
+    "Usage scope unverified",
+  )
+  await expect(row("Welfare wallet")).not.toContainText("Validity unverified")
+  await expect(row("Welfare wallet")).not.toContainText(
+    "fixture//daily/claim@1",
+  )
+  await expect(
+    row("Welfare wallet").getByText("Technical details (debug)", {
+      exact: true,
+    }),
+  ).toHaveCount(0)
+  await captureVisualViews({
+    page,
+    ready: row("Welfare wallet"),
+    captureTarget: row("Welfare wallet"),
+    id: "checkin-award-details",
+    extensionDir,
+  })
+  // The shared results table scrolls horizontally on narrow viewports.
+  // Verify the native amount and its details can be brought into the viewport.
+  await page.setViewportSize({ width: 390, height: 1000 })
+  const nativeAmount = row("Welfare wallet").getByText("+42 credits", {
+    exact: true,
+  })
+  await nativeAmount.scrollIntoViewIfNeeded()
+  await expect(nativeAmount).toBeInViewport({ ratio: 1 })
+  await page.evaluate(() => document.documentElement.classList.add("dark"))
+  await captureVisualViews({
+    page,
+    ready: nativeAmount,
+    id: "checkin-award-narrow-scrolled",
+    extensionDir,
+  })
+  await page.evaluate(() =>
+    localStorage.setItem("aah_dev_features_unlocked", "true"),
+  )
+  // The result row is wider than the narrow viewport; retain the scrolled
+  // narrow view separately and capture the expanded source at desktop width.
+  await page.setViewportSize({ width: 1600, height: 1000 })
+  await page.reload()
+  await waitForExtensionRoot(page)
+  await row("Welfare wallet")
+    .getByText("Award details", { exact: true })
+    .click()
+  const technical = row("Welfare wallet").getByText(
+    "Technical details (debug)",
+    { exact: true },
+  )
+  await expect(
+    row("Welfare wallet").getByText("fixture//daily/claim@1"),
+  ).not.toBeVisible()
+  await expect(
+    row("Welfare wallet").getByText(/https:\/\/awards.example.invalid/),
+  ).not.toBeVisible()
+  await captureVisualViews({
+    page,
+    ready: technical,
+    captureTarget: row("Welfare wallet"),
+    id: "checkin-award-debug-collapsed",
+    extensionDir,
+  })
+  await technical.click()
+  await expect(
+    row("Welfare wallet").getByText("fixture//daily/claim@1"),
+  ).toBeVisible()
+  await expect(
+    row("Welfare wallet").getByText(/https:\/\/awards.example.invalid/),
+  ).toBeVisible()
+  await captureVisualViews({
+    page,
+    ready: technical,
+    captureTarget: row("Welfare wallet"),
+    id: "checkin-award-debug",
+    extensionDir,
+  })
+})
 
 /** Fills an i18next copy string for the seeded run. */
 function fillCopy(

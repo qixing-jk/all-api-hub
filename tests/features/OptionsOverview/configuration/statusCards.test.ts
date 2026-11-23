@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { buildStatusCards } from "~/features/OptionsOverview/configuration/statusCards"
+import { OPTIONS_OVERVIEW_SEVERITIES } from "~/features/OptionsOverview/ids"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 
 const completeRequestCoverage = {
@@ -26,7 +27,7 @@ describe("overview status cards", () => {
       {
         id: "accounts",
         value: "2",
-        severity: "success",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Success,
         target: {
           menuItemId: MENU_ITEM_IDS.ACCOUNT,
           params: undefined,
@@ -35,20 +36,20 @@ describe("overview status cards", () => {
       {
         id: "profiles",
         value: "1",
-        severity: "success",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Success,
         target: { menuItemId: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES },
       },
       {
         id: "todayUsage",
         value: "12",
-        severity: "success",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Success,
         coverage: completeRequestCoverage,
         target: { menuItemId: MENU_ITEM_IDS.USAGE_ANALYTICS },
       },
       {
         id: "attention",
         value: "3",
-        severity: "warning",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       },
     ])
   })

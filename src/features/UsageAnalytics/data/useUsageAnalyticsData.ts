@@ -13,6 +13,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { SiteAccount } from "~/types"
 import type { UsageHistoryStore } from "~/types/usageHistory"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -43,6 +44,7 @@ export const useUsageAnalyticsData = () => {
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [store, setStore] = useState<UsageHistoryStore | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const enabledAccounts = useMemo(
     () => accounts.filter((account) => account.disabled !== true),
@@ -84,6 +86,7 @@ export const useUsageAnalyticsData = () => {
         if (isCurrent()) {
           setAccounts(nextAccounts)
           setStore(nextStore)
+          setLoadError(null)
         }
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
@@ -95,7 +98,10 @@ export const useUsageAnalyticsData = () => {
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
-        if (isCurrent()) logger.error("Failed to load data", error)
+        if (isCurrent()) {
+          logger.error("Failed to load data", error)
+          setLoadError(getErrorMessage(error, "Failed to load usage history"))
+        }
       } finally {
         if (isCurrent()) setIsLoading(false)
       }
@@ -118,6 +124,8 @@ export const useUsageAnalyticsData = () => {
     disabledAccountIdSet,
     store,
     isLoading,
+    loadError,
+    hasLoadedData: store !== null,
     loadData,
   }
 }

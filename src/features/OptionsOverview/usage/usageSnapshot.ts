@@ -1,8 +1,15 @@
+import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import type { OptionsOverviewUsageSnapshot } from "~/features/OptionsOverview/types"
 import { isAccountTodayMetricAvailable } from "~/services/accounts/metrics/accountTodayStats"
+import { normalizeDecimalUnits } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  FINANCIAL_ENUMERATION,
+} from "~/services/amounts/financialConstants"
 import type { AccountStats } from "~/types"
 import type { UsageHistoryStore } from "~/types/usageHistory"
+import { formatAssetAmount } from "~/utils/core/money"
 
 /**
  * Builds the compact usage summary from current account stats and history.
@@ -15,25 +22,66 @@ export function buildUsageSnapshot(
   const todayTokens =
     accountStats.today_total_prompt_tokens +
     accountStats.today_total_completion_tokens
+  const todayCostGroups = accountStats.consumptionProjection?.groups ?? []
+  const referenceUsd = normalizeDecimalUnits(
+    accountStats.referenceTodayConsumption?.quota,
+    QUOTA_PER_USD,
+  )
+  const todayReferenceCostText =
+    referenceUsd === undefined
+      ? undefined
+      : formatAssetAmount({
+          asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+          value: referenceUsd,
+        })
+  const todayCostCoverage = accountStats.consumptionProjection
+    ?.nativeCoverage ?? {
+    ...accountStats.todayStatsCoverage.consumption,
+    status: FINANCIAL_ENUMERATION.Unavailable,
+    completeCount: 0,
+    partialCount: 0,
+  }
 
-  const hasTodayUsageData = [
-    accountStats.todayStatsCoverage.requests,
-    accountStats.todayStatsCoverage.tokens,
-    accountStats.todayStatsCoverage.consumption,
-  ].some(isAccountTodayMetricAvailable)
+  const hasTodayUsageData =
+    todayReferenceCostText !== undefined ||
+    [
+      accountStats.todayStatsCoverage.requests,
+      accountStats.todayStatsCoverage.tokens,
+      todayCostCoverage,
+    ].some(isAccountTodayMetricAvailable)
 
   return {
+    ...(accountStats.siteDayUsage?.length
+      ? { siteDayUsage: accountStats.siteDayUsage }
+      : {}),
     todayRequests: accountStats.today_total_requests,
     todayTokens,
-    todayCostText: formatQuotaCost(accountStats.today_total_consumption),
+    todayCostText: todayCostGroups.length
+      ? todayCostGroups
+          .map((group) => formatAssetAmount(group.amount))
+          .join(" · ")
+      : "-",
+    ...(todayCostGroups.length ? { todayCostGroups } : {}),
+    ...(todayReferenceCostText === undefined ||
+    !accountStats.referenceTodayConsumption
+      ? {}
+      : {
+          todayReferenceCost: {
+            text: todayReferenceCostText,
+            coverage: accountStats.referenceTodayConsumption.coverage,
+          },
+        }),
     todayRequestsCoverage: accountStats.todayStatsCoverage.requests,
     todayTokensCoverage: accountStats.todayStatsCoverage.tokens,
-    todayCostCoverage: accountStats.todayStatsCoverage.consumption,
+    todayCostCoverage,
     sevenDayRequests: sevenDay.requests,
     sevenDayTokens: sevenDay.tokens,
     hasTodayUsageData,
     hasSevenDayUsageData: sevenDay.hasData,
-    hasUsageData: hasTodayUsageData || sevenDay.hasData,
+    hasUsageData:
+      hasTodayUsageData ||
+      sevenDay.hasData ||
+      Boolean(accountStats.siteDayUsage?.length),
     target: { menuItemId: MENU_ITEM_IDS.USAGE_ANALYTICS },
   }
 }
@@ -68,14 +116,4 @@ function sumLatestUsageDays(usageStore: UsageHistoryStore): {
   }
 
   return { requests, tokens, hasData: latestDayKeys.length > 0 }
-}
-
-/**
- * Formats raw quota consumption into a compact local fallback string.
- */
-function formatQuotaCost(quota: number): string {
-  if (!Number.isFinite(quota) || quota < 0) {
-    return "-"
-  }
-  return quota.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }

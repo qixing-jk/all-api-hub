@@ -4,6 +4,7 @@
  */
 
 import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { CURRENCIES } from "~/constants/money"
 import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { DEFAULT_WEB_AI_API_CHECK_PREFERENCES } from "~/services/preferences/contentScriptFeatureDefaults"
 import { migrateAutoRefreshConfig } from "~/services/preferences/migrations/autoRefreshConfigMigration"
@@ -47,7 +48,7 @@ const AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION = 27
 /**
  * Current version of the preferences schema.
  */
-export const CURRENT_PREFERENCES_VERSION = 30
+export const CURRENT_PREFERENCES_VERSION = 31
 
 /**
  * Migration function type
@@ -61,6 +62,13 @@ type PreferencesMigrationFunction = (prefs: UserPreferences) => UserPreferences
  * Value: migration function to upgrade to that version
  */
 const migrations: Record<number, PreferencesMigrationFunction> = {
+  // Existing users retain their selected display currency; only new users default to original.
+  31: (prefs) => ({
+    ...prefs,
+    currencyDisplay:
+      prefs.currencyDisplay ?? prefs.currencyType ?? CURRENCIES.USD,
+    preferencesVersion: 31,
+  }),
   // Version 29 -> 30: make the enabled web API detector usable without setup.
   30: (prefs) => {
     const config = prefs.webAiApiCheck ?? DEFAULT_WEB_AI_API_CHECK_PREFERENCES
@@ -284,8 +292,7 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     )
 
     const storedAutoRefresh = (prefs as any).accountAutoRefresh as
-      | Partial<AccountAutoRefresh>
-      | undefined
+      Partial<AccountAutoRefresh> | undefined
 
     const normalizedAutoRefresh: AccountAutoRefresh = {
       ...DEFAULT_ACCOUNT_AUTO_REFRESH,
@@ -342,8 +349,7 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     )
 
     const stored = (prefs as any).balanceHistory as
-      | Partial<BalanceHistoryPreferences>
-      | undefined
+      Partial<BalanceHistoryPreferences> | undefined
 
     const enabled =
       typeof stored?.enabled === "boolean"
@@ -593,8 +599,7 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     )
 
     const stored = (prefs as any).balanceHistory as
-      | Partial<BalanceHistoryPreferences>
-      | undefined
+      Partial<BalanceHistoryPreferences> | undefined
 
     return {
       ...prefs,

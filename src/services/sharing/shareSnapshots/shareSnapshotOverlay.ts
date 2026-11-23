@@ -595,7 +595,7 @@ export const drawShareSnapshotOverlay = (
       ? t("account:todayMetricAvailability.partial")
       : undefined,
     firstSiteDay?.lastKnown ? t("account:financial.lastKnown") : undefined,
-    t("account:financial.siteDay"),
+    t("optionsOverview:usage.siteDay"),
     firstSiteDay?.reportedDay,
   ]
     .filter(Boolean)

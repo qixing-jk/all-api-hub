@@ -6,6 +6,7 @@ import {
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import { getCurrencyDisplayUpdates } from "~/services/preferences/currencyDisplay"
 import {
   PreferencesMessageTypes,
   sendPreferencesMessage,
@@ -18,6 +19,7 @@ import {
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   ActiveSortField,
+  CurrencyDisplay,
   CurrencyType,
   DashboardTabType,
   SortOrder,
@@ -162,19 +164,28 @@ export function useDisplayPreferenceActions({
     [applySuccessfulPreferenceWrite],
   )
 
-  const updateDefaultTab = useCallback(
-    async (activeTab: DashboardTabType) => {
-      const result = await userPreferences.updateActiveTab(activeTab)
-      applySuccessfulPreferenceWrite(result, { activeTab })
+  const updateDefaultTab = updateActiveTab
+
+  const updateCurrencyType = useCallback(
+    async (currencyType: CurrencyType) => {
+      const result = await userPreferences.updateCurrencyType(currencyType)
+      applySuccessfulPreferenceWrite(result, {
+        currencyType,
+        currencyDisplay: currencyType,
+      })
       return result
     },
     [applySuccessfulPreferenceWrite],
   )
 
-  const updateCurrencyType = useCallback(
-    async (currencyType: CurrencyType) => {
-      const result = await userPreferences.updateCurrencyType(currencyType)
-      applySuccessfulPreferenceWrite(result, { currencyType })
+  const updateCurrencyDisplay = useCallback(
+    async (currencyDisplay: CurrencyDisplay) => {
+      const result =
+        await userPreferences.updateCurrencyDisplay(currencyDisplay)
+      applySuccessfulPreferenceWrite(
+        result,
+        getCurrencyDisplayUpdates(currencyDisplay),
+      )
       return result
     },
     [applySuccessfulPreferenceWrite],
@@ -287,6 +298,7 @@ export function useDisplayPreferenceActions({
       applySuccessfulPreferenceWrite(result, {
         activeTab: DEFAULT_PREFERENCES.activeTab,
         currencyType: DEFAULT_PREFERENCES.currencyType,
+        currencyDisplay: DEFAULT_PREFERENCES.currencyDisplay,
         showTodayCashflow: DEFAULT_PREFERENCES.showTodayCashflow,
       })
     }
@@ -317,6 +329,7 @@ export function useDisplayPreferenceActions({
     updateWarnOnDuplicateAccountAdd,
     updateDefaultTab,
     updateCurrencyType,
+    updateCurrencyDisplay,
     updateShowTodayCashflow,
     updateSortConfig,
     updateSortingPriorityConfig,

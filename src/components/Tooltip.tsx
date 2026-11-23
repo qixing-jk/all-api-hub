@@ -46,6 +46,8 @@ interface TooltipProps {
   includeAccessibleDescription?: boolean
   /** Allow touch/click activation in addition to hover and keyboard focus. */
   openOnClick?: boolean
+  /** Keep the popup from capturing pointer events over nearby controls. */
+  pointerTransparent?: boolean
 }
 
 interface TooltipChildProps {
@@ -79,6 +81,7 @@ export default function Tooltip({
   anchorAsChild = false,
   includeAccessibleDescription = true,
   openOnClick = false,
+  pointerTransparent = false,
 }: TooltipProps) {
   const instanceId = useId()
   const generatedAnchorId = `tooltip-${instanceId}`
@@ -278,7 +281,10 @@ export default function Tooltip({
       side={side}
       align={align}
       sideOffset={10}
-      className={cn(Z_INDEX.tooltip, "pointer-events-auto")}
+      className={cn(
+        Z_INDEX.tooltip,
+        pointerTransparent ? "pointer-events-none" : "pointer-events-auto",
+      )}
     >
       <TooltipPrimitive.Popup
         ref={popupRef}
@@ -304,7 +310,11 @@ export default function Tooltip({
           if (
             !open &&
             (details.reason === "trigger-press" ||
-              (isClickOpen && details.reason === "trigger-hover"))
+              (details.reason === "trigger-hover" &&
+                (isClickOpen ||
+                  (pointerTransparent &&
+                    (anchorRef.current?.matches(":focus-visible") ||
+                      anchorRef.current?.querySelector(":focus-visible"))))))
           ) {
             details.cancel()
             return

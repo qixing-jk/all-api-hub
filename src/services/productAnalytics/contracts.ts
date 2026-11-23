@@ -34,6 +34,7 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import {
   AuthTypeEnum,
+  type CurrencyDisplay,
   type CurrencyType,
   type DashboardTabType,
   type SortField,
@@ -1498,6 +1499,7 @@ export type ProductAnalyticsEventPayloadMap = {
     open_changelog_on_update_enabled?: boolean
     active_tab?: DashboardTabType
     currency_type?: CurrencyType
+    currency_display?: CurrencyDisplay
     sort_field?: ProductAnalyticsSortField
     sort_order?: SortOrder
     sorting_priority_configured?: boolean
@@ -1596,6 +1598,7 @@ export type ProductAnalyticsEventPayloadMap = {
     open_changelog_on_update_enabled?: boolean
     active_tab?: DashboardTabType
     currency_type?: CurrencyType
+    currency_display?: CurrencyDisplay
     sort_field?: ProductAnalyticsSortField
     sort_order?: SortOrder
     sorting_priority_configured?: boolean

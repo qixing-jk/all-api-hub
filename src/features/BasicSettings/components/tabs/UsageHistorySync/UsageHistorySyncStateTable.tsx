@@ -23,16 +23,17 @@ import {
 import { Z_INDEX } from "~/constants/designTokens"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { cn } from "~/lib/utils"
+import { USAGE_HISTORY_SYNC_STATES } from "~/types/usageHistory"
 
 import UsageHistorySyncRowActions from "./UsageHistorySyncRowActions"
 
 export type UsageHistorySyncState =
-  "never" | "success" | "error" | "unsupported"
+  (typeof USAGE_HISTORY_SYNC_STATES)[keyof typeof USAGE_HISTORY_SYNC_STATES]
 
 export type UsageHistoryAccountRow = {
   id: string
   accountName: string
-  state: UsageHistorySyncState
+  state?: UsageHistorySyncState
   lastSyncAtMs: number | null
   lastSyncAtLabel: string
   lastError?: string
@@ -55,17 +56,19 @@ interface UsageHistorySyncStateTableProps {
  */
 function getUsageHistorySyncStateLabel(
   t: TFunction,
-  state: UsageHistorySyncState,
+  state: UsageHistorySyncState | undefined,
 ) {
   switch (state) {
-    case "never":
+    case USAGE_HISTORY_SYNC_STATES.Never:
       return t("usageAnalytics:status.states.never")
-    case "success":
+    case USAGE_HISTORY_SYNC_STATES.Success:
       return t("usageAnalytics:status.states.success")
-    case "error":
+    case USAGE_HISTORY_SYNC_STATES.Error:
       return t("usageAnalytics:status.states.error")
-    case "unsupported":
+    case USAGE_HISTORY_SYNC_STATES.Unsupported:
       return t("usageAnalytics:status.states.unsupported")
+    default:
+      return t("common:labels.unknown")
   }
 }
 
@@ -88,12 +91,12 @@ export default function UsageHistorySyncStateTable({
   ])
   const [isSyncingSelection, setIsSyncingSelection] = useState(false)
 
-  const getStatusBadgeVariant = (state: UsageHistorySyncState) => {
-    return state === "success"
-      ? "success"
-      : state === "unsupported"
+  const getStatusBadgeVariant = (state: UsageHistorySyncState | undefined) => {
+    return state === USAGE_HISTORY_SYNC_STATES.Success
+      ? USAGE_HISTORY_SYNC_STATES.Success
+      : state === USAGE_HISTORY_SYNC_STATES.Unsupported
         ? "warning"
-        : state === "error"
+        : state === USAGE_HISTORY_SYNC_STATES.Error
           ? "destructive"
           : "secondary"
   }
@@ -136,7 +139,10 @@ export default function UsageHistorySyncStateTable({
         accessorKey: "accountName",
         header: t("syncTab.table.columns.account"),
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
-          <div className="max-w-[260px] truncate text-sm font-medium">
+          <div
+            className="max-w-[clamp(3.5rem,calc(100cqw_-_10rem),16.25rem)] truncate text-sm font-medium"
+            title={row.original.accountName}
+          >
             {row.original.accountName}
           </div>
         ),
@@ -146,8 +152,8 @@ export default function UsageHistorySyncStateTable({
         header: t("syncTab.table.columns.state"),
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
           <Badge
-            variant={getStatusBadgeVariant(row.original.state) as any}
-            className="shrink-0"
+            variant={getStatusBadgeVariant(row.original.state)}
+            className="shrink-0 whitespace-nowrap"
           >
             {getUsageHistorySyncStateLabel(t, row.original.state)}
           </Badge>
@@ -159,9 +165,9 @@ export default function UsageHistorySyncStateTable({
         accessorFn: (row) => row.lastSyncAtMs ?? 0,
         cell: ({ row }: { row: Row<UsageHistoryAccountRow> }) => (
           <div className="text-xs text-muted-foreground">
-            {row.original.lastSyncAtMs
-              ? row.original.lastSyncAtLabel
-              : t("status.never")}
+            {row.original.state === undefined
+              ? "—"
+              : row.original.lastSyncAtLabel}
           </div>
         ),
       },
@@ -281,7 +287,7 @@ export default function UsageHistorySyncStateTable({
         </div>
       </div>
 
-      <div className="overflow-auto rounded-lg border border-border">
+      <div className="@container overflow-auto rounded-lg border border-border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -290,6 +296,7 @@ export default function UsageHistorySyncStateTable({
                   <TableHead
                     key={header.id}
                     className={cn(
+                      "px-1.5 whitespace-nowrap sm:px-3",
                       header.column.id === "actions" &&
                         cn(
                           "sticky right-0 border-l bg-background",
@@ -327,7 +334,7 @@ export default function UsageHistorySyncStateTable({
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        "py-density-3",
+                        "px-1.5 py-density-3 sm:px-3",
                         cell.column.id === "actions" &&
                           cn(
                             "sticky right-0 border-l bg-background group-hover/row:bg-muted group-has-aria-expanded/row:bg-muted group-data-[state=selected]/row:bg-muted",

@@ -1,5 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
+import { QUOTA_PER_USD } from "~/constants/money"
+import { financialConsumptionFactSchema } from "~/services/amounts/usage"
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
@@ -9,6 +11,7 @@ import {
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
+  USAGE_HISTORY_SYNC_STATES,
   type UsageHistoryAccountStore,
   type UsageHistoryAggregate,
   type UsageHistoryCursor,
@@ -34,6 +37,7 @@ import {
 } from "./core"
 
 const logger = createLogger("UsageHistoryStorage")
+const consumptionFactsSchema = financialConsumptionFactSchema.array()
 
 /**
  * Create a new empty top-level store (current schema).
@@ -48,13 +52,30 @@ function createEmptyStore(): UsageHistoryStore {
 /**
  * Sanitize stored numeric aggregates into a safe shape for analysis/rendering.
  */
-function sanitizeAggregate(value: unknown): UsageHistoryAggregate {
+function sanitizeAggregate(
+  value: unknown,
+  legacy: boolean,
+): UsageHistoryAggregate {
   const payload = isPlainObject(value) ? value : {}
   const requests = Number(payload.requests)
   const promptTokens = Number(payload.promptTokens)
   const completionTokens = Number(payload.completionTokens)
   const totalTokens = Number(payload.totalTokens)
-  const quotaConsumed = Number(payload.quotaConsumed)
+  const storedCost = legacy ? payload.quotaConsumed : payload.referenceCostUsd
+  const referenceCostUsd =
+    typeof storedCost === "number" ||
+    (typeof storedCost === "string" && storedCost.trim() !== "")
+      ? Number(storedCost) / (legacy ? QUOTA_PER_USD : 1)
+      : NaN
+  const consumption =
+    payload.consumption === undefined
+      ? undefined
+      : consumptionFactsSchema.parse(payload.consumption)
+  if (
+    payload.consumptionIncomplete !== undefined &&
+    typeof payload.consumptionIncomplete !== "boolean"
+  )
+    throw new Error("Invalid usage history consumption coverage")
 
   return {
     requests: Number.isFinite(requests) && requests > 0 ? requests : 0,
@@ -66,8 +87,11 @@ function sanitizeAggregate(value: unknown): UsageHistoryAggregate {
         : 0,
     totalTokens:
       Number.isFinite(totalTokens) && totalTokens > 0 ? totalTokens : 0,
-    quotaConsumed:
-      Number.isFinite(quotaConsumed) && quotaConsumed > 0 ? quotaConsumed : 0,
+    ...(Number.isFinite(referenceCostUsd) && referenceCostUsd >= 0
+      ? { referenceCostUsd }
+      : {}),
+    ...(consumption ? { consumption } : {}),
+    ...(payload.consumptionIncomplete ? { consumptionIncomplete: true } : {}),
   }
 }
 
@@ -127,11 +151,14 @@ function sanitizeCursor(value: unknown): UsageHistoryCursor {
   }
 }
 
+type ReadAggregate = (value: unknown) => UsageHistoryAggregate
+
 /**
  * Sanitizes aggregate usage grouped by day.
  */
 function sanitizeAggregateByDay(
   value: unknown,
+  readAggregate: ReadAggregate,
 ): Record<string, UsageHistoryAggregate> {
   if (!isPlainObject(value)) {
     return {}
@@ -142,7 +169,7 @@ function sanitizeAggregateByDay(
     if (!parseDayKey(dayKey)) {
       continue
     }
-    out[dayKey] = sanitizeAggregate(aggregate)
+    out[dayKey] = readAggregate(aggregate)
   }
   return out
 }
@@ -152,6 +179,7 @@ function sanitizeAggregateByDay(
  */
 function sanitizeAggregateByHour(
   value: unknown,
+  readAggregate: ReadAggregate,
 ): Record<string, UsageHistoryAggregate> {
   if (!isPlainObject(value)) {
     return {}
@@ -162,7 +190,7 @@ function sanitizeAggregateByHour(
     if (!/^(0\d|1\d|2[0-3])$/.test(hourKey)) {
       continue
     }
-    out[hourKey] = sanitizeAggregate(aggregate)
+    out[hourKey] = readAggregate(aggregate)
   }
   return out
 }
@@ -172,6 +200,7 @@ function sanitizeAggregateByHour(
  */
 function sanitizeHourlyByDay(
   value: unknown,
+  readAggregate: ReadAggregate,
 ): Record<string, Record<string, UsageHistoryAggregate>> {
   if (!isPlainObject(value)) {
     return {}
@@ -182,7 +211,7 @@ function sanitizeHourlyByDay(
     if (!parseDayKey(dayKey)) {
       continue
     }
-    const sanitized = sanitizeAggregateByHour(hourly)
+    const sanitized = sanitizeAggregateByHour(hourly, readAggregate)
     if (Object.keys(sanitized).length > 0) {
       out[dayKey] = sanitized
     }
@@ -195,6 +224,7 @@ function sanitizeHourlyByDay(
  */
 function sanitizeHourlyByTokenByDay(
   value: unknown,
+  readAggregate: ReadAggregate,
 ): Record<string, Record<string, Record<string, UsageHistoryAggregate>>> {
   if (!isPlainObject(value)) {
     return {}
@@ -214,7 +244,7 @@ function sanitizeHourlyByTokenByDay(
       if (!parseDayKey(dayKey)) {
         continue
       }
-      const sanitized = sanitizeAggregateByHour(hourly)
+      const sanitized = sanitizeAggregateByHour(hourly, readAggregate)
       if (Object.keys(sanitized).length > 0) {
         tokenOut[dayKey] = sanitized
       }
@@ -229,46 +259,24 @@ function sanitizeHourlyByTokenByDay(
 }
 
 /**
- * Sanitizes aggregate usage by model grouped by day.
+ * Sanitizes daily usage grouped by model or token.
  */
-function sanitizeAggregateByModelByDay(
+function sanitizeNamedDailyAggregates(
   value: unknown,
+  readAggregate: ReadAggregate,
 ): Record<string, Record<string, UsageHistoryAggregate>> {
   if (!isPlainObject(value)) {
     return {}
   }
 
   const out: Record<string, Record<string, UsageHistoryAggregate>> = {}
-  for (const [modelName, daily] of Object.entries(value)) {
-    if (!modelName) {
+  for (const [name, daily] of Object.entries(value)) {
+    if (!name) {
       continue
     }
-    const sanitized = sanitizeAggregateByDay(daily)
+    const sanitized = sanitizeAggregateByDay(daily, readAggregate)
     if (Object.keys(sanitized).length > 0) {
-      out[modelName] = sanitized
-    }
-  }
-  return out
-}
-
-/**
- * Sanitizes aggregate usage by token grouped by day.
- */
-function sanitizeAggregateByTokenByDay(
-  value: unknown,
-): Record<string, Record<string, UsageHistoryAggregate>> {
-  if (!isPlainObject(value)) {
-    return {}
-  }
-
-  const out: Record<string, Record<string, UsageHistoryAggregate>> = {}
-  for (const [tokenId, daily] of Object.entries(value)) {
-    if (!tokenId) {
-      continue
-    }
-    const sanitized = sanitizeAggregateByDay(daily)
-    if (Object.keys(sanitized).length > 0) {
-      out[tokenId] = sanitized
+      out[name] = sanitized
     }
   }
   return out
@@ -279,6 +287,7 @@ function sanitizeAggregateByTokenByDay(
  */
 function sanitizeAggregateByTokenByModelByDay(
   value: unknown,
+  readAggregate: ReadAggregate,
 ): Record<string, Record<string, Record<string, UsageHistoryAggregate>>> {
   if (!isPlainObject(value)) {
     return {}
@@ -298,7 +307,7 @@ function sanitizeAggregateByTokenByModelByDay(
       if (!modelName) {
         continue
       }
-      const sanitized = sanitizeAggregateByDay(modelDaily)
+      const sanitized = sanitizeAggregateByDay(modelDaily, readAggregate)
       if (Object.keys(sanitized).length > 0) {
         tokenOut[modelName] = sanitized
       }
@@ -425,24 +434,29 @@ function sanitizeLatencyByTokenByModelByDay(
 /**
  * Sanitize a stored per-account payload into the expected current shape.
  */
-function sanitizeAccountStore(value: unknown): UsageHistoryAccountStore {
+function sanitizeAccountStore(
+  value: unknown,
+  legacy: boolean,
+): UsageHistoryAccountStore {
   if (!value || typeof value !== "object") {
     return createEmptyUsageHistoryAccountStore()
   }
 
   const payload = value as Partial<UsageHistoryAccountStore>
   const status = payload.status as unknown
+  const readAggregate: ReadAggregate = (aggregate) =>
+    sanitizeAggregate(aggregate, legacy)
 
   return {
     cursor: sanitizeCursor(payload.cursor),
     status: {
       state:
         isPlainObject(status) &&
-        (status.state === "success" ||
-          status.state === "error" ||
-          status.state === "unsupported")
+        (status.state === USAGE_HISTORY_SYNC_STATES.Success ||
+          status.state === USAGE_HISTORY_SYNC_STATES.Error ||
+          status.state === USAGE_HISTORY_SYNC_STATES.Unsupported)
           ? status.state
-          : "never",
+          : USAGE_HISTORY_SYNC_STATES.Never,
       lastSyncAt:
         isPlainObject(status) && typeof status.lastSyncAt === "number"
           ? status.lastSyncAt
@@ -464,11 +478,12 @@ function sanitizeAccountStore(value: unknown): UsageHistoryAccountStore {
           ? status.unsupportedUntil
           : undefined,
     },
-    daily: sanitizeAggregateByDay(payload.daily),
-    hourly: sanitizeHourlyByDay(
-      (payload as Partial<UsageHistoryAccountStore>).hourly,
+    daily: sanitizeAggregateByDay(payload.daily, readAggregate),
+    hourly: sanitizeHourlyByDay(payload.hourly, readAggregate),
+    dailyByModel: sanitizeNamedDailyAggregates(
+      payload.dailyByModel,
+      readAggregate,
     ),
-    dailyByModel: sanitizeAggregateByModelByDay(payload.dailyByModel),
     tokenNamesById:
       payload.tokenNamesById && typeof payload.tokenNamesById === "object"
         ? Object.fromEntries(
@@ -480,12 +495,17 @@ function sanitizeAccountStore(value: unknown): UsageHistoryAccountStore {
               .filter(([, value]) => Boolean(value)),
           )
         : {},
-    dailyByToken: sanitizeAggregateByTokenByDay(payload.dailyByToken),
+    dailyByToken: sanitizeNamedDailyAggregates(
+      payload.dailyByToken,
+      readAggregate,
+    ),
     hourlyByToken: sanitizeHourlyByTokenByDay(
-      (payload as Partial<UsageHistoryAccountStore>).hourlyByToken,
+      payload.hourlyByToken,
+      readAggregate,
     ),
     dailyByTokenByModel: sanitizeAggregateByTokenByModelByDay(
       payload.dailyByTokenByModel,
+      readAggregate,
     ),
     latencyDaily: sanitizeLatencyByDay(payload.latencyDaily),
     latencyDailyByModel: sanitizeLatencyByModelByDay(
@@ -504,15 +524,23 @@ function sanitizeAccountStore(value: unknown): UsageHistoryAccountStore {
  * Sanitize the persisted store payload into the current store schema.
  */
 function sanitizeStore(value: unknown): UsageHistoryStore {
-  if (!isPlainObject(value)) {
+  if (value === undefined) {
     return createEmptyStore()
   }
+  if (!isPlainObject(value)) throw new Error("Invalid usage history store")
 
-  if (value.schemaVersion !== USAGE_HISTORY_STORE_SCHEMA_VERSION) {
-    return createEmptyStore()
-  }
+  if (
+    value.schemaVersion !== 1 &&
+    value.schemaVersion !== 2 &&
+    value.schemaVersion !== USAGE_HISTORY_STORE_SCHEMA_VERSION
+  )
+    throw new Error(
+      `Unsupported usage history schema: ${String(value.schemaVersion)}`,
+    )
 
   const accountsRaw = value.accounts
+  if (!isPlainObject(accountsRaw))
+    throw new Error("Invalid usage history accounts")
 
   const accounts: UsageHistoryStore["accounts"] = {}
   if (isPlainObject(accountsRaw)) {
@@ -520,7 +548,10 @@ function sanitizeStore(value: unknown): UsageHistoryStore {
       if (!accountId) {
         continue
       }
-      accounts[accountId] = sanitizeAccountStore(accountValue)
+      accounts[accountId] = sanitizeAccountStore(
+        accountValue,
+        value.schemaVersion !== USAGE_HISTORY_STORE_SCHEMA_VERSION,
+      )
     }
   }
 
@@ -545,6 +576,7 @@ class UsageHistoryStorage {
   private async readStore(): Promise<{
     ok: boolean
     error?: unknown
+    needsMigration?: boolean
     store: UsageHistoryStore
   }> {
     try {
@@ -552,11 +584,13 @@ class UsageHistoryStorage {
         USAGE_HISTORY_STORAGE_KEYS.STORE,
       )) as unknown
 
-      if (stored && typeof stored === "object") {
-        return { ok: true, store: sanitizeStore(stored) }
+      return {
+        ok: true,
+        store: sanitizeStore(stored),
+        needsMigration:
+          isPlainObject(stored) &&
+          stored.schemaVersion !== USAGE_HISTORY_STORE_SCHEMA_VERSION,
       }
-
-      return { ok: true, store: createEmptyStore() }
     } catch (error) {
       logger.error("Failed to load store", error)
       return { ok: false, error, store: createEmptyStore() }
@@ -564,11 +598,28 @@ class UsageHistoryStorage {
   }
 
   async getStore(): Promise<UsageHistoryStore> {
-    return (await this.readStore()).store
+    const read = await this.readStore()
+    if (!read.ok) throw read.error ?? new Error("Failed to load usage history")
+    if (read.needsMigration) {
+      return withExtensionStorageWriteLock(
+        STORAGE_LOCKS.USAGE_HISTORY,
+        async () => {
+          const current = await this.readStore()
+          if (!current.ok)
+            throw current.error ?? new Error("Failed to load usage history")
+          if (current.needsMigration) await this.setStore(current.store)
+          return current.store
+        },
+      )
+    }
+    return read.store
   }
 
   private async setStore(store: UsageHistoryStore): Promise<void> {
-    await this.storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, store)
+    await this.storage.set(
+      USAGE_HISTORY_STORAGE_KEYS.STORE,
+      sanitizeStore(store),
+    )
   }
 
   /** Returns a mutation receipt only after the locked store write succeeds. */
@@ -689,7 +740,7 @@ class UsageHistoryStorage {
       pruneUsageHistoryAccountStore(account, cutoffDayKey)
       account.status = {
         ...account.status,
-        state: "success",
+        state: USAGE_HISTORY_SYNC_STATES.Success,
         lastSyncAt: params.nowMs,
         lastSuccessAt: params.nowMs,
         lastWarning: params.partial
@@ -711,7 +762,9 @@ class UsageHistoryStorage {
     await this.updateAccountStore(accountId, (account) => {
       account.status = {
         ...account.status,
-        state: params.unsupported ? "unsupported" : "error",
+        state: params.unsupported
+          ? USAGE_HISTORY_SYNC_STATES.Unsupported
+          : USAGE_HISTORY_SYNC_STATES.Error,
         lastSyncAt: params.nowMs,
         lastWarning: undefined,
         lastError: params.message,

@@ -95,11 +95,11 @@ test("scoped-token New API detection preserves identity and guides the missing A
     exact: true,
   })
   await expect(openSecurity).toBeEnabled()
-  const opened = context.waitForEvent("page")
+  const previousPages = new Set(context.pages())
   await openSecurity.click()
-  const security = await opened
   // tabs.create may navigate before Playwright attaches route interception.
-  // Read the browser's actual destination before replaying only this fixture GET.
+  // A failed initial navigation can replace its Page with an error document.
+  // Resolve the live new page before replaying only this fixture GET.
   let destination = ""
   await expect
     .poll(async () => {
@@ -113,6 +113,10 @@ test("scoped-token New API detection preserves identity and guides the missing A
       return destination
     })
     .toBe(`${baseUrl}/security#security-access`)
+  const newPages = () =>
+    context.pages().filter((candidate) => !previousPages.has(candidate))
+  await expect.poll(() => newPages().length).toBe(1)
+  const security = newPages()[0]!
   await security.goto(destination)
   await expect(
     security.getByRole("heading", { name: "Security settings" }),

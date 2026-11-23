@@ -19,25 +19,25 @@
         "ariaLabel": "Chart type",
         "histogram": "Histogram",
         "pie": "Pie"
-      }
+      },
+      "costUnit": "Cost unit"
     },
     "dailyOverview": {
       "axes": {
         "requests": "Requests",
-        "tokens": "Tokens / Quota"
+        "tokens": "Tokens"
       },
       "description": "Multi-metric trends with tooltip and zoom.",
       "series": {
         "completionTokens": "Completion tokens",
         "promptTokens": "Prompt tokens",
-        "quota": "Quota",
         "requests": "Requests",
         "totalTokens": "Total tokens"
       },
       "title": "Daily overview"
     },
     "latencyHistogram": {
-      "description": "Histogram of per-request latency (`use_time`) for the current selection.",
+      "description": "Histogram of per-request latency for the current selection.",
       "series": {
         "count": "Count"
       },
@@ -57,11 +57,12 @@
       "title": "Latency trend"
     },
     "modelCostDistribution": {
-      "description": "Top models by quota consumption (converted to USD) in the selected date range.",
+      "description": "Settled model charges grouped by unit.",
       "series": {
-        "usd": "Cost (USD)"
+        "native": "Settled consumption"
       },
-      "title": "Model cost distribution"
+      "title": "Model consumption",
+      "unavailable": "No settled model charges in this selection."
     },
     "modelDistribution": {
       "description": "Top models by total tokens in the selected date range.",
@@ -116,7 +117,7 @@
     "sitesHint": "Pick a subset of sites (empty selection means all).",
     "startDay": "Start date",
     "tokens": "API tokens",
-    "tokensHint": "Optional token filter derived from usage-history aggregates (empty selection means all within selected accounts).",
+    "tokensHint": "Filter recorded requests by API key (empty selection means all keys within selected accounts).",
     "unknownToken": "Unknown token"
   },
   "hover": {
@@ -125,13 +126,15 @@
     "owners": "Accounts",
     "site": "Site",
     "token": "Token",
-    "type": "Type",
     "url": "URL"
   },
   "messages": {
     "error": {
       "exportFailed": "Export failed: {{error}}",
       "exportNoData": "No data to export for the current selection",
+      "lastLoadedDescription": "Showing the last loaded history. Reload failed; retry to update it.",
+      "loadDescription": "Saved history was not replaced. Retry, or use an app version that supports this data.",
+      "loadTitle": "History could not be loaded",
       "settingsSaveFailed": "Failed to save settings: {{error}}",
       "syncFailed": "Sync failed: {{error}}"
     },
@@ -174,10 +177,14 @@
   },
   "summary": {
     "completionTokens": "Output tokens",
-    "cost": "Cost",
+    "cost": "Recorded costs",
+    "partial": "Some charges may be missing.",
     "promptTokens": "Input tokens",
+    "referenceCost": "Reference costs",
+    "referenceHint": "Recorded and reference costs may cover the same requests.",
     "requests": "Requests",
-    "totalTokens": "Total tokens"
+    "totalTokens": "Total tokens",
+    "unpriced": "No recorded costs"
   },
   "syncTab": {
     "actions": {

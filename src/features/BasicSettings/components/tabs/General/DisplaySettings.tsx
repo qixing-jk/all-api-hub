@@ -9,7 +9,7 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
-import type { CurrencyType, DashboardTabType } from "~/types"
+import type { CurrencyDisplay, DashboardTabType } from "~/types"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**
@@ -20,17 +20,17 @@ export default function DisplaySettings() {
   const { t } = useTranslation("settings")
   const {
     currencyType,
+    currencyDisplay = currencyType,
     activeTab,
     showTodayCashflow,
-    updateCurrencyType,
+    updateCurrencyDisplay,
     updateDefaultTab,
     updateShowTodayCashflow,
     resetDisplaySettings,
   } = useUserPreferencesContext()
 
-  const handleCurrencyChange = async (currency: CurrencyType) => {
-    if (currency === currencyType) return
-    const writeResult = await updateCurrencyType(currency)
+  const handleCurrencyChange = async (currency: CurrencyDisplay) => {
+    const writeResult = await updateCurrencyDisplay(currency)
     showUpdateToast(writeResult, t("display.currencyUnit"))
   }
 
@@ -54,6 +54,7 @@ export default function DisplaySettings() {
       onReset={resetDisplaySettings}
       resetRequiresConfirmation={false}
       resetDisabled={
+        currencyDisplay === DEFAULT_PREFERENCES.currencyDisplay &&
         currencyType === DEFAULT_PREFERENCES.currencyType &&
         activeTab === DEFAULT_PREFERENCES.activeTab &&
         showTodayCashflow === DEFAULT_PREFERENCES.showTodayCashflow
@@ -63,15 +64,20 @@ export default function DisplaySettings() {
         <CardList>
           <CardItem
             id="display-currency-unit"
-            icon={<Globe2 className="text-link h-5 w-5" />}
+            icon={<Globe2 className="h-5 w-5 text-link" />}
             title={t("display.currencyUnit")}
             description={t("display.currencyDesc")}
             rightContent={
               <SegmentedControl
                 aria-label={t("display.currencyUnit")}
-                value={currencyType}
+                value={currencyDisplay}
                 onValueChange={handleCurrencyChange}
                 options={[
+                  {
+                    value: "original",
+                    label: t("display.original"),
+                    ariaLabel: t("display.original"),
+                  },
                   {
                     value: "USD",
                     label: t("display.usd"),
@@ -89,7 +95,7 @@ export default function DisplaySettings() {
 
           <CardItem
             id="display-today-cashflow-enabled"
-            icon={<CalendarDays className="text-link h-5 w-5" />}
+            icon={<CalendarDays className="h-5 w-5 text-link" />}
             title={t("display.todayCashflowEnabled")}
             description={t("display.todayCashflowEnabledDesc")}
             rightContent={
@@ -103,7 +109,7 @@ export default function DisplaySettings() {
           <CardItem
             id="display-default-tab"
             icon={
-              <Eye className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+              <Eye className="h-5 w-5 text-theme-600 dark:text-theme-400" />
             }
             title={t("display.defaultTab")}
             description={t("display.defaultTabDesc")}
@@ -132,7 +138,7 @@ export default function DisplaySettings() {
           <CardItem
             id={SETTINGS_ANCHORS.APPEARANCE_LANGUAGE}
             icon={
-              <Languages className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+              <Languages className="h-5 w-5 text-theme-600 dark:text-theme-400" />
             }
             title={t("appearanceLanguage.language")}
             description={t("appearanceLanguage.languageDesc")}

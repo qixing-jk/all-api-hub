@@ -1,4 +1,4 @@
-import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -15,6 +15,8 @@ import {
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { UNIFIED_API_GUIDANCE_TEST_IDS } from "~/features/UnifiedApiGuidance/testIds"
+import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
+import { observeAmount } from "~/services/amounts/balance"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
@@ -45,6 +47,282 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const MANAGED_SITE_BASE_URL = "https://managed-gateway.example.invalid"
+
+const testInUtc = test.extend({ timezoneId: "UTC" })
+
+testInUtc(
+  "overview visibly marks partial native costs and opens coverage on focus",
+  async ({ context, page, extensionId, extensionDir }) => {
+    await forceExtensionLanguage(page, "en")
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await stubLlmMetadataIndex(context)
+    const worker = await getServiceWorker(context)
+    const date = new Date()
+    const dayStart = date.setUTCHours(0, 0, 0, 0)
+    const now = date.setUTCHours(12, 0, 0, 0)
+    await page.clock.setFixedTime(now)
+    const scope = accountBalanceScope({
+      baseUrl: "https://partial-usage.invalid",
+      accountId: "partial-usage",
+    })
+    scope.keys = scope.models = scope.projects = scope.groups = { kind: "all" }
+    await seedStoredAccounts(worker, [
+      createStoredAccount({
+        id: "partial-usage",
+        site_name: "Partial usage",
+        site_url: scope.authority,
+        last_sync_time: now,
+        account_info: {
+          quota: undefined,
+          settledConsumption: [
+            {
+              scope,
+              asset: { kind: "currency", code: "USD" },
+              amount: observeAmount(
+                "2.5",
+                {
+                  adapter: "fixture",
+                  operation: "usage",
+                  contractVersion: "1",
+                  kind: "reported",
+                },
+                now,
+              ),
+              window: { start: dayStart, end: now, timeZone: "UTC" },
+              settlement: "settled",
+              coverage: "partial",
+            },
+          ],
+        },
+      }),
+    ])
+    await seedUserPreferences(worker, { autoRefresh: false })
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+    )
+    await waitForExtensionRoot(page)
+    const value = page.getByLabel(/USD\s*2.5.*Partial daily statistic/)
+    await expect(
+      value.getByText("Partial daily statistic", { exact: true }),
+    ).toBeVisible()
+    const card = page.locator('[data-slot="card"]').filter({ has: value })
+    await captureVisualViews({
+      page,
+      extensionDir,
+      ready: value,
+      captureTarget: card,
+      id: "overview-native-partial",
+      views: [
+        { id: "light", width: 1440, height: 900, theme: "light" },
+        { id: "dark", width: 390, height: 900, theme: "dark" },
+      ],
+    })
+    await value.focus()
+    await expect(page.getByRole("tooltip")).toContainText("Eligible 1")
+    const restrictedScope = { ...scope, models: { kind: "unknown" as const } }
+    await seedStoredAccounts(worker, [
+      createStoredAccount({
+        id: "partial-usage",
+        site_name: "Partial usage",
+        site_url: scope.authority,
+        last_sync_time: now,
+        account_info: {
+          quota: undefined,
+          settledConsumption: [
+            {
+              scope: restrictedScope,
+              asset: { kind: "currency", code: "USD" },
+              amount: observeAmount(
+                "3.5",
+                {
+                  adapter: "fixture",
+                  operation: "usage",
+                  contractVersion: "1",
+                  kind: "reported",
+                },
+                now,
+              ),
+              window: { start: dayStart, end: now, timeZone: "UTC" },
+              settlement: "settled",
+              coverage: "partial",
+            },
+          ],
+        },
+      }),
+    ])
+    await page.reload()
+    await waitForExtensionRoot(page)
+    const providerDay = page.getByRole("region", {
+      name: "Usage by site day",
+      exact: true,
+    })
+    await expect(providerDay).toContainText("USD 3.5")
+    await expect(
+      providerDay.getByText("Partial daily statistic", { exact: true }),
+    ).toBeVisible()
+    await captureVisualViews({
+      page,
+      extensionDir,
+      ready: providerDay,
+      captureTarget: providerDay,
+      id: "overview-provider-day-partial",
+    })
+    await seedUserPreferences(worker, {
+      autoRefresh: false,
+      showTodayCashflow: true,
+    })
+    await page.setViewportSize({ width: 320, height: 900 })
+    await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
+    await waitForExtensionRoot(page)
+    const providerSummary = page
+      .getByRole("region", { name: "Financial totals", exact: true })
+      .getByRole("group", {
+        name: "Usage by site day",
+        exact: true,
+      })
+    await expect(providerSummary).toContainText("USD 3.5")
+    await expect(
+      providerSummary.getByText("Partial daily statistic", { exact: true }),
+    ).toBeVisible()
+    const partialRow = page
+      .getByRole("group", { name: "Usage by site day", exact: true })
+      .filter({ has: page.getByText("Partial", { exact: true }) })
+    await expect(partialRow.getByText("Partial", { exact: true })).toBeVisible()
+    await captureVisualViews({
+      page,
+      extensionDir,
+      ready: providerSummary,
+      captureTarget: page.locator("body"),
+      id: "popup-provider-day-partial",
+    })
+  },
+)
+
+test("overview shows site-day usage with no usage history", async ({
+  context,
+  page,
+  extensionDir,
+  extensionId,
+}) => {
+  await forceExtensionLanguage(page, "en")
+  const worker = await getServiceWorker(context)
+  const now = Date.now()
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "overview-site-day",
+      site_name: "Example API",
+      site_type: SITE_TYPES.SUB2API,
+      site_url: "https://overview-site-day.invalid",
+      last_sync_time: now,
+      account_info: {
+        usage: {
+          scope: "site_today",
+          totalRequests: 15,
+          totalTokens: 230,
+          cost: {
+            asset: { kind: "currency", code: "USD" },
+            amount: observeAmount(
+              "1.25",
+              {
+                kind: "reported",
+                adapter: SITE_TYPES.SUB2API,
+                operation: "usage",
+                contractVersion: "usd/v1",
+              },
+              now,
+            ),
+          },
+        },
+      },
+    }),
+  ])
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+  const usage = page.getByRole("region", { name: "Usage by site day" })
+  await expect(usage.getByText("Example API", { exact: true })).toBeVisible()
+  await expect(usage.getByText(/USD\s*1.25/)).toBeVisible()
+  await expect(usage.getByText("15", { exact: true })).toBeVisible()
+  await expect(usage.getByText("230", { exact: true })).toBeVisible()
+  await captureVisualViews({
+    page,
+    extensionDir,
+    captureTarget: usage,
+    ready: usage,
+    id: "overview-site-day",
+    views: [
+      { id: "desktop", width: 1440, height: 900, theme: "light" },
+      { id: "mobile", width: 390, height: 900, theme: "light" },
+    ],
+  })
+})
+
+test("overview discloses the coverage of saved reference costs", async ({
+  context,
+  page,
+  extensionId,
+  extensionDir,
+}) => {
+  await forceExtensionLanguage(page, "en")
+  const worker = await getServiceWorker(context)
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "overview-reference",
+      site_name: "Reference spending",
+      site_url: "https://overview-reference.invalid",
+      last_sync_time: Date.now(),
+      account_info: {
+        today_quota_consumption: 1_250_000,
+        todayStatsAvailability: {
+          consumption: { status: "complete" },
+          requests: { status: "unavailable", reason: "not_collected" },
+          tokens: { status: "unavailable", reason: "not_collected" },
+          income: { status: "unavailable", reason: "not_collected" },
+        },
+      },
+    }),
+    createStoredAccount({
+      id: "overview-no-reference",
+      site_name: "Unobserved spending",
+      site_url: "https://overview-no-reference.invalid",
+      account_info: {
+        todayStatsAvailability: {
+          consumption: { status: "unavailable", reason: "not_collected" },
+          income: { status: "unavailable", reason: "not_collected" },
+          requests: { status: "unavailable", reason: "not_collected" },
+          tokens: { status: "unavailable", reason: "not_collected" },
+        },
+      },
+    }),
+  ])
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+  const value = page.getByLabel(
+    /USD\s*2.5.*Partial daily statistic.*Eligible 2/,
+  )
+  await expect(value).toBeVisible()
+  const reference = page.getByText(
+    "Reference costs · Partial daily statistic",
+    {
+      exact: true,
+    },
+  )
+  await expect(reference).toBeVisible()
+  const usageCard = page
+    .locator('[data-slot="card"]')
+    .filter({ has: reference })
+  await usageCard.scrollIntoViewIfNeeded()
+  await captureVisualViews({
+    page,
+    extensionDir,
+    id: "overview-reference-coverage",
+    ready: value,
+    captureTarget: usageCard,
+  })
+})
 
 test("overview automation explains mixed announcement and sync results", async ({
   context,
@@ -158,6 +436,18 @@ test("overview automation explains mixed announcement and sync results", async (
     views: [
       { id: "light", width: 1280, height: 960, theme: "light" },
       { id: "dark", width: 900, height: 900, theme: "dark" },
+    ],
+  })
+  const usage = page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.recentUsage)
+  await captureVisualViews({
+    page,
+    ready: usage,
+    captureTarget: usage,
+    id: "options-overview-usage",
+    extensionDir,
+    views: [
+      { id: "light", width: 1280, height: 960, theme: "light" },
+      { id: "dark", width: 390, height: 960, theme: "dark" },
     ],
   })
   await automation

@@ -48,7 +48,7 @@ describe("useUsageAnalyticsData", () => {
       .mockReturnValueOnce(oldAccounts.promise)
       .mockResolvedValueOnce([buildSiteAccount({ id: "new" })])
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: {},
     })
     const { result } = renderHook(() => useUsageAnalyticsData())
@@ -69,7 +69,7 @@ describe("useUsageAnalyticsData", () => {
         .mockReturnValueOnce(oldAccounts.promise)
         .mockReturnValueOnce(newAccounts.promise)
       vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-        schemaVersion: 1,
+        schemaVersion: 3,
         accounts: {},
       })
       const { result } = renderHook(() => useUsageAnalyticsData())
@@ -100,7 +100,7 @@ describe("useUsageAnalyticsData", () => {
       pending.promise,
     )
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: {},
     })
     const { result, unmount } = renderHook(() => useUsageAnalyticsData())
@@ -139,7 +139,7 @@ describe("useUsageAnalyticsData", () => {
                 promptTokens: 1,
                 completionTokens: 1,
                 totalTokens: 2,
-                quotaConsumed: 1,
+                referenceCostUsd: 0.000002,
               },
             },
           },
@@ -242,5 +242,30 @@ describe("useUsageAnalyticsData", () => {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       },
     )
+    expect(result.current.loadError).toBe("accounts exploded")
+    expect(result.current.hasLoadedData).toBe(true)
+  })
+
+  it("exposes a failure even when the rejection has no message", async () => {
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([])
+    vi.mocked(usageHistoryStorage.getStore).mockRejectedValueOnce(null)
+    const { result } = renderHook(() => useUsageAnalyticsData())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.loadError).toBeTruthy()
+    expect(result.current.hasLoadedData).toBe(false)
+  })
+
+  it("retains the initial read error until a successful reload", async () => {
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([])
+    vi.mocked(usageHistoryStorage.getStore)
+      .mockRejectedValueOnce(new Error("Unsupported usage history schema"))
+      .mockResolvedValueOnce({ schemaVersion: 3, accounts: {} })
+    const { result } = renderHook(() => useUsageAnalyticsData())
+    await act(async () => {})
+    expect(result.current.loadError).toBe("Unsupported usage history schema")
+    expect(result.current.hasLoadedData).toBe(false)
+    await act(async () => result.current.loadData())
+    expect(result.current.loadError).toBeNull()
+    expect(result.current.hasLoadedData).toBe(true)
   })
 })

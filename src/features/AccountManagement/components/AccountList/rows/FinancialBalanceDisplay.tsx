@@ -426,6 +426,7 @@ export function FinancialBalanceDisplay({
               : t("list.balance.refreshBalance")
       }
       wrapperClassName="w-full"
+      pointerTransparent
       position="top-end"
       positionAnchor={positionAnchor}
     >

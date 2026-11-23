@@ -2,6 +2,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES as AUTO_CHECKIN_PANEL_STATUSES,
   OPTIONS_OVERVIEW_AUTO_CHECKIN_ACTION_IDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
 } from "~/features/OptionsOverview/ids"
 import type {
   OptionsOverviewAutoCheckinAction,
@@ -25,13 +26,13 @@ const autoCheckinRunResultStatusMap = {
 } as const satisfies Record<AutoCheckinRunResult, AutoCheckinPanelStatus>
 
 const autoCheckinPanelSeverityMap = {
-  [AUTO_CHECKIN_PANEL_STATUSES.failed]: "error",
-  [AUTO_CHECKIN_PANEL_STATUSES.skipped]: "info",
-  [AUTO_CHECKIN_PANEL_STATUSES.partial]: "warning",
-  [AUTO_CHECKIN_PANEL_STATUSES.disabled]: "info",
-  [AUTO_CHECKIN_PANEL_STATUSES.notRun]: "info",
-  [AUTO_CHECKIN_PANEL_STATUSES.ready]: "success",
-  [AUTO_CHECKIN_PANEL_STATUSES.success]: "success",
+  [AUTO_CHECKIN_PANEL_STATUSES.failed]: OPTIONS_OVERVIEW_SEVERITIES.Error,
+  [AUTO_CHECKIN_PANEL_STATUSES.skipped]: OPTIONS_OVERVIEW_SEVERITIES.Info,
+  [AUTO_CHECKIN_PANEL_STATUSES.partial]: OPTIONS_OVERVIEW_SEVERITIES.Warning,
+  [AUTO_CHECKIN_PANEL_STATUSES.disabled]: OPTIONS_OVERVIEW_SEVERITIES.Info,
+  [AUTO_CHECKIN_PANEL_STATUSES.notRun]: OPTIONS_OVERVIEW_SEVERITIES.Info,
+  [AUTO_CHECKIN_PANEL_STATUSES.ready]: OPTIONS_OVERVIEW_SEVERITIES.Success,
+  [AUTO_CHECKIN_PANEL_STATUSES.success]: OPTIONS_OVERVIEW_SEVERITIES.Success,
 } as const satisfies Record<AutoCheckinPanelStatus, OptionsOverviewSeverity>
 
 /**

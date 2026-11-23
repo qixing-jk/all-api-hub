@@ -42,10 +42,10 @@ export function ProviderDayUsageSummary({
   return (
     <div
       role="group"
-      aria-label={t("account:financial.siteDay")}
+      aria-label={t("optionsOverview:usage.siteDay")}
       className="col-span-full min-w-0 space-y-1 text-xs text-muted-foreground"
     >
-      <p className="font-medium">{t("account:financial.siteDay")}</p>
+      <p className="font-medium">{t("optionsOverview:usage.siteDay")}</p>
       {readings.map(({ site, usage, observedAt, lastKnown, index }) => (
         <div
           key={`${site.id}:${index}`}

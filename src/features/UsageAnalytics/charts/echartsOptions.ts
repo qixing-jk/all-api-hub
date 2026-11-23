@@ -1,10 +1,52 @@
 import { CHART_COLORS } from "~/components/charts/chartColors"
 import type { EChartsOption } from "~/components/charts/echarts"
+import { CURRENCIES } from "~/constants/money"
+import { assetIdentity, type Asset } from "~/services/amounts/assets"
+import { sumDecimals } from "~/services/amounts/decimal"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_SETTLEMENT_STATUSES,
+  OBSERVATION_STATUSES,
+} from "~/services/amounts/financialConstants"
+import type { FinancialConsumptionFact } from "~/services/amounts/usage"
 import { USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS } from "~/services/history/usageHistory/core"
 import type {
   UsageHistoryAggregate,
   UsageHistoryLatencyAggregate,
 } from "~/types/usageHistory"
+import { getAssetDisplayValue, getAssetLabel } from "~/utils/core/money"
+
+export const REFERENCE_COST_KEY = "reference"
+
+/** Group actual charges by asset identity, preserving zero and excluding unknown fees. */
+export function settledCostTotals(facts: FinancialConsumptionFact[]) {
+  const byAsset = new Map<
+    string,
+    {
+      asset: Exclude<Asset, { kind: typeof ASSET_KINDS.Unknown }>
+      values: string[]
+    }
+  >()
+  for (const fact of facts) {
+    if (
+      fact.asset.kind === ASSET_KINDS.Unknown ||
+      fact.amount.status !== OBSERVATION_STATUSES.Known ||
+      fact.settlement !== FINANCIAL_SETTLEMENT_STATUSES.Settled ||
+      fact.amount.source.kind === EVIDENCE_KINDS.Legacy ||
+      fact.amount.source.kind === EVIDENCE_KINDS.Manual
+    )
+      continue
+    const key = assetIdentity(fact.asset)
+    const group = byAsset.get(key) ?? { asset: fact.asset, values: [] }
+    group.values.push(fact.amount.value)
+    byAsset.set(key, group)
+  }
+  return Array.from(byAsset, ([key, { asset, values }]) => ({
+    key,
+    amount: { asset, value: sumDecimals(values) },
+  })).sort((a, b) => a.key.localeCompare(b.key))
+}
 
 /**
  * Create human-readable bucket labels aligned with `USAGE_HISTORY_LATENCY_BUCKET_UPPER_BOUNDS_SECONDS`.
@@ -23,7 +65,7 @@ export function getLatencyBucketLabels(): string[] {
 }
 
 /**
- * Build the combined daily overview chart option (requests + token counts + quota).
+ * Build daily requests, model tokens and optional historical USD reference costs.
  *
  * `dayKeys` is assumed to be a dense, ordered domain; any missing aggregate buckets are treated as 0.
  */
@@ -36,7 +78,9 @@ export function buildDailyOverviewOption(params: {
   promptTokensSeriesLabel: string
   completionTokensSeriesLabel: string
   totalTokensSeriesLabel: string
-  quotaSeriesLabel: string
+  recordedCostSeriesLabel?: string
+  referenceCostSeriesLabel?: string
+  selectedCostKey?: string
   legendSelected?: Record<string, boolean>
 }): EChartsOption {
   const {
@@ -48,7 +92,9 @@ export function buildDailyOverviewOption(params: {
     promptTokensSeriesLabel,
     completionTokensSeriesLabel,
     totalTokensSeriesLabel,
-    quotaSeriesLabel,
+    referenceCostSeriesLabel,
+    recordedCostSeriesLabel,
+    selectedCostKey,
     legendSelected,
   } = params
 
@@ -58,21 +104,83 @@ export function buildDailyOverviewOption(params: {
     (dayKey) => daily[dayKey]?.completionTokens ?? 0,
   )
   const totalTokens = dayKeys.map((dayKey) => daily[dayKey]?.totalTokens ?? 0)
-  const quotaConsumed = dayKeys.map(
-    (dayKey) => daily[dayKey]?.quotaConsumed ?? 0,
+  const referenceCosts = dayKeys.map(
+    (dayKey) => daily[dayKey]?.referenceCostUsd ?? null,
+  )
+  const showReferenceCosts =
+    (!selectedCostKey || selectedCostKey === REFERENCE_COST_KEY) &&
+    referenceCostSeriesLabel &&
+    referenceCosts.some((amount) => amount !== null)
+
+  const fees = new Map<string, { unit: string; values: Map<string, number> }>()
+  if (recordedCostSeriesLabel) {
+    for (const dayKey of dayKeys) {
+      for (const { key, amount } of settledCostTotals(
+        daily[dayKey]?.consumption ?? [],
+      )) {
+        if (selectedCostKey && selectedCostKey !== key) continue
+        const value = Number(getAssetDisplayValue(amount))
+        if (!Number.isFinite(value)) continue
+        const unit =
+          amount.asset.kind === ASSET_KINDS.Quota
+            ? amount.asset.displayLabel
+            : getAssetLabel(amount.asset)
+        const series = fees.get(key) ?? { unit, values: new Map() }
+        series.values.set(dayKey, value)
+        fees.set(key, series)
+      }
+    }
+  }
+  const usdKey = assetIdentity({
+    kind: ASSET_KINDS.Currency,
+    code: CURRENCIES.USD,
+  })
+  const axes = [
+    ...new Set([...(showReferenceCosts ? [usdKey] : []), ...fees.keys()]),
+  ]
+  const feeAxes = axes.map((key, index) => ({
+    type: "value" as const,
+    position: "right" as const,
+    offset: 42 + index * 54,
+    axisLabel: {
+      color: CHART_COLORS.axis,
+      formatter: key === usdKey ? "${value}" : "{value}",
+    },
+    splitLine: { show: false },
+  }))
+  const unitCounts = new Map<string, number>()
+  for (const { unit } of fees.values())
+    unitCounts.set(unit, (unitCounts.get(unit) ?? 0) + 1)
+  const recordedFeeSeries = Array.from(
+    fees,
+    ([key, { unit, values }], index) => ({
+      name: `${recordedCostSeriesLabel} (${unit})${(unitCounts.get(unit) ?? 0) > 1 ? ` #${index + 1}` : ""}`,
+      type: "line" as const,
+      yAxisIndex: axes.indexOf(key) + 2,
+      data: dayKeys.map((day) => values.get(day) ?? null),
+    }),
   )
 
   return {
     backgroundColor: "transparent",
     tooltip: { trigger: "axis" },
-    legend: { top: 0, ...(legendSelected ? { selected: legendSelected } : {}) },
+    legend: {
+      type: "scroll",
+      top: 0,
+      right: 52,
+      textStyle: { color: CHART_COLORS.axis },
+      ...(legendSelected ? { selected: legendSelected } : {}),
+    },
     toolbox: {
       feature: {
         restore: {},
         saveAsImage: {},
       },
     },
-    grid: { left: "10%", right: "10%" },
+    grid: {
+      left: "10%",
+      right: feeAxes.length ? Math.max(94, 42 + feeAxes.length * 54) : "10%",
+    },
     xAxis: {
       type: "category",
       data: dayKeys,
@@ -92,6 +200,7 @@ export function buildDailyOverviewOption(params: {
         axisLabel: { color: CHART_COLORS.axis },
         splitLine: { show: false },
       },
+      ...feeAxes,
     ],
     dataZoom: [
       { type: "inside", xAxisIndex: 0 },
@@ -134,15 +243,18 @@ export function buildDailyOverviewOption(params: {
         showSymbol: false,
         smooth: true,
       },
-      {
-        name: quotaSeriesLabel,
-        type: "line",
-        yAxisIndex: 1,
-        data: quotaConsumed,
-        showSymbol: false,
-        smooth: true,
-        lineStyle: { type: "dashed" },
-      },
+      ...recordedFeeSeries,
+      ...(showReferenceCosts
+        ? [
+            {
+              name: referenceCostSeriesLabel,
+              type: "line" as const,
+              yAxisIndex: 2,
+              data: referenceCosts,
+              lineStyle: { type: "dashed" as const },
+            },
+          ]
+        : []),
     ],
   }
 }
@@ -155,8 +267,15 @@ export function buildHorizontalBarOption(params: {
   values: number[]
   valueLabel?: string
   inverse?: boolean
+  showValueLabels?: boolean
 }): EChartsOption {
-  const { categories, values, valueLabel, inverse = true } = params
+  const {
+    categories,
+    values,
+    valueLabel,
+    inverse = true,
+    showValueLabels = false,
+  } = params
 
   return {
     backgroundColor: "transparent",
@@ -178,6 +297,15 @@ export function buildHorizontalBarOption(params: {
       {
         name: valueLabel ?? "",
         type: "bar",
+        ...(showValueLabels
+          ? {
+              label: {
+                show: true,
+                position: "right",
+                color: CHART_COLORS.axis,
+              },
+            }
+          : {}),
         data: values,
       },
     ],
@@ -258,7 +386,8 @@ export function buildHeatmapOption(params: {
   return {
     backgroundColor: "transparent",
     tooltip: { position: "top" },
-    grid: { left: 16, right: 24, top: 16, bottom: 24, containLabel: true },
+    // The calculable scale includes handles and numeric labels above its bar.
+    grid: { left: 16, right: 24, top: 16, bottom: 88, containLabel: true },
     xAxis: {
       type: "category",
       data: dayKeys,

@@ -62,6 +62,7 @@ function buildDisplayPreferencesSnapshot(
     entrypoint,
     active_tab: preferences.activeTab,
     currency_type: preferences.currencyType,
+    currency_display: preferences.currencyDisplay ?? preferences.currencyType,
     show_today_cashflow_enabled: preferences.showTodayCashflow !== false,
     sort_field: preferences.sortField ?? PRODUCT_ANALYTICS_SORT_FIELDS.None,
     sort_order: preferences.sortOrder,
@@ -165,6 +166,7 @@ export const generalSettingsSnapshots = {
     keys: [
       "activeTab",
       "currencyType",
+      "currencyDisplay",
       "showTodayCashflow",
       "sortField",
       "sortOrder",

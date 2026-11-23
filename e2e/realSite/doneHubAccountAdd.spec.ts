@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { test } from "~~/e2e/fixtures/extensionTest"
+import { registerBalanceDefaultDisplayTests } from "~~/e2e/scenarios/balanceDefaultDisplay"
 import {
   forceExtensionLanguage,
   seedUserPreferences,
@@ -22,6 +23,8 @@ import {
   createSharedRealSiteAccountFixtureCache,
   resolveSharedRealSiteAccountFixture,
 } from "~~/e2e/utils/realSite/sharedAccountFixture"
+
+registerBalanceDefaultDisplayTests("DONE_HUB")
 
 registerRealSiteAccountDetectionTests({
   label: "DoneHub",

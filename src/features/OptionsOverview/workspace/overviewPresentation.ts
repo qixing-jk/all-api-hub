@@ -1,6 +1,7 @@
 import {
   OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES as AUTO_CHECKIN_PANEL_STATUSES,
   OPTIONS_OVERVIEW_CONFIGURATION_STATUSES as CONFIGURATION_STATUSES,
+  OPTIONS_OVERVIEW_SEVERITIES,
 } from "~/features/OptionsOverview/ids"
 import type {
   OptionsOverviewActionCenterItem,
@@ -13,23 +14,23 @@ export const OVERVIEW_NEUTRAL_PANEL_CLASSES =
   "border-border/80 bg-card/90 dark:border-foreground/10 dark:bg-foreground/[0.03]"
 
 export const OVERVIEW_SEVERITY_BADGE_VARIANTS = {
-  success: "success",
-  warning: "warning",
-  info: "info",
-  error: "danger",
+  [OPTIONS_OVERVIEW_SEVERITIES.Success]: "success",
+  [OPTIONS_OVERVIEW_SEVERITIES.Warning]: "warning",
+  [OPTIONS_OVERVIEW_SEVERITIES.Info]: "info",
+  [OPTIONS_OVERVIEW_SEVERITIES.Error]: "danger",
 } as const satisfies Record<OptionsOverviewSeverity, string>
 
 export const OVERVIEW_ATTENTION_BADGE_VARIANTS = {
-  error: "danger",
-  warning: "warning",
-  info: "info",
+  [OPTIONS_OVERVIEW_SEVERITIES.Error]: "danger",
+  [OPTIONS_OVERVIEW_SEVERITIES.Warning]: "warning",
+  [OPTIONS_OVERVIEW_SEVERITIES.Info]: "info",
 } as const satisfies Record<OptionsOverviewAttentionItem["severity"], string>
 
 export const OVERVIEW_SEVERITY_INDICATOR_CLASSES = {
-  error: "bg-destructive-indicator",
-  warning: "bg-warning-indicator",
-  info: "bg-info-indicator",
-  success: "bg-success-indicator",
+  [OPTIONS_OVERVIEW_SEVERITIES.Error]: "bg-destructive-indicator",
+  [OPTIONS_OVERVIEW_SEVERITIES.Warning]: "bg-warning-indicator",
+  [OPTIONS_OVERVIEW_SEVERITIES.Info]: "bg-info-indicator",
+  [OPTIONS_OVERVIEW_SEVERITIES.Success]: "bg-success-indicator",
 } as const satisfies Record<OptionsOverviewSeverity, string>
 
 export const OVERVIEW_CONFIGURATION_BADGE_VARIANTS = {

@@ -10,3 +10,27 @@ export function getDisplayCurrency(
     ? undefined
     : (currencyDisplay ?? currencyType)
 }
+
+/** Original mode preserves the saved reference currency on both persistence and UI updates. */
+export function getCurrencyDisplayUpdates(currencyDisplay: CurrencyDisplay): {
+  currencyDisplay: CurrencyDisplay
+  currencyType?: CurrencyType
+} {
+  return {
+    currencyDisplay,
+    ...(currencyDisplay === CURRENCY_DISPLAY_MODES.Original
+      ? {}
+      : { currencyType: currencyDisplay }),
+  }
+}
+
+/** The overview cycles through the same three modes offered by settings. */
+export function getNextCurrencyDisplay(
+  currencyDisplay: CurrencyDisplay,
+): CurrencyDisplay {
+  return currencyDisplay === CURRENCY_DISPLAY_MODES.Original
+    ? CURRENCY_DISPLAY_MODES.USD
+    : currencyDisplay === CURRENCY_DISPLAY_MODES.USD
+      ? CURRENCY_DISPLAY_MODES.CNY
+      : CURRENCY_DISPLAY_MODES.Original
+}

@@ -22,11 +22,6 @@
     "retry": "Retry",
     "save": "Save"
   },
-  "currency": {
-    "clickToSwitch": "Click to switch to {{currency}}",
-    "cny": "CNY",
-    "usd": "USD"
-  },
   "datePicker": {
     "in1Year": "+1 year",
     "in30Days": "+30 days",

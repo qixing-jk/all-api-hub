@@ -134,3 +134,9 @@ export const OPTIONS_OVERVIEW_CONFIGURATION_SUB_ITEM_IDS = {
   managedSiteChannels: "managedSiteChannels",
   managedSiteModelSync: "managedSiteModelSync",
 } as const
+export const OPTIONS_OVERVIEW_SEVERITIES = {
+  Error: "error",
+  Warning: "warning",
+  Info: "info",
+  Success: "success",
+} as const

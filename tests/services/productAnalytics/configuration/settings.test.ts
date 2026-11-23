@@ -538,6 +538,7 @@ describe("settings product analytics snapshots", () => {
         setting_id: "display_preferences_snapshot",
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         active_tab: "balance",
+        currency_display: "original",
         currency_type: "CNY",
         show_today_cashflow_enabled: false,
         sort_field: "income",
@@ -670,10 +671,8 @@ describe("settings product analytics snapshots", () => {
         temp_window_fallback_automatic_bypass_redemption_assist_enabled: false,
         temp_window_fallback_automatic_bypass_ldoh_site_lookup_enabled: true,
         temp_window_fallback_automatic_bypass_key_management_enabled: false,
-        temp_window_fallback_automatic_bypass_managed_site_channels_enabled:
-          true,
-        temp_window_fallback_automatic_bypass_managed_site_model_sync_enabled:
-          false,
+        temp_window_fallback_automatic_bypass_managed_site_channels_enabled: true,
+        temp_window_fallback_automatic_bypass_managed_site_model_sync_enabled: false,
         mode: PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow,
         reminder_dismissed: true,
       },

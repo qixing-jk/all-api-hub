@@ -3,8 +3,10 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
+import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DisplaySettings from "~/features/BasicSettings/components/tabs/General/DisplaySettings"
+import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
@@ -17,13 +19,29 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
 }))
 
 describe("DisplaySettings", () => {
+  it("offers original currencies beside the two converted currencies", async () => {
+    const updateCurrencyDisplay = vi.fn().mockResolvedValue({ ok: true })
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      ...vi.mocked(useUserPreferencesContext)(),
+      currencyDisplay: CURRENCIES.USD,
+      updateCurrencyDisplay,
+    })
+    renderSubject()
+    fireEvent.click(
+      screen.getByRole("button", { name: "settings:display.original" }),
+    )
+    await waitFor(() =>
+      expect(updateCurrencyDisplay).toHaveBeenCalledWith("original"),
+    )
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       activeTab: DATA_TYPE_BALANCE,
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
+      currencyDisplay: CURRENCY_DISPLAY_MODES.Original,
       showTodayCashflow: true,
-      updateCurrencyType: vi.fn().mockResolvedValue({ ok: true }),
+      updateCurrencyDisplay: vi.fn().mockResolvedValue({ ok: true }),
       updateDefaultTab: vi.fn().mockResolvedValue({ ok: true }),
       updateShowTodayCashflow: vi.fn().mockResolvedValue({ ok: true }),
       resetDisplaySettings: vi.fn().mockResolvedValue({ ok: true }),
@@ -37,16 +55,42 @@ describe("DisplaySettings", () => {
       </I18nextProvider>,
     )
 
-  it("disables reset when display settings already use defaults", () => {
-    const context = vi.mocked(useUserPreferencesContext)()
+  it.each([
+    [CURRENCIES.USD, true],
+    [CURRENCIES.CNY, false],
+  ] as const)(
+    "reflects the remembered %s reference currency in reset availability",
+    (currencyType, disabled) => {
+      const context = vi.mocked(useUserPreferencesContext)()
+      vi.mocked(useUserPreferencesContext).mockReturnValue({
+        ...context,
+        currencyType,
+        activeTab: DATA_TYPE_CASHFLOW,
+      })
+      renderSubject()
+      expect(
+        screen.getByRole("button", { name: "common:actions.reset" }),
+      ).toHaveProperty("disabled", disabled)
+    },
+  )
+
+  it("accepts Original while the previous currency selection is pending", () => {
+    const updateCurrencyDisplay = vi.fn(
+      () => new Promise<PreferenceWriteResult>(() => {}),
+    )
     vi.mocked(useUserPreferencesContext).mockReturnValue({
-      ...context,
-      activeTab: DATA_TYPE_CASHFLOW,
+      ...vi.mocked(useUserPreferencesContext)(),
+      updateCurrencyDisplay,
     })
     renderSubject()
-    expect(
-      screen.getByRole("button", { name: "common:actions.reset" }),
-    ).toBeDisabled()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "settings:display.usd" }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "settings:display.original" }),
+    )
+    expect(updateCurrencyDisplay.mock.calls).toEqual([["USD"], ["original"]])
   })
 
   it("offers the interface language beside the display preferences", () => {
@@ -62,12 +106,12 @@ describe("DisplaySettings", () => {
 
   it("shows result-aware feedback after changing the currency", async () => {
     const writeResult = { ok: true as const }
-    const updateCurrencyType = vi.fn().mockResolvedValue(writeResult)
+    const updateCurrencyDisplay = vi.fn().mockResolvedValue(writeResult)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       activeTab: DATA_TYPE_BALANCE,
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       showTodayCashflow: true,
-      updateCurrencyType,
+      updateCurrencyDisplay,
       updateDefaultTab: vi.fn().mockResolvedValue({ ok: true }),
       updateShowTodayCashflow: vi.fn().mockResolvedValue({ ok: true }),
       resetDisplaySettings: vi.fn().mockResolvedValue({ ok: true }),
@@ -80,7 +124,7 @@ describe("DisplaySettings", () => {
     )
 
     await waitFor(() => {
-      expect(updateCurrencyType).toHaveBeenCalledWith("CNY")
+      expect(updateCurrencyDisplay).toHaveBeenCalledWith("CNY")
       expect(showUpdateToast).toHaveBeenCalledWith(
         writeResult,
         "settings:display.currencyUnit",
@@ -92,9 +136,9 @@ describe("DisplaySettings", () => {
     const updateDefaultTab = vi.fn().mockResolvedValue({ ok: true })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       activeTab: DATA_TYPE_BALANCE,
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       showTodayCashflow: false,
-      updateCurrencyType: vi.fn().mockResolvedValue({ ok: true }),
+      updateCurrencyDisplay: vi.fn().mockResolvedValue({ ok: true }),
       updateDefaultTab,
       updateShowTodayCashflow: vi.fn().mockResolvedValue({ ok: true }),
       resetDisplaySettings: vi.fn().mockResolvedValue({ ok: true }),
@@ -117,9 +161,9 @@ describe("DisplaySettings", () => {
     const updateDefaultTab = vi.fn().mockResolvedValue(writeResult)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       activeTab: DATA_TYPE_BALANCE,
-      currencyType: "USD",
+      currencyType: CURRENCIES.USD,
       showTodayCashflow: true,
-      updateCurrencyType: vi.fn().mockResolvedValue({ ok: true }),
+      updateCurrencyDisplay: vi.fn().mockResolvedValue({ ok: true }),
       updateDefaultTab,
       updateShowTodayCashflow: vi.fn().mockResolvedValue({ ok: true }),
       resetDisplaySettings: vi.fn().mockResolvedValue({ ok: true }),

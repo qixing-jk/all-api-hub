@@ -1,3 +1,8 @@
+import type { FinancialConsumptionFact } from "~/services/amounts/usage"
+
+/** Stored bucket ID for usage whose token ID is unavailable. */
+export const UNKNOWN_USAGE_TOKEN_ID = "unknown"
+
 export const USAGE_HISTORY_SCHEDULE_MODE = {
   MANUAL: "manual",
   AFTER_REFRESH: "afterRefresh",
@@ -41,7 +46,11 @@ export interface UsageHistoryAggregate {
   promptTokens: number
   completionTokens: number
   totalTokens: number
-  quotaConsumed: number
+  /** USD equivalent under the historical quota formula, independently of native charges. */
+  referenceCostUsd?: number
+  consumption?: FinancialConsumptionFact[]
+  /** Some included requests lack known charge facts. */
+  consumptionIncomplete?: boolean
 }
 
 /**
@@ -82,8 +91,15 @@ export interface UsageHistoryCursor {
   fingerprintsAtLastSeenCreatedAt: string[]
 }
 
+export const USAGE_HISTORY_SYNC_STATES = {
+  Never: "never",
+  Success: "success",
+  Error: "error",
+  Unsupported: "unsupported",
+} as const
+
 export type UsageHistorySyncState =
-  "never" | "success" | "error" | "unsupported"
+  (typeof USAGE_HISTORY_SYNC_STATES)[keyof typeof USAGE_HISTORY_SYNC_STATES]
 
 export interface UsageHistorySyncStatus {
   state: UsageHistorySyncState
@@ -182,10 +198,9 @@ export interface UsageHistoryAccountStore {
 /**
  * Persisted store schema version for usage-history aggregates.
  *
- * Backward-compatibility is intentionally not supported: older schemas are treated
- * as absent and the system starts with an empty store.
+ * V1 and V2 quota counters migrate to USD reference amounts.
  */
-export const USAGE_HISTORY_STORE_SCHEMA_VERSION = 1 as const
+export const USAGE_HISTORY_STORE_SCHEMA_VERSION = 3 as const
 
 /**
  * Root usage-history store structure.
@@ -201,7 +216,7 @@ export interface UsageHistoryExportSelection {
   endDay: string
 }
 
-export const USAGE_HISTORY_EXPORT_SCHEMA_VERSION = 1 as const
+export const USAGE_HISTORY_EXPORT_SCHEMA_VERSION = 3 as const
 
 /**
  * Exported usage-history data structure.

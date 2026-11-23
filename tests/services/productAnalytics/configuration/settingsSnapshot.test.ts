@@ -9,10 +9,23 @@ import {
 } from "~/services/productAnalytics/configuration/settingsSnapshot"
 
 describe("settings snapshot analytics", () => {
+  it("records original display mode separately from the retained reference currency", async () => {
+    const source =
+      await import("~/services/productAnalytics/configuration/settings")
+    expect(
+      source.buildAggregateSettingsSnapshotEvent(
+        {
+          ...DEFAULT_PREFERENCES,
+          currencyDisplay: "original",
+          currencyType: "CNY",
+        },
+        "background",
+      ),
+    ).toMatchObject({ currency_display: "original", currency_type: "CNY" })
+  })
   it("names the master setting as automatic protection-bypass enablement", async () => {
-    const source = await import(
-      "~/services/productAnalytics/configuration/settings"
-    )
+    const source =
+      await import("~/services/productAnalytics/configuration/settings")
     const snapshot = source.buildAggregateSettingsSnapshotEvent(
       {
         ...DEFAULT_PREFERENCES,

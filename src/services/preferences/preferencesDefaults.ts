@@ -1,4 +1,5 @@
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
+import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_THEME_MODE } from "~/constants/theme"
 import { DEFAULT_TURNSTILE_ASSIST_PRESENTATION } from "~/services/checkin/turnstile/assistPresentation"
@@ -47,7 +48,8 @@ import {
 // 默认配置
 export const DEFAULT_PREFERENCES: UserPreferences = {
   activeTab: DATA_TYPE_CASHFLOW,
-  currencyType: "USD",
+  currencyType: CURRENCIES.USD,
+  currencyDisplay: CURRENCY_DISPLAY_MODES.Original,
   showTodayCashflow: true,
   sortField: DATA_TYPE_BALANCE,
   sortOrder: "desc",

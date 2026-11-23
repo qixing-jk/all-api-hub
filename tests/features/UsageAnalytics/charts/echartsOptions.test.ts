@@ -1,3 +1,4 @@
+import * as echarts from "echarts"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -27,9 +28,51 @@ import {
   createEmptyUsageHistoryLatencyAggregate,
 } from "~/services/history/usageHistory/core"
 import type { UsageHistoryStore } from "~/types/usageHistory"
+import { buildFinancialPeriodFact } from "~~/tests/test-utils/accountTodayStats"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 describe("UsageAnalytics echartsOptions", () => {
+  it("keeps heatmap date labels above the interactive color scale", () => {
+    const chart = echarts.init(null, undefined, {
+      renderer: "svg",
+      ssr: true,
+      width: 320,
+      height: 360,
+    })
+    try {
+      chart.setOption({
+        ...buildHeatmapOption({
+          dayKeys: ["2026-11-20", "2026-11-21"],
+          modelNames: ["Production"],
+          valuesByModelAndDay: {
+            Production: { "2026-11-20": 50, "2026-11-21": 100 },
+          },
+          seriesLabel: "Tokens",
+        }),
+        animation: false,
+      })
+      const labels = [
+        ...chart
+          .renderToSVGString()
+          .matchAll(/<text\b([^>]*)>([^<]*)<\/text>/gu),
+      ].map(([, attributes, text]) => {
+        const translate = attributes!.match(/translate\([^ ]+ ([^)]+)\)/u)
+        const offset = attributes!.match(/\sy="([^"]+)"/u)
+        return {
+          text,
+          y: Number(translate?.[1] ?? 0) + Number(offset?.[1] ?? 0),
+        }
+      })
+      const date = labels.find(({ text }) => text === "2026-11-20")!
+      const scale = labels.find(({ text }) => text === "100")!
+      expect(date).toBeDefined()
+      expect(scale).toBeDefined()
+      // Their 12px labels need an actual clear row between axis and legend.
+      expect(date.y + 12).toBeLessThan(scale.y)
+    } finally {
+      chart.dispose()
+    }
+  })
   it("topNWithOther is stable and aggregates the remainder", () => {
     const out = topNWithOther(
       [
@@ -55,7 +98,7 @@ describe("UsageAnalytics echartsOptions", () => {
       promptTokens: 10,
       completionTokens: 5,
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     }
 
     accountStore.dailyByToken["1"] = {
@@ -64,7 +107,7 @@ describe("UsageAnalytics echartsOptions", () => {
         promptTokens: 10,
         completionTokens: 0,
         totalTokens: 10,
-        quotaConsumed: 2,
+        referenceCostUsd: 0.000004,
       },
     }
 
@@ -74,7 +117,7 @@ describe("UsageAnalytics echartsOptions", () => {
         promptTokens: 0,
         completionTokens: 5,
         totalTokens: 5,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
       },
     }
 
@@ -82,7 +125,7 @@ describe("UsageAnalytics echartsOptions", () => {
     accountStore.tokenNamesById["2"] = "Token B"
 
     const store: UsageHistoryStore = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     }
 
@@ -115,7 +158,10 @@ describe("UsageAnalytics echartsOptions", () => {
           promptTokens: 1,
           completionTokens: 1,
           totalTokens: 2,
-          quotaConsumed: 1,
+          referenceCostUsd: 0.000002,
+          consumption: [
+            buildFinancialPeriodFact({ accountId: "a1", value: "2.5" }),
+          ],
         },
       },
       requestsAxisLabel: "Requests",
@@ -124,11 +170,72 @@ describe("UsageAnalytics echartsOptions", () => {
       promptTokensSeriesLabel: "Prompt",
       completionTokensSeriesLabel: "Completion",
       totalTokensSeriesLabel: "Total",
-      quotaSeriesLabel: "Quota",
+      referenceCostSeriesLabel: "Reference (USD)",
+      recordedCostSeriesLabel: "Recorded",
+      selectedCostKey: "currency:USD",
     }) as any
 
     const requestsSeries = option.series.find((s: any) => s.name === "Requests")
     expect(requestsSeries.data).toEqual([1, 0])
+    expect(option.series.some((s: any) => s.name === "Reference (USD)")).toBe(
+      false,
+    )
+    expect(option.yAxis).toHaveLength(3)
+    expect(
+      option.series.find((s: any) => s.name === "Recorded (USD)"),
+    ).toMatchObject({ yAxisIndex: 2, data: [2.5, null] })
+  })
+
+  it("keeps provider quotas with the same unit label on separate cost series", () => {
+    const day = "2026-01-01"
+    const record = (id: string, value: string) =>
+      buildFinancialPeriodFact({
+        accountId: id,
+        value,
+        asset: {
+          kind: "quota",
+          id,
+          label: "Token",
+          displayScale: 1000,
+          displayLabel: "K Token",
+        },
+      })
+    const manual = record("provider-a", "8000")
+    manual.amount.source.kind = "manual"
+    const option = buildDailyOverviewOption({
+      dayKeys: [day],
+      daily: {
+        [day]: {
+          requests: 3,
+          promptTokens: 1,
+          completionTokens: 2,
+          totalTokens: 3,
+          consumption: [
+            record("provider-a", "2000"),
+            record("provider-b", "3000"),
+            manual,
+          ],
+        },
+      },
+      requestsAxisLabel: "Requests",
+      tokensAxisLabel: "Tokens",
+      requestsSeriesLabel: "Requests",
+      promptTokensSeriesLabel: "Prompt",
+      completionTokensSeriesLabel: "Completion",
+      totalTokensSeriesLabel: "Total",
+      recordedCostSeriesLabel: "Recorded",
+    })
+    const series = option.series as {
+      name: string
+      yAxisIndex: number
+      data: number[]
+    }[]
+    expect(
+      series.filter(({ name }) => name.startsWith("Recorded")),
+    ).toMatchObject([
+      { name: "Recorded (K Token) #1", yAxisIndex: 2, data: [2] },
+      { name: "Recorded (K Token) #2", yAxisIndex: 3, data: [3] },
+    ])
   })
 
   it("buildPieOption creates a pie series for distribution views", () => {
@@ -169,7 +276,7 @@ describe("UsageAnalytics echartsOptions", () => {
     }
 
     const store: UsageHistoryStore = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     }
 
@@ -225,7 +332,6 @@ describe("UsageAnalytics echartsOptions", () => {
           promptTokens: 0,
           completionTokens: 0,
           totalTokens: 0,
-          quotaConsumed: 0,
         },
       },
     }
@@ -236,20 +342,18 @@ describe("UsageAnalytics echartsOptions", () => {
           promptTokens: 0,
           completionTokens: 0,
           totalTokens: 0,
-          quotaConsumed: 0,
         },
         "01": {
           requests: 3,
           promptTokens: 0,
           completionTokens: 0,
           totalTokens: 0,
-          quotaConsumed: 0,
         },
       },
     }
 
     const store: UsageHistoryStore = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     }
     const exportData = computeUsageHistoryExport({
@@ -275,7 +379,7 @@ describe("UsageAnalytics echartsOptions", () => {
           promptTokens: 0,
           completionTokens: 0,
           totalTokens: 10,
-          quotaConsumed: 1,
+          referenceCostUsd: 0.000002,
         },
       },
     }
@@ -286,7 +390,7 @@ describe("UsageAnalytics echartsOptions", () => {
           promptTokens: 0,
           completionTokens: 0,
           totalTokens: 5,
-          quotaConsumed: 2,
+          referenceCostUsd: 0.000004,
         },
       },
       "gpt-3.5-turbo": {
@@ -295,13 +399,13 @@ describe("UsageAnalytics echartsOptions", () => {
           promptTokens: 0,
           completionTokens: 0,
           totalTokens: 1,
-          quotaConsumed: 1,
+          referenceCostUsd: 0.000002,
         },
       },
     }
 
     const store: UsageHistoryStore = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     }
     const exportData = computeUsageHistoryExport({
@@ -316,7 +420,7 @@ describe("UsageAnalytics echartsOptions", () => {
     const merged = resolveFusedDailyByModelForTokens(exportData, ["1", "2"])
     expect(atIndex(merged, "gpt-4")["2026-01-01"]).toMatchObject({
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     })
     expect(atIndex(merged, "gpt-3.5-turbo")["2026-01-01"]).toMatchObject({
       totalTokens: 1,
@@ -345,7 +449,7 @@ describe("UsageAnalytics echartsOptions", () => {
     accountStore.latencyDailyByToken["2"] = { [dayKey]: b }
 
     const store: UsageHistoryStore = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     }
     const exportData = computeUsageHistoryExport({
@@ -373,7 +477,7 @@ describe("UsageAnalytics echartsOptions", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 10,
-        quotaConsumed: 3,
+        referenceCostUsd: 0.000006,
       },
     }
     accountStore.dailyByModel["a-model"] = {
@@ -382,7 +486,7 @@ describe("UsageAnalytics echartsOptions", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 10,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
       },
     }
     accountStore.dailyByModel["c-model"] = {
@@ -391,12 +495,12 @@ describe("UsageAnalytics echartsOptions", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 1,
-        quotaConsumed: 2,
+        referenceCostUsd: 0.000004,
       },
     }
 
     const store: UsageHistoryStore = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     }
     const exportData = computeUsageHistoryExport({
@@ -414,7 +518,6 @@ describe("UsageAnalytics echartsOptions", () => {
     expect(rows[1]).toMatchObject({
       modelName: "Other",
       totalTokens: 11,
-      quotaConsumed: 5,
     })
   })
 
@@ -439,7 +542,7 @@ describe("UsageAnalytics echartsOptions", () => {
     }
 
     const store: UsageHistoryStore = {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     }
     const exportData = computeUsageHistoryExport({
@@ -480,7 +583,7 @@ describe("UsageAnalytics echartsOptions", () => {
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 10,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
 
     const a2 = createEmptyUsageHistoryAccountStore()
@@ -489,10 +592,10 @@ describe("UsageAnalytics echartsOptions", () => {
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 20,
-      quotaConsumed: 2,
+      referenceCostUsd: 0.000004,
     }
 
-    const store: UsageHistoryStore = { schemaVersion: 1, accounts: { a1, a2 } }
+    const store: UsageHistoryStore = { schemaVersion: 3, accounts: { a1, a2 } }
     const exportData = computeUsageHistoryExport({
       store,
       selection: {
@@ -512,7 +615,7 @@ describe("UsageAnalytics echartsOptions", () => {
     expect(rows[0]).toMatchObject({
       totalTokens: 20,
       requests: 2,
-      quotaConsumed: 2,
+      referenceCostUsd: 0.000004,
     })
   })
 

@@ -43,7 +43,7 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
         data-site-type={site.siteType}
         data-disabled={site.disabled ? "true" : undefined}
       >
-        <div className="grid w-full min-w-0 grid-cols-[0.5rem_minmax(0,1fr)_minmax(0,1.35fr)] items-center gap-x-2 gap-y-1 @sm/account-row:flex @sm/account-row:gap-density-2">
+        <div className="grid w-full min-w-0 grid-cols-[0.5rem_minmax(0,1fr)_minmax(0,1.55fr)] items-center gap-x-2 gap-y-1 @sm/account-row:flex @sm/account-row:gap-density-2">
           {/* 左侧：站点信息 - 可压缩 */}
           {/* Clip long names horizontally without creating a vertical scroll container for status/pin controls. */}
           <div className="contents @sm/account-row:block @sm/account-row:min-w-[80px] @sm/account-row:flex-1 @sm/account-row:overflow-x-clip">

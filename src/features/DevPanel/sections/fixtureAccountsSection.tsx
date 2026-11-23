@@ -1,16 +1,34 @@
-import { CalendarCheck2, ListPlus, Plus, Trash2, Users } from "lucide-react"
+import {
+  CalendarCheck2,
+  ListPlus,
+  Plus,
+  Trash2,
+  Users,
+  Wallet,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { DEV_FINANCIAL_FIXTURE_KINDS } from "~/features/DevPanel/fixtureScenarioKinds"
 import toast from "~/lib/notify"
+import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import {
   addDevCheckInFixtureAccounts,
+  addDevFinancialFixtureAccounts,
   addDevFixtureAccounts,
   clearDevFixtureAccounts,
   countDevFixtureAccounts,
 } from "../fixtureAccounts"
 import type { DevPanelSection } from "../types"
+
+const DEV_FIXTURE_ACCOUNT_KINDS = {
+  Basic: "basic",
+  Checkin: "checkin",
+  Balance: "balance",
+  SiteBalance: "site-balance",
+  SiteStates: "site-states",
+} as const
 
 /**
  * Local fixture-account management for the dev panel. The count refreshes
@@ -35,17 +53,32 @@ export function useFixtureAccountsDevSection(
   }, [isPanelOpen, refreshCount])
 
   const handleAdd = useCallback(
-    async (count?: number) => {
+    async (
+      kind: (typeof DEV_FIXTURE_ACCOUNT_KINDS)[keyof typeof DEV_FIXTURE_ACCOUNT_KINDS],
+      count = 1,
+    ) => {
       setPendingAction("add")
       try {
         const added =
-          count === undefined
-            ? await addDevCheckInFixtureAccounts()
-            : await addDevFixtureAccounts(count)
+          kind === DEV_FIXTURE_ACCOUNT_KINDS.SiteStates
+            ? await addDevFinancialFixtureAccounts(
+                DEV_FINANCIAL_FIXTURE_KINDS.SiteStates,
+              )
+            : kind === DEV_FIXTURE_ACCOUNT_KINDS.SiteBalance
+              ? await addDevFinancialFixtureAccounts(
+                  DEV_FINANCIAL_FIXTURE_KINDS.SiteTypes,
+                )
+              : kind === DEV_FIXTURE_ACCOUNT_KINDS.Balance
+                ? await addDevFinancialFixtureAccounts()
+                : kind === DEV_FIXTURE_ACCOUNT_KINDS.Checkin
+                  ? await addDevCheckInFixtureAccounts()
+                  : await addDevFixtureAccounts(count)
         toast.success(
-          count === undefined
-            ? `Dev: added ${added} check-in scenario account(s)`
-            : `Dev: added ${added} fixture account(s)`,
+          kind === DEV_FIXTURE_ACCOUNT_KINDS.Balance
+            ? `Dev: added ${added} balance scenario account(s)`
+            : kind === DEV_FIXTURE_ACCOUNT_KINDS.Checkin
+              ? `Dev: added ${added} check-in scenario account(s)`
+              : `Dev: added ${added} fixture account(s)`,
         )
         await refreshCount()
       } catch (error) {
@@ -54,6 +87,7 @@ export function useFixtureAccountsDevSection(
             error instanceof Error ? error.message : String(error)
           }`,
         )
+        await refreshCount()
       } finally {
         setPendingAction(null)
       }
@@ -84,7 +118,7 @@ export function useFixtureAccountsDevSection(
       title: "Fixture accounts",
       icon: Users,
       description:
-        "Add check-in scenarios, refresh the page, then redetect from an account's More menu or Auto Check-in's Readiness tab. Multiple methods opens the real chooser; selecting a method keeps it on the next retry. Add fresh scenarios to test again. Automatic check-in stays off. Clear removes all registered fixture accounts.",
+        "Add local balance/plan examples, then View account list to reload saved data. Includes zero, negative, multiple assets, vouchers, restricted, stale and missing amounts. For check-in scenarios, refresh then redetect from More or Readiness; method selection persists. Automatic check-in stays off. Clear removes registered fixtures only.",
       pages: [
         MENU_ITEM_IDS.ACCOUNT,
         MENU_ITEM_IDS.OVERVIEW,
@@ -93,12 +127,46 @@ export function useFixtureAccountsDevSection(
       surfaces: ["options"],
       actions: [
         {
+          id: "add-site-state-scenarios",
+          label: "Dev: Add native zero, missing and stale scenarios",
+          icon: Wallet,
+          loading: pendingAction === "add",
+          disabled: pendingAction !== null,
+          run: () => handleAdd(DEV_FIXTURE_ACCOUNT_KINDS.SiteStates),
+        },
+        {
+          id: "add-site-balance-scenarios",
+          label: "Dev: Add native site balance scenarios",
+          icon: Wallet,
+          loading: pendingAction === "add",
+          disabled: pendingAction !== null,
+          run: () => handleAdd(DEV_FIXTURE_ACCOUNT_KINDS.SiteBalance),
+        },
+        {
+          id: "add-balance-scenarios",
+          label: "Dev: Add balance and plan scenarios",
+          icon: Wallet,
+          loading: pendingAction === "add",
+          disabled: pendingAction !== null,
+          run: () => handleAdd(DEV_FIXTURE_ACCOUNT_KINDS.Balance),
+        },
+        {
+          id: "view-accounts",
+          label: "Dev: View account list",
+          icon: Users,
+          disabled: pendingAction !== null,
+          run: () => {
+            replaceWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
+            window.location.reload()
+          },
+        },
+        {
           id: "add-checkin-scenarios",
           label: "Dev: Add check-in discovery scenarios",
           icon: CalendarCheck2,
           loading: pendingAction === "add",
           disabled: pendingAction !== null,
-          run: () => handleAdd(),
+          run: () => handleAdd(DEV_FIXTURE_ACCOUNT_KINDS.Checkin),
         },
         {
           id: "add-five",
@@ -106,7 +174,7 @@ export function useFixtureAccountsDevSection(
           icon: ListPlus,
           loading: pendingAction === "add",
           disabled: pendingAction !== null,
-          run: () => handleAdd(5),
+          run: () => handleAdd(DEV_FIXTURE_ACCOUNT_KINDS.Basic, 5),
         },
         {
           id: "add-one",
@@ -114,7 +182,7 @@ export function useFixtureAccountsDevSection(
           icon: Plus,
           loading: pendingAction === "add",
           disabled: pendingAction !== null,
-          run: () => handleAdd(1),
+          run: () => handleAdd(DEV_FIXTURE_ACCOUNT_KINDS.Basic, 1),
         },
         {
           id: "clear",

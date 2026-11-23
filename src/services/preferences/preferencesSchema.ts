@@ -242,6 +242,8 @@ export interface UserPreferences {
    * 金额单位
    */
   currencyType: CurrencyType
+  /** Optional on older snapshots, which inherit their saved currencyType. */
+  currencyDisplay?: import("~/types").CurrencyDisplay
 
   /**
    * Whether to show and fetch "today cashflow" statistics (today consumption/income

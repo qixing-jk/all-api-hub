@@ -393,13 +393,16 @@
       "title": "Noch keine Nutzung erfasst"
     },
     "noRecentActivity": "Keine aktuelle Nutzung aufgezeichnet.",
+    "requests": "Anfragen",
     "requestShare": "Anteil der Anfragen",
     "sevenDayRequests": "7-Tage-Anfragen",
     "sevenDayTokens": "7-Tage-Tokens",
+    "siteDay": "Nutzung nach Standortzeit",
     "todayCost": "Heutige Kosten",
     "todayRequests": "Heutige Anfragen",
     "todayShare": "Heutiger Anteil der letzten 7 Tage",
     "todayTokens": "Heutige Token",
+    "tokens": "Token",
     "tokenShare": "Token-Anteil"
   }
 }

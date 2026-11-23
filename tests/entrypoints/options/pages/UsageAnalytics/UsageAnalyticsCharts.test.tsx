@@ -1,23 +1,37 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import {
+  ASSET_KINDS,
+  EVIDENCE_KINDS,
+  FINANCIAL_COVERAGE,
+  FINANCIAL_SETTLEMENT_STATUSES,
+  FINANCIAL_SUBJECT_KINDS,
+  OBSERVATION_STATUSES,
+  SCOPE_SELECTION_KINDS,
+} from "~/services/amounts/financialConstants"
 import {
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
 } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import { formatPriceCompact } from "~/services/models/utils/modelPricing"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const { useUserPreferencesContextMock } = vi.hoisted(() => ({
   useUserPreferencesContextMock: vi.fn(),
 }))
 
 const echartsInstances: Array<{
+  container: HTMLElement
   setOption: ReturnType<typeof vi.fn>
   resize: ReturnType<typeof vi.fn>
   dispose: ReturnType<typeof vi.fn>
@@ -28,8 +42,9 @@ const echartsInstances: Array<{
 vi.mock("~/components/charts/echarts", async () => {
   return {
     echarts: {
-      init: vi.fn(() => {
+      init: vi.fn((container: HTMLElement) => {
         const instance = {
+          container,
           setOption: vi.fn(),
           resize: vi.fn(),
           dispose: vi.fn(),
@@ -43,6 +58,11 @@ vi.mock("~/components/charts/echarts", async () => {
     },
   }
 })
+
+const chartForCard = (key: string) =>
+  echartsInstances.find(({ container }) =>
+    container.closest('[data-slot="card"]')?.textContent?.includes(key),
+  )
 
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAllAccounts: vi.fn() },
@@ -80,7 +100,7 @@ describe("UsageAnalytics charts", () => {
     promptTokens: Math.max(totalTokens - 5, 0),
     completionTokens: Math.min(5, totalTokens),
     totalTokens,
-    quotaConsumed,
+    ...(quotaConsumed > 0 ? { referenceCostUsd: quotaConsumed / 500_000 } : {}),
   })
 
   const attachLatency = (
@@ -113,7 +133,7 @@ describe("UsageAnalytics charts", () => {
       promptTokens: 10,
       completionTokens: 5,
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     }
     accountStore.dailyByModel["gpt-4"] = {
       "2026-01-01": { ...accountStore.daily["2026-01-01"] },
@@ -127,7 +147,7 @@ describe("UsageAnalytics charts", () => {
     accountStore.latencyDaily["2026-01-01"] = latency
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     } as any)
 
@@ -162,7 +182,7 @@ describe("UsageAnalytics charts", () => {
       promptTokens: 10,
       completionTokens: 5,
       totalTokens: 15,
-      quotaConsumed: 3,
+      referenceCostUsd: 0.000006,
     }
     accountStore.dailyByModel["gpt-4"] = {
       "2026-01-01": { ...accountStore.daily["2026-01-01"] },
@@ -176,18 +196,20 @@ describe("UsageAnalytics charts", () => {
     accountStore.latencyDaily["2026-01-01"] = latency
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     } as any)
 
     render(<UsageAnalytics />)
     await screen.findByText("usageAnalytics:charts.modelDistribution.title")
 
-    expect(
-      screen.getAllByRole("button", {
-        name: "usageAnalytics:charts.common.chartType.pie",
-      }),
-    ).toHaveLength(5)
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", {
+          name: "usageAnalytics:charts.common.chartType.pie",
+        }),
+      ).toHaveLength(5),
+    )
     expect(
       screen.getAllByRole("button", {
         name: "usageAnalytics:charts.common.chartType.histogram",
@@ -220,7 +242,7 @@ describe("UsageAnalytics charts", () => {
     expect((lastOption as any).series?.[0]?.type).toBe("bar")
   })
 
-  it("formats summary cost with per-account exchange rates when currency is not USD", async () => {
+  it("shows the missing cost state when neither native nor reference costs are available", async () => {
     useUserPreferencesContextMock.mockReturnValue({
       currencyType: "CNY",
     })
@@ -244,21 +266,21 @@ describe("UsageAnalytics charts", () => {
     ] as any)
 
     const a1 = createEmptyUsageHistoryAccountStore()
-    a1.daily["2026-01-01"] = createDailyAggregate(20, 5)
+    a1.daily["2026-01-01"] = createDailyAggregate(20, 0)
     a1.dailyByModel["gpt-4"] = {
       "2026-01-01": { ...a1.daily["2026-01-01"] },
     }
     attachLatency(a1, "2026-01-01")
 
     const a2 = createEmptyUsageHistoryAccountStore()
-    a2.daily["2026-01-01"] = createDailyAggregate(10, 3)
+    a2.daily["2026-01-01"] = createDailyAggregate(10, 0)
     a2.dailyByModel["claude-3"] = {
       "2026-01-01": { ...a2.daily["2026-01-01"] },
     }
     attachLatency(a2, "2026-01-01")
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1, a2 },
     } as any)
 
@@ -266,14 +288,112 @@ describe("UsageAnalytics charts", () => {
 
     await screen.findByText("usageAnalytics:summary.cost")
 
-    const conversionFactor = QUOTA_PER_USD
-    const expectedCost =
-      (5 / conversionFactor) * 7.2 +
-      (3 / conversionFactor) * DEFAULT_USD_TO_CNY_RATE
-
     expect(
-      screen.getByText(formatPriceCompact(expectedCost, "CNY")),
+      screen.getByText("usageAnalytics:summary.unpriced"),
     ).toBeInTheDocument()
+  })
+
+  it("shows original-currency settled charges and their partial coverage beside independent token counts", async () => {
+    useUserPreferencesContextMock.mockReturnValue({ currencyType: "USD" })
+    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([
+      {
+        id: "a1",
+        site_name: "A",
+        exchange_rate: 99,
+        account_info: { username: "A" },
+      },
+      { id: "a2", site_name: "B", account_info: { username: "B" } },
+    ] as any)
+    const account = createEmptyUsageHistoryAccountStore()
+    account.daily["2026-01-01"] = {
+      ...createDailyAggregate(20, 500_000),
+      consumption: [
+        {
+          asset: { kind: ASSET_KINDS.Currency, code: "CNY" },
+          amount: {
+            status: OBSERVATION_STATUSES.Known,
+            value: "3.25",
+            observedAt: Date.UTC(2026, 0, 1, 1),
+            source: {
+              adapter: "fixture",
+              operation: "logs",
+              contractVersion: "2",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          },
+          scope: {
+            subject: { kind: FINANCIAL_SUBJECT_KINDS.Account, accountId: "a1" },
+            authority: "https://example.com",
+            projects: { kind: SCOPE_SELECTION_KINDS.All },
+            models: { kind: SCOPE_SELECTION_KINDS.All },
+            groups: { kind: SCOPE_SELECTION_KINDS.All },
+            keys: { kind: SCOPE_SELECTION_KINDS.All },
+          },
+          window: {
+            start: Date.UTC(2026, 0, 1),
+            end: Date.UTC(2026, 0, 1, 1),
+            timeZone: "UTC",
+          },
+          settlement: FINANCIAL_SETTLEMENT_STATUSES.Settled,
+          coverage: FINANCIAL_COVERAGE.Partial,
+        },
+      ],
+    }
+    const day = "2026-01-01"
+    account.dailyByModel["gpt-4"] = { [day]: account.daily[day]! }
+    const second = createEmptyUsageHistoryAccountStore()
+    const fromAnotherAccount = structuredClone(account.daily[day]!)
+    const charge = fromAnotherAccount.consumption![0]!
+    charge.scope.subject = {
+      kind: FINANCIAL_SUBJECT_KINDS.Account,
+      accountId: "a2",
+    }
+    charge.amount.source.adapter = "another-adapter"
+    const usdCharge = structuredClone(charge)
+    usdCharge.asset = { kind: ASSET_KINDS.Currency, code: "USD" }
+    fromAnotherAccount.consumption!.push(usdCharge)
+    second.daily[day] = fromAnotherAccount
+    second.dailyByModel["gpt-4"] = { [day]: fromAnotherAccount }
+    vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 3,
+      accounts: { a1: account, a2: second },
+    })
+    render(<UsageAnalytics />)
+    expect(await screen.findByText(/CNY.*6\.5/)).toBeInTheDocument()
+    expect(
+      screen.getByText("usageAnalytics:summary.partial"),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/USD.*3\.25/)).toBeInTheDocument()
+    const expectSelectedModelCosts = async (expected: number[]) =>
+      waitFor(() => {
+        const modelCharts = echartsInstances.filter(({ container }) =>
+          container
+            .closest('[data-slot="card"]')
+            ?.textContent?.includes(
+              "usageAnalytics:charts.modelCostDistribution.title",
+            ),
+        )
+        const chart = modelCharts
+          .filter(({ container }) => container.isConnected)
+          .at(-1)
+        const values =
+          chart?.setOption.mock.lastCall?.[0]?.series?.[0]?.data.map(
+            ({ value }: { value: number }) => value,
+          )
+        expect(values).toEqual(expected)
+      })
+    await expectSelectedModelCosts([6.5])
+    const modelCostsCard = screen
+      .getByText("usageAnalytics:charts.modelCostDistribution.title")
+      .closest('[data-slot="card"]')!
+    const user = userEvent.setup()
+    await user.click(
+      within(modelCostsCard as HTMLElement).getByRole("combobox", {
+        name: "usageAnalytics:charts.common.costUnit",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: /^USD$/ }))
+    await expectSelectedModelCosts([3.25])
   })
 
   it("applies legend selection updates coming from the daily overview chart", async () => {
@@ -296,7 +416,7 @@ describe("UsageAnalytics charts", () => {
     attachLatency(accountStore, "2026-01-01")
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     } as any)
 
@@ -347,7 +467,7 @@ describe("UsageAnalytics charts", () => {
     ] as any)
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: createEmptyUsageHistoryAccountStore() },
     } as any)
 
@@ -381,7 +501,7 @@ describe("UsageAnalytics charts", () => {
     attachLatency(accountStore, "2026-01-01")
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     } as any)
 
@@ -428,7 +548,7 @@ describe("UsageAnalytics charts", () => {
     }
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     } as any)
 
@@ -487,15 +607,25 @@ describe("UsageAnalytics charts", () => {
     attachLatency(accountStore, "2026-01-02")
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     } as any)
 
     render(<UsageAnalytics />)
     await screen.findByText("usageAnalytics:charts.modelCostDistribution.title")
 
+    const cards = [
+      "modelCostDistribution",
+      "accountComparison",
+      "slowModels",
+      "slowTokens",
+    ]
     await waitFor(() => {
-      expect(echartsInstances[9]).toBeDefined()
+      for (const card of cards) {
+        expect(
+          chartForCard(`usageAnalytics:charts.${card}.title`),
+        ).toBeDefined()
+      }
     })
 
     const user = userEvent.setup()
@@ -508,22 +638,11 @@ describe("UsageAnalytics charts", () => {
     await user.click(histogramButtons[3]!)
     await user.click(histogramButtons[4]!)
 
-    const modelCostDistributionOption = echartsInstances[2]!.setOption.mock
-      .calls[echartsInstances[2]!.setOption.mock.calls.length - 1]?.[0] as any
-    const accountComparisonOption = echartsInstances[3]!.setOption.mock.calls[
-      echartsInstances[3]!.setOption.mock.calls.length - 1
-    ]?.[0] as any
-    const slowModelsOption = echartsInstances[8]!.setOption.mock.calls[
-      echartsInstances[8]!.setOption.mock.calls.length - 1
-    ]?.[0] as any
-    const slowTokensOption = echartsInstances[9]!.setOption.mock.calls[
-      echartsInstances[9]!.setOption.mock.calls.length - 1
-    ]?.[0] as any
-
-    expect(modelCostDistributionOption.series?.[0]?.type).toBe("bar")
-    expect(accountComparisonOption.series?.[0]?.type).toBe("bar")
-    expect(slowModelsOption.series?.[0]?.type).toBe("bar")
-    expect(slowTokensOption.series?.[0]?.type).toBe("bar")
+    for (const card of cards) {
+      const option = chartForCard(`usageAnalytics:charts.${card}.title`)
+        ?.setOption.mock.lastCall?.[0]
+      expect(option?.series?.[0]?.type, card).toBe("bar")
+    }
   })
 
   const findTimeHeatmapOption = () =>
@@ -556,7 +675,7 @@ describe("UsageAnalytics charts", () => {
     attachLatency(accountStore, "2026-01-01")
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     } as any)
 
@@ -596,7 +715,7 @@ describe("UsageAnalytics charts", () => {
     attachLatency(accountStore, "2026-01-02")
 
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       accounts: { a1: accountStore },
     } as any)
 
@@ -604,11 +723,17 @@ describe("UsageAnalytics charts", () => {
     await screen.findByText("usageAnalytics:charts.modelHeatmap.title")
 
     await waitFor(() => {
-      expect(echartsInstances[5]).toBeDefined()
+      expect(
+        chartForCard("usageAnalytics:charts.modelHeatmap.title"),
+      ).toBeDefined()
     })
 
-    const modelDistributionInstance = echartsInstances[1]
-    const modelHeatmapInstance = echartsInstances[5]
+    const modelDistributionInstance = chartForCard(
+      "usageAnalytics:charts.modelDistribution.title",
+    )
+    const modelHeatmapInstance = chartForCard(
+      "usageAnalytics:charts.modelHeatmap.title",
+    )
     const clickHandler = modelDistributionInstance?.on.mock.calls.find(
       ([eventName]) => eventName === "click",
     )?.[1]

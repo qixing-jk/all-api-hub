@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent, Input } from "~/components/ui"
+import { Alert, Button, Card, CardContent, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import toast from "~/lib/notify"
@@ -60,6 +60,8 @@ export default function UsageHistorySyncTab() {
 
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [store, setStore] = useState<UsageHistoryStore | null>(null)
+  const [historyLoadFailed, setHistoryLoadFailed] = useState(false)
+  const loadGeneration = useRef(0)
   const [isLoading, setIsLoading] = useState(true)
   const [isSyncingAll, setIsSyncingAll] = useState(false)
   const [syncingAccountIds, setSyncingAccountIds] = useState<Set<string>>(
@@ -108,19 +110,19 @@ export default function UsageHistorySyncTab() {
   }, [preferences.usageHistory?.retentionDays])
 
   const loadData = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const [nextAccounts, nextStore] = await Promise.all([
-        accountQueries.getEnabledAccounts(),
-        usageHistoryStorage.getStore(),
-      ])
-      setAccounts(nextAccounts)
-      setStore(nextStore)
-    } catch (error) {
-      logger.error("Failed to load data", error)
-    } finally {
-      setIsLoading(false)
-    }
+    const generation = ++loadGeneration.current
+    setIsLoading(true)
+    const [nextAccounts, nextStore] = await Promise.allSettled([
+      accountQueries.getEnabledAccounts(),
+      usageHistoryStorage.getStore(),
+    ])
+    if (generation !== loadGeneration.current) return
+    if (nextAccounts.status === "fulfilled") setAccounts(nextAccounts.value)
+    else logger.error("Failed to load accounts", nextAccounts.reason)
+    if (nextStore.status === "fulfilled") setStore(nextStore.value)
+    else logger.error("Failed to load usage history", nextStore.reason)
+    setHistoryLoadFailed(nextStore.status === "rejected")
+    setIsLoading(false)
   }, [])
 
   useEffect(() => {
@@ -147,7 +149,7 @@ export default function UsageHistorySyncTab() {
   const tableRows = useMemo<UsageHistoryAccountRow[]>(() => {
     return filteredAccounts.map((account) => {
       const status = store?.accounts?.[account.id]?.status
-      const state = status?.state ?? "never"
+      const state = status?.state ?? (store ? "never" : undefined)
       const lastSyncAtMs =
         typeof status?.lastSyncAt === "number" ? status.lastSyncAt : null
       const lastSyncAtLabel = formatLocaleDateTime(
@@ -394,6 +396,27 @@ export default function UsageHistorySyncTab() {
       >
         <Card>
           <CardContent className="space-y-density-4">
+            {historyLoadFailed && (
+              <Alert
+                variant="warning"
+                title={t("messages.error.loadTitle")}
+                description={t(
+                  store
+                    ? "messages.error.lastLoadedDescription"
+                    : "messages.error.loadDescription",
+                )}
+                action={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isLoading}
+                    onClick={() => void loadData()}
+                  >
+                    {t("common:actions.retry")}
+                  </Button>
+                }
+              />
+            )}
             <div className="space-y-density-3">
               <Input
                 value={accountSearch}

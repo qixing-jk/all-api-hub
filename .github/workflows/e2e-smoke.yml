@@ -264,10 +264,11 @@ jobs:
           path: .e2e-durations
           name: e2e-shard-duration-profile
 
-      # Cold-cache count shards completed 105 tests in 8.2m; allow reporting and
-      # additional specs while retaining a bounded 12m deadline.
+      # The expanded default shard has 142 tests; its predecessor ran 105 in
+      # 8.2m. Allow cold-runner overhead after the isolated suites are parallelized,
+      # while retaining the per-test deadlines and the bounded job deadline.
       - name: Run E2E smoke
-        timeout-minutes: ${{ matrix.e2e_type == 'default' && 12 || 5 }}
+        timeout-minutes: ${{ matrix.e2e_type == 'default' && 15 || 5 }}
         env:
           AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
           AAH_E2E_SMOKE_ONLY: ${{ matrix.e2e_type == 'default' && '1' || '' }}

@@ -181,10 +181,12 @@ test("shows a reported Sub2API cost separately in the credential popup", async (
   await page.getByTestId(POPUP_TEST_IDS.apiCredentialProfilesTab).click()
   for (const { mode, amount } of [
     { mode: "CNY", amount: "¥18.00" },
+    { mode: "original", amount: "USD 2.5" },
     { mode: "USD", amount: "USD 2.5" },
   ] as const) {
     await seedUserPreferences(worker, {
-      currencyType: mode,
+      currencyDisplay: mode,
+      currencyType: mode === "original" ? "CNY" : mode,
     })
     await page.reload()
     await waitForExtensionRoot(page)
@@ -211,7 +213,6 @@ test("shows native custom spend and a rough runway after a credential refresh", 
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
   const worker = await getServiceWorker(context)
-  await seedUserPreferences(worker, { currencyType: "CNY" })
   const baseUrl = "https://credential-native-cost.invalid"
   await seedApiCredentialProfiles(worker, [
     createStoredApiCredentialProfile({

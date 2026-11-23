@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { EChart } from "~/components/charts/EChart"
+import { EChart, ECHART_RENDERERS } from "~/components/charts/EChart"
 import { THEME_ATTRIBUTES, THEME_PRESET } from "~/constants/theme"
-import { render, waitFor } from "~~/tests/test-utils/render"
+import { act, render, waitFor } from "~~/tests/test-utils/render"
 
 const { echartsInitMock } = vi.hoisted(() => ({
   echartsInitMock: vi.fn(),
@@ -50,6 +50,52 @@ class MockResizeObserver {
 }
 
 describe("EChart", () => {
+  it.each([true, false, undefined])(
+    "propagates live reduced-motion changes while preserving caller animation %s and chart interactions",
+    async (animation) => {
+      const instance = createInstance()
+      echartsInitMock.mockReturnValueOnce(instance)
+      const media = Object.assign(new EventTarget(), {
+        matches: false,
+        media: "(prefers-reduced-motion: reduce)",
+      })
+      const originalMatchMedia = window.matchMedia
+      window.matchMedia = vi.fn((query) =>
+        query === media.media
+          ? (media as MediaQueryList)
+          : originalMatchMedia(query),
+      )
+      const { unmount } = render(
+        <EChart
+          option={{
+            ...(animation === undefined ? {} : { animation }),
+            series: [{ type: "line", data: [1, null, 2] }],
+          }}
+          setOptionOpts={{ replaceMerge: ["series"] }}
+        />,
+      )
+      try {
+        await waitFor(() => expect(instance.setOption).toHaveBeenCalled())
+        for (const matches of [true, false]) {
+          await act(async () => {
+            media.matches = matches
+            media.dispatchEvent(Object.assign(new Event("change"), { matches }))
+          })
+          expect(instance.setOption).toHaveBeenLastCalledWith(
+            { animation: matches ? false : (animation ?? true) },
+            expect.objectContaining({ notMerge: false }),
+          )
+          expect(instance.setOption.mock.calls.at(-1)?.[1]).not.toHaveProperty(
+            "replaceMerge",
+          )
+        }
+        expect(echartsInitMock).toHaveBeenCalledOnce()
+      } finally {
+        unmount()
+        window.matchMedia = originalMatchMedia
+      }
+    },
+  )
   it("updates chart fonts with appearance without replacing the chart or resetting interactions", async () => {
     const instance = createInstance()
     echartsInitMock.mockReturnValueOnce(instance)
@@ -216,7 +262,7 @@ describe("EChart", () => {
     rerender(
       <EChart
         option={{ series: [{ type: "bar", data: [5] }] }}
-        renderer="svg"
+        renderer={ECHART_RENDERERS.Svg}
         onEvents={{ legendselectchanged: secondLegend }}
       />,
     )

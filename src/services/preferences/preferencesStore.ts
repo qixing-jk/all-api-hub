@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { CURRENCIES, CURRENCY_DISPLAY_MODES } from "~/constants/money"
 import {
   STORAGE_LOCKS,
   USER_PREFERENCES_STORAGE_KEYS,
@@ -115,6 +116,14 @@ function migrateAndNormalizePreferences(
 
   return normalizeSharedPreferencesMetadata({
     ...currentPreferences,
+    currencyDisplay:
+      currentPreferences.currencyDisplay === CURRENCY_DISPLAY_MODES.Original ||
+      currentPreferences.currencyDisplay === CURRENCIES.USD ||
+      currentPreferences.currencyDisplay === CURRENCIES.CNY
+        ? currentPreferences.currencyDisplay
+        : currentPreferences.currencyType === CURRENCIES.CNY
+          ? CURRENCIES.CNY
+          : CURRENCIES.USD,
     appearance: normalizeAppearance(currentPreferences.appearance),
     autoProvisionKeyOnAccountAddMode:
       currentPreferences.autoProvisionKeyOnAccountAddMode ===

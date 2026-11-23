@@ -8,6 +8,7 @@ import {
   OPTIONS_OVERVIEW_AUTO_CHECKIN_ACTION_IDS as CHECKIN_ACTION_IDS,
   OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES as CHECKIN_STATUSES,
   OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS as ITEM_IDS,
+  OPTIONS_OVERVIEW_SEVERITIES,
   OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as STATUS_LABELS,
 } from "~/features/OptionsOverview/ids"
 import type { OptionsOverviewAutoCheckinPanel } from "~/features/OptionsOverview/types"
@@ -27,7 +28,7 @@ const basePreferences: UserPreferences = {
 
 const autoCheckinPanel: OptionsOverviewAutoCheckinPanel = {
   status: CHECKIN_STATUSES.partial,
-  severity: "warning",
+  severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
   totalEligible: 3,
   executed: 2,
   successCount: 1,

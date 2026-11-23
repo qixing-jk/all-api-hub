@@ -523,8 +523,8 @@ describe("AccountBalanceSummary", () => {
     expect(screen.getByText("¥79.95")).toBeVisible()
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: /currency.clickToSwitch/ }))
-    expect(updateCurrencyType).toHaveBeenCalledWith("USD")
+      .click(screen.getByRole("button", { name: /currencyUnit.*original/ }))
+    expect(updateCurrencyType).toHaveBeenCalledWith("original")
   })
   it("explains which accounts were omitted from each total inside the overview details", async () => {
     netEnabled.value = true

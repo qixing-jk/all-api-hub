@@ -37,7 +37,7 @@ function buildExportData(
 ) {
   return computeUsageHistoryExport({
     store: {
-      schemaVersion: 1,
+      schemaVersion: 3,
       accounts,
     },
     selection: {
@@ -83,7 +83,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
     accountStore.latencyDaily["2026-01-02"] = secondDay
     const exportData = computeUsageHistoryExport({
       store: {
-        schemaVersion: 1,
+        schemaVersion: 3,
         accounts: { account: accountStore },
       },
       selection: {
@@ -125,7 +125,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
         promptTokens: 1,
         completionTokens: 3,
         totalTokens: 4,
-        quotaConsumed: 2,
+        referenceCostUsd: 0.000004,
       },
     }
     accountStore.hourlyByToken["token-1"] = {
@@ -135,7 +135,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
           promptTokens: 1,
           completionTokens: 3,
           totalTokens: 4,
-          quotaConsumed: 2,
+          referenceCostUsd: 0.000004,
         },
       },
     }
@@ -146,7 +146,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
           promptTokens: 1,
           completionTokens: 3,
           totalTokens: 4,
-          quotaConsumed: 2,
+          referenceCostUsd: 0.000004,
         },
       },
     }
@@ -168,7 +168,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
     expect(
       resolveFusedDailyForTokens(exportData, ["missing-token", "token-1"]),
     ).toMatchObject({
-      [dayKey]: { requests: 2, totalTokens: 4, quotaConsumed: 2 },
+      [dayKey]: { requests: 2, totalTokens: 4, referenceCostUsd: 0.000004 },
     })
     expect(
       resolveFusedHourlyForTokens(exportData, ["missing-token", "token-1"]),
@@ -300,7 +300,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 5,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
       },
     }
 
@@ -311,7 +311,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 12,
-        quotaConsumed: 4,
+        referenceCostUsd: 0.000008,
       },
     }
 
@@ -327,14 +327,14 @@ describe("feature UsageAnalytics echartsOptions", () => {
         accountLabel: "a",
         totalTokens: 12,
         requests: 3,
-        quotaConsumed: 4,
+        referenceCostUsd: 0.000008,
       },
       {
         accountId: "b",
         accountLabel: "Bravo",
         totalTokens: 5,
         requests: 2,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
       },
     ])
   })
@@ -348,7 +348,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
           promptTokens: 5,
           completionTokens: 7,
           totalTokens: 12,
-          quotaConsumed: 3,
+          referenceCostUsd: 0.000006,
         },
       },
       requestsAxisLabel: "Requests",
@@ -357,7 +357,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
       promptTokensSeriesLabel: "Prompt",
       completionTokensSeriesLabel: "Completion",
       totalTokensSeriesLabel: "Total",
-      quotaSeriesLabel: "Quota",
+      referenceCostSeriesLabel: "Quota",
       legendSelected: { Total: false },
     }) as any
 
@@ -413,7 +413,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
       promptTokens: 2,
       completionTokens: 4,
       totalTokens: 6,
-      quotaConsumed: 1,
+      referenceCostUsd: 0.000002,
     }
     accountStore.hourly["2026-01-01"] = {
       "09": {
@@ -421,7 +421,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
         promptTokens: 2,
         completionTokens: 4,
         totalTokens: 6,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
       },
     }
     accountStore.dailyByModel["gpt-4"] = {
@@ -430,7 +430,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 4,
-        quotaConsumed: 2,
+        referenceCostUsd: 0.000004,
       },
     }
     accountStore.dailyByModel["claude-3"] = {
@@ -439,7 +439,7 @@ describe("feature UsageAnalytics echartsOptions", () => {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 2,
-        quotaConsumed: 1,
+        referenceCostUsd: 0.000002,
       },
     }
 
@@ -464,8 +464,8 @@ describe("feature UsageAnalytics echartsOptions", () => {
         topN: 99,
       }),
     ).toEqual([
-      { modelName: "gpt-4", totalTokens: 4, quotaConsumed: 2 },
-      { modelName: "claude-3", totalTokens: 2, quotaConsumed: 1 },
+      { modelName: "gpt-4", totalTokens: 4 },
+      { modelName: "claude-3", totalTokens: 2 },
     ])
   })
 

@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { OverviewStatusSummary } from "~/features/OptionsOverview/configuration/OverviewStatusCard"
-import { OPTIONS_OVERVIEW_STATUS_CARD_IDS } from "~/features/OptionsOverview/ids"
+import {
+  OPTIONS_OVERVIEW_SEVERITIES,
+  OPTIONS_OVERVIEW_STATUS_CARD_IDS,
+} from "~/features/OptionsOverview/ids"
 import type { OptionsOverviewStatusCard } from "~/features/OptionsOverview/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -17,7 +20,7 @@ describe("OverviewStatusSummary", () => {
     const item: OptionsOverviewStatusCard = {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.todayUsage,
       value: "5",
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       target,
       coverage: {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
@@ -63,7 +66,7 @@ describe("OverviewStatusSummary", () => {
     const item: OptionsOverviewStatusCard = {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.todayUsage,
       value: "5",
-      severity: "success",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Success,
       target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
       coverage: {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
@@ -110,7 +113,7 @@ describe("OverviewStatusSummary", () => {
       const item: OptionsOverviewStatusCard = {
         id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.todayUsage,
         value: status === ACCOUNT_TODAY_METRIC_STATUSES.Unavailable ? "—" : "5",
-        severity: "info",
+        severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
         target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
         coverage: {
           status,
@@ -148,7 +151,7 @@ describe("OverviewStatusSummary", () => {
     const item: OptionsOverviewStatusCard = {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.todayUsage,
       value: "—",
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
       coverage: {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
@@ -179,7 +182,7 @@ describe("OverviewStatusSummary", () => {
     const item: OptionsOverviewStatusCard = {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.todayUsage,
       value: "5",
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       coverage: {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
         completeCount: 1,
@@ -212,7 +215,7 @@ describe("OverviewStatusSummary", () => {
     const item: OptionsOverviewStatusCard = {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.todayUsage,
       value: "—",
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
       coverage: {
         status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
         completeCount: 0,

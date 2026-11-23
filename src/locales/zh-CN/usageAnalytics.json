@@ -19,25 +19,25 @@
         "ariaLabel": "图表类型",
         "histogram": "直方图",
         "pie": "饼图"
-      }
+      },
+      "costUnit": "费用单位"
     },
     "dailyOverview": {
       "axes": {
         "requests": "请求数",
-        "tokens": "Tokens / 额度"
+        "tokens": "Token"
       },
       "description": "多指标趋势，支持提示与缩放。",
       "series": {
         "completionTokens": "Completion Tokens",
         "promptTokens": "Prompt Tokens",
-        "quota": "额度",
         "requests": "请求数",
         "totalTokens": "总 Tokens"
       },
       "title": "每日总览"
     },
     "latencyHistogram": {
-      "description": "当前选择下单次请求延迟（use_time）的直方图。",
+      "description": "当前选择范围内单次请求耗时的分布。",
       "series": {
         "count": "数量"
       },
@@ -57,11 +57,12 @@
       "title": "延迟趋势"
     },
     "modelCostDistribution": {
-      "description": "按所选日期范围内额度消耗（折算 USD）统计的 Top 模型。",
+      "description": "按单位查看各模型的已结算费用。",
       "series": {
-        "usd": "花费（USD）"
+        "native": "已结算消耗"
       },
-      "title": "模型花费分布"
+      "title": "模型消耗分布",
+      "unavailable": "当前筛选范围内暂无已结算的模型费用。"
     },
     "modelDistribution": {
       "description": "按所选日期范围内总 Tokens 统计的 Top 模型。",
@@ -116,7 +117,7 @@
     "sitesHint": "可选择部分站点（不选择表示全部）。",
     "startDay": "开始日期",
     "tokens": "API Token",
-    "tokensHint": "可按账号 Token 过滤（不选择表示账号范围内全部）。",
+    "tokensHint": "按 API 密钥筛选已记录的请求（不选择表示所选账号的全部密钥）。",
     "unknownToken": "未知 Token"
   },
   "hover": {
@@ -125,13 +126,15 @@
     "owners": "所属账号",
     "site": "站点",
     "token": "Token",
-    "type": "类型",
     "url": "URL"
   },
   "messages": {
     "error": {
       "exportFailed": "导出失败：{{error}}",
       "exportNoData": "当前选择下没有可导出的数据",
+      "lastLoadedDescription": "正在显示上次读取的历史。重新读取失败，可重试更新。",
+      "loadDescription": "已保存的历史未被替换。请重试，或使用支持此数据的应用版本。",
+      "loadTitle": "无法读取历史记录",
       "settingsSaveFailed": "保存设置失败：{{error}}",
       "syncFailed": "同步失败：{{error}}"
     },
@@ -174,10 +177,14 @@
   },
   "summary": {
     "completionTokens": "输出 Token",
-    "cost": "花费",
+    "cost": "已记录费用",
+    "partial": "部分费用可能未记录。",
     "promptTokens": "输入 Token",
+    "referenceCost": "参考费用",
+    "referenceHint": "已记录费用与参考费用可能覆盖同一批请求。",
     "requests": "请求数",
-    "totalTokens": "Token 总量"
+    "totalTokens": "Token 总量",
+    "unpriced": "暂无费用记录"
   },
   "syncTab": {
     "actions": {

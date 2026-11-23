@@ -4,6 +4,7 @@ import { buildAutoCheckinPanel } from "~/features/OptionsOverview/automation/aut
 import {
   OPTIONS_OVERVIEW_AUTO_CHECKIN_ACTION_IDS,
   OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES,
+  OPTIONS_OVERVIEW_SEVERITIES,
 } from "~/features/OptionsOverview/ids"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
@@ -25,7 +26,7 @@ describe("auto check-in overview panel builder", () => {
 
     expect(panel).toMatchObject({
       status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.disabled,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       needsRetry: false,
     })
     expect(panel.actions.map((action) => action.id)).toEqual([
@@ -41,7 +42,7 @@ describe("auto check-in overview panel builder", () => {
 
     expect(panel).toMatchObject({
       status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.notRun,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
       totalEligible: 0,
       executed: 0,
       successCount: 0,
@@ -58,7 +59,7 @@ describe("auto check-in overview panel builder", () => {
       }),
     ).toMatchObject({
       status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.success,
-      severity: "success",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Success,
     })
     expect(
       buildAutoCheckinPanel({
@@ -67,7 +68,7 @@ describe("auto check-in overview panel builder", () => {
       }),
     ).toMatchObject({
       status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.partial,
-      severity: "warning",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Warning,
     })
     expect(
       buildAutoCheckinPanel({
@@ -76,7 +77,7 @@ describe("auto check-in overview panel builder", () => {
       }),
     ).toMatchObject({
       status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.failed,
-      severity: "error",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Error,
     })
     expect(
       buildAutoCheckinPanel({
@@ -85,7 +86,7 @@ describe("auto check-in overview panel builder", () => {
       }),
     ).toMatchObject({
       status: OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES.skipped,
-      severity: "info",
+      severity: OPTIONS_OVERVIEW_SEVERITIES.Info,
     })
   })
 

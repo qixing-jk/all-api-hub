@@ -384,13 +384,16 @@
       "title": "Chưa có bản ghi sử dụng"
     },
     "noRecentActivity": "Chưa ghi nhận sử dụng gần đây.",
+    "requests": "Yêu cầu",
     "requestShare": "Tỷ trọng yêu cầu",
     "sevenDayRequests": "Yêu cầu 7 ngày",
     "sevenDayTokens": "Token 7 ngày",
+    "siteDay": "Mức sử dụng theo ngày của trang web",
     "todayCost": "Chi phí hôm nay",
     "todayRequests": "Yêu cầu hôm nay",
     "todayShare": "Tỷ trọng hôm nay trong 7 ngày gần nhất",
     "todayTokens": "Token hôm nay",
+    "tokens": "Token",
     "tokenShare": "Tỷ trọng token"
   }
 }
