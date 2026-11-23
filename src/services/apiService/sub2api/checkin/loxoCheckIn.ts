@@ -3,7 +3,11 @@ import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 import { createCheckInCodeEnvelopeParser } from "./codeEnvelope"
-import { LOXO_CHECK_IN_ENDPOINT } from "./loxoCheckInProtocol"
+import {
+  createLoxoCheckInStatusEndpoint,
+  LOXO_CHECK_IN_ENDPOINT,
+} from "./loxoCheckInProtocol"
+import { resolveUserCheckInTimezone } from "./userCheckInProtocol"
 
 const { parseEnvelopeData, invalidResponse } =
   createCheckInCodeEnvelopeParser("Loxo")
@@ -15,12 +19,13 @@ const passiveAuth = {
 
 /** Use the server's notion of today and its explicit captcha gate. */
 export function fetchLoxoCheckInStatus(request: ApiServiceRequest) {
+  const endpoint = createLoxoCheckInStatusEndpoint(resolveUserCheckInTimezone())
   return executeAuthenticatedSub2ApiRequest(
     request,
     LOXO_CHECK_IN_ENDPOINT,
     async (authenticated) => {
       const response = await fetchApiResponse(authenticated, {
-        endpoint: LOXO_CHECK_IN_ENDPOINT,
+        endpoint,
         options: { method: "GET", cache: "no-store" },
       })
       const data = parseEnvelopeData(response, LOXO_CHECK_IN_ENDPOINT)

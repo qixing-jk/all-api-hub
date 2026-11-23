@@ -33,7 +33,7 @@ import {
   createHiyoCheckInStatusEndpoint,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
-import { LOXO_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/loxoCheckInProtocol"
+import { createLoxoCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/loxoCheckInProtocol"
 import {
   createNexaVlinksCheckInStatusEndpoint,
   resolveNexaVlinksCheckInTimezone,
@@ -584,7 +584,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       sourceName: "Loxo",
     },
     supportsStatusReadback: true,
-    feedbackStatusRoutes: [{ path: LOXO_CHECK_IN_ENDPOINT }],
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createLoxoCheckInStatusEndpoint(resolveUserCheckInTimezone()) },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },

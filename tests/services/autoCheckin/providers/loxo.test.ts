@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
+import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
 import { loxoProvider } from "~/services/checkin/autoCheckin/providers/loxo"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -86,6 +87,28 @@ describe("Loxo check-in", () => {
       (request, _path, execute) => execute(request),
     )
   })
+  afterEach(() => vi.restoreAllMocks())
+
+  it("uses the native browser timezone for both status and feedback GETs", async () => {
+    const options = Intl.DateTimeFormat().resolvedOptions()
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      ...options,
+      timeZone: "Asia/Kathmandu",
+    })
+    respond(status)
+    await loxoProvider.getStatus?.({ account, observedAt: 123 })
+    const path = "/api/v1/user/check-in?timezone=Asia%2FKathmandu"
+    expect(fetchApiResponse).toHaveBeenCalledWith(expect.anything(), {
+      endpoint: path,
+      options: { method: "GET", cache: "no-store" },
+    })
+    const routes = getCheckInFeedbackStatusRoutes(
+      SITE_TYPES.SUB2API,
+      account.site_url,
+    )
+    expect(routes).toContainEqual({ path })
+    expect(routes).not.toContainEqual({ path: endpoint })
+  })
 
   it("discovers through a passive GET and carries forward the site's verification gate", async () => {
     respond({ ...status, captcha_required: true })
@@ -100,7 +123,7 @@ describe("Loxo check-in", () => {
       },
     })
     expect(fetchApiResponse).toHaveBeenCalledWith(expect.anything(), {
-      endpoint,
+      endpoint: `${endpoint}?timezone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
       options: { method: "GET", cache: "no-store" },
     })
     expect(executeAuthenticatedSub2ApiRequest).toHaveBeenCalledWith(
