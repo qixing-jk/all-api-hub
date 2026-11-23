@@ -107,13 +107,11 @@ async function fetchConsumeLogPage(params: {
   page: number
   startTimestamp: number
   endTimestamp: number
-  siteType?: SiteType
+  siteType: SiteType
 }): Promise<LogResponseData> {
-  const { request, page, startTimestamp, endTimestamp } = params
-  const capabilities = params.siteType
-    ? getSiteTypeCapabilities(params.siteType)
-    : undefined
-  const nativeHistory = capabilities?.account?.usageHistory
+  const { request, page, startTimestamp, endTimestamp, siteType } = params
+  const capabilities = getSiteTypeCapabilities(siteType)
+  const nativeHistory = capabilities.account?.usageHistory
   if (nativeHistory)
     return nativeHistory.fetchPage(request, {
       page,
@@ -152,8 +150,8 @@ async function fetchConsumeLogPage(params: {
     )
   }
 
-  const siteType = isCompatibleAccountFamily(capabilities?.family)
-    ? params.siteType
+  const compatibleSiteType = isCompatibleAccountFamily(capabilities.family)
+    ? siteType
     : null
   const scope = accountBalanceScope(request)
   return {
@@ -164,7 +162,7 @@ async function fetchConsumeLogPage(params: {
       const charge = newApiFinancialAmount(
         item.quota,
         request.baseUrl,
-        siteType,
+        compatibleSiteType,
       )
       return {
         ...item,

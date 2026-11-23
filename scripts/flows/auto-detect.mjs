@@ -118,6 +118,34 @@ export async function detectAccountSiteType({
   return dialog
 }
 
+/** Cancel pending duplicate confirmation and let any dispatched save finish. */
+export async function settleAccountSaveForCleanup(
+  page,
+  { timeoutMs = 60_000 } = {},
+) {
+  const busySave = page.locator(
+    `[data-testid="${accounts.confirmAddButton}"][aria-busy="true"]`,
+  )
+  const duplicateWarning = page.getByRole("dialog").filter({
+    has: page.getByTestId(accounts.duplicateWarningContinueButton),
+  })
+  await expect
+    .poll(
+      async () => {
+        if (await duplicateWarning.isVisible())
+          await duplicateWarning
+            .getByRole("button", { name: /^(取消|Cancel)$/i })
+            .click({ timeout: timeoutMs })
+        return !(await busySave.isVisible())
+      },
+      {
+        timeout: timeoutMs,
+        message: "The account save must settle before cleanup",
+      },
+    )
+    .toBe(true)
+}
+
 /** Close an owned draft through its application control and wait for closure. */
 export async function closeAccountDraft(page, { timeoutMs = 30_000 } = {}) {
   const dialog = page.getByTestId(accounts.accountDialog)

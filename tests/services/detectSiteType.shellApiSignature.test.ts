@@ -68,6 +68,18 @@ describe("Shell API public status detection", () => {
     await expect(getAccountSiteType(origin)).resolves.toBe(SITE_TYPES.SHELL_API)
   })
 
+  it("recognizes the Shell marker alongside mixed auxiliary fields", async () => {
+    status({
+      success: true,
+      data: {
+        [marker]: false,
+        CustomThemeConfig: "",
+        CustomDarkThemeConfig: null,
+      },
+    })
+    await expect(getAccountSiteType(origin)).resolves.toBe(SITE_TYPES.SHELL_API)
+  })
+
   it("keeps conflicting Shell and exact Sub2API authentication signatures unknown", async () => {
     server.use(
       http.get(origin + "/api/v1/auth/me", () =>

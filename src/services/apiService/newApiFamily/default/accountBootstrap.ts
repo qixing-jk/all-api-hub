@@ -74,14 +74,10 @@ interface AccountBootstrapImplementation {
 /** Reads the shared public status protocol, leaving transport failures to the caller. */
 export async function readPublicSiteStatus(
   request: ApiServiceRequest,
-  signal?: AbortSignal,
 ): Promise<(SiteStatusInfo & Record<string, unknown>) | null> {
   const response = await newApiFamilyRequests.envelope<unknown>(
     { ...request, auth: { authType: AuthTypeEnum.None } },
-    {
-      endpoint: "/api/status",
-      ...(signal ? { options: { signal } } : {}),
-    },
+    { endpoint: "/api/status" },
   )
   return response?.success === true && isRecord(response.data)
     ? response.data

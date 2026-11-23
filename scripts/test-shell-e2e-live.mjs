@@ -24,6 +24,7 @@ import {
 import {
   closeAccountDraft,
   openAccountAddDialog,
+  settleAccountSaveForCleanup,
 } from "./flows/auto-detect.mjs"
 import { testModelCatalogFlow } from "./flows/model-catalog.mjs"
 import { fillSecret } from "./flows/new-api-token-ui.mjs"
@@ -535,12 +536,7 @@ async function runSite(config) {
   }
 
   async function cleanup() {
-    if (saveStarted) {
-      const busySave = ui.locator(
-        `[data-testid="${ids.confirmAddButton}"][aria-busy="true"]`,
-      )
-      await expect(busySave).toBeHidden({ timeout: 60_000 })
-    }
+    if (saveStarted) await settleAccountSaveForCleanup(ui)
     const owned = (await getAccounts(dev.serviceWorker)).filter(
       (a) => !before.has(a.id) && a.site_name === accountName,
     )
