@@ -54,7 +54,7 @@ From lowest to highest priority:
 1. Primary checkout `.env.local` (shared defaults only).
 2. Current checkout `.env`.
 3. Current checkout `.env.local`.
-4. A runner's explicit `--env-file`, where supported (currently GPT-Load, Magpie, and OmniRoute).
+4. A runner's explicit `--env-file`, where supported (currently GPT-Load, Magpie, OmniRoute, and the Shell hosted-site CDP runner).
 5. Environment variables already present when the command starts, including CI.
 
 An empty value can override a shared default. Keep checkout-specific ports, extension output paths, and other runtime differences in the current checkout. The loader does not rewrite relative paths: their interpretation remains owned by each consuming command. Prefer absolute paths for shared browser/profile locations. Never point a linked checkout's extension output at the primary checkout merely because its credentials are shared.
