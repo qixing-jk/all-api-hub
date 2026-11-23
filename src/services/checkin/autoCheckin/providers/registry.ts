@@ -33,6 +33,7 @@ import {
   createHiyoCheckInStatusEndpoint,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
+import { LOXO_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/loxoCheckInProtocol"
 import {
   createNexaVlinksCheckInStatusEndpoint,
   resolveNexaVlinksCheckInTimezone,
@@ -113,6 +114,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "hiyo"
   | "aiRouter"
   | "daigua"
+  | "loxo"
   | "sidrune"
   | "nexavlinks"
   | "xingya"
@@ -153,6 +155,7 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.LoxoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
@@ -568,6 +571,20 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
         path: createDaiguaCheckInStatusEndpoint(resolveDaiguaCheckInTimezone()),
       },
     ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.LoxoDailyCheckIn]: {
+    presentation: { sourceNameKey: "methods.sources.loxo" },
+    discoveryOrigins: ["https://loxo.cc"],
+    id: AUTO_CHECKIN_METHOD_IDS.LoxoDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Loxo",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: LOXO_CHECK_IN_ENDPOINT }],
     legacy: false,
     newAccountCompatibility: false,
   },

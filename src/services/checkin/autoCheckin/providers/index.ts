@@ -17,6 +17,7 @@ import { emRankProvider } from "./emrank"
 import { freeApiProvider } from "./freeApi"
 import { geniusProgrammerProvider } from "./geniusProgrammer"
 import { hiyoProvider } from "./hiyo"
+import { loxoProvider } from "./loxo"
 import { nexavlinksProvider } from "./nexavlinks"
 import { pmApiProvider } from "./pmapi"
 import {
@@ -33,6 +34,7 @@ import { xiaoenProvider } from "./xiaoen"
 import { xingyaProvider } from "./xingya"
 
 const PROVIDER_BY_METHOD_ID = {
+  [AUTO_CHECKIN_METHOD_IDS.LoxoDailyCheckIn]: loxoProvider,
   [AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn]: sidruneProvider,
   [AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn]: xiaoenProvider,
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: agentRouterProvider,
