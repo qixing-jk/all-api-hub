@@ -18,6 +18,7 @@ import {
   accountBalanceScope,
   accountBalanceSnapshot,
 } from "~/services/accounts/balanceSnapshot"
+import { createUnavailableTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import {
   AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
   AUTO_REFRESH_UPDATE_TYPES,
@@ -1581,311 +1582,585 @@ test("keeps daily cashflow below the compact account identity and actions", asyn
   }
 })
 
-test("mixed native balances keep the overview bounded and expose each asset separately", async ({
+// Keep independently seeded workflows within the ordinary per-test deadline.
+for (const phase of [
+  "overview",
+  "asset details",
+  "filtered subtotals",
+] as const) {
+  for (const [entry, width, captureId] of phase === "filtered subtotals"
+    ? ([
+        [POPUP_PAGE_PATH, 320, "popup-filtered-summary"],
+        [SIDEPANEL_PAGE_PATH, 390, "sidepanel-filtered-summary"],
+        ["options.html#account", 320, "filtered-summary"],
+        ["options.html#account", 390, "filtered-summary"],
+        ["options.html#account", 1440, "filtered-summary"],
+      ] as const)
+    : ([
+        [POPUP_PAGE_PATH, 320, "popup-summary"],
+        [SIDEPANEL_PAGE_PATH, 390, "sidepanel-summary"],
+        ["options.html#account", 1440, "options-summary"],
+      ] as const)) {
+    test(`mixed native balances preserve ${phase} in ${entry} at ${width}px`, async ({
+      page,
+      context,
+      extensionId,
+      extensionDir,
+    }) => {
+      test.setTimeout(process.env.AAH_VISUAL_CAPTURE_DIR ? 120_000 : 60_000)
+      await forceExtensionLanguage(page, "en")
+      await stubLlmMetadataIndex(context)
+      await page.emulateMedia({ reducedMotion: "reduce" })
+      const worker = await getServiceWorker(context)
+      const examples = buildDevSiteFinancialScenarios(Date.now())
+      const cubenceIndex = examples.findIndex(
+        (example) => example.siteType === SITE_TYPES.CUBENCE,
+      )
+      await seedStoredAccounts(
+        worker,
+        examples.map((example, index) =>
+          createStoredAccount({
+            id: `overview-${index}`,
+            site_name: `Dev Balance: ${example.label}`,
+            site_type: example.siteType,
+            site_url: example.baseUrl,
+            exchange_rate: 7.2,
+            account_info: {
+              balance: example.balance,
+              allowances: example.allowances,
+            },
+          }),
+        ),
+      )
+      await seedUserPreferences(worker, {
+        themeMode: "light",
+        currencyType: "CNY",
+        showTodayCashflow: false,
+        autoRefresh: false,
+      })
+      if (phase === "overview") {
+        await page.setViewportSize({ width, height: 900 })
+        await page.goto(`chrome-extension://${extensionId}/${entry}`)
+        await waitForExtensionRoot(page)
+        if (width === 320 && !entry.startsWith("options")) {
+          const row = page.getByTestId(
+            getAccountManagementListItemTestId(`overview-${cubenceIndex}`),
+          )
+          await expect(
+            row.getByText("Normal balance", { exact: true }),
+          ).toBeVisible()
+          for (const name of ["Normal balance", "Charity balance"]) {
+            const lines = await row
+              .getByText(name, { exact: true })
+              .evaluate((element) => {
+                const range = document.createRange()
+                range.selectNodeContents(element)
+                return new Set(
+                  [...range.getClientRects()].map((rect) => rect.top),
+                ).size
+              })
+            expect(
+              lines,
+              `${name} remains readable beside its amount at 320px`,
+            ).toBe(1)
+          }
+          for (const type of [
+            SITE_TYPES.FREEMODEL,
+            SITE_TYPES.GRSAI,
+            SITE_TYPES.UNKNOWN,
+          ]) {
+            const index = examples.findIndex(
+              (example) => example.siteType === type,
+            )
+            const search = page.getByRole("textbox", {
+              name: "Enter site information or account information to search",
+            })
+            await search.fill(`Dev Balance: ${examples[index]!.label}`)
+            const account = page.getByTestId(
+              getAccountManagementListItemTestId(`overview-${index}`),
+            )
+            const expectedAmounts =
+              type === SITE_TYPES.FREEMODEL
+                ? ["¥124.85"]
+                : nativeBalanceExpectations[type]!
+            const values = account.getByText(
+              new RegExp(
+                `^(?:${expectedAmounts.map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})$`,
+              ),
+            )
+            await expect(values.first()).toBeVisible()
+            for (const value of await values.all()) {
+              expect(
+                await value.evaluate(
+                  (element) => element.scrollWidth <= element.clientWidth,
+                ),
+                `${type} keeps the native amount readable at 320px`,
+              ).toBe(true)
+              const lines = await value.evaluate((element) => {
+                const range = document.createRange()
+                range.selectNodeContents(element)
+                return new Set(
+                  [...range.getClientRects()].map((rect) => rect.top),
+                ).size
+              })
+              expect(
+                lines,
+                `${type} keeps its common native amount and unit on one line`,
+              ).toBe(1)
+            }
+            await search.clear()
+          }
+        }
+        if (entry.startsWith("options")) {
+          await page
+            .getByRole("textbox", {
+              name: "Enter site information or account information to search",
+            })
+            .fill("Dev Balance:")
+          const filteredSummary = page.getByRole("region", {
+            name: "40 accounts",
+            exact: true,
+          })
+          await expect(filteredSummary).toBeVisible()
+          expect(
+            (await filteredSummary.boundingBox())!.height,
+            "Filtered totals remain a compact strip above the list",
+          ).toBeLessThan(36)
+          await expect(
+            filteredSummary.getByRole("combobox", { name: "Balance subtotal" }),
+          ).toHaveCount(0)
+          await filteredSummary
+            .getByRole("button", { name: "Details", exact: true })
+            .click()
+        }
+        const summary = entry.startsWith("options")
+          ? page.getByRole("dialog", {
+              name: "Filtered subtotals",
+              exact: true,
+            })
+          : page.getByRole("region", { name: "Financial totals", exact: true })
+        await expect(summary).toContainText("¥2,853.94")
+        await captureVisualViews({
+          page,
+          ready: summary,
+          captureTarget: summary,
+          id: `mixed-overview-${width}`,
+          extensionDir,
+          views: [
+            { id: "light", width, height: 900, theme: "light" },
+            { id: "dark", width, height: 900, theme: "dark" },
+          ],
+        })
+      }
+      if (phase === "asset details") {
+        await page.setViewportSize({ width, height: 900 })
+        await page.goto(`chrome-extension://${extensionId}/${entry}`)
+        await waitForExtensionRoot(page)
+        if (entry.startsWith("options")) {
+          await page
+            .getByRole("textbox", {
+              name: "Enter site information or account information to search",
+            })
+            .fill("Dev Balance:")
+          await page
+            .getByRole("button", { name: "Details", exact: true })
+            .click()
+        }
+        const summary = entry.startsWith("options")
+          ? page.getByRole("dialog", {
+              name: "Filtered subtotals",
+              exact: true,
+            })
+          : page.getByRole("region", { name: "Financial totals", exact: true })
+        expect((await summary.boundingBox())!.height).toBeLessThan(180)
+        if (!entry.startsWith("options"))
+          await summary
+            .getByRole("button", { name: "Financial totals", exact: true })
+            .click()
+        const assetSummary = entry.startsWith("options")
+          ? summary
+          : page.getByRole("dialog", { name: "Financial totals", exact: true })
+        const assets = assetSummary.getByRole(
+          "button",
+          entry.startsWith("options")
+            ? { name: "Balance details", exact: true }
+            : { name: /^Assets/ },
+        )
+        await assets.click()
+        const details = entry.startsWith("options")
+          ? page.getByRole("dialog", { name: "Balance details", exact: true })
+          : assetSummary.getByRole("group", {
+              name: "Balance details",
+              exact: true,
+            })
+        await expect(details).toContainText("dahl")
+        await expect(details).toContainText("emrank")
+        await expect(
+          details.getByText("2.5 M Token", { exact: true }),
+        ).toHaveCount(2)
+        await expect(details).toContainText("XNO")
+        await captureVisualViews({
+          page,
+          ready: details,
+          captureTarget: details,
+          id: `mixed-overview-details-${width}`,
+          extensionDir,
+        })
+        await page.keyboard.press("Escape")
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > innerWidth,
+          ),
+        ).toBe(false)
+      }
+      if (phase === "filtered subtotals") {
+        await page.setViewportSize({ width, height: 900 })
+        await page.goto(`chrome-extension://${extensionId}/${entry}`)
+        await waitForExtensionRoot(page)
+        const search = page.getByRole("textbox", {
+          name: "Enter site information or account information to search",
+        })
+        await search.fill("Dev Balance:")
+        const summary = page.getByRole("region", {
+          name: "40 accounts",
+          exact: true,
+        })
+        await expect(summary).toBeVisible()
+        expect(
+          await summary.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth + 1,
+          ),
+          "Filtered summary stays within the account panel",
+        ).toBe(true)
+        await expect(summary.getByRole("combobox")).toHaveCount(0)
+        await expect(summary).toContainText("¥2,853.94")
+        await captureVisualViews({
+          page,
+          ready: summary,
+          captureTarget: summary,
+          id: `${captureId}-closed-${width}`,
+          extensionDir,
+          views: [{ id: "light", width, height: 900, theme: "light" }],
+        })
+        await summary
+          .getByRole("button", { name: "Details", exact: true })
+          .click()
+        const totals = page.getByRole("dialog", {
+          name: "Filtered subtotals",
+          exact: true,
+        })
+        const amount = totals.getByText("¥2,853.94", { exact: true })
+        await expect(amount).toBeVisible()
+        expect(
+          await amount.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth + 1,
+          ),
+          "The filtered subtotal amount remains readable at narrow widths",
+        ).toBe(true)
+        await captureVisualViews({
+          page,
+          ready: totals,
+          captureTarget: totals,
+          id: `${captureId}-${width}`,
+          extensionDir,
+          views: [
+            { id: "light", width, height: 900, theme: "light" },
+            { id: "dark", width, height: 900, theme: "dark" },
+          ],
+        })
+        await search.fill("Dev Balance: novita")
+        const singleSummary = page.getByRole("region", {
+          name: "1 account",
+          exact: true,
+        })
+        await singleSummary
+          .getByRole("button", { name: "Details", exact: true })
+          .click()
+        await expect(totals.getByRole("combobox")).toHaveCount(0)
+        await expect(totals.getByText("¥88.56", { exact: true })).toBeVisible()
+        await expect(totals).toContainText("Included 1 of 1 accounts")
+        if (entry.startsWith("options") && width !== 390) {
+          await captureVisualViews({
+            page,
+            ready: totals,
+            captureTarget: totals,
+            id: `filtered-single-${width}`,
+            extensionDir,
+            views: [
+              { id: "light", width, height: 900, theme: "light" },
+              { id: "dark", width, height: 900, theme: "dark" },
+            ],
+          })
+        }
+        await expect(totals.getByText("¥88.56", { exact: true })).toBeVisible()
+        await totals
+          .getByRole("button", { name: "Balance details", exact: true })
+          .click()
+        await expect(
+          page.getByRole("dialog", { name: "Balance details", exact: true }),
+        ).toContainText("USD 12.3")
+        await page.keyboard.press("Escape")
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > innerWidth,
+          ),
+        ).toBe(false)
+      }
+    })
+  }
+}
+
+// UI-only scenarios use the same canonical examples; fixture creation and cleanup
+// remain covered through the Dev panel in the dedicated lifecycle workflow.
+const buildBalanceUiAccounts = () =>
+  buildDevFinancialScenarios(Date.now()).map((scenario, index) =>
+    createStoredAccount({
+      id: `balance-ui-${index}`,
+      site_name: `Dev Balance: ${scenario.label}`,
+      site_type: SITE_TYPES.UNKNOWN,
+      site_url: scenario.baseUrl,
+      last_sync_time: scenario.observedAt,
+      account_info: {
+        quota: undefined,
+        balance: scenario.balance,
+        allowances: scenario.allowances,
+        todayStatsAvailability:
+          createUnavailableTodayStatsAvailability("not_collected"),
+      },
+    }),
+  )
+
+for (const width of [1440, 390, 320] as const) {
+  test(`dev balance scenarios align balances and cashflow at ${width}px`, async ({
+    page,
+    context,
+    extensionId,
+  }) => {
+    await forceExtensionLanguage(page, "en")
+    await stubLlmMetadataIndex(context)
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    const worker = await getServiceWorker(context)
+    const fixtures = buildBalanceUiAccounts()
+    await seedStoredAccounts(worker, fixtures)
+    await seedUserPreferences(worker, {
+      themeMode: "light",
+      showTodayCashflow: true,
+      autoRefresh: false,
+    })
+    await page.setViewportSize({ width, height: 1100 })
+    await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+    await waitForExtensionRoot(page)
+    const accountSearch = page.getByRole("textbox", {
+      name: "Enter site information or account information to search",
+    })
+    // Amounts and supplemental cashflow share the same value edge.
+    const contentEdges: number[] = []
+    for (const account of fixtures) {
+      await accountSearch.fill(account.site_name)
+      const accountRow = page.getByTestId(
+        getAccountManagementListItemTestId(account.id),
+      )
+      await accountRow.scrollIntoViewIfNeeded()
+      const primary = await accountRow
+        .getByRole("group")
+        .first()
+        .getByText(/.+/)
+        .first()
+        .boundingBox()
+      const income = await accountRow
+        .getByRole("button", { name: /Click to refresh today's income/ })
+        .boundingBox()
+      const detailsButton = await accountRow
+        .getByRole("button", { name: "Balance details", exact: true })
+        .boundingBox()
+      if (!primary || !income || !detailsButton)
+        throw new Error("Missing financial row layout")
+      const contentRight = primary.x + primary.width
+      contentEdges.push(contentRight)
+      expect(
+        Math.abs(income.x + income.width - contentRight),
+        `${account.site_name} cashflow at ${width}px`,
+      ).toBeLessThanOrEqual(1)
+      expect(
+        detailsButton.width,
+        `${account.site_name} details width at ${width}px`,
+      ).toBeCloseTo(20, 0)
+    }
+    expect(
+      Math.max(...contentEdges) - Math.min(...contentEdges),
+      `balance edges at ${width}px`,
+    ).toBeLessThanOrEqual(1)
+    await accountSearch.clear()
+  })
+}
+
+test("dev balance scenarios keep hover feedback aligned and free of extra blocks", async ({
+  page,
+  context,
+  extensionId,
+}) => {
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  const worker = await getServiceWorker(context)
+  const walletAccount = buildBalanceUiAccounts()[0]!
+  await seedStoredAccounts(worker, [walletAccount])
+  await seedUserPreferences(worker, {
+    themeMode: "light",
+    showTodayCashflow: true,
+    autoRefresh: false,
+  })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+  await waitForExtensionRoot(page)
+  const row = () =>
+    page.getByTestId(getAccountManagementListItemTestId(walletAccount.id))
+  // Hovering financial text must not paint a second block or move its aligned edge.
+  for (const theme of ["light", "dark"] as const) {
+    await page.evaluate((value) => {
+      document.documentElement.classList.toggle("dark", value === "dark")
+    }, theme)
+    const wallet = row()
+    await wallet.scrollIntoViewIfNeeded()
+    for (const button of [
+      wallet.getByRole("button").filter({ has: page.getByRole("group") }),
+      wallet.getByRole("button", {
+        name: /Click to refresh today's income/,
+      }),
+    ]) {
+      await page.mouse.move(0, 0)
+      const before = await button.boundingBox()
+      const color = await button.evaluate((el) => getComputedStyle(el).color)
+      await button.hover()
+      await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
+      await expect(button).toHaveCSS("color", color)
+      const after = await button.boundingBox()
+      expect(after!.x).toBeCloseTo(before!.x, 1)
+      expect(after!.width).toBeCloseTo(before!.width, 1)
+    }
+    const hint = page.getByRole("tooltip")
+    await expect(hint).toBeVisible()
+    // Tailwind composes cleared shadows as transparent zero-sized entries.
+    const noVisibleShadow =
+      /^none$|^(rgba\(0, 0, 0, 0\) 0px 0px 0px 0px(, )?)+$/
+    await expect(hint).toHaveCSS("box-shadow", noVisibleShadow)
+    await page.mouse.move(0, 0)
+    await expect(hint).toHaveCount(0)
+    const detailsTrigger = wallet.getByRole("button", {
+      name: "Balance details",
+      exact: true,
+    })
+    await detailsTrigger.hover()
+    const preview = page.getByRole("dialog", {
+      name: "Balance details",
+      exact: true,
+    })
+    await expect(preview).toBeVisible()
+    await expect(preview).toHaveCSS("box-shadow", noVisibleShadow)
+    await page.mouse.move(0, 0)
+    await expect(preview).toHaveCount(0)
+  }
+})
+test("dev balance scenarios expose availability and plan details without overflow", async ({
   page,
   context,
   extensionId,
   extensionDir,
 }) => {
-  test.setTimeout(process.env.AAH_VISUAL_CAPTURE_DIR ? 120_000 : 60_000)
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
+  await page.addInitScript(() =>
+    localStorage.setItem("aah_dev_features_unlocked", "true"),
+  )
   await page.emulateMedia({ reducedMotion: "reduce" })
   const worker = await getServiceWorker(context)
-  const examples = buildDevSiteFinancialScenarios(Date.now())
-  const cubenceIndex = examples.findIndex(
-    (example) => example.siteType === SITE_TYPES.CUBENCE,
-  )
-  await seedStoredAccounts(
-    worker,
-    examples.map((example, index) =>
-      createStoredAccount({
-        id: `overview-${index}`,
-        site_name: `Dev Balance: ${example.label}`,
-        site_type: example.siteType,
-        site_url: example.baseUrl,
-        exchange_rate: 7.2,
-        account_info: {
-          balance: example.balance,
-          allowances: example.allowances,
-        },
-      }),
-    ),
-  )
+  const fixtures = buildBalanceUiAccounts()
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "keep-real",
+      site_name: "My account",
+      notes: "dev fixture: USD wallet",
+    }),
+    ...fixtures,
+  ])
   await seedUserPreferences(worker, {
     themeMode: "light",
-    currencyType: "CNY",
-    showTodayCashflow: false,
+    showTodayCashflow: true,
     autoRefresh: false,
   })
-  for (const [entry, width] of [
-    [POPUP_PAGE_PATH, 320],
-    [SIDEPANEL_PAGE_PATH, 390],
-    ["options.html#account", 1440],
-  ] as const) {
-    await page.setViewportSize({ width, height: 900 })
-    await page.goto(`chrome-extension://${extensionId}/${entry}`)
-    await waitForExtensionRoot(page)
-    if (width === 320 && !entry.startsWith("options")) {
-      const row = page.getByTestId(
-        getAccountManagementListItemTestId(`overview-${cubenceIndex}`),
-      )
-      await expect(
-        row.getByText("Normal balance", { exact: true }),
-      ).toBeVisible()
-      for (const name of ["Normal balance", "Charity balance"]) {
-        const lines = await row
-          .getByText(name, { exact: true })
-          .evaluate((element) => {
-            const range = document.createRange()
-            range.selectNodeContents(element)
-            return new Set([...range.getClientRects()].map((rect) => rect.top))
-              .size
-          })
-        expect(
-          lines,
-          `${name} remains readable beside its amount at 320px`,
-        ).toBe(1)
-      }
-      for (const type of [
-        SITE_TYPES.FREEMODEL,
-        SITE_TYPES.GRSAI,
-        SITE_TYPES.UNKNOWN,
-      ]) {
-        const index = examples.findIndex((example) => example.siteType === type)
-        const search = page.getByRole("textbox", {
-          name: "Enter site information or account information to search",
-        })
-        await search.fill(`Dev Balance: ${examples[index]!.label}`)
-        const account = page.getByTestId(
-          getAccountManagementListItemTestId(`overview-${index}`),
-        )
-        const expectedAmounts =
-          type === SITE_TYPES.FREEMODEL
-            ? ["¥124.85"]
-            : nativeBalanceExpectations[type]!
-        const values = account.getByText(
-          new RegExp(
-            `^(?:${expectedAmounts.map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})$`,
-          ),
-        )
-        await expect(values.first()).toBeVisible()
-        for (const value of await values.all()) {
-          expect(
-            await value.evaluate(
-              (element) => element.scrollWidth <= element.clientWidth,
-            ),
-            `${type} keeps the native amount readable at 320px`,
-          ).toBe(true)
-          const lines = await value.evaluate((element) => {
-            const range = document.createRange()
-            range.selectNodeContents(element)
-            return new Set([...range.getClientRects()].map((rect) => rect.top))
-              .size
-          })
-          expect(
-            lines,
-            `${type} keeps its common native amount and unit on one line`,
-          ).toBe(1)
-        }
-        await search.clear()
-      }
-    }
-    if (entry.startsWith("options")) {
-      await page
-        .getByRole("textbox", {
-          name: "Enter site information or account information to search",
-        })
-        .fill("Dev Balance:")
-      const filteredSummary = page.getByRole("region", {
-        name: "40 accounts",
-        exact: true,
-      })
-      await expect(filteredSummary).toBeVisible()
-      expect(
-        (await filteredSummary.boundingBox())!.height,
-        "Filtered totals remain a compact strip above the list",
-      ).toBeLessThan(36)
-      await expect(
-        filteredSummary.getByRole("combobox", { name: "Balance subtotal" }),
-      ).toHaveCount(0)
-      await filteredSummary
-        .getByRole("button", { name: "Details", exact: true })
-        .click()
-    }
-    const summary = entry.startsWith("options")
-      ? page.getByRole("dialog", { name: "Filtered subtotals", exact: true })
-      : page.getByRole("region", { name: "Financial totals", exact: true })
-    await expect(summary).toContainText("¥2,853.94")
-    await captureVisualViews({
-      page,
-      ready: summary,
-      captureTarget: summary,
-      id: `mixed-overview-${width}`,
-      extensionDir,
-      views: [
-        { id: "light", width, height: 900, theme: "light" },
-        { id: "dark", width, height: 900, theme: "dark" },
-      ],
-    })
-  }
-  for (const [entry, width] of [
-    [POPUP_PAGE_PATH, 320],
-    [SIDEPANEL_PAGE_PATH, 390],
-    ["options.html#account", 1440],
-  ] as const) {
-    await page.setViewportSize({ width, height: 900 })
-    await page.goto(`chrome-extension://${extensionId}/${entry}`)
-    await waitForExtensionRoot(page)
-    if (entry.startsWith("options")) {
-      await page
-        .getByRole("textbox", {
-          name: "Enter site information or account information to search",
-        })
-        .fill("Dev Balance:")
-      await page.getByRole("button", { name: "Details", exact: true }).click()
-    }
-    const summary = entry.startsWith("options")
-      ? page.getByRole("dialog", { name: "Filtered subtotals", exact: true })
-      : page.getByRole("region", { name: "Financial totals", exact: true })
-    expect((await summary.boundingBox())!.height).toBeLessThan(180)
-    if (!entry.startsWith("options"))
-      await summary
-        .getByRole("button", { name: "Financial totals", exact: true })
-        .click()
-    const assetSummary = entry.startsWith("options")
-      ? summary
-      : page.getByRole("dialog", { name: "Financial totals", exact: true })
-    const assets = assetSummary.getByRole(
-      "button",
-      entry.startsWith("options")
-        ? { name: "Balance details", exact: true }
-        : { name: /^Assets/ },
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+  await waitForExtensionRoot(page)
+  const row = (label: string) => {
+    const account = fixtures.find(
+      (account) => account.site_name === `Dev Balance: ${label}`,
     )
-    await assets.click()
-    const details = entry.startsWith("options")
-      ? page.getByRole("dialog", { name: "Balance details", exact: true })
-      : assetSummary.getByRole("group", {
-          name: "Balance details",
-          exact: true,
-        })
-    await expect(details).toContainText("dahl")
-    await expect(details).toContainText("emrank")
-    await expect(details.getByText("2.5 M Token", { exact: true })).toHaveCount(
-      2,
+    if (!account) throw new Error(`Missing scenario ${label}`)
+    return page.getByTestId(getAccountManagementListItemTestId(account.id))
+  }
+  await expect(row("USD wallet")).toContainText("120.5")
+  await expect(row("Zero balance")).toContainText("0")
+  await expect(row("Negative balance")).toContainText("-$8.25")
+  await expect(row("Multiple assets")).toContainText("GBP")
+  await expect(
+    row("Stale balance").getByRole("group", { name: /Last known value/ }),
+  ).toBeVisible()
+  await expect(
+    row("Unavailable balance").getByRole("group", {
+      name: /^Available credit · Unavailable/,
+    }),
+  ).toBeVisible()
+  await expect(
+    row("Independent plans").getByRole("group", {
+      name: "Daily plan · Daily · $8.00",
+      exact: true,
+    }),
+  ).toContainText("8")
+  const later = page.getByRole("button", { name: "Later", exact: true })
+  if (await later.isVisible()) await later.click()
+  const accountSearch = page.getByRole("textbox", {
+    name: "Enter site information or account information to search",
+  })
+  await page.evaluate(() => document.documentElement.classList.remove("dark"))
+  await captureVisualViews({
+    page,
+    ready: row("USD wallet"),
+    captureTarget: page.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountListView,
+    ),
+    id: "balance-fixture-list",
+    extensionDir,
+    views: [
+      { id: "light", width: 1440, height: 1100, theme: "light" },
+      { id: "dark", width: 390, height: 1000, theme: "dark" },
+    ],
+  })
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 1000 })
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
     )
-    await expect(details).toContainText("XNO")
-    await captureVisualViews({
-      page,
-      ready: details,
-      captureTarget: details,
-      id: `mixed-overview-details-${width}`,
-      extensionDir,
-    })
-    await page.keyboard.press("Escape")
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > innerWidth,
-      ),
-    ).toBe(false)
+    expect(overflow).toBe(false)
   }
-  for (const [entry, width, captureId] of [
-    [POPUP_PAGE_PATH, 320, "popup-filtered-summary"],
-    [SIDEPANEL_PAGE_PATH, 390, "sidepanel-filtered-summary"],
-    ["options.html#account", 320, "filtered-summary"],
-    ["options.html#account", 390, "filtered-summary"],
-    ["options.html#account", 1440, "filtered-summary"],
-  ] as const) {
-    await page.setViewportSize({ width, height: 900 })
-    await page.goto(`chrome-extension://${extensionId}/${entry}`)
-    await waitForExtensionRoot(page)
-    const search = page.getByRole("textbox", {
-      name: "Enter site information or account information to search",
-    })
-    await search.fill("Dev Balance:")
-    const summary = page.getByRole("region", {
-      name: "40 accounts",
-      exact: true,
-    })
-    await expect(summary).toBeVisible()
-    expect(
-      await summary.evaluate(
-        (element) => element.scrollWidth <= element.clientWidth + 1,
-      ),
-      "Filtered summary stays within the account panel",
-    ).toBe(true)
-    await expect(summary.getByRole("combobox")).toHaveCount(0)
-    await expect(summary).toContainText("¥2,853.94")
-    await captureVisualViews({
-      page,
-      ready: summary,
-      captureTarget: summary,
-      id: `${captureId}-closed-${width}`,
-      extensionDir,
-      views: [{ id: "light", width, height: 900, theme: "light" }],
-    })
-    await summary.getByRole("button", { name: "Details", exact: true }).click()
-    const totals = page.getByRole("dialog", {
-      name: "Filtered subtotals",
-      exact: true,
-    })
-    const amount = totals.getByText("¥2,853.94", { exact: true })
-    await expect(amount).toBeVisible()
-    expect(
-      await amount.evaluate(
-        (element) => element.scrollWidth <= element.clientWidth + 1,
-      ),
-      "The filtered subtotal amount remains readable at narrow widths",
-    ).toBe(true)
-    await captureVisualViews({
-      page,
-      ready: totals,
-      captureTarget: totals,
-      id: `${captureId}-${width}`,
-      extensionDir,
-      views: [
-        { id: "light", width, height: 900, theme: "light" },
-        { id: "dark", width, height: 900, theme: "dark" },
-      ],
-    })
-    await search.fill("Dev Balance: novita")
-    const singleSummary = page.getByRole("region", {
-      name: "1 account",
-      exact: true,
-    })
-    await singleSummary
-      .getByRole("button", { name: "Details", exact: true })
-      .click()
-    await expect(totals.getByRole("combobox")).toHaveCount(0)
-    await expect(totals.getByText("¥88.56", { exact: true })).toBeVisible()
-    await expect(totals).toContainText("Included 1 of 1 accounts")
-    if (entry.startsWith("options") && width !== 390) {
-      await captureVisualViews({
-        page,
-        ready: totals,
-        captureTarget: totals,
-        id: `filtered-single-${width}`,
-        extensionDir,
-        views: [
-          { id: "light", width, height: 900, theme: "light" },
-          { id: "dark", width, height: 900, theme: "dark" },
-        ],
-      })
-    }
-    await expect(totals.getByText("¥88.56", { exact: true })).toBeVisible()
-    await totals
-      .getByRole("button", { name: "Balance details", exact: true })
-      .click()
-    await expect(
-      page.getByRole("dialog", { name: "Balance details", exact: true }),
-    ).toContainText("USD 12.3")
-    await page.keyboard.press("Escape")
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth > innerWidth,
-      ),
-    ).toBe(false)
-  }
+  await accountSearch.fill("Dev Balance: Independent plans")
+  await row("Independent plans")
+    .getByRole("button", { name: "Balance details", exact: true })
+    .click()
+  const details = page.getByRole("dialog", {
+    name: "Balance details",
+    exact: true,
+  })
+  await expect(details).toContainText("Unlimited plan")
+  await expect(details).toContainText("Daily plan")
+  await captureVisualViews({
+    page,
+    ready: details,
+    captureTarget: details,
+    id: "balance-fixture-plans",
+    extensionDir,
+  })
+  await page.keyboard.press("Escape")
+  await accountSearch.clear()
 })
 
 test("dev balance scenarios persist, open in the real account UI and clean up without deleting a look-alike account", async ({
@@ -1915,8 +2190,9 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
     autoRefresh: false,
   })
   await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+  const openPanel = page.getByRole("button", { name: "Dev: Open dev panel" })
   await waitForExtensionRoot(page)
-  await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
+  await openPanel.click()
   const panel = page.getByRole("dialog", { name: "Dev panel", exact: true })
   const add = panel.getByRole("button", {
     name: "Dev: Add balance and plan scenarios",
@@ -1971,164 +2247,25 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
     if (!account) throw new Error(`Missing scenario ${label}`)
     return page.getByTestId(getAccountManagementListItemTestId(account.id))
   }
-  await panel
-    .getByRole("button", { name: "Dev: View account list", exact: true })
-    .click()
-  await waitForExtensionRoot(page)
-  await expect(panel).not.toBeVisible()
-  await expect(row("USD wallet")).toContainText("120.5")
-  await expect(row("Zero balance")).toContainText("0")
-  await expect(row("Negative balance")).toContainText("-$8.25")
-  await expect(row("Multiple assets")).toContainText("GBP")
-  await expect(
-    row("Stale balance").getByRole("group", { name: /Last known value/ }),
-  ).toBeVisible()
-  await expect(
-    row("Unavailable balance").getByRole("group", {
-      name: /^Available credit · Unavailable/,
-    }),
-  ).toBeVisible()
-  await expect(
-    row("Independent plans").getByRole("group", {
-      name: "Daily plan · Daily · $8.00",
-      exact: true,
-    }),
-  ).toContainText("8")
-  const later = page.getByRole("button", { name: "Later", exact: true })
-  if (await later.isVisible()) await later.click()
-  // Hovering financial text must not paint a second block or move its aligned edge.
-  for (const theme of ["light", "dark"] as const) {
-    await page.evaluate((value) => {
-      document.documentElement.classList.toggle("dark", value === "dark")
-    }, theme)
-    const wallet = row("USD wallet")
-    await wallet.scrollIntoViewIfNeeded()
-    for (const button of [
-      wallet.getByRole("button").filter({ has: page.getByRole("group") }),
-      wallet.getByRole("button", { name: /Click to refresh today's income/ }),
-    ]) {
-      await page.mouse.move(0, 0)
-      const before = await button.boundingBox()
-      const color = await button.evaluate((el) => getComputedStyle(el).color)
-      await button.hover()
-      await expect(button).toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
-      await expect(button).toHaveCSS("color", color)
-      const after = await button.boundingBox()
-      expect(after!.x).toBeCloseTo(before!.x, 1)
-      expect(after!.width).toBeCloseTo(before!.width, 1)
-    }
-    const hint = page.getByRole("tooltip")
-    await expect(hint).toBeVisible()
-    // Tailwind composes cleared shadows as transparent zero-sized entries.
-    const noVisibleShadow =
-      /^none$|^(rgba\(0, 0, 0, 0\) 0px 0px 0px 0px(, )?)+$/
-    await expect(hint).toHaveCSS("box-shadow", noVisibleShadow)
-    await page.mouse.move(0, 0)
-    await expect(hint).toHaveCount(0)
-    const detailsTrigger = wallet.getByRole("button", {
-      name: "Balance details",
-      exact: true,
-    })
-    await detailsTrigger.hover()
-    const preview = page.getByRole("dialog", {
-      name: "Balance details",
-      exact: true,
-    })
-    await expect(preview).toBeVisible()
-    await expect(preview).toHaveCSS("box-shadow", noVisibleShadow)
-    await page.mouse.move(0, 0)
-    await expect(preview).toHaveCount(0)
-  }
-  await page.evaluate(() => document.documentElement.classList.remove("dark"))
-  // Amounts and supplemental cashflow share the same value edge.
   const accountSearch = page.getByRole("textbox", {
     name: "Enter site information or account information to search",
   })
-  for (const width of [1440, 390, 320]) {
-    await page.setViewportSize({ width, height: 1100 })
-    const contentEdges: number[] = []
-    for (const account of fixtures) {
-      await accountSearch.fill(account.site_name)
-      const accountRow = page.getByTestId(
-        getAccountManagementListItemTestId(account.id),
-      )
-      await accountRow.scrollIntoViewIfNeeded()
-      const primary = await accountRow
-        .getByRole("group")
-        .first()
-        .getByText(/.+/)
-        .first()
-        .boundingBox()
-      const income = await accountRow
-        .getByRole("button", { name: /Click to refresh today's income/ })
-        .boundingBox()
-      const detailsButton = await accountRow
-        .getByRole("button", { name: "Balance details", exact: true })
-        .boundingBox()
-      if (!primary || !income || !detailsButton)
-        throw new Error("Missing financial row layout")
-      const contentRight = primary.x + primary.width
-      contentEdges.push(contentRight)
-      expect(
-        Math.abs(income.x + income.width - contentRight),
-        `${account.site_name} cashflow at ${width}px`,
-      ).toBeLessThanOrEqual(1)
-      expect(
-        detailsButton.width,
-        `${account.site_name} details width at ${width}px`,
-      ).toBeCloseTo(20, 0)
-    }
-    expect(
-      Math.max(...contentEdges) - Math.min(...contentEdges),
-      `balance edges at ${width}px`,
-    ).toBeLessThanOrEqual(1)
-    await accountSearch.clear()
-  }
-  await captureVisualViews({
-    page,
-    ready: row("USD wallet"),
-    captureTarget: page.getByTestId(
-      ACCOUNT_MANAGEMENT_TEST_IDS.accountListView,
-    ),
-    id: "balance-fixture-list",
-    extensionDir,
-    views: [
-      { id: "light", width: 1440, height: 1100, theme: "light" },
-      { id: "dark", width: 390, height: 1000, theme: "dark" },
-    ],
-  })
-  for (const width of [390, 320]) {
-    await page.setViewportSize({ width, height: 1000 })
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth,
-    )
-    expect(overflow).toBe(false)
-  }
-  await accountSearch.fill("Dev Balance: Independent plans")
-  await row("Independent plans")
-    .getByRole("button", { name: "Balance details", exact: true })
+  await panel
+    .getByRole("button", { name: "Dev: View account list", exact: true })
     .click()
-  const details = page.getByRole("dialog", {
-    name: "Balance details",
-    exact: true,
-  })
-  await expect(details).toContainText("Unlimited plan")
-  await expect(details).toContainText("Daily plan")
-  await captureVisualViews({
-    page,
-    ready: details,
-    captureTarget: details,
-    id: "balance-fixture-plans",
-    extensionDir,
-  })
-  await page.keyboard.press("Escape")
-  await accountSearch.clear()
-  await page.reload()
-  await waitForExtensionRoot(page)
+  await expect(panel).not.toBeVisible()
+  const later = page.getByRole("button", { name: "Later", exact: true })
+  if (await later.isVisible()) await later.click()
+  await expect(accountSearch).toBeVisible()
   await accountSearch.fill("Dev Balance: Multiple assets")
   await expect(row("Multiple assets")).toContainText("GBP")
   await accountSearch.clear()
-  await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
+  await page.reload()
+  await expect(accountSearch).toBeVisible()
+  await accountSearch.fill("Dev Balance: Multiple assets")
+  await expect(row("Multiple assets")).toContainText("GBP")
+  await accountSearch.clear()
+  await openPanel.click()
   await panel
     .getByRole("button", { name: "Dev: Clear fixture accounts (9)" })
     .click()
@@ -2138,16 +2275,15 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
   await panel
     .getByRole("button", { name: "Dev: View account list", exact: true })
     .click()
-  await waitForExtensionRoot(page)
+  await expect(
+    page.getByTestId(getAccountManagementListItemTestId("keep-real")),
+  ).toBeVisible()
   const final = await getPlasmoStorageJsonValue<AccountStorageConfig>(
     worker,
     STORAGE_KEYS.ACCOUNTS,
   )
   if (!final) throw new Error("Missing saved accounts after cleanup")
   expect(final.accounts.map((account) => account.id)).toEqual(["keep-real"])
-  await expect(
-    page.getByTestId(getAccountManagementListItemTestId("keep-real")),
-  ).toBeVisible()
   await expect(
     page.getByText("Dev Balance: USD wallet", { exact: true }),
   ).toHaveCount(0)
