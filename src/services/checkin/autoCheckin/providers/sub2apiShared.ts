@@ -66,10 +66,16 @@ export const createSub2ApiCheckInReadRequest = (
       ? createAccountApiRequestFromStoredAccount(context.account).request
       : null)
   if (!request) throw new Error("Sub2API account data is unavailable")
-  return {
+  const readRequest = {
     ...request,
     ...(context.signal ? { abortSignal: context.signal } : {}),
   }
+  return context.authenticationRecovery
+    ? bindApiTransportRequest(
+        { ...readRequest, ...context.authenticationRecovery },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      )
+    : readRequest
 }
 
 export const createSub2ApiCheckInMutationRequest = (
