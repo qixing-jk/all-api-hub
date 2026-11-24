@@ -17,8 +17,11 @@ const passiveAuth = {
   recoverUnauthorized: false,
 } as const
 
-/** Use the server's notion of today and its explicit captcha gate. */
-export function fetchLoxoCheckInStatus(request: ApiServiceRequest) {
+/** Passive by default; admitted execution reads may use the existing auth lifecycle. */
+export function fetchLoxoCheckInStatus(
+  request: ApiServiceRequest,
+  options: { allowAuthenticationRecovery?: boolean } = {},
+) {
   const endpoint = createLoxoCheckInStatusEndpoint(resolveUserCheckInTimezone())
   return executeAuthenticatedSub2ApiRequest(
     request,
@@ -41,7 +44,7 @@ export function fetchLoxoCheckInStatus(request: ApiServiceRequest) {
         requiresManualVerification: data.captcha_required,
       }
     },
-    passiveAuth,
+    options.allowAuthenticationRecovery ? {} : passiveAuth,
   )
 }
 

@@ -138,6 +138,62 @@ describe("Loxo check-in", () => {
     )
   })
 
+  it("allows authentication renewal only for the admitted execution status read", async () => {
+    respond(status)
+    respond({ reward: 0.12, streak_days: 3 })
+    await expect(
+      executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context,
+      }),
+    ).resolves.toMatchObject({
+      kind: "executed",
+      result: { status: "success" },
+    })
+    expect(executeAuthenticatedSub2ApiRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        tempWindowRequestSource: context.tempWindowRequestSource,
+        protectionBypassExecution: context.protectionBypassExecution,
+        directRequestReason: undefined,
+      }),
+      endpoint,
+      expect.any(Function),
+      {},
+    )
+    expect(executeAuthenticatedSub2ApiRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      endpoint,
+      expect.any(Function),
+      {
+        proactiveRefresh: false,
+        recoverMissingAccessToken: false,
+        recoverUnauthorized: false,
+      },
+    )
+  })
+
+  it("keeps discovery and ordinary refresh passive even with execution context", async () => {
+    respond(status)
+    await loxoProvider.detect?.({
+      account,
+      observedAt: 123,
+      authenticationRecovery: context,
+    })
+    respond(status)
+    await loxoProvider.getStatus?.({ account, observedAt: 123 })
+    for (const call of vi.mocked(executeAuthenticatedSub2ApiRequest).mock
+      .calls) {
+      expect(call[3]).toEqual({
+        proactiveRefresh: false,
+        recoverMissingAccessToken: false,
+        recoverUnauthorized: false,
+      })
+    }
+  })
+
   it.each([
     [
       { ...status, checked_in_today: true },
@@ -266,6 +322,16 @@ describe("Loxo check-in", () => {
         .mocked(fetchApiResponse)
         .mock.calls.map((call) => call[1].options?.method),
     ).toEqual(["GET", "POST", "GET"])
+    expect(executeAuthenticatedSub2ApiRequest).toHaveBeenLastCalledWith(
+      expect.anything(),
+      endpoint,
+      expect.any(Function),
+      {
+        proactiveRefresh: false,
+        recoverMissingAccessToken: false,
+        recoverUnauthorized: false,
+      },
+    )
   })
 
   it("reports failure after readback confirms an inconclusive claim did not check in", async () => {

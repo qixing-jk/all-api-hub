@@ -31,6 +31,7 @@ import {
 const readStatus = async (context: AutoCheckinProviderReadContext) => {
   const status = await fetchLoxoCheckInStatus(
     createSub2ApiCheckInReadRequest(context),
+    { allowAuthenticationRecovery: !!context.authenticationRecovery },
   )
   return {
     ...toSub2ApiCheckInStatus(status, context.observedAt),
@@ -49,7 +50,11 @@ export const loxoProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
   getReadiness: getSub2ApiCheckInReadiness,
   getStatus: readStatus,
-  detect: (context) => detectWithStatusReadback(context, readStatus),
+  detect: (context) =>
+    detectWithStatusReadback(
+      { ...context, authenticationRecovery: undefined },
+      readStatus,
+    ),
   async checkIn(account, context) {
     const status = context.statusProof
     if (
