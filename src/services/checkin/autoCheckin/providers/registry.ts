@@ -33,6 +33,7 @@ import {
   createHiyoCheckInStatusEndpoint,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
+import { linxiStatusRoute } from "~/services/apiService/sub2api/checkin/linxiCheckInProtocol"
 import {
   createNexaVlinksCheckInStatusEndpoint,
   resolveNexaVlinksCheckInTimezone,
@@ -116,6 +117,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "sidrune"
   | "nexavlinks"
   | "xingya"
+  | "linxi"
   | "agentRouter"}`
 
 export type CheckInMethodPresentationMetadata = {
@@ -155,6 +157,7 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
   ])
 
@@ -410,6 +413,24 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: "/api/v1/redeem/checkin/status" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: {
+    // This task is scoped to the deployment whose account diagnostic matches.
+    discoveryOrigins: ["https://sub.100xlabs.space"],
+    presentation: { sourceNameKey: "methods.sources.linxi" },
+    id: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    origins: ["https://sub.100xlabs.space"],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "100xLabs",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: linxiStatusRoute() },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },
