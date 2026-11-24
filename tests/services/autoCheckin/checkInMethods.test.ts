@@ -120,6 +120,54 @@ describe("check-in methods compatibility activation", () => {
     ),
   })
 
+  it("allows authentication recovery only for authorized execution admission", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    const context = createExecutionContext()
+    const read = vi
+      .spyOn(registration.provider, "getStatus")
+      .mockImplementation(async () => ({
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+        today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        evidence: {
+          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+          observedAt: Date.now(),
+        },
+      }))
+    vi.spyOn(registration.provider, "checkIn").mockResolvedValue({
+      status: "uncertain",
+    })
+
+    await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context,
+    })
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(read.mock.calls[0]?.[0]).toMatchObject({
+      authenticationRecovery: context,
+    })
+    expect(read.mock.calls[1]?.[0]).not.toHaveProperty("authenticationRecovery")
+
+    read.mockClear()
+    await refreshSelectedStatus({
+      config: account.checkIn,
+      siteType: account.site_type,
+      account,
+    })
+    expect(read).toHaveBeenCalledOnce()
+    expect(read.mock.calls[0]?.[0]).not.toHaveProperty("authenticationRecovery")
+
+    read.mockClear()
+    await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: false,
+      context,
+    })
+    expect(read).not.toHaveBeenCalled()
+  })
+
   it.each([
     {
       name: "uses the new day's unchecked admission after yesterday's checked response",
