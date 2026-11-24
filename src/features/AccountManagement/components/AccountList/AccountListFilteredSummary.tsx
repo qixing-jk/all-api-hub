@@ -3,16 +3,17 @@ import { useTranslation } from "react-i18next"
 import { FINANCIAL_METRIC_KINDS } from "~/components/financialMetricKinds"
 import { FinancialMetricLabel } from "~/components/FinancialMetricLabel"
 import { Caption } from "~/components/ui"
-import {
-  BalancePortfolioSummary,
-  FILTERED_SUMMARY_METRIC_ROWS,
-} from "~/features/AccountManagement/components/BalancePortfolioSummary"
+import { BalancePortfolioSummary } from "~/features/AccountManagement/components/BalancePortfolioSummary"
 import { FinancialTotalsPopover } from "~/features/AccountManagement/components/FinancialTotalsPopover"
 import { ProviderDayUsageSummary } from "~/features/AccountManagement/components/ProviderDayUsageSummary"
 import { cn } from "~/lib/utils"
 import type { ConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import type { DisplaySiteData } from "~/types"
 
+import {
+  FILTERED_SUMMARY_METRIC_ROWS,
+  useFilteredSummaryLabelHeight,
+} from "./filteredSummaryLayout"
 import { FilteredTodayMetric } from "./FilteredTodayMetric"
 
 interface AccountListFilteredSummaryProps {
@@ -29,7 +30,11 @@ export function AccountListFilteredSummary({
   income,
   showTodayCashflow,
 }: AccountListFilteredSummaryProps) {
-  const { t } = useTranslation(["account", "common"])
+  const { t, i18n } = useTranslation(["account", "common"])
+  const metricGridRef = useFilteredSummaryLabelHeight(
+    showTodayCashflow,
+    i18n.resolvedLanguage,
+  )
   return (
     <div
       role="region"
@@ -44,6 +49,7 @@ export function AccountListFilteredSummary({
         })}
       </span>
       <div
+        ref={metricGridRef}
         className={cn(
           "col-span-full col-start-1 row-start-2 grid min-w-0 gap-x-3 gap-y-1 [@container(min-width:40rem)]:col-span-1 [@container(min-width:40rem)]:col-start-2 [@container(min-width:40rem)]:row-start-1",
           showTodayCashflow
@@ -71,7 +77,10 @@ export function AccountListFilteredSummary({
                 "min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2",
               )}
             >
-              <Caption className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4">
+              <Caption
+                data-filtered-summary-label=""
+                className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4"
+              >
                 <FinancialMetricLabel
                   kind={FINANCIAL_METRIC_KINDS.Consumption}
                   className="pl-0 [@container(min-width:56rem)]:pl-5"
@@ -99,7 +108,10 @@ export function AccountListFilteredSummary({
                 "min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2",
               )}
             >
-              <Caption className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4">
+              <Caption
+                data-filtered-summary-label=""
+                className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4"
+              >
                 <FinancialMetricLabel
                   kind={FINANCIAL_METRIC_KINDS.Income}
                   className="pl-0 [@container(min-width:56rem)]:pl-5"

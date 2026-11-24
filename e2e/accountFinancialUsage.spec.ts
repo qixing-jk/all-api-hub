@@ -962,6 +962,23 @@ testInUtc(
         exact: true,
       })
       await expect(summary).toBeVisible()
+      // Inspect Chrome's actual accessibility tree; DOM role queries alone do
+      // not establish that display: contents retains screen-reader groups.
+      const accessibility = await context.newCDPSession(page)
+      try {
+        const { nodes } = await accessibility.send(
+          "Accessibility.getFullAXTree",
+        )
+        const groups = nodes
+          .filter((node) => !node.ignored && node.role?.value === "group")
+          .map((node) => node.name?.value)
+        for (const name of ["Balance", "Today's consumption", "Today's income"])
+          expect(groups, `Accessible filtered metric group: ${name}`).toContain(
+            name,
+          )
+      } finally {
+        await accessibility.detach()
+      }
       await expect(
         summary.getByRole("group", { name: "Today's consumption" }),
       ).toContainText("USD 0.12")
@@ -1083,6 +1100,24 @@ testInUtc(
           label.style.overflowWrap = "anywhere"
         })
       }
+      if (width !== 1440)
+        for (const [label, amount] of [
+          ["Balance", "$7.00"],
+          ["Today's consumption", "USD 0.12"],
+          ["Today's income", "25 Credits"],
+        ] as const) {
+          await expect
+            .poll(async () => {
+              const labelBox = (await summary
+                .getByText(label, { exact: true })
+                .boundingBox())!
+              const amountBox = (await summary
+                .getByText(amount, { exact: true })
+                .boundingBox())!
+              return amountBox.y - (labelBox.y + labelBox.height)
+            })
+            .toBeGreaterThanOrEqual(0)
+        }
       const amountBottoms = await Promise.all(
         ["$7.00", "USD 0.12", "25 Credits"].map((value) =>
           summary.getByText(value, { exact: true }).evaluate((element) => {

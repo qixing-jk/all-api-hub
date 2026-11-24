@@ -38,14 +38,13 @@ import {
   getAssetLabel,
 } from "~/utils/core/money"
 
+import {
+  FILTERED_SUMMARY_CONTENT_ROWS,
+  FILTERED_SUMMARY_METRIC_ROWS,
+} from "./AccountList/filteredSummaryLayout"
 import { AllowanceDetailsPopover } from "./AccountList/rows/AllowanceDetailsPopover"
 import { getBalancePortfolioPresentation } from "./balancePortfolioPresentation"
 import { FinancialAccountExclusions } from "./FinancialAccountExclusions"
-
-// Share the tallest label row below the desktop layout. Without subgrid,
-// place labels and values directly in the parent grid's shared rows.
-export const FILTERED_SUMMARY_METRIC_ROWS =
-  "[@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:row-span-2 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid-rows-subgrid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:space-y-0 [@container(max-width:55.999rem)]:not-supports-[grid-template-rows:subgrid]:contents [@container(max-width:55.999rem)]:not-supports-[grid-template-rows:subgrid]:space-y-0 [@container(max-width:55.999rem)]:not-supports-[grid-template-rows:subgrid]:[&>:first-child]:row-start-1 [@container(max-width:55.999rem)]:not-supports-[grid-template-rows:subgrid]:[&>:nth-child(2)]:row-start-2"
 
 /** Shared native-asset totals for the popup and filtered account groups. */
 export function BalancePortfolioSummary({
@@ -183,7 +182,9 @@ export function BalancePortfolioSummary({
         inline
           ? cn(
               "space-y-1",
-              FILTERED_SUMMARY_METRIC_ROWS,
+              showAccountBreakdown
+                ? FILTERED_SUMMARY_METRIC_ROWS
+                : FILTERED_SUMMARY_CONTENT_ROWS,
               "[@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0",
             )
           : compact
@@ -214,6 +215,7 @@ export function BalancePortfolioSummary({
       {(!compact || inline) && (
         <div className="flex items-center justify-between gap-2">
           <Caption
+            data-filtered-summary-label={inline ? "" : undefined}
             className={cn(
               "font-medium",
               inline && "block min-h-8 [@container(min-width:30rem)]:min-h-4",
