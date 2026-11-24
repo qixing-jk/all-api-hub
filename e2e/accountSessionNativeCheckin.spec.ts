@@ -24,6 +24,7 @@ for (const mode of [
   "pow",
   "turnstile",
   "shared-mismatch",
+  "swapped-identities",
   "legacy-refresh-401",
   "legacy-refresh-405",
 ] as const) {
@@ -32,6 +33,9 @@ for (const mode of [
     extensionId,
     page,
   }, testInfo) => {
+    const identityMismatch =
+      mode === "shared-mismatch" || mode === "swapped-identities"
+    const confirmedIdentities = new Set<string>()
     const logins: string[] = [],
       claims: string[] = [],
       challenges: string[] = []
@@ -67,7 +71,16 @@ for (const mode of [
       if (path === "/api/user/login") {
         const user = JSON.parse(body).username.replace("user-", "")
         logins.push(user)
-        res.setHeader("set-cookie", `session=${user}; Path=/; SameSite=Lax`)
+        const sessionUser =
+          mode === "swapped-identities"
+            ? user === "101"
+              ? "202"
+              : "101"
+            : user
+        res.setHeader(
+          "set-cookie",
+          `session=${sessionUser}; Path=/; SameSite=Lax`,
+        )
         return json({
           success: true,
           data: { id: Number(user), username: `user-${user}` },
@@ -83,7 +96,10 @@ for (const mode of [
           : json({ success: false }, 401)
       if (path === "/api/user/checkin") {
         if (!id) return json({ success: false }, 401)
-        if (req.method !== "POST")
+        if (req.method !== "POST") {
+          const targetId = req.headers["new-api-user"]
+          if (cookieId && checked.has(id) && typeof targetId === "string")
+            confirmedIdentities.add(`${targetId}:${cookieId}`)
           return json({
             success: true,
             data: {
@@ -91,6 +107,7 @@ for (const mode of [
               stats: { checked_in_today: checked.has(id) },
             },
           })
+        }
         const challenge = `native-${id}`
         const nonce = Number(url.searchParams.get("pow_nonce"))
         const valid =
@@ -202,7 +219,10 @@ for (const mode of [
           turnstileAssistPresentation: "page",
         },
       })
-      const ids = mode === "pow" ? ["101", "202"] : ["101"]
+      const ids =
+        mode === "pow" || mode === "swapped-identities"
+          ? ["101", "202"]
+          : ["101"]
       await seedStoredAccounts(
         worker,
         [...ids].reverse().map((id) =>
@@ -306,7 +326,7 @@ for (const mode of [
         perAccount: Object.fromEntries(
           ids.map((id) => [
             `native-${id}`,
-            mode === "shared-mismatch"
+            identityMismatch
               ? {
                   status: "failed",
                   reasonCode: "authentication_required",
@@ -320,7 +340,7 @@ for (const mode of [
       const status = await readStatus()
       for (const id of ids)
         expect(status?.perAccount?.[`native-${id}`]).toMatchObject(
-          mode === "shared-mismatch"
+          identityMismatch
             ? {
                 status: "failed",
                 reasonCode: "authentication_required",
@@ -331,17 +351,22 @@ for (const mode of [
         )
       // Account sessions may finish in either order; still require each identity
       // exactly once so duplicates and cross-account requests cannot pass.
-      expect([...claims].sort()).toEqual(mode === "shared-mismatch" ? [] : ids)
+      expect([...claims].sort()).toEqual(identityMismatch ? [] : ids)
       expect([...logins].sort()).toEqual(mode === "shared-mismatch" ? [] : ids)
       expect([...challenges].sort()).toEqual(
-        mode !== "turnstile" && mode !== "shared-mismatch" ? ids : [],
+        mode !== "turnstile" && !identityMismatch ? ids : [],
+      )
+      // Readback carries the target account header and the actual native Cookie.
+      // Keep each pair intact so two successful accounts cannot swap identities.
+      expect([...confirmedIdentities].sort()).toEqual(
+        identityMismatch ? [] : ids.map((id) => `${id}:${id}`),
       )
       expect(directPosts).toBe(ids.length)
       for (const id of ids) {
         const row = options.getByRole("row").filter({ hasText: `Target ${id}` })
         await expect(row).toBeVisible()
         await expect(row).toContainText(
-          mode === "shared-mismatch" ? /different account/i : /success/i,
+          identityMismatch ? /different account/i : /success/i,
         )
       }
       await expect
@@ -362,6 +387,7 @@ for (const mode of [
             logins,
             claims,
             challenges,
+            confirmedIdentities: [...confirmedIdentities],
             directPosts,
             perAccount: status?.perAccount,
           },

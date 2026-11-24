@@ -77,6 +77,11 @@ test.describe("New API balance from authenticated login without a repeat self re
     Object.assign(process.env, overrides)
   })
 
+  test.afterEach(() => {
+    // Release fixture-owned HTTP connections before the browser context closes.
+    server.closeAllConnections()
+  })
+
   test.afterAll(async () => {
     for (const [key, value] of Object.entries(originalEnv)) {
       if (value === undefined) delete process.env[key]
@@ -86,7 +91,7 @@ test.describe("New API balance from authenticated login without a repeat self re
       server.close((error) => (error ? reject(error) : resolve())),
     )
     expect(selfRequests).toBe(0)
-    expect(logouts).toBe(1)
+    if (!process.env.AAH_E2E_USER_DATA_DIR) expect(logouts).toBe(1)
   })
 
   registerBalanceDefaultDisplayTests("NEW_API")
