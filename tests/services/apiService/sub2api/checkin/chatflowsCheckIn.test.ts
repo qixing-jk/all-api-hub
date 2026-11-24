@@ -208,12 +208,74 @@ describe("ChatflowsAI public check-in contract", () => {
     await expect(
       fetchChatflowsCheckInStatus({
         ...request,
-        auth: { ...request.auth, accessToken: "" },
+        auth: {
+          ...request.auth,
+          accessToken: "",
+          refreshToken: "refresh-token",
+        },
       }),
     ).rejects.toThrow()
     expect(fetchApiResponse).not.toHaveBeenCalled()
     expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
     expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+  })
+
+  it("renews an expiring token before an authorized execution status GET", async () => {
+    vi.mocked(refreshSub2ApiTokens).mockResolvedValueOnce({
+      accessToken: "renewed-token",
+      refreshToken: "rotated-token",
+      tokenExpiresAt: Date.now() + 3600000,
+    })
+    vi.mocked(fetchApiResponse).mockResolvedValue(success(statusData()))
+    await fetchChatflowsCheckInStatus(
+      {
+        ...request,
+        auth: {
+          ...request.auth,
+          refreshToken: "refresh-token",
+          tokenExpiresAt: Date.now() - 1000,
+        },
+      },
+      { allowAuthenticationRecovery: true },
+    )
+    expect(refreshSub2ApiTokens).toHaveBeenCalledOnce()
+    expect(fetchApiResponse).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({ accessToken: "renewed-token" }),
+      }),
+      {
+        endpoint: "/api/checkin/status",
+        options: { method: "GET", cache: "no-store" },
+      },
+    )
+  })
+
+  it("renews once after an unauthorized execution status GET", async () => {
+    vi.mocked(refreshSub2ApiTokens).mockResolvedValueOnce({
+      accessToken: "renewed-token",
+      refreshToken: "rotated-token",
+      tokenExpiresAt: Date.now() + 3600000,
+    })
+    vi.mocked(fetchApiResponse)
+      .mockResolvedValueOnce(response({ code: 401, message: "Unauthorized" }))
+      .mockResolvedValueOnce(success(statusData()))
+    await expect(
+      fetchChatflowsCheckInStatus(
+        {
+          ...request,
+          auth: { ...request.auth, refreshToken: "refresh-token" },
+        },
+        { allowAuthenticationRecovery: true },
+      ),
+    ).resolves.toMatchObject({ checkedInToday: false })
+    expect(refreshSub2ApiTokens).toHaveBeenCalledOnce()
+    expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+    expect(fetchApiResponse).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({ accessToken: "renewed-token" }),
+      }),
+      expect.anything(),
+    )
   })
 
   it("submits once without a body or query", async () => {

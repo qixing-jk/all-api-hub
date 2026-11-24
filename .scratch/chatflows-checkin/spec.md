@@ -61,3 +61,12 @@ its exact next-noon reset; a stale period with a distant future reset is invalid
 The regression tests first reproduced the noon cache skip and weak period
 validation, then passed with the scoped policy and parser changes. Raw API
 field types and live extension execution remain unverified.
+
+Authorized execution status admission opts into the existing Sub2API auth
+lifecycle, including saved refresh-token rotation and identity verification.
+Discovery, ordinary status refresh and post-claim reconciliation remain passive.
+The shared read-request owner carries the execution's transport policy; the
+provider does not duplicate authentication or replay uncertain POSTs.
+The account-list status projection uses the same registry period policy as
+execution: a pre-noon observation expires at noon, while midnight within the
+same noon-to-noon period does not expire it. Other methods keep local-day rules.

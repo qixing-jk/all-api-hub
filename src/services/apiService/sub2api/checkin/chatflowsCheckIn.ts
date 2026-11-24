@@ -91,8 +91,11 @@ export function parseChatflowsCheckInMutationResponse(
   return { kind: "applied" as const, amount: data.amount as string | number }
 }
 
-/** Discovery never refreshes credentials, opens login, or sends a mutation. */
-export async function fetchChatflowsCheckInStatus(request: ApiServiceRequest) {
+/** Passive by default; only admitted execution reads may renew credentials. */
+export async function fetchChatflowsCheckInStatus(
+  request: ApiServiceRequest,
+  options: { allowAuthenticationRecovery?: boolean } = {},
+) {
   return executeAuthenticatedSub2ApiRequest(
     request,
     CHATFLOWS_CHECK_IN_STATUS_ENDPOINT,
@@ -103,11 +106,13 @@ export async function fetchChatflowsCheckInStatus(request: ApiServiceRequest) {
       })
       return parseChatflowsCheckInStatusResponse(response)
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    options.allowAuthenticationRecovery
+      ? {}
+      : {
+          proactiveRefresh: false,
+          recoverMissingAccessToken: false,
+          recoverUnauthorized: false,
+        },
   )
 }
 

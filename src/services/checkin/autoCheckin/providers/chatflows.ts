@@ -47,7 +47,10 @@ import {
 
 const fetchStatus = async (context: AutoCheckinProviderReadContext) =>
   toSub2ApiCheckInStatus(
-    await fetchChatflowsCheckInStatus(createSub2ApiCheckInReadRequest(context)),
+    await fetchChatflowsCheckInStatus(
+      createSub2ApiCheckInReadRequest(context),
+      { allowAuthenticationRecovery: !!context.authenticationRecovery },
+    ),
     context.observedAt,
   )
 
@@ -68,7 +71,11 @@ const readStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
 export const chatflowsProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
   getReadiness: getSub2ApiCheckInReadiness,
-  detect: (context) => detectWithStatusReadback(context, fetchStatus),
+  detect: (context) =>
+    detectWithStatusReadback(
+      { ...context, authenticationRecovery: undefined },
+      fetchStatus,
+    ),
   getStatus: readStatus,
 
   async checkIn(account, context) {

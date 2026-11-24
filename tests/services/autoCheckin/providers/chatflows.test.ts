@@ -137,6 +137,7 @@ describe("ChatflowsAI check-in integration", () => {
     })
     expect(fetchChatflowsCheckInStatus).toHaveBeenCalledWith(
       expect.objectContaining({ abortSignal: signal }),
+      { allowAuthenticationRecovery: false },
     )
     expect(performChatflowsCheckIn).not.toHaveBeenCalled()
   })
@@ -181,6 +182,22 @@ describe("ChatflowsAI check-in integration", () => {
       }),
     ).toMatchObject({ kind: "executed", result: { status: "success" } })
     expect(performChatflowsCheckIn).toHaveBeenCalledOnce()
+    expect(fetchChatflowsCheckInStatus).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ ...context(), directRequestReason: undefined }),
+      { allowAuthenticationRecovery: true },
+    )
+  })
+
+  it("keeps discovery passive even when given execution recovery context", async () => {
+    await chatflowsProvider.detect?.({
+      account: createAccount(),
+      observedAt: Date.now(),
+      authenticationRecovery: context(),
+    })
+    expect(fetchChatflowsCheckInStatus).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      { allowAuthenticationRecovery: false },
+    )
   })
 
   it("rejects a missing or previous-period proof at Beijing noon", async () => {
@@ -263,6 +280,10 @@ describe("ChatflowsAI check-in integration", () => {
     })
     expect(performChatflowsCheckIn).toHaveBeenCalledOnce()
     expect(fetchChatflowsCheckInStatus).toHaveBeenCalledOnce()
+    expect(fetchChatflowsCheckInStatus).toHaveBeenLastCalledWith(
+      expect.anything(),
+      { allowAuthenticationRecovery: false },
+    )
   })
 
   it.each([false, "unavailable"])(

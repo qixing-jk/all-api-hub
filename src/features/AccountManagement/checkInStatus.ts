@@ -11,7 +11,10 @@ import {
   inspectAccountCheckIn,
   resolveSelectedCheckInMethod,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
-import { supportsCheckInStatusReadback } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getCheckInMethodStatusPeriodKey,
+  supportsCheckInStatusReadback,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type { DisplaySiteData } from "~/types"
 import type {
   CheckInExecutionSkipReason,
@@ -80,7 +83,7 @@ export function getCheckInObservationTime(
     : status.evidence.observedAt
 }
 
-/** Returns whether the selected method status was observed for the current day. */
+/** Returns whether the selected status belongs to its method's current period. */
 export function isSelectedCheckInStatusCurrent(
   account: StatusAccount,
 ): boolean {
@@ -91,6 +94,23 @@ export function isSelectedCheckInStatusCurrent(
   })
   if (!status || status.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
     return false
+  }
+
+  const methodId = resolveSelectedCheckInMethod({
+    config: account.checkIn,
+    siteType: account.siteType,
+    siteUrl: account.baseUrl,
+  })
+  const observedAt = getCheckInObservationTime(status)
+  if (
+    methodId &&
+    typeof observedAt === "number" &&
+    Number.isFinite(observedAt)
+  ) {
+    const periodKey = getCheckInMethodStatusPeriodKey(methodId, observedAt)
+    if (periodKey !== undefined) {
+      return periodKey === getCheckInMethodStatusPeriodKey(methodId, Date.now())
+    }
   }
 
   if (
