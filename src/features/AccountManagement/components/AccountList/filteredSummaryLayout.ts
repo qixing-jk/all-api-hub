@@ -19,16 +19,22 @@ export function useFilteredSummaryLabelHeight(
     const grid = ref.current
     if (!grid || globalThis.CSS?.supports?.("grid-template-rows", "subgrid"))
       return
+    // Select the actual contents so grid-stretched Caption boxes never feed
+    // their assigned row height back into the intrinsic measurement.
     const labels = Array.from(
-      grid.querySelectorAll<HTMLElement>("[data-filtered-summary-label]"),
+      grid.querySelectorAll<HTMLElement>(
+        "[data-filtered-summary-label] > span",
+      ),
     )
     const measure = () => {
       const height = Math.max(
         0,
         ...labels.map((label) =>
           Math.max(
-            Number.parseFloat(getComputedStyle(label).minHeight) || 0,
-            label.firstElementChild?.getBoundingClientRect().height ?? 0,
+            Number.parseFloat(
+              getComputedStyle(label.parentElement!).minHeight,
+            ) || 0,
+            label.getBoundingClientRect().height,
           ),
         ),
       )
@@ -42,7 +48,7 @@ export function useFilteredSummaryLabelHeight(
     const observer = new ResizeObserver(measure)
     observer.observe(grid)
     for (const label of labels) {
-      if (label.firstElementChild) observer.observe(label.firstElementChild)
+      observer.observe(label)
     }
     return () => observer.disconnect()
   }, [showTodayCashflow, language])
