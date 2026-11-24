@@ -3,7 +3,10 @@ import { useTranslation } from "react-i18next"
 import { FINANCIAL_METRIC_KINDS } from "~/components/financialMetricKinds"
 import { FinancialMetricLabel } from "~/components/FinancialMetricLabel"
 import { Caption } from "~/components/ui"
-import { BalancePortfolioSummary } from "~/features/AccountManagement/components/BalancePortfolioSummary"
+import {
+  BalancePortfolioSummary,
+  FILTERED_SUMMARY_METRIC_ROWS,
+} from "~/features/AccountManagement/components/BalancePortfolioSummary"
 import { FinancialTotalsPopover } from "~/features/AccountManagement/components/FinancialTotalsPopover"
 import { ProviderDayUsageSummary } from "~/features/AccountManagement/components/ProviderDayUsageSummary"
 import { cn } from "~/lib/utils"
@@ -11,11 +14,6 @@ import type { ConsumptionProjection } from "~/services/accounts/metrics/consumpt
 import type { DisplaySiteData } from "~/types"
 
 import { FilteredTodayMetric } from "./FilteredTodayMetric"
-
-// Share the tallest label row below the desktop layout. Older engines use
-// the label minimum heights and keep the same grid columns.
-const compactMetricRows =
-  "[@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:row-span-2 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid-rows-subgrid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:space-y-0"
 
 interface AccountListFilteredSummaryProps {
   sites: DisplaySiteData[]
@@ -57,7 +55,7 @@ export function AccountListFilteredSummary({
           role="group"
           aria-label={t("account:financial.availableTotal")}
           className={cn(
-            compactMetricRows,
+            FILTERED_SUMMARY_METRIC_ROWS,
             "min-w-0 [@container(min-width:56rem)]:border-l [@container(min-width:56rem)]:border-border/70 [@container(min-width:56rem)]:pl-2",
           )}
         >
@@ -69,7 +67,7 @@ export function AccountListFilteredSummary({
               role="group"
               aria-label={t("account:filteredTotals.consumption")}
               className={cn(
-                compactMetricRows,
+                FILTERED_SUMMARY_METRIC_ROWS,
                 "min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2",
               )}
             >
@@ -97,7 +95,7 @@ export function AccountListFilteredSummary({
               role="group"
               aria-label={t("account:filteredTotals.income")}
               className={cn(
-                compactMetricRows,
+                FILTERED_SUMMARY_METRIC_ROWS,
                 "min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2",
               )}
             >

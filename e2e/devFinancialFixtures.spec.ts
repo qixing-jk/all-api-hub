@@ -2005,21 +2005,18 @@ test("dev balance scenarios keep hover feedback aligned and free of extra blocks
   const worker = await getServiceWorker(context)
   const walletAccount = buildBalanceUiAccounts()[0]!
   await seedStoredAccounts(worker, [walletAccount])
-  await seedUserPreferences(worker, {
-    themeMode: "light",
-    showTodayCashflow: true,
-    autoRefresh: false,
-  })
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
-  await waitForExtensionRoot(page)
   const row = () =>
     page.getByTestId(getAccountManagementListItemTestId(walletAccount.id))
   // Hovering financial text must not paint a second block or move its aligned edge.
   for (const theme of ["light", "dark"] as const) {
-    await page.evaluate((value) => {
-      document.documentElement.classList.toggle("dark", value === "dark")
-    }, theme)
+    await seedUserPreferences(worker, {
+      themeMode: theme,
+      showTodayCashflow: true,
+      autoRefresh: false,
+    })
+    await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+    await waitForExtensionRoot(page)
     const wallet = row()
     await wallet.scrollIntoViewIfNeeded()
     for (const button of [

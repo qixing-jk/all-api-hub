@@ -1103,6 +1103,17 @@ testInUtc(
         "Filtered amount text shares a baseline even when its labels wrap",
       ).toBeLessThan(1)
       if (width === 320) {
+        await captureVisualViews({
+          page,
+          ready: summary,
+          captureTarget: summary,
+          id: `filtered-cashflow-wrapped-${width}`,
+          extensionDir,
+          views: [
+            { id: "light", width, height: 900, theme: "light" },
+            { id: "dark", width, height: 900, theme: "dark" },
+          ],
+        })
         await consumptionLabel.evaluate((label) => {
           label.style.removeProperty("display")
           label.style.removeProperty("max-width")

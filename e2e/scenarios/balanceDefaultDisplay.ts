@@ -13,7 +13,7 @@ import {
 } from "~/services/accounts/balanceSnapshot"
 import { balancePosition } from "~/services/amounts/balance"
 import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
-import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { expect, test as extensionTest } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -40,13 +40,18 @@ const targets = [
   { prefix: "SUB2API", type: SITE_TYPES.SUB2API, route: "/dashboard" },
 ] as const
 
+const test = extensionTest.extend({
+  screenshot: "off",
+  trace: "off",
+  video: "off",
+})
+
 // Read the existing CI deployments; only log in and read finance. No resource creation.
 export function registerBalanceDefaultDisplayTests(
   prefix: (typeof targets)[number]["prefix"],
 ) {
   const target = targets.find((candidate) => candidate.prefix === prefix)!
   test.describe("native balance comparison", () => {
-    test.use({ screenshot: "off", trace: "off", video: "off" })
     test.skip(
       () => Boolean(process.env.AAH_E2E_USER_DATA_DIR),
       "The balance comparison seeds accounts and preferences in a disposable profile.",
