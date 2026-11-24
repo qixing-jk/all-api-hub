@@ -137,6 +137,7 @@ describe("check-in methods compatibility activation", () => {
       }))
     vi.spyOn(registration.provider, "checkIn").mockResolvedValue({
       status: "uncertain",
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
     })
 
     await executeSelectedCheckIn({
