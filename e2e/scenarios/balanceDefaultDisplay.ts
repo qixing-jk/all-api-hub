@@ -80,6 +80,7 @@ export function registerBalanceDefaultDisplayTests(
       const config = resolution.config!
       const native = await context.newPage()
       let cleanupOwnedSession: (() => Promise<void>) | undefined
+      let authenticatedUser: Record<string, unknown> | undefined
       try {
         if ("login2faApiUrl" in config) {
           const login = await loginToCompatibleApiRealSite(native, config, {
@@ -88,36 +89,51 @@ export function registerBalanceDefaultDisplayTests(
             authBundle: target.prefix === "NEW_API",
           })
           cleanupOwnedSession = login.cleanupOwnedSession
+          authenticatedUser = login.user
         } else {
           await loginToRealSub2ApiSite(native, config)
         }
 
         const sub2api = target.prefix === "SUB2API"
-        const endpoint = sub2api ? "/api/v1/auth/me" : "/api/user/self"
-        const responseUrl = new URL(endpoint, config.baseUrl)
-        const [balanceResponse] = await Promise.all([
-          native.waitForResponse(
-            (response) => {
-              const url = new URL(response.url())
-              return (
-                url.origin === responseUrl.origin &&
-                url.pathname === responseUrl.pathname &&
-                response.status() === 200 &&
-                response.request().method() === "GET"
-              )
-            },
-            { timeout: 30_000 },
-          ),
-          native.goto(new URL(target.route, config.baseUrl).href, {
+        let observation:
+          | { source: "authenticated login user"; raw: unknown }
+          | { endpoint: string; status: number; raw: unknown }
+        const destination = new URL(target.route, config.baseUrl).href
+        if (target.prefix === "NEW_API") {
+          // Modern login returns the user through APIRequestContext. The console
+          // may render that cached quota without emitting another page response.
+          observation = {
+            source: "authenticated login user",
+            raw: authenticatedUser?.quota,
+          }
+          await native.goto(destination, {
             waitUntil: "domcontentloaded",
-          }),
-        ])
-        const body = await balanceResponse.json()
-        const data = body.data ?? body
-        const observation = {
-          endpoint,
-          status: balanceResponse.status(),
-          raw: sub2api ? data.balance : data.quota,
+          })
+        } else {
+          const endpoint = sub2api ? "/api/v1/auth/me" : "/api/user/self"
+          const responseUrl = new URL(endpoint, config.baseUrl)
+          const [balanceResponse] = await Promise.all([
+            native.waitForResponse(
+              (response) => {
+                const url = new URL(response.url())
+                return (
+                  url.origin === responseUrl.origin &&
+                  url.pathname === responseUrl.pathname &&
+                  response.status() === 200 &&
+                  response.request().method() === "GET"
+                )
+              },
+              { timeout: 30_000 },
+            ),
+            native.goto(destination, { waitUntil: "domcontentloaded" }),
+          ])
+          const body = await balanceResponse.json()
+          const data = body.data ?? body
+          observation = {
+            endpoint,
+            status: balanceResponse.status(),
+            raw: sub2api ? data.balance : data.quota,
+          }
         }
         expect(observation.raw).toBeDefined()
         const amount =
@@ -176,9 +192,11 @@ export function registerBalanceDefaultDisplayTests(
         const source = {
           adapter: target.type,
           operation:
-            target.prefix === "SUB2API"
-              ? `${observation.endpoint}:balance`
-              : observation.endpoint,
+            "endpoint" in observation
+              ? target.prefix === "SUB2API"
+                ? `${observation.endpoint}:balance`
+                : observation.endpoint
+              : "authenticated-login:user.quota",
           contractVersion:
             target.prefix === "SUB2API" ? "usd/v1" : "matched-ci/v1",
           kind: "reported" as const,

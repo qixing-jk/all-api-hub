@@ -205,7 +205,7 @@ for (const mode of [
       const ids = mode === "pow" ? ["101", "202"] : ["101"]
       await seedStoredAccounts(
         worker,
-        ids.map((id) =>
+        [...ids].reverse().map((id) =>
           createStoredAccount({
             id: `native-${id}`,
             site_name: `Target ${id}`,
@@ -329,9 +329,11 @@ for (const mode of [
               }
             : { status: "success" },
         )
-      expect(claims).toEqual(mode === "shared-mismatch" ? [] : ids)
-      expect(logins).toEqual(mode === "shared-mismatch" ? [] : ids)
-      expect(challenges).toEqual(
+      // Account sessions may finish in either order; still require each identity
+      // exactly once so duplicates and cross-account requests cannot pass.
+      expect([...claims].sort()).toEqual(mode === "shared-mismatch" ? [] : ids)
+      expect([...logins].sort()).toEqual(mode === "shared-mismatch" ? [] : ids)
+      expect([...challenges].sort()).toEqual(
         mode !== "turnstile" && mode !== "shared-mismatch" ? ids : [],
       )
       expect(directPosts).toBe(ids.length)
