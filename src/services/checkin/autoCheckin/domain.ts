@@ -1,6 +1,7 @@
 import {
   AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
+  CHECK_IN_DISCOVERY_PRIORITIES,
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
@@ -13,7 +14,10 @@ import {
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
-import { getCheckInDiscoveryPriority } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getCheckInDiscoveryPriority,
+  getCheckInMethodStatusPeriodKey,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -80,12 +84,33 @@ const deriveDiscoveryDecision = (
   choices: readonly CheckInMethodChoice[],
   config: CheckInConfig,
 ): CheckInDiscoveryDecision => {
-  const allMatchedMethodIds = choices
+  let allMatchedMethodIds = choices
     .filter(
       (choice) =>
         choice.detectionOutcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
     )
     .map((choice) => choice.methodId)
+  const isKnownDisabled = (id: CheckInMethodId) => {
+    const status = config.methodKnowledge.methods[id]?.status
+    return (
+      status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
+    )
+  }
+  // Optional fallback activities yield to ordinary usable methods. Only when
+  // such a fallback matched may a disabled method yield; existing specific-vs-
+  // generic semantics otherwise stay intact. Unknown is never enablement proof.
+  if (
+    allMatchedMethodIds.some(
+      (id) =>
+        getCheckInDiscoveryPriority(id) ===
+          CHECK_IN_DISCOVERY_PRIORITIES.Fallback && !isKnownDisabled(id),
+    )
+  ) {
+    allMatchedMethodIds = allMatchedMethodIds.filter(
+      (id) => !isKnownDisabled(id),
+    )
+  }
   const highestPriority = Math.max(
     ...allMatchedMethodIds.map(getCheckInDiscoveryPriority),
   )
@@ -339,17 +364,14 @@ const deriveExecutionEligibility = (
       ? knownStatus.evidence.observedAt
       : undefined
   const statusControlsExecution = statusObservedAt !== undefined
+  const statusPeriodKey = (timestamp: number) =>
+    getCheckInMethodStatusPeriodKey(methodId, timestamp) ??
+    getDayKeyFromUnixSeconds(Math.floor(timestamp / 1000), input.timeZone)
   const checkedStatusIsCurrent =
     statusControlsExecution &&
     knownStatus?.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked &&
-    getDayKeyFromUnixSeconds(
-      Math.floor(statusObservedAt / 1000),
-      input.timeZone,
-    ) ===
-      getDayKeyFromUnixSeconds(
-        Math.floor((input.now ?? Date.now()) / 1000),
-        input.timeZone,
-      )
+    statusPeriodKey(statusObservedAt) ===
+      statusPeriodKey(input.now ?? Date.now())
   if (
     statusControlsExecution &&
     knownStatus?.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled

@@ -12,6 +12,10 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
 import {
+  getHogLotteryPeriodKey,
+  HOG_LOTTERY_ENDPOINTS,
+} from "~/services/apiService/newApiFamily/variants/hogDailyLotteryProtocol"
+import {
   XINGYA_CHECK_IN_ORIGINS,
   XINGYA_CHECK_IN_STATUS_ENDPOINT,
 } from "~/services/apiService/newApiFamily/variants/xingyaCheckInProtocol"
@@ -98,9 +102,14 @@ type FeedbackStatusRoutes = readonly [
 ]
 
 type CheckInMethodLabelKey =
-  "methods.generic.name" | "methods.daily.name" | "methods.login.name"
+  | "methods.generic.name"
+  | "methods.daily.name"
+  | "methods.login.name"
+  | "methods.freeDailyDraw.name"
 type CheckInMethodDisclosureKey =
-  "methods.daily.description" | "methods.login.description"
+  | "methods.daily.description"
+  | "methods.login.description"
+  | "methods.freeDailyDraw.description"
 type CheckInMethodSourceNameKey = `methods.sources.${
   | "geniusProgrammer"
   | "denxio"
@@ -128,8 +137,13 @@ export type CheckInMethodPresentationMetadata = {
 
 interface AutoCheckinMethodDefinitionBase {
   readonly presentation?: Partial<
-    Pick<CheckInMethodPresentationMetadata, "kind" | "sourceNameKey">
+    Pick<
+      CheckInMethodPresentationMetadata,
+      "kind" | "sourceNameKey" | "labelKey" | "disclosureKey"
+    >
   >
+  /** Explicit protocol periods override local-day caches only for declaring methods. */
+  readonly statusPeriodKey?: (timestamp: number) => string | number
   readonly discoveryPriority?: number
   /** Public-domain hints for the last tie-break; never an origin authorization. */
   readonly discoveryOrigins?: readonly string[]
@@ -700,7 +714,37 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.HogDailyLottery]: {
+    id: AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
+    siteTypes: [SITE_TYPES.NEW_API],
+    excludedOrigins: AGENT_ROUTER_ORIGINS,
+    discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Fallback,
+    accountLogin: CHECK_IN_ACCOUNT_LOGIN_MODES.Session,
+    presentation: {
+      labelKey: "methods.freeDailyDraw.name",
+      disclosureKey: "methods.freeDailyDraw.description",
+    },
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Hog API Gateway",
+    },
+    statusPeriodKey: getHogLotteryPeriodKey,
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: HOG_LOTTERY_ENDPOINTS.Status }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
+
+/** Returns an explicit protocol period, or leaves existing caller cache rules intact. */
+export function getCheckInMethodStatusPeriodKey(
+  methodId: CheckInMethodId,
+  timestamp: number,
+): string | number | undefined {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.statusPeriodKey?.(timestamp)
+}
 
 /** Unranked protocols remain peers; generic protocols are automatic-selection fallbacks. */
 export function getCheckInDiscoveryPriority(methodId: CheckInMethodId): number {

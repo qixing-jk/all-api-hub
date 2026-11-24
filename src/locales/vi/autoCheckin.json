@@ -170,6 +170,10 @@
       "description": "Phương thức này dùng giao thức điểm danh của bên thứ ba {{source}} và chỉ hoạt động trên các bản triển khai có hỗ trợ giao thức đó.",
       "name": "Điểm danh hằng ngày qua {{source}}"
     },
+    "freeDailyDraw": {
+      "description": "Một lượt rút thăm miễn phí mỗi ngày qua {{source}}. Cần cấu hình đăng nhập bảng điều khiển; phần thưởng có thể bằng không.",
+      "name": "Rút thăm miễn phí hằng ngày"
+    },
     "generic": {
       "name": "Điểm danh hằng ngày"
     },

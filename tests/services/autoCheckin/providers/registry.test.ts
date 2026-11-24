@@ -107,7 +107,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(25)
+    expect(registrationContracts).toHaveLength(26)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -244,6 +244,7 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
     ])
     expect(
       autoCheckinMethodRegistry
@@ -266,6 +267,7 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
     ])
     expect(
       autoCheckinMethodRegistry
@@ -274,6 +276,7 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
     ])
     expect(
       getAutoCheckinCandidateMethodIds(
@@ -595,6 +598,7 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
     ])
   })
 })

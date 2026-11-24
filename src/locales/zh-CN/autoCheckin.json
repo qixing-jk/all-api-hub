@@ -170,6 +170,10 @@
       "description": "此方式使用 {{source}} 的第三方签到协议，仅适用于支持该协议的部署。",
       "name": "{{source}} 签到"
     },
+    "freeDailyDraw": {
+      "description": "使用 {{source}} 的免费每日抽奖。需要配置控制台登录，奖励可能为零。",
+      "name": "免费每日抽奖"
+    },
     "generic": {
       "name": "每日签到"
     },

@@ -12,6 +12,7 @@ import {
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { inspectSelectedCheckInCompatibility } from "~/services/checkin/autoCheckin/methods"
+import { getCheckInMethodStatusPeriodKey } from "~/services/checkin/autoCheckin/providers/registry"
 import { toAutoCheckinSkipReason } from "~/services/checkin/autoCheckin/skipReasons"
 import type { SiteAccount } from "~/types"
 import {
@@ -59,6 +60,29 @@ export function buildAutoCheckinAccountSnapshot(
         : AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
   }
 
+  let isCheckedInToday =
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+      ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
+      : undefined
+  if (
+    selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected &&
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+    "observedAt" in selectedStatus.evidence
+  ) {
+    const period = getCheckInMethodStatusPeriodKey(
+      selectionState.methodId,
+      selectedStatus.evidence.observedAt,
+    )
+    if (
+      period !== undefined &&
+      period !==
+        getCheckInMethodStatusPeriodKey(selectionState.methodId, Date.now())
+    ) {
+      // A prior protocol period is unknown now, not evidence of an unchecked claim.
+      isCheckedInToday = undefined
+    }
+  }
+
   return {
     accountId: account.id,
     accountName,
@@ -67,10 +91,7 @@ export function buildAutoCheckinAccountSnapshot(
     autoCheckinEnabled,
     providerAvailable,
     // Display-only field: DO NOT use this for eligibility decisions (provider outcomes are the source of truth).
-    isCheckedInToday:
-      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-        ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
-        : undefined,
+    isCheckedInToday,
     lastCheckInDate:
       selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
       selectedStatus.evidence.source ===

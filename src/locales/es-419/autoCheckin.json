@@ -178,6 +178,10 @@
       "description": "Este método usa el protocolo de check-in de terceros de {{source}} y solo funciona en instalaciones compatibles.",
       "name": "Check-in diario de {{source}}"
     },
+    "freeDailyDraw": {
+      "description": "Un sorteo diario gratuito mediante {{source}}. Requiere un inicio de sesión configurado; el premio puede ser cero.",
+      "name": "Sorteo diario gratuito"
+    },
     "generic": {
       "name": "Check-in diario"
     },
