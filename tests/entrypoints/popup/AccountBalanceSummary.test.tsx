@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import AccountBalanceSummary from "~/features/AccountManagement/components/AccountBalanceSummary"
 import { AccountListFilteredSummary } from "~/features/AccountManagement/components/AccountList/AccountListFilteredSummary"
+import { BalancePortfolioSummary } from "~/features/AccountManagement/components/BalancePortfolioSummary"
 import { buildDevSiteFinancialScenarios } from "~/features/DevPanel/fixtureSiteBalances"
 import enAccount from "~/locales/en/account.json"
 import {
@@ -74,6 +75,58 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 describe("AccountBalanceSummary", () => {
+  it("keeps the inline balance breakdown named and expandable", async () => {
+    const scope = accountBalanceScope({
+      baseUrl: "https://inline.example",
+      accountId: "inline",
+    })
+    const now = Date.now()
+    const site = buildDisplaySiteData({
+      id: "inline",
+      baseUrl: "https://inline.example",
+      balanceSnapshot: accountBalanceSnapshot(
+        scope,
+        [
+          balancePosition({
+            id: "credit",
+            scope,
+            observedAt: now,
+            value: "7",
+            asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+            source: {
+              adapter: "fixture",
+              operation: "balance",
+              contractVersion: "1",
+              kind: EVIDENCE_KINDS.Reported,
+            },
+          }),
+        ],
+        now,
+        FINANCIAL_COVERAGE.Complete,
+      ),
+    })
+    const i18n = await createResourceTestI18n({ en: { account: enAccount } })
+    const user = userEvent.setup()
+    render(
+      <I18nextProvider i18n={i18n}>
+        <BalancePortfolioSummary sites={[site]} inline showAccountBreakdown />
+      </I18nextProvider>,
+    )
+    const balance = screen.getByRole("group", { name: "Balance" })
+    expect(balance).toHaveTextContent("$7.00")
+    expect(
+      screen.queryByRole("group", { name: enAccount.financial.details }),
+    ).not.toBeInTheDocument()
+    await user.click(
+      within(balance).getByRole("button", {
+        name: i18n.t("account:financial.assetCount", { total: 1 }),
+      }),
+    )
+    expect(
+      screen.getByRole("group", { name: enAccount.financial.details }),
+    ).toHaveTextContent("USD 7")
+  })
+
   it.each([
     [CURRENCIES.USD, /USD\s2\.00/, /USD\s4\.00/],
     [CURRENCIES.CNY, /CNY\s21\.00/, /CNY\s42\.00/],

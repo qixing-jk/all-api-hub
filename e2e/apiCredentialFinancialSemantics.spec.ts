@@ -251,7 +251,13 @@ test("shows native custom spend and a rough runway after a credential refresh", 
   await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
   await waitForExtensionRoot(page)
   await page.getByTestId(POPUP_TEST_IDS.apiCredentialProfilesTab).click()
-  const cost = page.getByText("CNY 3", { exact: true })
+  const popupRow = page.getByTestId(
+    getApiCredentialProfileRowTestId("native-cost"),
+  )
+  const cost = popupRow.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage,
+  )
+  await expect(cost).toHaveText("CNY 3")
   await expect(cost).toBeVisible()
   await captureVisualViews({
     page,
