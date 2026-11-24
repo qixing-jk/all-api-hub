@@ -166,10 +166,10 @@ describe("Xingchi check-in integration", () => {
       signal,
       observedAt: 200,
     })
-    expect(fetchXingchiDailyCheckInStatus).toHaveBeenCalledWith({
-      ...request,
-      abortSignal: signal,
-    })
+    expect(fetchXingchiDailyCheckInStatus).toHaveBeenCalledWith(
+      { ...request, abortSignal: signal },
+      { allowAuthenticationRecovery: false },
+    )
     expect(request.abortSignal).toBe(originalSignal)
   })
 
@@ -183,6 +183,10 @@ describe("Xingchi check-in integration", () => {
       detection: { outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched },
     })
     expect(performXingchiDailyCheckIn).not.toHaveBeenCalled()
+    expect(fetchXingchiDailyCheckInStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      { allowAuthenticationRecovery: false },
+    )
   })
 
   it("reports the observed status facts", async () => {
@@ -278,6 +282,23 @@ describe("Xingchi check-in integration", () => {
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
   })
 
+  it("passes the authorized execution context only to the admission status read", async () => {
+    const context = executionContext()
+    await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context,
+    })
+    expect(fetchXingchiDailyCheckInStatus).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        ...context,
+        directRequestReason: undefined,
+      }),
+      { allowAuthenticationRecovery: true },
+    )
+  })
+
   it("preserves the native duplicate response as already checked", async () => {
     vi.mocked(performXingchiDailyCheckIn).mockRejectedValue(
       new ApiError(
@@ -352,6 +373,11 @@ describe("Xingchi check-in integration", () => {
       expect(
         vi.mocked(fetchXingchiDailyCheckInStatus).mock.calls.length,
       ).toBeGreaterThanOrEqual(2)
+      expect(
+        vi.mocked(fetchXingchiDailyCheckInStatus).mock.calls[1]?.[1],
+      ).toEqual({
+        allowAuthenticationRecovery: false,
+      })
     },
   )
 })

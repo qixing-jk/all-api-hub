@@ -34,6 +34,7 @@ const readStatus = async (context: AutoCheckinProviderReadContext) =>
   toSub2ApiCheckInStatus(
     await fetchXingchiDailyCheckInStatus(
       createSub2ApiCheckInReadRequest(context),
+      { allowAuthenticationRecovery: Boolean(context.authenticationRecovery) },
     ),
     context.observedAt,
   )

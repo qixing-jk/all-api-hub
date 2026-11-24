@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { fetchSub2ApiAuthIdentity } from "~/services/apiService/sub2api/auth/authIdentity"
+import {
+  SUB2API_AUTH_PERSISTENCE_STATUSES,
+  type Sub2ApiAuthSession,
+  type Sub2ApiStoredAuthSnapshot,
+} from "~/services/apiService/sub2api/auth/authSession"
 import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/auth/browserAuth"
 import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { parseClawhudDailyCheckInStatusResponse } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
@@ -29,11 +35,26 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
   fetchApiResponse: vi.fn(),
 }))
-vi.mock("~/services/apiService/sub2api/auth/browserAuth", () => ({
-  recoverSub2ApiBrowserAuth: vi.fn(),
-}))
-vi.mock("~/services/apiService/sub2api/auth/tokenRefresh", () => ({
-  refreshSub2ApiTokens: vi.fn(),
+vi.mock(
+  "~/services/apiService/sub2api/auth/browserAuth",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/browserAuth")
+    >()),
+    recoverSub2ApiBrowserAuth: vi.fn(),
+  }),
+)
+vi.mock(
+  "~/services/apiService/sub2api/auth/tokenRefresh",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/tokenRefresh")
+    >()),
+    refreshSub2ApiTokens: vi.fn(),
+  }),
+)
+vi.mock("~/services/apiService/sub2api/auth/authIdentity", () => ({
+  fetchSub2ApiAuthIdentity: vi.fn(),
 }))
 
 const response = (data: unknown): ApiTransportResponse<unknown> => ({
@@ -174,6 +195,109 @@ describe("Xingchi check-in contract", () => {
     expect(fetchApiResponse).not.toHaveBeenCalled()
     expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
     expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+  })
+
+  it("renews an expired credential only for an authorized status read", async () => {
+    let stored: Sub2ApiStoredAuthSnapshot = {
+      accessToken: "example-token",
+      origin: request.baseUrl,
+      userId: "42",
+      sub2apiAuth: {
+        refreshToken: "fixture-refresh",
+        tokenExpiresAt: Date.now() - 1,
+      },
+    }
+    const persistAuthUpdate = vi.fn<Sub2ApiAuthSession["persistAuthUpdate"]>(
+      async (_id, update) => {
+        stored = {
+          ...stored,
+          accessToken: update.accessToken,
+          sub2apiAuth: {
+            refreshToken: update.refreshToken!,
+            tokenExpiresAt: update.tokenExpiresAt,
+          },
+        }
+        return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED }
+      },
+    )
+    const expiredRequest = {
+      ...request,
+      accountId: "xingchi-fixture",
+      auth: {
+        ...request.auth,
+        refreshToken: "fixture-refresh",
+        tokenExpiresAt: Date.now() - 1,
+      },
+      sub2apiAuthSession: {
+        getLatestAuth: async () => stored,
+        persistAuthUpdate,
+      },
+    }
+    vi.mocked(fetchSub2ApiAuthIdentity).mockResolvedValue({
+      data: { id: 42 },
+      identity: { userId: 42, username: "Fixture", balanceUsd: 0 },
+    })
+    vi.mocked(refreshSub2ApiTokens).mockResolvedValue({
+      accessToken: "renewed-fixture",
+      refreshToken: "renewed-refresh",
+      tokenExpiresAt: Date.now() + 3_600_000,
+    })
+    vi.mocked(fetchApiResponse).mockResolvedValue(response(status))
+
+    await fetchXingchiDailyCheckInStatus(expiredRequest)
+    expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+    vi.mocked(fetchApiResponse).mockClear()
+
+    await fetchXingchiDailyCheckInStatus(expiredRequest, {
+      allowAuthenticationRecovery: true,
+    })
+    expect(refreshSub2ApiTokens).toHaveBeenCalledOnce()
+    expect(persistAuthUpdate).toHaveBeenCalledOnce()
+    expect(fetchApiResponse).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({ accessToken: "renewed-fixture" }),
+      }),
+      expect.objectContaining({
+        options: { method: "GET", cache: "no-store" },
+      }),
+    )
+    vi.mocked(fetchApiResponse).mockResolvedValue(
+      response({ amount: 300, status }),
+    )
+    await performXingchiDailyCheckIn(expiredRequest)
+    expect(fetchApiResponse).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({ accessToken: "renewed-fixture" }),
+      }),
+      expect.objectContaining({
+        options: { method: "POST", cache: "no-store" },
+      }),
+    )
+    expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+    expect(refreshSub2ApiTokens).toHaveBeenCalledOnce()
+    expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+  })
+
+  it("does not renew or replay an unauthorized POST", async () => {
+    vi.mocked(fetchApiResponse).mockResolvedValue({
+      ...response(null),
+      ok: false,
+      status: 401,
+      body: { code: "UNAUTHORIZED", message: "expired" },
+    })
+    await expect(
+      performXingchiDailyCheckIn({
+        ...request,
+        auth: {
+          ...request.auth,
+          refreshToken: "fixture-refresh",
+          tokenExpiresAt: Date.now() - 1,
+        },
+      }),
+    ).rejects.toMatchObject({ statusCode: 401 })
+    expect(fetchApiResponse).toHaveBeenCalledOnce()
+    expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+    expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
   })
 
   it("submits without a body and never replays a lost response", async () => {

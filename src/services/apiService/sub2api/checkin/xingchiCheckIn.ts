@@ -8,7 +8,8 @@ import {
   SIBLING_DTO_VERDICTS,
 } from "~/services/apiService/sub2api/checkin/siblingStatusContracts"
 import {
-  executeSub2ApiCheckInWithRecovery,
+  SUB2API_CHECK_IN_RECOVERY_REASONS,
+  Sub2ApiCheckInRecoveryBlockedError,
   type Sub2ApiCheckInRecoveryOptions,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import {
@@ -81,9 +82,16 @@ export function parseXingchiDailyCheckInMutationResponse(
   return { rewardAmount: amount as number | string }
 }
 
-/** Discovery must not refresh or recover a browser session. */
+const noCredentialRecovery = {
+  proactiveRefresh: false,
+  recoverMissingAccessToken: false,
+  recoverUnauthorized: false,
+}
+
+/** Discovery is passive; only an authorized execution may renew its session. */
 export async function fetchXingchiDailyCheckInStatus(
   request: ApiServiceRequest,
+  options: { allowAuthenticationRecovery?: boolean } = {},
 ) {
   return executeAuthenticatedSub2ApiRequest(
     request,
@@ -97,30 +105,33 @@ export async function fetchXingchiDailyCheckInStatus(
       })
       return parseXingchiDailyCheckInStatusResponse(response)
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    options.allowAuthenticationRecovery ? undefined : noCredentialRecovery,
   )
 }
 
-/** Reuse status-gated auth recovery; lost replies are reconciled, not replayed. */
+/** Authentication is prepared by the status read; the claim is never replayed. */
 export async function performXingchiDailyCheckIn(
   request: ApiServiceRequest,
   options: Sub2ApiCheckInRecoveryOptions = {},
 ) {
-  return executeSub2ApiCheckInWithRecovery(
+  return executeAuthenticatedSub2ApiRequest(
     request,
     XINGCHI_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
+      if (
+        options.beforeRecoveredMutation &&
+        !(await options.beforeRecoveredMutation())
+      ) {
+        throw new Sub2ApiCheckInRecoveryBlockedError(
+          SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed,
+        )
+      }
       const response = await fetchApiResponse<unknown>(authenticatedRequest, {
         endpoint: XINGCHI_CHECK_IN_ENDPOINT,
         options: { method: "POST", cache: "no-store" },
       })
       return parseXingchiDailyCheckInMutationResponse(response)
     },
-    fetchXingchiDailyCheckInStatus,
-    options,
+    noCredentialRecovery,
   )
 }
