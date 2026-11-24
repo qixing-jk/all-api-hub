@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -120,6 +121,7 @@ describe("registered BizDecipher free daily check-in", () => {
         bizDecipherProvider.getStatus!({
           request: {
             baseUrl: "https://biz.example",
+            directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
             auth: {
               authType: AuthTypeEnum.AccessToken,
               userId: "42",
