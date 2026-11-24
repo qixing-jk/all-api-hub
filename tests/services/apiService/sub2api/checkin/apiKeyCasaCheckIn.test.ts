@@ -1,5 +1,13 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { fetchSub2ApiAuthIdentity } from "~/services/apiService/sub2api/auth/authIdentity"
+import {
+  SUB2API_AUTH_PERSISTENCE_STATUSES,
+  type Sub2ApiAuthSession,
+  type Sub2ApiStoredAuthSnapshot,
+} from "~/services/apiService/sub2api/auth/authSession"
+import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/auth/browserAuth"
+import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import {
   fetchApiKeyCasaDailyCheckInStatus,
   parseApiKeyCasaDailyCheckInStatusResponse,
@@ -19,6 +27,27 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
   fetchApiResponse: vi.fn(),
 }))
+vi.mock(
+  "~/services/apiService/sub2api/auth/browserAuth",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/browserAuth")
+    >()),
+    recoverSub2ApiBrowserAuth: vi.fn(),
+  }),
+)
+vi.mock(
+  "~/services/apiService/sub2api/auth/tokenRefresh",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/tokenRefresh")
+    >()),
+    refreshSub2ApiTokens: vi.fn(),
+  }),
+)
+vi.mock("~/services/apiService/sub2api/auth/authIdentity", () => ({
+  fetchSub2ApiAuthIdentity: vi.fn(),
+}))
 
 const response = (
   body: unknown,
@@ -31,6 +60,8 @@ const response = (
 })
 
 describe("ApiKey Casa daily check-in protocol", () => {
+  beforeEach(() => vi.resetAllMocks())
+
   it("reads status with the same browser-timezone query as the dashboard", () => {
     expect(createApiKeyCasaDailyCheckInStatusEndpoint("Asia/Singapore")).toBe(
       "/api/v1/redeem/checkin?timezone=Asia%2FSingapore",
@@ -180,8 +211,104 @@ describe("ApiKey Casa daily check-in protocol", () => {
         }),
       ).rejects.toMatchObject({ statusCode: 401 })
       expect(transport).toHaveBeenCalledOnce()
+      expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+      expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
     },
   )
+
+  it("renews an expired credential only for an authorized status read", async () => {
+    let stored: Sub2ApiStoredAuthSnapshot = {
+      accessToken: "expired-fixture",
+      origin: "https://casa.example",
+      userId: "42",
+      sub2apiAuth: {
+        refreshToken: "fixture-refresh",
+        tokenExpiresAt: Date.now() - 1,
+      },
+    }
+    const persistAuthUpdate = vi.fn<Sub2ApiAuthSession["persistAuthUpdate"]>(
+      async (_id, update) => {
+        stored = {
+          ...stored,
+          accessToken: update.accessToken,
+          sub2apiAuth: {
+            refreshToken: update.refreshToken!,
+            tokenExpiresAt: update.tokenExpiresAt,
+          },
+        }
+        return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED }
+      },
+    )
+    const request = {
+      accountId: "casa-fixture",
+      baseUrl: "https://casa.example",
+      directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "expired-fixture",
+        refreshToken: "fixture-refresh",
+        tokenExpiresAt: Date.now() - 1,
+        userId: "42",
+      },
+      sub2apiAuthSession: {
+        getLatestAuth: async () => stored,
+        persistAuthUpdate,
+      },
+    }
+    vi.mocked(fetchSub2ApiAuthIdentity).mockResolvedValue({
+      data: { id: 42 },
+      identity: { userId: 42, username: "Fixture", balanceUsd: 0 },
+    })
+    vi.mocked(refreshSub2ApiTokens).mockResolvedValue({
+      accessToken: "renewed-fixture",
+      refreshToken: "renewed-refresh",
+      tokenExpiresAt: Date.now() + 3_600_000,
+    })
+    vi.mocked(fetchApiResponse).mockResolvedValue(
+      response({
+        code: 0,
+        message: "success",
+        data: { checked_in: false, reward: 0.25 },
+      }),
+    )
+
+    await fetchApiKeyCasaDailyCheckInStatus(request)
+    expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+    vi.mocked(fetchApiResponse).mockClear()
+
+    await fetchApiKeyCasaDailyCheckInStatus(request, {
+      allowAuthenticationRecovery: true,
+    })
+    expect(refreshSub2ApiTokens).toHaveBeenCalledOnce()
+    expect(persistAuthUpdate).toHaveBeenCalledOnce()
+    expect(fetchApiResponse).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({ accessToken: "renewed-fixture" }),
+      }),
+      expect.objectContaining({
+        options: { method: "GET", cache: "no-store" },
+      }),
+    )
+    vi.mocked(fetchApiResponse).mockResolvedValue(
+      response({
+        code: 0,
+        message: "success",
+        data: { checked_in: true, reward: 0.25 },
+      }),
+    )
+    await performApiKeyCasaDailyCheckIn(request)
+    expect(fetchApiResponse).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({ accessToken: "renewed-fixture" }),
+      }),
+      expect.objectContaining({
+        options: { method: "POST", cache: "no-store" },
+      }),
+    )
+    expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+    expect(refreshSub2ApiTokens).toHaveBeenCalledOnce()
+    expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+  })
 
   it.each([{ checked_in: false, reward: 0.25 }, { reward_amount: 0.25 }])(
     "submits once and rejects a POST that cannot confirm today: %j",

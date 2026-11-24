@@ -31,6 +31,7 @@ import {
 const readStatus = async (context: AutoCheckinProviderReadContext) => {
   const status = await fetchApiKeyCasaDailyCheckInStatus(
     createSub2ApiCheckInReadRequest(context),
+    { allowAuthenticationRecovery: Boolean(context.authenticationRecovery) },
   )
   return toSub2ApiCheckInStatus(status, context.observedAt)
 }

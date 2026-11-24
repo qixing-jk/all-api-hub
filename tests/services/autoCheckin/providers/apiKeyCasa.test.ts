@@ -124,6 +124,10 @@ describe("ApiKey Casa check-in provider", () => {
       }),
     ).resolves.toMatchObject({ detection: { outcome: "matched" } })
     expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenCalledOnce()
+    expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenCalledWith(
+      expect.anything(),
+      { allowAuthenticationRecovery: false },
+    )
     expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
   })
 
@@ -152,10 +156,11 @@ describe("ApiKey Casa check-in provider", () => {
   })
 
   it("confirms the completed day without attributing the advertised reward", async () => {
+    const context = executionContext()
     const execution = await executeSelectedCheckIn({
       account: createAccount(),
       globalAutomaticExecutionEnabled: true,
-      context: executionContext(),
+      context,
     })
     expect(execution).toMatchObject({
       kind: "executed",
@@ -163,6 +168,14 @@ describe("ApiKey Casa check-in provider", () => {
     })
     expect(execution).not.toHaveProperty("result.awards")
     expect(performApiKeyCasaDailyCheckIn).toHaveBeenCalledOnce()
+    expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        ...context,
+        directRequestReason: undefined,
+      }),
+      { allowAuthenticationRecovery: true },
+    )
   })
 
   it.each([
@@ -213,6 +226,11 @@ describe("ApiKey Casa check-in provider", () => {
         vi.mocked(fetchApiKeyCasaDailyCheckInStatus).mock.calls.length,
       ).toBeGreaterThanOrEqual(2)
       expect(performApiKeyCasaDailyCheckIn).toHaveBeenCalledOnce()
+      expect(
+        vi.mocked(fetchApiKeyCasaDailyCheckInStatus).mock.calls[1]?.[1],
+      ).toEqual({
+        allowAuthenticationRecovery: false,
+      })
     },
   )
 })

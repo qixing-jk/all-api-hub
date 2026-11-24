@@ -41,8 +41,11 @@ const noCredentialRecovery = {
   recoverUnauthorized: false,
 }
 
-/** Read today's eligibility without renewing or recovering credentials. */
-export function fetchApiKeyCasaDailyCheckInStatus(request: ApiServiceRequest) {
+/** Only an authorized execution may renew credentials while reading eligibility. */
+export function fetchApiKeyCasaDailyCheckInStatus(
+  request: ApiServiceRequest,
+  options: { allowAuthenticationRecovery?: boolean } = {},
+) {
   const endpoint = createApiKeyCasaDailyCheckInStatusEndpoint()
   return executeAuthenticatedSub2ApiRequest(
     request,
@@ -54,7 +57,7 @@ export function fetchApiKeyCasaDailyCheckInStatus(request: ApiServiceRequest) {
       })
       return parseApiKeyCasaDailyCheckInStatusResponse(response)
     },
-    noCredentialRecovery,
+    options.allowAuthenticationRecovery ? undefined : noCredentialRecovery,
   )
 }
 
