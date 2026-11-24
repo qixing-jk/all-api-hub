@@ -125,8 +125,11 @@ function parseReceipt(
   }
 }
 
-/** Read the free daily status without issuing or renewing credentials. */
-export function fetchBizDecipherDailyCheckInStatus(request: ApiServiceRequest) {
+/** Passive by default; authorized execution admission may renew saved credentials. */
+export function fetchBizDecipherDailyCheckInStatus(
+  request: ApiServiceRequest,
+  options: { allowAuthenticationRecovery?: boolean } = {},
+) {
   const day = captureDay()
   const endpoint = createUserCheckInStatusEndpoint(day.timezone)
   return executeAuthenticatedSub2ApiRequest(
@@ -140,7 +143,7 @@ export function fetchBizDecipherDailyCheckInStatus(request: ApiServiceRequest) {
         }),
         day,
       ),
-    passiveAuth,
+    options.allowAuthenticationRecovery ? {} : passiveAuth,
   )
 }
 

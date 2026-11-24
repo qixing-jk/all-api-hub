@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
@@ -18,6 +19,15 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
   fetchApiResponse: vi.fn(),
 }))
+vi.mock(
+  "~/services/apiService/sub2api/auth/tokenRefresh",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/tokenRefresh")
+    >()),
+    refreshSub2ApiTokens: vi.fn(),
+  }),
+)
 
 const METHOD_ID = "bizdecipher:free-checkin"
 const account = () =>
@@ -91,10 +101,50 @@ const run = () =>
 describe("registered BizDecipher free daily check-in", () => {
   beforeEach(() => {
     vi.mocked(fetchApiResponse).mockReset()
+    vi.mocked(refreshSub2ApiTokens).mockReset()
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date("2026-11-24T05:00:00Z"))
   })
   afterEach(() => vi.useRealTimers())
+
+  it.each([false, true])(
+    "renews an expiring credential only for authorized admission (authorized=%s)",
+    async (authorized) => {
+      vi.mocked(refreshSub2ApiTokens).mockResolvedValue({
+        accessToken: "renewed-access",
+        refreshToken: "rotated-refresh",
+        tokenExpiresAt: Date.now() + 3_600_000,
+      })
+      vi.mocked(fetchApiResponse).mockResolvedValue(response(statusData()))
+      await expect(
+        bizDecipherProvider.getStatus!({
+          request: {
+            baseUrl: "https://biz.example",
+            auth: {
+              authType: AuthTypeEnum.AccessToken,
+              userId: "42",
+              accessToken: "expiring-access",
+              refreshToken: "test-refresh",
+              tokenExpiresAt: Date.now() + 1_000,
+            },
+          },
+          observedAt: Date.now(),
+          ...(authorized ? { authenticationRecovery: context() } : {}),
+        }),
+      ).resolves.toMatchObject({ outcome: "known", today: "not_checked" })
+      expect(refreshSub2ApiTokens).toHaveBeenCalledTimes(authorized ? 1 : 0)
+      expect(fetchApiResponse).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          auth: expect.objectContaining({
+            accessToken: authorized ? "renewed-access" : "expiring-access",
+          }),
+        }),
+        expect.objectContaining({
+          options: expect.objectContaining({ method: "GET" }),
+        }),
+      )
+    },
+  )
 
   it("discovers the free contract without a hostname restriction or mutating a sibling", async () => {
     vi.mocked(fetchApiResponse).mockImplementation(async (_, input) => {

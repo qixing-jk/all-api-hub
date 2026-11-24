@@ -44,6 +44,7 @@ const readStatus = async (context: AutoCheckinProviderReadContext) =>
   toSub2ApiCheckInStatus(
     await fetchBizDecipherDailyCheckInStatus(
       createSub2ApiCheckInReadRequest(context),
+      { allowAuthenticationRecovery: !!context.authenticationRecovery },
     ),
     context.observedAt,
   )
@@ -53,7 +54,7 @@ export const bizDecipherProvider: AutoCheckinProvider = {
   getReadiness: getSub2ApiCheckInReadiness,
   detect: (context) =>
     detectWithStatusReadback(
-      context,
+      { ...context, authenticationRecovery: undefined },
       readStatus,
       undefined,
       isForeignCheckInContract,
