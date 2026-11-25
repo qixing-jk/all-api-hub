@@ -2,12 +2,15 @@ import {
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { ASSET_KINDS } from "~/services/amounts/financialConstants"
 import { isForeignCheckInContract } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
   fetchXingchiDailyCheckInStatus,
   performXingchiDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/xingchiCheckIn"
+import { XINGCHI_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/xingchiCheckInProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -72,6 +75,17 @@ export const xingchiProvider: AutoCheckinProvider = {
         messageKey:
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         data,
+        // The dashboard exposes the amount, but its asset is not established.
+        awards: [
+          accountAward(account as SiteAccount, {
+            id: "check-in-amount",
+            operation: XINGCHI_CHECK_IN_ENDPOINT,
+            field: "amount",
+            adapter: "xingchi-check-in",
+            asset: { kind: ASSET_KINDS.Unknown },
+            value: data.rewardAmount,
+          }),
+        ],
       }
     } catch (error) {
       // The native endpoint reports a duplicate as a business conflict. Keep

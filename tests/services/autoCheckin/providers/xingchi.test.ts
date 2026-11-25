@@ -26,6 +26,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RECONCILIATION_OUTCOME,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -327,8 +328,13 @@ describe("Xingchi check-in integration", () => {
     expect(result).toMatchObject({
       status: CHECKIN_RESULT_STATUS.SUCCESS,
       data: { rewardAmount: 12.5 },
+      awards: [
+        expect.objectContaining({
+          asset: { kind: "unknown" },
+          amount: expect.objectContaining({ status: "known", value: "12.5" }),
+        }),
+      ],
     })
-    expect(result.awards).toBeUndefined()
   })
 
   it("marks a dispatched malformed or lost response uncertain", async () => {
@@ -368,6 +374,20 @@ describe("Xingchi check-in integration", () => {
       expect(result).toMatchObject({
         kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,
         retryable: false,
+        result: expect.objectContaining(
+          checkedInToday
+            ? {
+                status: CHECKIN_RESULT_STATUS.SUCCESS,
+                reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
+              }
+            : {
+                status: CHECKIN_RESULT_STATUS.FAILED,
+                // The dispatched network error remains status-unavailable;
+                // readback independently proves the request was not applied.
+                reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+                reconciliation: CHECKIN_RECONCILIATION_OUTCOME.NOT_CHECKED,
+              },
+        ),
       })
       expect(performXingchiDailyCheckIn).toHaveBeenCalledOnce()
       expect(
