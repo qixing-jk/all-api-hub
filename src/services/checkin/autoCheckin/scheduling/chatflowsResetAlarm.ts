@@ -302,8 +302,15 @@ export async function scheduleChatflowsResetForCheckedAccounts(
   const prefs = await userPreferences.getPreferences()
   const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
   if (config.globalEnabled !== true) {
-    await writeTargets([])
-    await syncAlarm([])
+    await withQueueMutationLock(async () => {
+      const latestPrefs = await userPreferences.getPreferences()
+      const latestConfig =
+        latestPrefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+      if (latestConfig.globalEnabled !== true) {
+        await writeTargets([])
+        await syncAlarm([])
+      }
+    })
     return
   }
 

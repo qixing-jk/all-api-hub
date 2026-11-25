@@ -14,11 +14,13 @@ import {
   mergeChatflowsResetTargets,
   parseChatflowsResetTargets,
   partitionChatflowsResetTargets,
+  scheduleChatflowsResetForCheckedAccounts,
   selectChatflowsResetStatusRetryTargets,
   selectRunnableChatflowsResetAccountIds,
   takeDueChatflowsResetTargets,
   type ChatflowsResetTarget,
 } from "~/services/checkin/autoCheckin/scheduling/chatflowsResetAlarm"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type { CheckInMethodStatus } from "~/types/checkIn"
 import { clearAlarm, createAlarm, getAlarm } from "~/utils/browser/alarms"
 import {
@@ -41,6 +43,10 @@ vi.mock("~/utils/browser/alarms", () => ({
   clearAlarm: vi.fn(),
   createAlarm: vi.fn(),
   getAlarm: vi.fn(),
+}))
+
+vi.mock("~/services/preferences/userPreferences", () => ({
+  userPreferences: { getPreferences: vi.fn() },
 }))
 
 const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
@@ -322,5 +328,18 @@ describe("Chatflows noon reset alarm", () => {
         [oldRetry],
       ),
     ).toEqual([oldRetry])
+  })
+
+  it("does not clear the queue if the global switch was re-enabled before lock acquisition", async () => {
+    vi.mocked(userPreferences.getPreferences)
+      .mockResolvedValueOnce({ autoCheckin: { globalEnabled: false } } as any)
+      .mockResolvedValueOnce({ autoCheckin: { globalEnabled: true } } as any)
+
+    await scheduleChatflowsResetForCheckedAccounts(beforeReset)
+
+    expect(userPreferences.getPreferences).toHaveBeenCalledTimes(2)
+    expect(removeLocalStorage).not.toHaveBeenCalled()
+    expect(setLocalStorage).not.toHaveBeenCalled()
+    expect(clearAlarm).not.toHaveBeenCalled()
   })
 })
