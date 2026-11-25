@@ -2341,7 +2341,8 @@ for (const phase of [
     extensionDir,
   }) => {
     if (process.env.AAH_VISUAL_CAPTURE_DIR && phase !== "currency switching") {
-      test.setTimeout(120_000)
+      const { timeout } = test.info()
+      if (timeout > 0) test.setTimeout(timeout + 60_000)
     }
 
     await forceExtensionLanguage(page, "en")
