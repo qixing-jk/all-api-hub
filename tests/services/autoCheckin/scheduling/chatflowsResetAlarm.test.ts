@@ -24,6 +24,7 @@ import {
   takeDueChatflowsResetTargets,
   type ChatflowsResetTarget,
 } from "~/services/checkin/autoCheckin/scheduling/chatflowsResetAlarm"
+import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { CheckInMethodStatus } from "~/types/checkIn"
 import { clearAlarm, createAlarm, getAlarm } from "~/utils/browser/alarms"
@@ -338,6 +339,77 @@ describe("Chatflows noon reset alarm", () => {
 
     expect(setLocalStorage).not.toHaveBeenCalled()
     expect(removeLocalStorage).not.toHaveBeenCalled()
+  })
+
+  it("loads accounts before consuming due reset targets", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(afterReset)
+    const due = {
+      accountId: "due-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    }
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      autoCheckin: { globalEnabled: true },
+    } as any)
+    vi.spyOn(accountQueries, "getAllAccounts").mockRejectedValueOnce(
+      new Error("account storage unavailable"),
+    )
+    vi.mocked(getLocalStorageValues).mockImplementation(async (key) => {
+      if (typeof key !== "string") return {}
+      return { [key]: { version: 1, targets: [due] } }
+    })
+
+    await expect(
+      (autoCheckinScheduler as any).runChatflowsResetAlarm(),
+    ).rejects.toThrow("account storage unavailable")
+
+    expect(getLocalStorageValues).not.toHaveBeenCalled()
+    expect(removeLocalStorage).not.toHaveBeenCalled()
+    expect(setLocalStorage).not.toHaveBeenCalled()
+    expect(clearAlarm).not.toHaveBeenCalled()
+  })
+
+  it("requeues due targets when a pre-dispatch step fails", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(afterReset)
+    const due = {
+      accountId: "chatflows-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    }
+    const account = makeAccount(due.accountId)
+    vi.mocked(userPreferences.getPreferences)
+      .mockResolvedValueOnce({ autoCheckin: { globalEnabled: true } } as any)
+      .mockRejectedValueOnce(new Error("pre-dispatch preference read failed"))
+      .mockResolvedValueOnce({ autoCheckin: { globalEnabled: true } } as any)
+    vi.spyOn(accountQueries, "getAllAccounts").mockResolvedValueOnce([account])
+    vi.spyOn(autoCheckinMethodRegistry, "resolveById").mockReturnValue({
+      id: methodId,
+      provider: {
+        getStatus: vi
+          .fn()
+          .mockResolvedValue(
+            knownStatus(CHECK_IN_METHOD_TODAY_STATUSES.NotChecked, afterReset),
+          ),
+      },
+    } as any)
+    vi.mocked(getLocalStorageValues).mockImplementation(async (key) => {
+      if (typeof key !== "string") return {}
+      return { [key]: { version: 1, targets: [due] } }
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+
+    await expect(
+      (autoCheckinScheduler as any).runChatflowsResetAlarm(),
+    ).rejects.toThrow("pre-dispatch preference read failed")
+
+    const queueKey = vi.mocked(getLocalStorageValues).mock.calls[0]?.[0]
+    expect(typeof queueKey).toBe("string")
+    expect(setLocalStorage).toHaveBeenLastCalledWith({
+      [queueKey as string]: { version: 1, targets: [due] },
+    })
+    expect(createAlarm).toHaveBeenCalledWith(CHATFLOWS_RESET_ALARM_NAME, {
+      when: afterReset + 1_000,
+    })
   })
 
   it("restores an overdue target during its intended period with a near-term alarm", async () => {
