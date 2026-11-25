@@ -23,6 +23,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { createUiCapture } from "~~/scripts/cdp/ui-driver.mjs"
 
 for (const { width, language } of [
   { width: 1100, language: "en" },
@@ -276,10 +277,8 @@ for (const { width, language } of [
     await expect(
       feedback.getByText(copy.titleSiteName.replace("{{name}}", draftSiteName)),
     ).toBeVisible()
-    await feedback.screenshot({
-      animations: "disabled",
-      path: testInfo.outputPath(`feedback-site-name-${language}-${width}.png`),
-    })
+    const capture = createUiCapture({ page, directory: testInfo.outputDir })
+    await capture(`feedback-site-name-${language}-${width}.png`, feedback)
     await feedback.getByRole("button", { name: copy.open }).click()
     await expect
       .poll(async () => {

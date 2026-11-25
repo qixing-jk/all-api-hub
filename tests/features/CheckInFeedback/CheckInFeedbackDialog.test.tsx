@@ -164,13 +164,37 @@ describe("check-in feedback workflow", () => {
     },
   )
 
-  it.each(["provided", "saved"] as const)(
-    "describes the %s result as the last check-in when there are no notes",
-    async (source) => {
+  it.each([
+    ["provided", AUTO_CHECKIN_SKIP_REASON.TIMEOUT, "Timed out"],
+    ["saved", AUTO_CHECKIN_SKIP_REASON.TIMEOUT, "Timed out"],
+    [
+      "provided",
+      AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+      "Sign-in required",
+    ],
+    [
+      "provided",
+      AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+      "Human verification required",
+    ],
+    [
+      "provided",
+      AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED,
+      "Check-in method no longer matches",
+    ],
+    ["provided", AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR, "Network error"],
+    [
+      "provided",
+      AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD,
+      "No available check-in method detected",
+    ],
+  ] as const)(
+    "describes a %s %s result as the last check-in when there are no notes",
+    async (source, reasonCode, reasonLabel) => {
       const user = userEvent.setup()
       const execution = {
         status: CHECKIN_RESULT_STATUS.FAILED,
-        reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+        reasonCode,
         timestamp: 1,
         rawMessage: "Technical error that should only be in diagnostics",
       }
@@ -198,6 +222,9 @@ describe("check-in feedback workflow", () => {
           />,
         ),
       )
+      const expectedTitle = `[Check-in] example.com · Last check-in (${reasonLabel})`
+      await user.click(await screen.findByText("Review and edit submission"))
+      expect(screen.getByText(expectedTitle, { exact: true })).toBeVisible()
       await user.click(
         await screen.findByRole("button", {
           name: accountDialogLocale.checkInFeedback.open,
@@ -205,9 +232,7 @@ describe("check-in feedback workflow", () => {
       )
 
       const url = new URL(atIndex(vi.mocked(createTab).mock.calls, 0)[0])
-      expect(url.searchParams.get("title")).toBe(
-        "[Check-in] example.com · Last check-in (Timed out)",
-      )
+      expect(url.searchParams.get("title")).toBe(expectedTitle)
       expect(url.searchParams.has("summary")).toBe(false)
     },
   )
