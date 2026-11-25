@@ -3,6 +3,7 @@ import "~~/tests/services/autoCheckin/schedulerTestHarness"
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CHATFLOWS_RESET_ALARM_NAME } from "~/services/checkin/autoCheckin/scheduling/chatflowsResetAlarm"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -122,6 +123,24 @@ describe("autoCheckinScheduler.initialize", () => {
 
     handleDailyAlarmSpy.mockRestore()
     handleRetryAlarmSpy.mockRestore()
+  })
+
+  it("routes Chatflows reset alarms through the account-scoped handler", async () => {
+    const handleResetSpy = vi
+      .spyOn(autoCheckinScheduler as any, "handleChatflowsResetAlarm")
+      .mockResolvedValue(undefined)
+
+    await autoCheckinScheduler.initialize()
+
+    const alarmListener = mockedBrowserApi.onAlarm.mock.calls[0]?.[0]
+    await expect(
+      alarmListener({
+        name: CHATFLOWS_RESET_ALARM_NAME,
+        scheduledTime: Date.now(),
+      }),
+    ).resolves.toBeUndefined()
+    expect(handleResetSpy).toHaveBeenCalledOnce()
+    handleResetSpy.mockRestore()
   })
 
   it("restores the schedule when the installed listener receives the legacy alarm", async () => {
