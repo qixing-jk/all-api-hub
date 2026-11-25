@@ -2339,6 +2339,11 @@ for (const phase of [
     extensionId,
     extensionDir,
   }) => {
+    if (phase === "native units and periods") {
+      // Each account type needs its own filtered row and balance dialog.
+      test.setTimeout(120_000)
+    }
+
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
     await page.addInitScript(() =>
@@ -2640,27 +2645,29 @@ for (const phase of [
         }
         await page.keyboard.press("Escape")
       }
-      for (const type of [
-        SITE_TYPES.NEW_API,
-        SITE_TYPES.SUB2API,
-        SITE_TYPES.RELAYFOR,
-        SITE_TYPES.KIMI,
-        SITE_TYPES.DAHL,
-        SITE_TYPES.CUBENCE,
-        SITE_TYPES.FREEMODEL,
-      ]) {
-        await show(type)
-        await captureVisualViews({
-          page,
-          ready: row(type),
-          captureTarget: row(type),
-          id: `native-${type.toLowerCase()}`,
-          extensionDir,
-          views: [
-            { id: "light", width: 1440, height: 1000, theme: "light" },
-            { id: "dark", width: 390, height: 1000, theme: "dark" },
-          ],
-        })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        for (const type of [
+          SITE_TYPES.NEW_API,
+          SITE_TYPES.SUB2API,
+          SITE_TYPES.RELAYFOR,
+          SITE_TYPES.KIMI,
+          SITE_TYPES.DAHL,
+          SITE_TYPES.CUBENCE,
+          SITE_TYPES.FREEMODEL,
+        ]) {
+          const visibleRow = await show(type)
+          await captureVisualViews({
+            page,
+            ready: visibleRow,
+            captureTarget: visibleRow,
+            id: `native-${type.toLowerCase()}`,
+            extensionDir,
+            views: [
+              { id: "light", width: 1440, height: 1000, theme: "light" },
+              { id: "dark", width: 390, height: 1000, theme: "dark" },
+            ],
+          })
+        }
       }
     } else {
       await page.goto(
