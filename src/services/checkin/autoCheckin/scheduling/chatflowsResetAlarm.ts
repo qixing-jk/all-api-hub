@@ -22,8 +22,7 @@ import {
 } from "~/utils/browser/storage"
 
 export const CHATFLOWS_RESET_ALARM_NAME = "autoCheckinChatflowsReset"
-export const CHATFLOWS_RESET_QUEUE_STORAGE_KEY =
-  "autoCheckin_chatflowsResetQueue_v1"
+const CHATFLOWS_RESET_QUEUE_STORAGE_KEY = "autoCheckin_chatflowsResetQueue_v1"
 
 export interface ChatflowsResetTarget {
   accountId: string
@@ -59,9 +58,7 @@ async function withQueueMutationLock<T>(
 }
 
 /** A target is valid only when its period and reset time are protocol-derived. */
-export function isChatflowsResetTarget(
-  value: unknown,
-): value is ChatflowsResetTarget {
+function isChatflowsResetTarget(value: unknown): value is ChatflowsResetTarget {
   if (typeof value !== "object" || value === null) return false
   const target = value as Partial<ChatflowsResetTarget>
   if (
@@ -100,7 +97,7 @@ export function isChatflowsResetTarget(
 }
 
 /** Returns the next wake time for a validated queue target. */
-export function getChatflowsResetTargetWakeAt(target: ChatflowsResetTarget) {
+function getChatflowsResetTargetWakeAt(target: ChatflowsResetTarget) {
   return target.nextAttemptAt ?? target.nextResetAt
 }
 
@@ -264,9 +261,7 @@ export const parseChatflowsResetTargets = (
 }
 
 /** Loads and validates persisted Chatflows reset targets. */
-export async function readChatflowsResetTargets(): Promise<
-  ChatflowsResetTarget[]
-> {
+async function readChatflowsResetTargets(): Promise<ChatflowsResetTarget[]> {
   const values = await getLocalStorageValues(CHATFLOWS_RESET_QUEUE_STORAGE_KEY)
   return parseChatflowsResetTargets(values[CHATFLOWS_RESET_QUEUE_STORAGE_KEY])
 }
