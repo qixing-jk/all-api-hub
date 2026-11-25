@@ -80,12 +80,18 @@ export type AutoCheckinRunOutcome = {
 export async function runCheckins(options: {
   runType?: AutoCheckinRunType
   targetAccountIds?: string[]
+  /** A scoped alarm run: honor automatic/global gates without entering the daily ledger. */
+  scheduledAutomaticExecution?: boolean
+  /** Scoped alarms should not look like user-initiated manual runs in the UI. */
+  notifyUiOnCompletion?: boolean
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
 }): Promise<AutoCheckinRunOutcome> {
   // Default to manual runs for UI-triggered or debug entry points.
   const runType = options?.runType ?? AUTO_CHECKIN_RUN_TYPE.MANUAL
   const isDailyRun = runType === AUTO_CHECKIN_RUN_TYPE.DAILY
+  const isScheduledAutomaticExecution =
+    isDailyRun || options.scheduledAutomaticExecution === true
   const targetAccountIds = options?.targetAccountIds
   const tempWindowRequestSource =
     options?.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background
@@ -176,7 +182,7 @@ export async function runCheckins(options: {
               eligibleIds.has(accountId),
             ),
           ),
-      mergeHistory ? base?.summary ?? summary : summary,
+      mergeHistory ? (base?.summary ?? summary) : summary,
     )
   }
 
@@ -185,11 +191,12 @@ export async function runCheckins(options: {
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
     // Treat missing values as enabled to preserve backward compatibility with older stored prefs.
-    notifyUiOnCompletion = config.notifyUiOnCompletion !== false
+    notifyUiOnCompletion =
+      options.notifyUiOnCompletion ?? config.notifyUiOnCompletion !== false
 
     // The global switch controls unattended automatic runs. Explicit manual
     // runs, including an unscoped batch run from the UI, remain available.
-    if (!config.globalEnabled && isDailyRun) {
+    if (!config.globalEnabled && isScheduledAutomaticExecution) {
       logger.info("Global feature disabled; skipping")
       return { persisted: true }
     }
@@ -229,7 +236,7 @@ export async function runCheckins(options: {
       )
     }
     const automaticExecutionEnabled =
-      !isDailyRun || (await isAutomaticExecutionEnabled())
+      !isScheduledAutomaticExecution || (await isAutomaticExecutionEnabled())
     const enabledAccounts = allAccounts.filter(
       (account) => account.disabled !== true,
     )
@@ -399,6 +406,7 @@ export async function runCheckins(options: {
       protectionBypassExecution,
       loginProviderOwners,
       allowAutomaticDiscovery: isDailyRun,
+      requireAutomaticExecution: options.scheduledAutomaticExecution === true,
     })
 
     for (const outcome of checkinOutcomes) {
@@ -582,7 +590,7 @@ export async function runCheckins(options: {
         patch: {
           lastRunAt: new Date().toISOString(),
           lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
-          perAccount: mergeHistory ? current?.perAccount ?? {} : {},
+          perAccount: mergeHistory ? (current?.perAccount ?? {}) : {},
           pendingRetry: false,
           retryState: isDailyRun ? undefined : current?.retryState,
           ...(isDailyRun

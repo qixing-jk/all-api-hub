@@ -33,6 +33,7 @@ import { getErrorMessage } from "~/utils/core/error"
 export interface RunAccountCheckinOptions {
   requireStatusConfirmationBeforeMutation?: boolean
   allowAutomaticDiscovery?: boolean
+  requireAutomaticExecution?: boolean
   /**
    * Provider ownership resolved over the full stored account list. Absent means
    * the guard could not be evaluated and the run stays unblocked.
@@ -55,6 +56,7 @@ export async function executeAccountCheckin(
   {
     requireStatusConfirmationBeforeMutation = false,
     allowAutomaticDiscovery = false,
+    requireAutomaticExecution = false,
     loginProviderOwners,
   }: RunAccountCheckinOptions = {},
 ): Promise<AccountCheckinExecutionOutcome> {
@@ -100,11 +102,12 @@ export async function executeAccountCheckin(
       executeSelectedCheckIn({
         account,
         globalAutomaticExecutionEnabled:
-          !allowAutomaticDiscovery || (await isAutomaticExecutionEnabled()),
+          !(allowAutomaticDiscovery || requireAutomaticExecution) ||
+          (await isAutomaticExecutionEnabled()),
         loginProviderClaimedByAnother:
           getLoginProviderClaimedByAnother(account, loginProviderOwners) !==
           null,
-        ...(allowAutomaticDiscovery
+        ...(allowAutomaticDiscovery || requireAutomaticExecution
           ? {
               isAutomaticExecutionEnabled: () => isAutomaticExecutionEnabled(),
             }

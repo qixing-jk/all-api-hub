@@ -2,6 +2,7 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
+import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { createAutomaticCheckinExecution } from "~/services/checkin/autoCheckin/execution/executionIntent"
 import {
   retryAccount,
@@ -14,6 +15,18 @@ import {
   AUTO_CHECKIN_ALARM_NAMES,
   autoCheckinAlarmSchedule,
 } from "~/services/checkin/autoCheckin/scheduling/alarmSchedule"
+import {
+  cancelChatflowsResetAlarm,
+  CHATFLOWS_RESET_ALARM_NAME,
+  logChatflowsResetFailure,
+  readChatflowsResetAccountStatus,
+  requeueChatflowsResetTargets,
+  restoreChatflowsResetAlarm,
+  scheduleChatflowsResetForCheckedAccounts,
+  selectChatflowsResetStatusRetryTargets,
+  selectRunnableChatflowsResetAccountIds,
+  takeDueChatflowsResetTargets,
+} from "~/services/checkin/autoCheckin/scheduling/chatflowsResetAlarm"
 import { DailyTriggerWorkflow } from "~/services/checkin/autoCheckin/scheduling/dailyTriggerWorkflow"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -23,7 +36,10 @@ import {
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
 import { type DisplaySiteData } from "~/types"
-import { type AutoCheckinPreferences } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_RUN_TYPE,
+  type AutoCheckinPreferences,
+} from "~/types/autoCheckin"
 import {
   TEMP_WINDOW_REQUEST_SOURCES,
   type TempWindowRequestSource,
@@ -77,6 +93,7 @@ class AutoCheckinScheduler {
   }
 
   private isInitialized = false
+  private chatflowsResetInFlight?: Promise<void>
 
   private readonly dailyTrigger = new DailyTriggerWorkflow({
     dailyAlarmName: AUTO_CHECKIN_ALARM_NAMES.Daily,
@@ -126,6 +143,17 @@ class AutoCheckinScheduler {
             return
           }
 
+          if (alarm.name === CHATFLOWS_RESET_ALARM_NAME) {
+            // This alarm is method- and account-scoped; it never enters the
+            // daily or generic retry ledger.
+            try {
+              await this.handleChatflowsResetAlarm()
+            } catch (error) {
+              logChatflowsResetFailure(error)
+            }
+            return
+          }
+
           if (alarm.name === AUTO_CHECKIN_ALARM_NAMES.Legacy) {
             logger.warn(
               "Legacy alarm detected; clearing and restoring daily schedule",
@@ -142,6 +170,7 @@ class AutoCheckinScheduler {
           preserveExisting: true,
           allowCatchUp: true,
         })
+        await restoreChatflowsResetAlarm()
       } else {
         logger.warn("Alarms API not available, automatic check-in disabled")
       }
@@ -164,14 +193,125 @@ class AutoCheckinScheduler {
   private handleDailyAlarm(
     ...args: Parameters<DailyTriggerWorkflow["handleDailyAlarm"]>
   ) {
-    return this.dailyTrigger.handleDailyAlarm(...args)
+    return this.dailyTrigger.handleDailyAlarm(...args).then(async (result) => {
+      try {
+        await scheduleChatflowsResetForCheckedAccounts()
+      } catch (error) {
+        logChatflowsResetFailure(error)
+      }
+      return result
+    })
+  }
+
+  private handleChatflowsResetAlarm(): Promise<void> {
+    if (this.chatflowsResetInFlight) return this.chatflowsResetInFlight
+    const task = this.runChatflowsResetAlarm()
+    this.chatflowsResetInFlight = task.finally(() => {
+      this.chatflowsResetInFlight = undefined
+    })
+    return this.chatflowsResetInFlight
+  }
+
+  private async runChatflowsResetAlarm(): Promise<void> {
+    const prefs = await userPreferences.getPreferences()
+    const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+    if (config.globalEnabled !== true) {
+      await cancelChatflowsResetAlarm()
+      return
+    }
+
+    const now = Date.now()
+    const dueTargets = await takeDueChatflowsResetTargets(now)
+    if (dueTargets.length === 0) return
+
+    const accounts = await accountQueries.getAllAccounts()
+    const execution = createAutomaticCheckinExecution(
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
+    const eligibleTargets = dueTargets.filter((target) => {
+      const account = accounts.find((item) => item.id === target.accountId)
+      return (
+        account !== undefined &&
+        account.disabled !== true &&
+        account.checkIn.automaticExecutionEnabled === true &&
+        resolveSelectedCheckInMethod({
+          config: account.checkIn,
+          siteType: account.site_type,
+          siteUrl: account.site_url,
+        }) === target.methodId
+      )
+    })
+    const statuses = new Map(
+      await Promise.all(
+        eligibleTargets.map(async (target) => {
+          const account = accounts.find((item) => item.id === target.accountId)
+          if (!account) return [target.accountId, undefined] as const
+          try {
+            return [
+              target.accountId,
+              await readChatflowsResetAccountStatus(account, Date.now(), {
+                tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+                protectionBypassExecution: execution,
+              }),
+            ] as const
+          } catch {
+            return [target.accountId, undefined] as const
+          }
+        }),
+      ),
+    )
+    const latestPrefs = await userPreferences.getPreferences()
+    const latestConfig =
+      latestPrefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+    if (latestConfig.globalEnabled !== true) {
+      await cancelChatflowsResetAlarm()
+      return
+    }
+    const targetAccountIds = selectRunnableChatflowsResetAccountIds({
+      targets: eligibleTargets,
+      now: Date.now(),
+      globalAutomaticExecutionEnabled: latestConfig.globalEnabled === true,
+      accounts,
+      statuses,
+    })
+    const retryTargets = selectChatflowsResetStatusRetryTargets({
+      targets: eligibleTargets,
+      now: Date.now(),
+      globalAutomaticExecutionEnabled: latestConfig.globalEnabled === true,
+      accounts,
+      statuses,
+    })
+    await requeueChatflowsResetTargets(retryTargets)
+    if (targetAccountIds.length === 0) return
+
+    // runCheckins' account execution queue serializes this scoped run against
+    // any concurrent daily/manual run for the same account. Its provider then
+    // repeats authoritative status admission before the claim POST.
+    await this.runCheckins({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      targetAccountIds,
+      scheduledAutomaticExecution: true,
+      notifyUiOnCompletion: false,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      protectionBypassExecution: execution,
+    })
   }
 
   /** Routes UI-open diagnostics and triggers through the same daily owner. */
   pretriggerDailyOnUiOpen(
     ...args: Parameters<DailyTriggerWorkflow["pretriggerDailyOnUiOpen"]>
   ) {
-    return this.dailyTrigger.pretriggerDailyOnUiOpen(...args)
+    return this.dailyTrigger
+      .pretriggerDailyOnUiOpen(...args)
+      .then(async (result) => {
+        try {
+          await scheduleChatflowsResetForCheckedAccounts()
+        } catch (error) {
+          logChatflowsResetFailure(error)
+        }
+        return result
+      })
   }
 
   /**

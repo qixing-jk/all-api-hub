@@ -1329,6 +1329,30 @@ describe("dailyBatch", () => {
     vi.useRealTimers()
   })
 
+  it("applies the global switch to scoped scheduled runs that use the manual runner", async () => {
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: false,
+        notifyUiOnCompletion: true,
+      },
+    })
+
+    await expect(
+      runCheckinsForTest({
+        runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+        targetAccountIds: ["chatflows-noon"],
+        scheduledAutomaticExecution: true,
+        notifyUiOnCompletion: false,
+      }),
+    ).resolves.toEqual({ persisted: true })
+
+    expect(mockedAccountStorage.getAllAccounts).not.toHaveBeenCalled()
+    expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
+    expect(schedulerTestState.statusWriteCount).toBe(0)
+    expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
   it("marks the day as attempted and clears retry scheduling when a daily run fails before execution", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 15, 0))
