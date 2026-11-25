@@ -38,6 +38,13 @@ interface StoredChatflowsResetQueue {
   targets: ChatflowsResetTarget[]
 }
 
+const MAX_SUPPORTED_DATE_VALUE = 8_640_000_000_000_000
+
+const isSupportedDateTimestamp = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isSafeInteger(value) &&
+  Math.abs(value) <= MAX_SUPPORTED_DATE_VALUE
+
 let queueMutationTail: Promise<void> = Promise.resolve()
 
 /** Serializes persisted queue mutations within the extension worker. */
@@ -67,38 +74,59 @@ function isChatflowsResetTarget(value: unknown): value is ChatflowsResetTarget {
     target.methodId !== AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn ||
     typeof target.periodKey !== "string" ||
     !/^\d{4}-\d{2}-\d{2}$/.test(target.periodKey) ||
-    !Number.isSafeInteger(target.nextResetAt)
+    !isSupportedDateTimestamp(target.nextResetAt)
   ) {
     return false
   }
-  const canonical = getChatflowsCheckInPeriodBounds(target.nextResetAt! - 1)
-  if (
-    canonical.periodKey !== target.periodKey ||
-    canonical.nextResetAt !== target.nextResetAt
-  ) {
+  try {
+    const canonical = getChatflowsCheckInPeriodBounds(target.nextResetAt - 1)
+    if (
+      canonical.periodKey !== target.periodKey ||
+      canonical.nextResetAt !== target.nextResetAt
+    ) {
+      return false
+    }
+    if (target.statusReadAttempts === undefined) {
+      return target.nextAttemptAt === undefined
+    }
+    if (
+      target.statusReadAttempts !== 1 ||
+      !isSupportedDateTimestamp(target.nextAttemptAt)
+    ) {
+      return false
+    }
+    const nextPeriodEnd = getChatflowsCheckInPeriodBounds(
+      target.nextResetAt + 1,
+    ).nextResetAt
+    return (
+      target.nextAttemptAt >= target.nextResetAt &&
+      target.nextAttemptAt < nextPeriodEnd
+    )
+  } catch {
+    // One corrupt/out-of-range persisted timestamp must not hide valid targets.
     return false
   }
-  if (target.statusReadAttempts === undefined) {
-    return target.nextAttemptAt === undefined
-  }
-  if (
-    target.statusReadAttempts !== 1 ||
-    !Number.isSafeInteger(target.nextAttemptAt)
-  ) {
-    return false
-  }
-  const nextPeriodEnd = getChatflowsCheckInPeriodBounds(
-    target.nextResetAt! + 1,
-  ).nextResetAt
-  return (
-    target.nextAttemptAt! >= target.nextResetAt! &&
-    target.nextAttemptAt! < nextPeriodEnd
-  )
 }
 
 /** Returns the next wake time for a validated queue target. */
 function getChatflowsResetTargetWakeAt(target: ChatflowsResetTarget) {
   return target.nextAttemptAt ?? target.nextResetAt
+}
+
+/** Keep a target until both its checked period and the next claim period end. */
+function isChatflowsResetTargetRelevantAt(
+  target: ChatflowsResetTarget,
+  now: number,
+) {
+  try {
+    const currentPeriod = getChatflowsCheckInPeriodBounds(now).periodKey
+    const claimPeriod = getChatflowsCheckInPeriodBounds(
+      target.nextResetAt + 1,
+    ).periodKey
+    return target.periodKey === currentPeriod || claimPeriod === currentPeriod
+  } catch {
+    return false
+  }
 }
 
 /** Creates a queue entry only from a current, enabled checked-status proof. */
@@ -278,12 +306,18 @@ async function writeTargets(targets: readonly ChatflowsResetTarget[]) {
 }
 
 /** Aligns the Chatflows alarm with the earliest queued wake time. */
-async function syncAlarm(targets: readonly ChatflowsResetTarget[]) {
+async function syncAlarm(
+  targets: readonly ChatflowsResetTarget[],
+  now = Date.now(),
+) {
   if (targets.length === 0) {
     await clearAlarm(CHATFLOWS_RESET_ALARM_NAME)
     return
   }
-  const when = Math.min(...targets.map(getChatflowsResetTargetWakeAt))
+  const earliestWakeAt = Math.min(...targets.map(getChatflowsResetTargetWakeAt))
+  // Alarms cannot be relied on to survive worker shutdown. Re-arm overdue
+  // persisted work promptly instead of dropping it on restoration.
+  const when = Math.max(earliestWakeAt, now + 1_000)
   const existing = await getAlarm(CHATFLOWS_RESET_ALARM_NAME)
   if (existing?.scheduledTime === when) return
   await clearAlarm(CHATFLOWS_RESET_ALARM_NAME)
@@ -354,8 +388,8 @@ export async function scheduleChatflowsResetForCheckedAccounts(
       await syncAlarm([])
       return
     }
-    const previous = (await readChatflowsResetTargets()).filter(
-      (target) => target.nextResetAt > now,
+    const previous = (await readChatflowsResetTargets()).filter((target) =>
+      isChatflowsResetTargetRelevantAt(target, now),
     )
     const nextTargets = mergeChatflowsResetTargets(previous, nowTargets)
     await writeTargets(nextTargets)
@@ -368,10 +402,11 @@ export async function restoreChatflowsResetAlarm(): Promise<void> {
   await withQueueMutationLock(async () => {
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+    const now = Date.now()
     const targets =
       config.globalEnabled === true
-        ? (await readChatflowsResetTargets()).filter(
-            (target) => getChatflowsResetTargetWakeAt(target) > Date.now(),
+        ? (await readChatflowsResetTargets()).filter((target) =>
+            isChatflowsResetTargetRelevantAt(target, now),
           )
         : []
     await writeTargets(targets)
@@ -394,8 +429,10 @@ export async function takeDueChatflowsResetTargets(
   return withQueueMutationLock(async () => {
     const targets = await readChatflowsResetTargets()
     const { due, future } = partitionChatflowsResetTargets(targets, now)
+    // Keep due work durable unless its replacement alarm was created. If
+    // alarm synchronization fails, the same targets can be taken on recovery.
+    await syncAlarm(future, now)
     await writeTargets(future)
-    await syncAlarm(future)
     return due
   })
 }

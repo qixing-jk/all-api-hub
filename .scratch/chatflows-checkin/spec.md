@@ -36,19 +36,24 @@ corroborates the period semantics only; it does not establish
 the raw API field types, a new grant, or extension execution. Raw API validation
 remains pending. Keep this site in "missing adaptation", not verification-blocked.
 
-The existing global daily schedule is reused. It does not add an extra run at
-the provider's noon reset. Its settings use the computer's local timezone, not
-the provider's timezone. With an Asia/Singapore or Asia/Shanghai computer clock,
-use fixed `13:00` inside a `12:05`–`23:00` window, or choose a random time inside
-that afternoon-only window. In other timezones, convert Beijing noon first.
-The fixed time must be inside the configured window. An earlier window can
-still trigger an early daily run when `pretriggerDailyOnUiOpen` is enabled;
-use the afternoon window or disable that early-trigger option.
+The existing global daily schedule is reused to discover checked accounts and
+build Chatflows reset targets. Those targets schedule a method-specific run at
+the server's `nextResetAt`, when the current status read confirms the new
+period is enabled and not yet checked. Users still need the global daily
+schedule enabled to build targets for accounts first observed as checked.
+Its settings use the computer's local timezone, not the provider's timezone.
+With an Asia/Singapore or Asia/Shanghai computer clock, use fixed `13:00`
+inside a `12:05`–`23:00` window, or choose a random time inside that
+afternoon-only window. In other timezones, convert Beijing noon first. The
+fixed time must be inside the configured window. An earlier window can still
+trigger an early daily run when `pretriggerDailyOnUiOpen` is enabled; use the
+afternoon window or disable that early-trigger option.
 
 A random `09:00`–`23:00` window can hit one noon period twice on adjacent local
-dates and miss another period. The scheduler does not catch that up at noon,
-and browser downtime can still miss a period. This adaptation does not rewrite
-the shared scheduler or change saved user preferences.
+dates and miss another period. Browser downtime can still miss a period if the
+one-shot target expires before the extension can restore and run it. This
+adaptation does not rewrite the shared daily schedule or change saved user
+preferences.
 
 Cache validity uses the method registry's optional `statusPeriodKey` policy.
 Only ChatflowsAI declares the noon rule; other methods retain their existing

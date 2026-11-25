@@ -274,6 +274,28 @@ describe("autoCheckinScheduler run-completed notifications", () => {
     vi.useRealTimers()
   })
 
+  it("keeps an explicit notification override when the first preference read fails", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    mockedUserPreferences.getPreferences.mockRejectedValueOnce(
+      new Error("temporary preferences read failure"),
+    )
+
+    await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      notifyUiOnCompletion: false,
+    })
+
+    expect(mockedUserPreferences.getPreferences).toHaveBeenCalledOnce()
+    expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+      }),
+      expect.anything(),
+    )
+    vi.useRealTimers()
+  })
+
   it("suppresses manual-shaped completion notifications for a scoped scheduled run", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 13, 0, 0))

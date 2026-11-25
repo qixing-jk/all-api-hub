@@ -1,6 +1,7 @@
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
+import { getChatflowsCheckInPeriodBounds } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { createAutomaticCheckinExecution } from "~/services/checkin/autoCheckin/execution/executionIntent"
@@ -206,8 +207,15 @@ class AutoCheckinScheduler {
   private handleChatflowsResetAlarm(): Promise<void> {
     if (this.chatflowsResetInFlight) return this.chatflowsResetInFlight
     const task = this.runChatflowsResetAlarm()
-    this.chatflowsResetInFlight = task.finally(() => {
+    this.chatflowsResetInFlight = task.finally(async () => {
       this.chatflowsResetInFlight = undefined
+      try {
+        // An alarm delivered during this run may have left a due retry queued.
+        // Re-arm any remaining work after the in-flight owner releases it.
+        await restoreChatflowsResetAlarm()
+      } catch (error) {
+        logChatflowsResetFailure(error)
+      }
     })
     return this.chatflowsResetInFlight
   }
@@ -221,6 +229,7 @@ class AutoCheckinScheduler {
     }
 
     const now = Date.now()
+    const currentPeriod = getChatflowsCheckInPeriodBounds(now).periodKey
     const dueTargets = await takeDueChatflowsResetTargets(now)
     if (dueTargets.length === 0) return
 
@@ -232,6 +241,9 @@ class AutoCheckinScheduler {
     const eligibleTargets = dueTargets.filter((target) => {
       const account = accounts.find((item) => item.id === target.accountId)
       return (
+        // Reject stale one-shot targets before status admission can renew auth.
+        getChatflowsCheckInPeriodBounds(target.nextResetAt + 1).periodKey ===
+          currentPeriod &&
         account !== undefined &&
         account.disabled !== true &&
         account.checkIn.automaticExecutionEnabled === true &&
@@ -284,6 +296,12 @@ class AutoCheckinScheduler {
     })
     await requeueChatflowsResetTargets(retryTargets)
     if (targetAccountIds.length === 0) return
+    const runnableAccountIds = new Set(targetAccountIds)
+    const expectedMethodIdsByAccount = Object.fromEntries(
+      eligibleTargets
+        .filter((target) => runnableAccountIds.has(target.accountId))
+        .map((target) => [target.accountId, target.methodId]),
+    )
 
     // runCheckins' account execution queue serializes this scoped run against
     // any concurrent daily/manual run for the same account. Its provider then
@@ -291,6 +309,7 @@ class AutoCheckinScheduler {
     await this.runCheckins({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds,
+      expectedMethodIdsByAccount,
       scheduledAutomaticExecution: true,
       notifyUiOnCompletion: false,
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -305,6 +324,7 @@ class AutoCheckinScheduler {
     return this.dailyTrigger
       .pretriggerDailyOnUiOpen(...args)
       .then(async (result) => {
+        if (!result.started) return result
         try {
           await scheduleChatflowsResetForCheckedAccounts()
         } catch (error) {

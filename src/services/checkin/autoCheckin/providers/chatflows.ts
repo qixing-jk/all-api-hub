@@ -45,14 +45,16 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const fetchStatus = async (context: AutoCheckinProviderReadContext) =>
-  toSub2ApiCheckInStatus(
-    await fetchChatflowsCheckInStatus(
-      createSub2ApiCheckInReadRequest(context),
-      { allowAuthenticationRecovery: !!context.authenticationRecovery },
-    ),
-    context.observedAt,
+const fetchStatus = async (context: AutoCheckinProviderReadContext) => {
+  const status = await fetchChatflowsCheckInStatus(
+    createSub2ApiCheckInReadRequest(context),
+    { allowAuthenticationRecovery: !!context.authenticationRecovery },
   )
+  // The period check is made against the response's server-period key. Stamp
+  // that proof when the read completes so a response crossing noon is not
+  // later mistaken for evidence from the period in which the request began.
+  return toSub2ApiCheckInStatus(status, Date.now())
+}
 
 const readStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
   context,
@@ -120,29 +122,36 @@ export const chatflowsProvider: AutoCheckinProvider = {
         )
       }
 
-      return withCheckInResponseConfirmation(siteAccount, {
-        status: CHECKIN_RESULT_STATUS.SUCCESS,
-        messageKey:
-          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-        data: result,
-        awards: [
-          accountAward(siteAccount, {
-            id: "amount",
-            operation: CHATFLOWS_CHECK_IN_ENDPOINT,
-            field: "amount",
-            value: result.amount,
-            asset: {
-              kind: ASSET_KINDS.Quota,
-              id: `chatflows:${new URL(siteAccount.site_url).origin}:credits`,
-              label: "credits",
-              displayScale: 1,
-              displayLabel: "credits",
-            },
-            target: AWARD_TARGETS.Wallet,
-            fulfillment: AWARD_FULFILLMENT.Credited,
-          }),
-        ],
-      })
+      // The authoritative status proof establishes the claim period. Keep its
+      // timestamp through result persistence if a successful POST response
+      // arrives after the next noon reset.
+      return withCheckInResponseConfirmation(
+        siteAccount,
+        {
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          messageKey:
+            AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
+          data: result,
+          awards: [
+            accountAward(siteAccount, {
+              id: "amount",
+              operation: CHATFLOWS_CHECK_IN_ENDPOINT,
+              field: "amount",
+              value: result.amount,
+              asset: {
+                kind: ASSET_KINDS.Quota,
+                id: `chatflows:${new URL(siteAccount.site_url).origin}:credits`,
+                label: "credits",
+                displayScale: 1,
+                displayLabel: "credits",
+              },
+              target: AWARD_TARGETS.Wallet,
+              fulfillment: AWARD_FULFILLMENT.Credited,
+            }),
+          ],
+        },
+        { timestamp: new Date(proof.evidence.observedAt).toISOString() },
+      )
     } catch (error) {
       return mapSub2ApiCheckInMutationError(error, context, siteAccount)
     }

@@ -1,5 +1,6 @@
 import { type AccountLoginProvider } from "~/constants/accountLogin"
 import {
+  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
 } from "~/constants/checkIn"
@@ -193,9 +194,13 @@ export async function executeAccountCheckin(
       reward: providerResult.reward,
       awards: providerResult.awards,
       timestamp:
-        execution.confirmation?.observedAt ??
-        execution.completedAt ??
-        Date.now(),
+        execution.methodId === AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+          ? (execution.completedAt ??
+            execution.confirmation?.observedAt ??
+            Date.now())
+          : (execution.confirmation?.observedAt ??
+            execution.completedAt ??
+            Date.now()),
       ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED ||
       providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
         ? { retryable: execution.retryable === true }

@@ -142,6 +142,30 @@ describe("ChatflowsAI check-in integration", () => {
     expect(performChatflowsCheckIn).not.toHaveBeenCalled()
   })
 
+  it("timestamps status evidence when the response completes across noon", async () => {
+    const beforeNoon = Date.parse("2026-11-24T03:59:59.000Z")
+    const afterNoon = Date.parse("2026-11-24T04:00:01.000Z")
+    vi.setSystemTime(beforeNoon)
+    vi.mocked(fetchChatflowsCheckInStatus).mockImplementationOnce(async () => {
+      vi.setSystemTime(afterNoon)
+      return {
+        ...status(),
+        periodKey: "2026-11-24",
+        nextResetAt: Date.parse("2026-11-25T04:00:00.000Z"),
+      }
+    })
+
+    const result = await chatflowsProvider.getStatus?.({
+      account: createAccount(),
+      observedAt: beforeNoon,
+    })
+
+    expect(result).toMatchObject({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      evidence: { observedAt: afterNoon },
+    })
+  })
+
   it("distinguishes unsupported from unreadable status", async () => {
     vi.mocked(fetchChatflowsCheckInStatus).mockRejectedValueOnce(
       new ApiError("absent", 404),
@@ -186,6 +210,29 @@ describe("ChatflowsAI check-in integration", () => {
       expect.objectContaining({ ...context(), directRequestReason: undefined }),
       { allowAuthenticationRecovery: true },
     )
+  })
+
+  it("attributes a successful claim to its proven period if the response crosses noon", async () => {
+    const beforeNoon = Date.parse("2026-11-24T03:59:59.000Z")
+    const afterNoon = Date.parse("2026-11-24T04:00:01.000Z")
+    vi.setSystemTime(beforeNoon)
+    vi.mocked(performChatflowsCheckIn).mockImplementationOnce(async () => {
+      vi.setSystemTime(afterNoon)
+      return { kind: "applied", amount: 50 }
+    })
+
+    const execution = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: context(),
+    })
+
+    expect(execution).toMatchObject({
+      kind: "executed",
+      completedAt: beforeNoon,
+      result: { status: "success" },
+    })
+    expect(performChatflowsCheckIn).toHaveBeenCalledOnce()
   })
 
   it("keeps discovery passive even when given execution recovery context", async () => {

@@ -12,6 +12,7 @@ import {
   manualExecution,
   mockedAccountStorage,
   mockedBrowserApi,
+  mockedMethods,
   mockedUserPreferences,
   noSelectedCheckIn,
   resolveProviderForTest,
@@ -428,6 +429,124 @@ describe("autoCheckinScheduler targeting support", () => {
       },
     )
 
+    vi.useRealTimers()
+  })
+
+  it("does not dispatch a scoped reset through a changed selected method", async () => {
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+      },
+    })
+    const account: any = {
+      id: "target",
+      disabled: false,
+      site_name: "Target",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "user" },
+      checkIn: runnableCheckIn(),
+    }
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+
+    await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      targetAccountIds: [account.id],
+      expectedMethodIdsByAccount: { [account.id]: "expected-reset-method" },
+      scheduledAutomaticExecution: true,
+      notifyUiOnCompletion: false,
+    })
+
+    expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
+    expect(schedulerTestState.storedStatus.perAccount.target).toMatchObject({
+      status: "skipped",
+      reasonCode: "status_unavailable",
+    })
+  })
+
+  it("preserves the generic retry ledger after a successful scoped scheduled run", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    const retryState = {
+      day: "2024-01-01",
+      pendingAccountIds: ["target", "other"],
+      attemptsByAccount: { target: 1, other: 2 },
+    }
+    schedulerTestState.storedStatus = {
+      retryState,
+      pendingRetry: true,
+    } as any
+    const account: any = {
+      id: "target",
+      disabled: false,
+      site_name: "Target",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "user" },
+      checkIn: runnableCheckIn(),
+    }
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async () => ({ status: "success" })),
+    } as any)
+
+    await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      targetAccountIds: [account.id],
+      scheduledAutomaticExecution: true,
+      notifyUiOnCompletion: false,
+    })
+
+    expect(schedulerTestState.storedStatus.retryState).toEqual(retryState)
+    expect(schedulerTestState.storedStatus.pendingRetry).toBe(true)
+    vi.useRealTimers()
+  })
+
+  it("preserves the generic retry ledger when a scoped scheduled run fails before dispatch", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+      },
+    })
+    const retryState = {
+      day: "2024-01-01",
+      pendingAccountIds: ["target", "other"],
+      attemptsByAccount: { target: 1, other: 2 },
+    }
+    schedulerTestState.storedStatus = {
+      retryState,
+      pendingRetry: true,
+    } as any
+    mockedAccountStorage.getAllAccounts.mockRejectedValueOnce(
+      new Error("temporary storage read failure"),
+    )
+
+    await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      targetAccountIds: ["target"],
+      scheduledAutomaticExecution: true,
+      notifyUiOnCompletion: false,
+    })
+
+    expect(schedulerTestState.storedStatus.retryState).toEqual(retryState)
+    expect(schedulerTestState.storedStatus.pendingRetry).toBe(true)
     vi.useRealTimers()
   })
 

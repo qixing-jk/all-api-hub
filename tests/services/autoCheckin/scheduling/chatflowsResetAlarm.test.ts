@@ -8,12 +8,16 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { getChatflowsCheckInPeriodBounds } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
+import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import {
+  CHATFLOWS_RESET_ALARM_NAME,
   createChatflowsResetTarget,
   mergeChatflowsResetTargets,
   parseChatflowsResetTargets,
   partitionChatflowsResetTargets,
+  restoreChatflowsResetAlarm,
   scheduleChatflowsResetForCheckedAccounts,
   selectChatflowsResetStatusRetryTargets,
   selectRunnableChatflowsResetAccountIds,
@@ -86,6 +90,7 @@ const knownStatus = (
 
 describe("Chatflows noon reset alarm", () => {
   afterEach(() => {
+    vi.clearAllMocks()
     vi.restoreAllMocks()
   })
 
@@ -271,6 +276,19 @@ describe("Chatflows noon reset alarm", () => {
       }),
     ).toEqual([due])
     expect(
+      parseChatflowsResetTargets({
+        version: 1,
+        targets: [
+          {
+            ...due,
+            accountId: "invalid",
+            nextResetAt: Number.MAX_SAFE_INTEGER,
+          },
+          due,
+        ],
+      }),
+    ).toEqual([due])
+    expect(
       partitionChatflowsResetTargets([due, future], bounds.nextResetAt),
     ).toEqual({
       due: [due],
@@ -295,6 +313,95 @@ describe("Chatflows noon reset alarm", () => {
     })
     expect(removeLocalStorage).not.toHaveBeenCalled()
     expect(clearAlarm).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps due targets persisted when synchronizing the next alarm fails", async () => {
+    const bounds = getChatflowsCheckInPeriodBounds(beforeReset)
+    const due = { accountId: "due-account", methodId, ...bounds }
+    const future = {
+      accountId: "future-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(bounds.nextResetAt + 1),
+    }
+    vi.mocked(getLocalStorageValues).mockResolvedValue({
+      autoCheckin_chatflowsResetQueue_v1: {
+        version: 1,
+        targets: [due, future],
+      },
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+    vi.mocked(createAlarm).mockRejectedValueOnce(new Error("alarm unavailable"))
+
+    await expect(
+      takeDueChatflowsResetTargets(bounds.nextResetAt),
+    ).rejects.toThrow("alarm unavailable")
+
+    expect(setLocalStorage).not.toHaveBeenCalled()
+    expect(removeLocalStorage).not.toHaveBeenCalled()
+  })
+
+  it("restores an overdue target during its intended period with a near-term alarm", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(afterReset)
+    const target = {
+      accountId: "chatflows-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    }
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      autoCheckin: { globalEnabled: true },
+    } as any)
+    vi.mocked(getLocalStorageValues).mockResolvedValue({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [target] },
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+
+    await restoreChatflowsResetAlarm()
+
+    expect(setLocalStorage).toHaveBeenCalledWith({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [target] },
+    })
+    expect(createAlarm).toHaveBeenCalledWith(CHATFLOWS_RESET_ALARM_NAME, {
+      when: afterReset + 1_000,
+    })
+    vi.useRealTimers()
+  })
+
+  it("retains a pending reset across a daily scan until its claim period ends", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(afterReset)
+    const target = {
+      accountId: "chatflows-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    }
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      autoCheckin: { globalEnabled: true },
+    } as any)
+    vi.spyOn(accountQueries, "getAllAccounts").mockResolvedValue([
+      makeAccount(target.accountId),
+    ])
+    vi.spyOn(autoCheckinMethodRegistry, "resolveById").mockReturnValue({
+      id: methodId,
+      provider: {
+        getStatus: vi.fn().mockResolvedValue({
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+          reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network,
+          attemptedAt: afterReset,
+        }),
+      },
+    } as any)
+    vi.mocked(getLocalStorageValues).mockResolvedValue({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [target] },
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+
+    await scheduleChatflowsResetForCheckedAccounts(afterReset)
+
+    expect(setLocalStorage).toHaveBeenCalledWith({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [target] },
+    })
+    vi.useRealTimers()
   })
 
   it("keeps a later daily-scan reset when an older due target is requeued", () => {
