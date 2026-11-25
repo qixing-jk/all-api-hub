@@ -119,6 +119,7 @@
     "includeAddress": "附带站点地址",
     "intro": "描述签到问题或申请站点支持，辅助信息会自动收集。",
     "issueTitle": "[签到反馈]",
+    "issueTitleFallback": "诊断报告",
     "longReport": "将先复制完整报告，再打开 GitHub。请在网页的「问题描述或扩展反馈」中粘贴后提交。",
     "manualCopied": "已手动复制，前往 GitHub",
     "notes": "遇到什么问题？（选填）",
@@ -137,7 +138,18 @@
     "scanEmpty": "未收集到辅助线索，可补充操作步骤帮助排查。",
     "scanning": "正在收集辅助信息，完成后会更新报告。",
     "scanPartial": "已收集部分辅助信息，详情可在报告中查看。",
-    "title": "签到反馈"
+    "title": "签到反馈",
+    "titleLastCheckIn": "上次签到（{{reason}}）",
+    "titlePreview": "GitHub 标题",
+    "titleReasons": {
+      "authenticationRequired": "需要登录",
+      "manualVerificationRequired": "需要人工验证",
+      "methodNotMatched": "签到方式不匹配",
+      "networkError": "网络错误",
+      "noAvailableMethod": "未检测到可用签到方式",
+      "timeout": "超时"
+    },
+    "titleSiteName": "GitHub 标题将使用站点名「{{name}}」。"
   },
   "cookieValidation": {
     "action": "验证这条 Cookie",

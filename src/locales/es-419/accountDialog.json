@@ -119,6 +119,7 @@
     "includeAddress": "Incluir dirección del sitio",
     "intro": "Reporta un problema de check-in o solicita compatibilidad con un sitio. La información de apoyo se recopila automáticamente.",
     "issueTitle": "[Check-in]",
+    "issueTitleFallback": "Informe de diagnóstico",
     "longReport": "Se copiará el informe antes de abrir GitHub. Pégalo en “Problem description or extension feedback” antes de enviarlo.",
     "manualCopied": "Ya copié — abrir GitHub",
     "notes": "¿Qué pasó? (opcional)",
@@ -137,7 +138,18 @@
     "scanEmpty": "No se recopilaron pistas adicionales. Agregar los pasos puede ayudar a investigar.",
     "scanning": "Recopilando información de apoyo. El reporte se actualizará cuando termine la recopilación.",
     "scanPartial": "Se recopiló parte de la información de apoyo. Consulta los detalles en el reporte.",
-    "title": "Comentarios sobre check-in"
+    "title": "Comentarios sobre check-in",
+    "titleLastCheckIn": "Último check-in ({{reason}})",
+    "titlePreview": "Título en GitHub",
+    "titleReasons": {
+      "authenticationRequired": "Se requiere iniciar sesión",
+      "manualVerificationRequired": "Se requiere verificación manual",
+      "methodNotMatched": "El método de check-in ya no coincide",
+      "networkError": "Error de red",
+      "noAvailableMethod": "No se detectó un método de check-in disponible",
+      "timeout": "Tiempo de espera agotado"
+    },
+    "titleSiteName": "El título en GitHub incluirá el nombre del sitio «{{name}}»."
   },
   "cookieValidation": {
     "action": "Verificar este Cookie",

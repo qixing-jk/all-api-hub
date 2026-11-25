@@ -119,6 +119,7 @@
     "includeAddress": "Kèm địa chỉ trang web",
     "intro": "Báo cáo vấn đề điểm danh hoặc yêu cầu hỗ trợ trang web. Thông tin bổ sung được thu thập tự động.",
     "issueTitle": "[Điểm danh]",
+    "issueTitleFallback": "Báo cáo chẩn đoán",
     "longReport": "Báo cáo sẽ được sao chép trước khi mở GitHub. Hãy dán vào “Problem description or extension feedback” trước khi gửi.",
     "manualCopied": "Đã sao chép — mở GitHub",
     "notes": "Đã xảy ra vấn đề gì? (không bắt buộc)",
@@ -137,7 +138,18 @@
     "scanEmpty": "Không thu thập được manh mối bổ sung. Các bước thao tác có thể giúp điều tra.",
     "scanning": "Đang thu thập thông tin bổ sung. Báo cáo sẽ được cập nhật khi hoàn tất.",
     "scanPartial": "Đã thu thập một phần thông tin bổ sung. Xem báo cáo để biết chi tiết.",
-    "title": "Phản hồi về điểm danh"
+    "title": "Phản hồi về điểm danh",
+    "titleLastCheckIn": "Lần điểm danh trước ({{reason}})",
+    "titlePreview": "Tiêu đề trên GitHub",
+    "titleReasons": {
+      "authenticationRequired": "Cần đăng nhập",
+      "manualVerificationRequired": "Cần xác minh thủ công",
+      "methodNotMatched": "Phương thức điểm danh không còn phù hợp",
+      "networkError": "Lỗi mạng",
+      "noAvailableMethod": "Không tìm thấy phương thức điểm danh khả dụng",
+      "timeout": "Hết thời gian chờ"
+    },
+    "titleSiteName": "Tiêu đề trên GitHub sẽ dùng tên trang web “{{name}}”."
   },
   "cookieValidation": {
     "action": "Xác minh Cookie này",

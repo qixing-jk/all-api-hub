@@ -119,6 +119,7 @@
     "includeAddress": "Website-Adresse hinzufügen",
     "intro": "Melde ein Check-in-Problem oder bitte um Website-Unterstützung. Ergänzende Informationen werden automatisch gesammelt.",
     "issueTitle": "[Check-in]",
+    "issueTitleFallback": "Diagnosebericht",
     "longReport": "Der Bericht wird vor dem Öffnen von GitHub kopiert. Fügen Sie ihn dort unter „Problem description or extension feedback“ ein.",
     "manualCopied": "Kopiert — GitHub öffnen",
     "notes": "Was ist passiert? (optional)",
@@ -137,7 +138,18 @@
     "scanEmpty": "Es wurden keine ergänzenden Hinweise gesammelt. Die Angabe der Schritte kann bei der Untersuchung helfen.",
     "scanning": "Ergänzende Informationen werden gesammelt. Der Bericht wird nach Abschluss aktualisiert.",
     "scanPartial": "Ein Teil der ergänzenden Informationen wurde gesammelt. Details stehen im Bericht.",
-    "title": "Check-in-Feedback"
+    "title": "Check-in-Feedback",
+    "titleLastCheckIn": "Letzter Check-in ({{reason}})",
+    "titlePreview": "GitHub-Titel",
+    "titleReasons": {
+      "authenticationRequired": "Anmeldung erforderlich",
+      "manualVerificationRequired": "Manuelle Verifizierung erforderlich",
+      "methodNotMatched": "Check-in-Methode passt nicht mehr",
+      "networkError": "Netzwerkfehler",
+      "noAvailableMethod": "Keine verfügbare Check-in-Methode erkannt",
+      "timeout": "Zeitüberschreitung"
+    },
+    "titleSiteName": "Der GitHub-Titel verwendet den Seitennamen „{{name}}“."
   },
   "cookieValidation": {
     "action": "Dieses Cookie prüfen",

@@ -50,17 +50,19 @@ export function FeedbackForm({
     browserInfo,
     details,
     setDetails,
+    execution,
     executionMessage,
+    issueTitleSummary,
     recordState,
     reloading,
     handleReloadExecution,
   } = useFeedbackDetails(initialSnapshot, auth, reloadExecution)
   const { clues, setClues, scanStatus, authUnavailable, scanning } =
     useFeedbackClues(initialSnapshot, auth)
-  const execution = snapshot.execution
   const origin = getFeedbackOrigin(snapshot.baseUrl)
+  const sharedOrigin = includeAddress ? origin : null
   const reportInput = {
-    origin: includeAddress ? origin : null,
+    origin: sharedOrigin,
     notes,
     details,
     clues,
@@ -76,9 +78,12 @@ export function FeedbackForm({
     report,
     t("checkInFeedback.issueTitle"),
     {
-      origin: includeAddress ? origin : null,
+      origin: sharedOrigin,
+      siteName: snapshot.siteName?.trim().replace(/\s+/g, " "),
       version: pkg.version,
       notes,
+      titleSummary: issueTitleSummary,
+      titleFallback: t("checkInFeedback.issueTitleFallback"),
       browserInfo,
       feedbackBody: composeCheckInFeedback({
         ...reportInput,
@@ -123,32 +128,13 @@ export function FeedbackForm({
         data-testid="checkin-feedback-form"
       >
         <div className="space-y-density-3">
-          <div className="flex flex-col items-start gap-x-3 gap-y-density-3 [@container(min-width:28rem)]:flex-row [@container(min-width:28rem)]:items-center [@container(min-width:28rem)]:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-x-2 gap-y-density-2 text-sm font-medium">
-                <Globe className="h-4 w-4 shrink-0 text-faint-foreground" />
-                <span className="break-all">
-                  {origin ?? t("checkInFeedback.reportSite")}
-                </span>
-              </div>
-            </div>
-            <label
-              className="flex shrink-0 items-center gap-x-2 gap-y-density-2 text-xs text-muted-foreground"
-              htmlFor={`${id}-address`}
-            >
-              {t("checkInFeedback.includeAddress")}
-              <Switch
-                id={`${id}-address`}
-                checked={includeAddress}
-                onChange={setIncludeAddress}
-                disabled={!origin}
-                aria-describedby={`${id}-address-hint`}
-              />
-            </label>
-          </div>
-          <p id={`${id}-address-hint`} className="sr-only">
-            {t("checkInFeedback.addressHint")}
-          </p>
+          <FeedbackSiteAddress
+            id={id}
+            origin={origin}
+            included={Boolean(sharedOrigin)}
+            onIncludeChange={setIncludeAddress}
+            titleSiteName={issue.titleSiteName}
+          />
           {executionMessage && execution && (
             <div className="space-y-density-2 rounded-lg bg-surface-subtle px-3 py-density-2-5 dark:bg-card/50">
               <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-density-2">
@@ -199,6 +185,7 @@ export function FeedbackForm({
         />
         <FeedbackReportEditor
           id={id}
+          issueTitle={issue.title}
           report={report}
           details={details}
           setDetails={setDetails}
@@ -212,5 +199,67 @@ export function FeedbackForm({
         />
       </div>
     </Modal>
+  )
+}
+
+/** Displays the sharing control and explains any fallback site name in the title. */
+function FeedbackSiteAddress({
+  id,
+  origin,
+  included,
+  onIncludeChange,
+  titleSiteName,
+}: {
+  id: string
+  origin: string | null
+  included: boolean
+  onIncludeChange: (included: boolean) => void
+  titleSiteName?: string
+}) {
+  const { t } = useTranslation("accountDialog")
+  const addressId = `${id}-address`
+  const addressHintId = `${id}-address-hint`
+  const titleSiteNameId = `${id}-title-site-name`
+  return (
+    <>
+      <div className="flex flex-col items-start gap-x-3 gap-y-density-3 [@container(min-width:28rem)]:flex-row [@container(min-width:28rem)]:items-center [@container(min-width:28rem)]:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-x-2 gap-y-density-2 text-sm font-medium">
+            <Globe className="h-4 w-4 shrink-0 text-faint-foreground" />
+            <span className="break-all">
+              {origin ?? t("checkInFeedback.reportSite")}
+            </span>
+          </div>
+        </div>
+        <label
+          className="flex shrink-0 items-center gap-x-2 gap-y-density-2 text-xs text-muted-foreground"
+          htmlFor={addressId}
+        >
+          {t("checkInFeedback.includeAddress")}
+          <Switch
+            id={addressId}
+            checked={included}
+            onChange={onIncludeChange}
+            disabled={!origin}
+            aria-describedby={
+              titleSiteName
+                ? `${addressHintId} ${titleSiteNameId}`
+                : addressHintId
+            }
+          />
+        </label>
+      </div>
+      <p id={addressHintId} className="sr-only">
+        {t("checkInFeedback.addressHint")}
+      </p>
+      {titleSiteName && (
+        <p
+          id={titleSiteNameId}
+          className="text-xs break-words text-muted-foreground"
+        >
+          {t("checkInFeedback.titleSiteName", { name: titleSiteName })}
+        </p>
+      )}
+    </>
   )
 }
