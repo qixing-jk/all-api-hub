@@ -274,6 +274,75 @@ describe("Hog free daily draw integration", () => {
     expect(performHogAirdropClaim).not.toHaveBeenCalled()
     expect(performHogLotteryDraw).not.toHaveBeenCalled()
   })
+  it.each(["expired", "already claimed"])(
+    "skips a later campaign that became %s during the previous claim",
+    async (reason) => {
+      const later = {
+        ...campaign,
+        id: 9,
+        endTime: Math.floor(Date.now() / 1000) + 1,
+      }
+      const laterClaim = { ...airClaim, id: 71, airdropId: later.id }
+      vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
+      vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign, later])
+      vi.mocked(fetchHogAirdropClaims)
+        .mockResolvedValueOnce([])
+        .mockImplementationOnce(async () => {
+          if (reason === "expired") {
+            vi.setSystemTime(Date.now() + 2_000)
+            return [airClaim]
+          }
+          return [airClaim, laterClaim]
+        })
+      if (reason === "already claimed")
+        vi.mocked(fetchHogAirdropClaims).mockResolvedValueOnce([
+          airClaim,
+          laterClaim,
+        ])
+
+      await expect(
+        hogLotteryProvider.checkIn(account(), context()),
+      ).resolves.toMatchObject({ status: "success" })
+      expect(performHogAirdropClaim).toHaveBeenCalledExactlyOnceWith(
+        expect.any(Object),
+        campaign.id,
+        expect.any(Object),
+      )
+    },
+  )
+  it("does not claim an airdrop that expires while awaiting mutation admission", async () => {
+    vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([
+      { ...campaign, endTime: Math.floor(Date.now() / 1000) + 1 },
+    ])
+
+    await expect(
+      hogLotteryProvider.checkIn(account(), {
+        ...context(),
+        async beforeRecoveredMutation() {
+          vi.setSystemTime(Date.now() + 2_000)
+          return true
+        },
+      }),
+    ).resolves.toMatchObject({ status: "already_checked" })
+    expect(performHogAirdropClaim).not.toHaveBeenCalled()
+  })
+  it("rechecks own claims after mutation admission and before the claim POST", async () => {
+    vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])
+
+    await expect(
+      hogLotteryProvider.checkIn(account(), {
+        ...context(),
+        async beforeRecoveredMutation() {
+          vi.mocked(fetchHogAirdropClaims).mockResolvedValue([airClaim])
+          return true
+        },
+      }),
+    ).resolves.toMatchObject({ status: "already_checked" })
+    expect(performHogAirdropClaim).not.toHaveBeenCalled()
+    expect(performHogLotteryDraw).not.toHaveBeenCalled()
+  })
   it("confirms a lost airdrop response from a new own-claim row without replaying it", async () => {
     vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
     vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])

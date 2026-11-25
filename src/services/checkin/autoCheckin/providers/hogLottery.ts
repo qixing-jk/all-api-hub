@@ -459,20 +459,10 @@ async function claimAvailableAirdrops(
   let failed: AutoCheckinProviderOutcome | undefined
   if (campaigns.length === 0) return { awards, uncertain, failed }
 
-  let beforeClaims: HogAirdropClaim[]
-  try {
-    beforeClaims = await fetchHogAirdropClaims(request)
-  } catch {
-    return { awards, uncertain: true, failed }
-  }
-  const knownClaimIds = new Set(beforeClaims.map((claim) => claim.airdropId))
-  const nowSeconds = Math.floor(Date.now() / 1000)
-  const pending = campaigns.filter(
-    (campaign) =>
-      !knownClaimIds.has(campaign.id) && campaign.endTime >= nowSeconds,
-  )
-
-  for (const campaign of pending) {
+  const isCurrent = (campaign: HogAirdropCampaign, nowSeconds: number) =>
+    campaign.endTime >= nowSeconds
+  for (const campaign of campaigns) {
+    if (!isCurrent(campaign, Math.floor(Date.now() / 1000))) continue
     if (
       context.beforeRecoveredMutation &&
       !(await context.beforeRecoveredMutation())
@@ -482,10 +472,24 @@ async function claimAvailableAirdrops(
       })
       break
     }
+    // Re-read own claims after any awaited admission step and immediately before
+    // the POST. Another window can claim this campaign while earlier work runs.
+    let beforeClaims: HogAirdropClaim[]
+    try {
+      beforeClaims = await fetchHogAirdropClaims(request)
+    } catch (error) {
+      failed = resolveProviderErrorResult({ error })
+      break
+    }
+    if (!isCurrent(campaign, Math.floor(Date.now() / 1000))) continue
+    const prior = beforeClaims.find((claim) => claim.airdropId === campaign.id)
+    if (prior) continue
+
     let dispatched = false
     let applied: HogAirdropClaim | undefined
     let error: unknown
     const startedAt = Math.floor(Date.now() / 1000)
+    if (!isCurrent(campaign, startedAt)) continue
     try {
       applied = await performHogAirdropClaim(request, campaign.id, {
         onDispatch() {
@@ -510,8 +514,7 @@ async function claimAvailableAirdrops(
     const matching = afterClaims.find(
       (claim) => claim.airdropId === campaign.id,
     )
-    const prior = beforeClaims.find((claim) => claim.airdropId === campaign.id)
-    const isNew = matching !== undefined && matching.id !== prior?.id
+    const isNew = matching !== undefined
     const responseConfirmed =
       applied !== undefined &&
       claimMatches(applied, campaign) &&
@@ -532,7 +535,6 @@ async function claimAvailableAirdrops(
 
     if (matching && (responseConfirmed || lostResponseConfirmed)) {
       awards.push(toAirdropAward(account, campaign, matching))
-      beforeClaims = afterClaims
       continue
     }
 
@@ -541,7 +543,6 @@ async function claimAvailableAirdrops(
       error.statusCode === 409 &&
       matching !== undefined
     ) {
-      beforeClaims = afterClaims
       continue
     }
     if (error) {
