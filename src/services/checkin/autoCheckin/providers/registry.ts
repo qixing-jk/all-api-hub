@@ -417,15 +417,21 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: {
-    // This task is scoped to the deployment whose account diagnostic matches.
-    discoveryOrigins: ["https://sub.100xlabs.space"],
+    // Public frontend bundles for both K40 hosts use the same `/api/v1`
+    // check-in status and claim contract as 100xLabs. The HTTP-only K40
+    // origin is intentionally excluded because authenticated calls would
+    // expose the account bearer token without TLS.
+    discoveryOrigins: [
+      "https://sub.100xlabs.space",
+      "https://k40.shengqainbang.cn",
+    ],
     presentation: { sourceNameKey: "methods.sources.linxi" },
     id: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
-    origins: ["https://sub.100xlabs.space"],
+    origins: ["https://sub.100xlabs.space", "https://k40.shengqainbang.cn"],
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
-      sourceName: "100xLabs",
+      sourceName: "Linxi / 100xLabs",
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: (): FeedbackStatusRoutes => [
