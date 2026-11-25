@@ -233,6 +233,19 @@ describe("Hog free daily draw integration", () => {
     )
     expect(performHogLotteryDraw).not.toHaveBeenCalled()
   })
+  it("claims a welfare airdrop without drawing when the lottery is disabled", async () => {
+    vi.mocked(fetchHogLotteryConfigured).mockResolvedValue(false)
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])
+    vi.mocked(fetchHogAirdropClaims)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([airClaim])
+
+    const outcome = await hogLotteryProvider.checkIn(account(), context())
+
+    expect(outcome).toMatchObject({ status: "success" })
+    expect(performHogAirdropClaim).toHaveBeenCalledOnce()
+    expect(performHogLotteryDraw).not.toHaveBeenCalled()
+  })
   it("keeps the combined method unchecked while a welfare airdrop is claimable", async () => {
     vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
     vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])

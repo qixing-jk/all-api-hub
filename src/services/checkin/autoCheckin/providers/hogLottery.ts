@@ -99,14 +99,14 @@ async function readStatus(request: ApiServiceRequest) {
   const period = getHogLotteryPeriodKey(Date.now())
   const status = await fetchHogLotteryStatus(request)
   const claimableAirdrops = await fetchHogClaimableAirdrops(request)
-  const enabled =
-    status.remaining === 0 ||
-    claimableAirdrops.length > 0 ||
-    (await fetchHogLotteryConfigured(request))
+  const lotteryEnabled =
+    status.remaining === 0 || (await fetchHogLotteryConfigured(request))
+  const enabled = lotteryEnabled || claimableAirdrops.length > 0
   if (period !== getHogLotteryPeriodKey(Date.now()))
     throw new Error("Hog status crossed its day boundary")
   return {
     status,
+    lotteryEnabled,
     claimableAirdrops,
     methodStatus: toStatus(status, enabled, Date.now(), claimableAirdrops),
   }
@@ -177,7 +177,8 @@ async function drawInSession(
       { kind: CHECK_IN_CONFIRMATION_KINDS.Unavailable },
     )
   }
-  const canAttemptLottery = before.status.remaining === 1
+  const canAttemptLottery =
+    before.lotteryEnabled && before.status.remaining === 1
   if (!canAttemptLottery) {
     if (airdropOutcome.awards.length > 0) {
       if (airdropOutcome.failed) {
