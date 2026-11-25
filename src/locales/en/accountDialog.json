@@ -119,6 +119,7 @@
     "includeAddress": "Include site address",
     "intro": "Report a check-in problem or request site support. Supporting information is collected automatically.",
     "issueTitle": "[Check-in]",
+    "issueTitleFallback": "Diagnostic report",
     "longReport": "The report will be copied before GitHub opens. Paste it into “Problem description or extension feedback” on that page.",
     "manualCopied": "I copied it — open GitHub",
     "notes": "What happened? (optional)",
@@ -137,7 +138,18 @@
     "scanEmpty": "No supporting clues were collected. Adding the steps can help us investigate.",
     "scanning": "Collecting supporting information. The report will update when collection finishes.",
     "scanPartial": "Some supporting information was collected. See the report for details.",
-    "title": "Check-in feedback"
+    "title": "Check-in feedback",
+    "titleLastCheckIn": "Last check-in ({{reason}})",
+    "titlePreview": "GitHub title",
+    "titleReasons": {
+      "authenticationRequired": "Sign-in required",
+      "manualVerificationRequired": "Human verification required",
+      "methodNotMatched": "Check-in method no longer matches",
+      "networkError": "Network error",
+      "noAvailableMethod": "No available check-in method detected",
+      "timeout": "Timed out"
+    },
+    "titleSiteName": "The GitHub title will use the site name “{{name}}”."
   },
   "cookieValidation": {
     "action": "Verify this Cookie",

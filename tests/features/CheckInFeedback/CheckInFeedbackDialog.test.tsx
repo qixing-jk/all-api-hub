@@ -27,7 +27,11 @@ import { FEEDBACK_EXECUTION_RECORDS } from "~/services/checkin/feedback/executio
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
 import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/feedback/scanTypes"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import type { CheckinAccountResult } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+  type CheckinAccountResult,
+} from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
 import { sendRuntimeActionMessage } from "~/utils/browser/runtimeMessages"
 import { createTab } from "~/utils/browser/tabs"
@@ -157,6 +161,54 @@ describe("check-in feedback workflow", () => {
       expect(autoCheckinStorage.getStatus).toHaveBeenCalledTimes(
         source === "saved" ? 1 : 0,
       )
+    },
+  )
+
+  it.each(["provided", "saved"] as const)(
+    "describes the %s result as the last check-in when there are no notes",
+    async (source) => {
+      const user = userEvent.setup()
+      const execution = {
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+        timestamp: 1,
+        rawMessage: "Technical error that should only be in diagnostics",
+      }
+      vi.mocked(accountQueries.getAccountById).mockResolvedValueOnce(
+        buildSiteAccount({ id: "account", site_url: "https://example.com" }),
+      )
+      if (source === "saved")
+        vi.mocked(autoCheckinStorage.getStatus).mockResolvedValueOnce({
+          perAccount: {
+            account: {
+              ...execution,
+              accountId: "account",
+              accountName: "Site",
+            },
+          },
+        })
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{
+              accountId: "account",
+              execution: source === "provided" ? execution : undefined,
+            }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      await user.click(
+        await screen.findByRole("button", {
+          name: accountDialogLocale.checkInFeedback.open,
+        }),
+      )
+
+      const url = new URL(atIndex(vi.mocked(createTab).mock.calls, 0)[0])
+      expect(url.searchParams.get("title")).toBe(
+        "[Check-in] example.com · Last check-in (Timed out)",
+      )
+      expect(url.searchParams.has("summary")).toBe(false)
     },
   )
 
@@ -316,11 +368,19 @@ describe("check-in feedback workflow", () => {
       }),
     )
     const url = new URL(vi.mocked(createTab).mock.calls.at(-1)![0]!)
-    expect(url.searchParams.get("title")).toBe("[Check-in] Website works")
+    expect(url.searchParams.get("title")).toBe(
+      "[Check-in] example.com · Website works",
+    )
     expect(url.searchParams.get("summary")).toBe("Website works")
     expect(url.searchParams.get("feedback")).not.toContain("Website works")
     expect(url.searchParams.get("feedback")).not.toContain("## Site")
     await user.click(screen.getByText("Review and edit submission"))
+    expect(screen.getByText("GitHub title", { exact: true })).toBeVisible()
+    expect(
+      screen.getByText("[Check-in] example.com · Website works", {
+        exact: true,
+      }),
+    ).toBeVisible()
     const fullReport = screen.getByLabelText(
       "Full submission (select to copy)",
     ) as HTMLTextAreaElement
@@ -1399,7 +1459,11 @@ describe("check-in feedback workflow", () => {
             onRedetectCheckInMethods={redetect}
             isRedetectingCheckInMethods={false}
             checkInRedetectionFeedback={null}
-            feedbackSource={hasFeedbackSource ? { snapshot } : undefined}
+            feedbackSource={
+              hasFeedbackSource
+                ? { snapshot: { ...snapshot, siteName: "Draft Name" } }
+                : undefined
+            }
           />,
         ),
       )
@@ -1441,6 +1505,11 @@ describe("check-in feedback workflow", () => {
       const issueParams = new URL(
         atIndex(vi.mocked(createTab).mock.calls, 0)[0],
       ).searchParams
+      expect(issueParams.get("title")).toBe(
+        hasFeedbackSource
+          ? "[Check-in] Draft Name · Website works"
+          : "[Check-in] Website works",
+      )
       expect(issueParams.get("summary")).toBe("Website works")
       expect(issueParams.get("feedback")).toContain(
         '<td colspan="2">My edited details</td>',
@@ -1458,6 +1527,130 @@ describe("check-in feedback workflow", () => {
       expect(
         await screen.findByLabelText("What happened? (optional)"),
       ).toHaveValue("")
+    },
+  )
+
+  it.each([
+    { record: "absent", execution: undefined },
+    {
+      record: "successful",
+      execution: {
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+      },
+    },
+    {
+      record: "already checked",
+      execution: {
+        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+      },
+    },
+    {
+      record: "failed with an unsupported title reason",
+      execution: {
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
+        message: "Upstream response text",
+      },
+    },
+  ])(
+    "uses only the shared site host when the latest record is $record",
+    async ({ execution }) => {
+      const user = userEvent.setup()
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{ snapshot: { ...snapshot, execution } }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+
+      await user.click(
+        await screen.findByRole("button", {
+          name: accountDialogLocale.checkInFeedback.open,
+        }),
+      )
+
+      const url = new URL(atIndex(vi.mocked(createTab).mock.calls, 0)[0])
+      expect(url.searchParams.get("title")).toBe("[Check-in] example.com")
+      expect(url.searchParams.get("site-url")).toBe("https://example.com")
+    },
+  )
+
+  it.each([
+    { reason: "excluded", baseUrl: snapshot.baseUrl },
+    { reason: "missing", baseUrl: "" },
+  ])(
+    "uses the saved site name when the address is $reason",
+    async ({ baseUrl }) => {
+      const user = userEvent.setup()
+      vi.mocked(accountQueries.getAccountById).mockResolvedValueOnce(
+        buildSiteAccount({
+          id: "saved-account",
+          site_name: "  Acme\t\nAI  ",
+          site_url: baseUrl,
+        }),
+      )
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{ accountId: "saved-account" }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      const addressSwitch = await screen.findByRole("switch", {
+        name: "Include site address",
+      })
+      if (baseUrl) await user.click(addressSwitch)
+      expect(addressSwitch).not.toBeChecked()
+      expect(addressSwitch).toHaveAccessibleDescription(
+        /The GitHub title will use the site name “Acme AI”\./,
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: accountDialogLocale.checkInFeedback.open,
+        }),
+      )
+
+      const url = new URL(atIndex(vi.mocked(createTab).mock.calls, 0)[0])
+      expect(url.searchParams.get("title")).toBe("[Check-in] Acme AI")
+      expect(url.searchParams.has("site-url")).toBe(false)
+    },
+  )
+
+  it.each([
+    { reason: "hidden", baseUrl: snapshot.baseUrl, hideAddress: true },
+    { reason: "invalid", baseUrl: "not a URL", hideAddress: false },
+  ])(
+    "uses a diagnostic title when the site address is $reason",
+    async ({ baseUrl, hideAddress }) => {
+      const user = userEvent.setup()
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={{ snapshot: { ...snapshot, baseUrl, siteName: " \t " } }}
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+
+      if (hideAddress) {
+        await user.click(
+          await screen.findByRole("switch", { name: "Include site address" }),
+        )
+      }
+      await user.click(
+        await screen.findByRole("button", {
+          name: accountDialogLocale.checkInFeedback.open,
+        }),
+      )
+
+      const url = new URL(atIndex(vi.mocked(createTab).mock.calls, 0)[0])
+      expect(url.searchParams.get("title")).toBe("[Check-in] Diagnostic report")
+      expect(url.searchParams.has("site-url")).toBe(false)
     },
   )
 
@@ -1602,12 +1795,13 @@ describe("check-in feedback workflow", () => {
       screen.getByRole("button", { name: "I copied it — open GitHub" }),
     )
     expect(write).toHaveBeenCalledTimes(1)
-    expect(
-      new URL(
-        atIndex(vi.mocked(sendRuntimeActionMessage).mock.calls, 0)[0]
-          .url as string,
-      ).searchParams.has("feedback"),
-    ).toBe(false)
+    const url = new URL(
+      atIndex(vi.mocked(sendRuntimeActionMessage).mock.calls, 0)[0]
+        .url as string,
+    )
+    expect(url.searchParams.get("title")).toBe("[Check-in] example.com")
+    expect(url.searchParams.has("site-url")).toBe(false)
+    expect(url.searchParams.has("feedback")).toBe(false)
     write.mockRestore()
   })
 

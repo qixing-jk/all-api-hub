@@ -1107,6 +1107,7 @@ export default function AccountForm({
           accountId: feedbackAccountId,
           snapshot: {
             baseUrl: feedbackBaseUrl,
+            siteName,
             siteType,
             checkIn: hasFeedbackSiteChanged
               ? {

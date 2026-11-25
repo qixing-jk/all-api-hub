@@ -119,6 +119,7 @@
     "includeAddress": "附帶站點位址",
     "intro": "描述簽到問題或申請網站支援，輔助資訊會自動收集。",
     "issueTitle": "[簽到回饋]",
+    "issueTitleFallback": "診斷報告",
     "longReport": "將先複製完整報告，再開啟 GitHub。請在網頁的「Problem description or extension feedback」中貼上後提交。",
     "manualCopied": "已手動複製，前往 GitHub",
     "notes": "遇到什麼問題？（選填）",
@@ -137,7 +138,18 @@
     "scanEmpty": "未收集到輔助線索，可補充操作步驟協助排查。",
     "scanning": "正在收集輔助資訊，完成後會更新報告。",
     "scanPartial": "已收集部分輔助資訊，詳情可在報告中查看。",
-    "title": "簽到回饋"
+    "title": "簽到回饋",
+    "titleLastCheckIn": "上次簽到（{{reason}}）",
+    "titlePreview": "GitHub 標題",
+    "titleReasons": {
+      "authenticationRequired": "需要登入",
+      "manualVerificationRequired": "需要人工驗證",
+      "methodNotMatched": "簽到方式不相符",
+      "networkError": "網路錯誤",
+      "noAvailableMethod": "未偵測到可用的簽到方式",
+      "timeout": "逾時"
+    },
+    "titleSiteName": "GitHub 標題將使用站點名稱「{{name}}」。"
   },
   "cookieValidation": {
     "action": "驗證這條 Cookie",

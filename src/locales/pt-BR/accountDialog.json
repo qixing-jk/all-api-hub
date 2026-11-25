@@ -119,6 +119,7 @@
     "includeAddress": "Incluir endereço do site",
     "intro": "Relate um problema de check-in ou solicite suporte para um site. As informações de apoio são coletadas automaticamente.",
     "issueTitle": "[Check-in]",
+    "issueTitleFallback": "Relatório de diagnóstico",
     "longReport": "O relatório será copiado antes de abrir o GitHub. Cole em “Problem description or extension feedback” antes de enviar.",
     "manualCopied": "Já copiei — abrir GitHub",
     "notes": "O que aconteceu? (opcional)",
@@ -137,7 +138,18 @@
     "scanEmpty": "Nenhuma pista adicional foi coletada. Incluir os passos pode ajudar na investigação.",
     "scanning": "Coletando informações de apoio. O relatório será atualizado quando a coleta terminar.",
     "scanPartial": "Parte das informações de apoio foi coletada. Veja os detalhes no relatório.",
-    "title": "Feedback de check-in"
+    "title": "Feedback de check-in",
+    "titleLastCheckIn": "Último check-in ({{reason}})",
+    "titlePreview": "Título no GitHub",
+    "titleReasons": {
+      "authenticationRequired": "Login necessário",
+      "manualVerificationRequired": "Verificação manual necessária",
+      "methodNotMatched": "O método de check-in não corresponde mais ao site",
+      "networkError": "Erro de rede",
+      "noAvailableMethod": "Nenhum método de check-in disponível foi detectado",
+      "timeout": "Tempo limite excedido"
+    },
+    "titleSiteName": "O título no GitHub usará o nome do site “{{name}}”."
   },
   "cookieValidation": {
     "action": "Verificar este Cookie",

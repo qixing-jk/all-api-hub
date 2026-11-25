@@ -119,6 +119,7 @@
     "includeAddress": "サイトのアドレスを含める",
     "intro": "チェックインの問題やサイト対応の要望を記入してください。補助情報は自動で収集されます。",
     "issueTitle": "[チェックイン]",
+    "issueTitleFallback": "診断レポート",
     "longReport": "全文をコピーしてからGitHubを開きます。「Problem description or extension feedback」に貼り付けて送信してください。",
     "manualCopied": "コピー済み — GitHub を開く",
     "notes": "どのような問題ですか？（任意）",
@@ -137,7 +138,18 @@
     "scanEmpty": "補助情報を収集できませんでした。操作手順の補足が調査に役立ちます。",
     "scanning": "補助情報を収集しています。完了するとレポートが更新されます。",
     "scanPartial": "補助情報を一部収集しました。詳細はレポートで確認できます。",
-    "title": "チェックインのフィードバック"
+    "title": "チェックインのフィードバック",
+    "titleLastCheckIn": "前回のチェックイン（{{reason}}）",
+    "titlePreview": "GitHub のタイトル",
+    "titleReasons": {
+      "authenticationRequired": "ログインが必要",
+      "manualVerificationRequired": "手動での認証が必要",
+      "methodNotMatched": "チェックイン方法がサイトと不一致",
+      "networkError": "ネットワークエラー",
+      "noAvailableMethod": "利用可能なチェックイン方法が見つからない",
+      "timeout": "タイムアウト"
+    },
+    "titleSiteName": "GitHub のタイトルにはサイト名「{{name}}」が使われます。"
   },
   "cookieValidation": {
     "action": "この Cookie を検証",
