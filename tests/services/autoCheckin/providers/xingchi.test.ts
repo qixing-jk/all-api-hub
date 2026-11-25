@@ -320,7 +320,7 @@ describe("Xingchi check-in integration", () => {
     })
   })
 
-  it("keeps the native reward without guessing its currency", async () => {
+  it("publishes the native reward as an unknown-asset award", async () => {
     const result = await xingchiProvider.checkIn(createAccount(), {
       ...executionContext(),
       statusProof: notCheckedStatus,
@@ -331,7 +331,13 @@ describe("Xingchi check-in integration", () => {
       awards: [
         expect.objectContaining({
           asset: { kind: "unknown" },
-          amount: expect.objectContaining({ status: "known", value: "12.5" }),
+          amount: expect.objectContaining({
+            status: "known",
+            value: "12.5",
+            source: expect.objectContaining({ inputs: ["amount"] }),
+          }),
+          target: "unknown",
+          fulfillment: "unknown",
         }),
       ],
     })

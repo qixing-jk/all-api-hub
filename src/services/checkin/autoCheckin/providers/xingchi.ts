@@ -2,7 +2,11 @@ import {
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
-import { ASSET_KINDS } from "~/services/amounts/financialConstants"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
 import { isForeignCheckInContract } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
   fetchXingchiDailyCheckInStatus,
@@ -84,6 +88,8 @@ export const xingchiProvider: AutoCheckinProvider = {
             adapter: "xingchi-check-in",
             asset: { kind: ASSET_KINDS.Unknown },
             value: data.rewardAmount,
+            target: AWARD_TARGETS.Unknown,
+            fulfillment: AWARD_FULFILLMENT.Unknown,
           }),
         ],
       }
