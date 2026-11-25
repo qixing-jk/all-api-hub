@@ -90,6 +90,32 @@ describe("ChatflowsAI public check-in contract", () => {
     },
   )
 
+  it("parses the server check-in timestamp only when it has an explicit timezone", () => {
+    expect(
+      parseChatflowsCheckInStatusResponse(
+        success(
+          statusData({
+            can_checkin: false,
+            checked_in_at: "2026-11-24T11:59:59+08:00",
+          }),
+        ),
+      ),
+    ).toMatchObject({
+      checkedInToday: true,
+      checkedInAt: Date.parse("2026-11-24T03:59:59Z"),
+    })
+    expect(
+      parseChatflowsCheckInStatusResponse(
+        success(
+          statusData({
+            can_checkin: false,
+            checked_in_at: "2026-11-24T03:59:59",
+          }),
+        ),
+      ).checkedInAt,
+    ).toBeUndefined()
+  })
+
   it("does not invent a required message in a successful envelope", () => {
     expect(
       parseChatflowsCheckInStatusResponse(

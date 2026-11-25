@@ -63,11 +63,18 @@ export function parseChatflowsCheckInStatusResponse(
   ) {
     throw invalidResponse(CHATFLOWS_CHECK_IN_STATUS_ENDPOINT)
   }
+  const checkedInAtValue = data.checked_in_at
+  const checkedInAt =
+    typeof checkedInAtValue === "string" &&
+    /(?:Z|[+-]\d{2}:\d{2})$/i.test(checkedInAtValue)
+      ? Date.parse(checkedInAtValue)
+      : Number.NaN
   return {
     enabled: true,
     checkedInToday: !data.can_checkin,
     periodKey: currentPeriod.periodKey,
     nextResetAt,
+    checkedInAt: Number.isFinite(checkedInAt) ? checkedInAt : undefined,
   }
 }
 

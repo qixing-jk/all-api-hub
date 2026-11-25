@@ -11,7 +11,10 @@ import {
   fetchChatflowsCheckInStatus,
   performChatflowsCheckIn,
 } from "~/services/apiService/sub2api/checkin/chatflowsCheckIn"
-import { getChatflowsCheckInPeriodBounds } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
+import {
+  getChatflowsCheckInPeriodBounds,
+  getChatflowsCheckInPeriodStartAt,
+} from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -84,12 +87,20 @@ const proof = (observedAt = Date.now()) => ({
     periodKey: getChatflowsCheckInPeriodBounds(observedAt).periodKey,
   },
 })
-const status = (checkedInToday = false) => ({
-  enabled: true,
-  checkedInToday,
-  periodKey: "2026-11-23",
-  nextResetAt: Date.parse("2026-11-24T04:00:00Z"),
-})
+const status = (
+  checkedInToday = false,
+  checkedInAt?: number,
+  periodKey = "2026-11-23",
+) => {
+  const periodStartAt = getChatflowsCheckInPeriodStartAt(periodKey)!
+  return {
+    enabled: true,
+    checkedInToday,
+    periodKey,
+    nextResetAt: periodStartAt + 24 * 60 * 60 * 1_000,
+    checkedInAt,
+  }
+}
 
 describe("ChatflowsAI check-in integration", () => {
   beforeEach(() => {
@@ -203,6 +214,9 @@ describe("ChatflowsAI check-in integration", () => {
   })
 
   it("submits once through the selected method", async () => {
+    vi.mocked(fetchChatflowsCheckInStatus)
+      .mockResolvedValueOnce(status())
+      .mockResolvedValueOnce(status(true, Date.parse("2026-11-24T03:58:00Z")))
     expect(
       await executeSelectedCheckIn({
         account: createAccount(),
@@ -211,16 +225,45 @@ describe("ChatflowsAI check-in integration", () => {
       }),
     ).toMatchObject({ kind: "executed", result: { status: "success" } })
     expect(performChatflowsCheckIn).toHaveBeenCalledOnce()
-    expect(fetchChatflowsCheckInStatus).toHaveBeenCalledExactlyOnceWith(
+    expect(fetchChatflowsCheckInStatus).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({ ...context(), directRequestReason: undefined }),
       { allowAuthenticationRecovery: true },
     )
+    expect(fetchChatflowsCheckInStatus).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ baseUrl: "https://relay.example" }),
+      { allowAuthenticationRecovery: false },
+    )
   })
 
-  it("attributes a successful claim to the server period when the response crosses noon", async () => {
+  it("attributes a claim accepted before noon to the checked-in time", async () => {
+    const checkedInAt = Date.parse("2026-11-24T03:59:59.000Z")
+    vi.setSystemTime(checkedInAt)
+    vi.mocked(fetchChatflowsCheckInStatus)
+      .mockResolvedValueOnce(status())
+      .mockResolvedValueOnce(status(true, checkedInAt))
+
+    const execution = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: context(),
+    })
+
+    expect(execution).toMatchObject({
+      kind: "executed",
+      completedAt: checkedInAt,
+      result: { status: "success" },
+    })
+  })
+
+  it("attributes a claim accepted after noon even when the POST response crosses noon", async () => {
     const beforeNoon = Date.parse("2026-11-24T03:59:59.000Z")
     const afterNoon = Date.parse("2026-11-24T04:00:01.000Z")
     vi.setSystemTime(beforeNoon)
+    vi.mocked(fetchChatflowsCheckInStatus)
+      .mockResolvedValueOnce(status())
+      .mockResolvedValueOnce(status(true, afterNoon, "2026-11-24"))
     vi.mocked(performChatflowsCheckIn).mockImplementationOnce(async () => {
       vi.setSystemTime(afterNoon)
       return { kind: "applied", amount: 50 }
@@ -234,10 +277,23 @@ describe("ChatflowsAI check-in integration", () => {
 
     expect(execution).toMatchObject({
       kind: "executed",
-      completedAt: Date.parse("2026-11-23T04:00:00.000Z"),
+      completedAt: afterNoon,
       result: { status: "success" },
     })
     expect(performChatflowsCheckIn).toHaveBeenCalledOnce()
+  })
+
+  it("keeps an applied mutation uncertain when status lacks authoritative claim time", async () => {
+    vi.mocked(fetchChatflowsCheckInStatus).mockResolvedValueOnce(status(true))
+
+    const result = await chatflowsProvider.checkIn(createAccount(), {
+      ...context(),
+      statusProof: proof(),
+    })
+
+    expect(result).toMatchObject({ status: "uncertain" })
+    expect(performChatflowsCheckIn).toHaveBeenCalledOnce()
+    expect(fetchChatflowsCheckInStatus).toHaveBeenCalledOnce()
   })
 
   it("keeps discovery passive even when given execution recovery context", async () => {
@@ -274,11 +330,11 @@ describe("ChatflowsAI check-in integration", () => {
       today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
     }
     vi.setSystemTime(new Date("2026-11-24T04:01:00Z"))
-    vi.mocked(fetchChatflowsCheckInStatus).mockResolvedValue({
-      ...status(),
-      periodKey: "2026-11-24",
-      nextResetAt: Date.parse("2026-11-25T04:00:00Z"),
-    })
+    vi.mocked(fetchChatflowsCheckInStatus)
+      .mockResolvedValueOnce(status(false, undefined, "2026-11-24"))
+      .mockResolvedValueOnce(
+        status(true, Date.parse("2026-11-24T04:01:00Z"), "2026-11-24"),
+      )
     expect(
       await executeSelectedCheckIn({
         account,
@@ -292,6 +348,9 @@ describe("ChatflowsAI check-in integration", () => {
   it.each([0, "50.25"])(
     "retains native credit amount %s without a USD conversion",
     async (amount) => {
+      vi.mocked(fetchChatflowsCheckInStatus).mockResolvedValueOnce(
+        status(true, Date.parse("2026-11-24T03:58:00Z")),
+      )
       vi.mocked(performChatflowsCheckIn).mockResolvedValue({
         kind: "applied",
         amount,

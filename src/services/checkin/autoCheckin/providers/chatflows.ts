@@ -133,9 +133,32 @@ export const chatflowsProvider: AutoCheckinProvider = {
         )
       }
 
-      // period_key from the validated status response establishes the claimed
-      // cycle. Use its opening time for grant attribution even if the POST
-      // receipt arrives after the next noon reset.
+      // The mutation response does not identify which side of noon accepted
+      // the claim. Read the server's checked_in_at after the POST and only
+      // confirm a grant when that timestamp belongs to the returned period.
+      let claimStatus
+      try {
+        claimStatus = await fetchChatflowsCheckInStatus(
+          createSub2ApiCheckInReadRequest({
+            account: siteAccount,
+            observedAt: Date.now(),
+          }),
+          { allowAuthenticationRecovery: false },
+        )
+      } catch {
+        return createUnconfirmedCheckInResult(siteAccount, { data: result })
+      }
+      const checkedInAt = claimStatus.checkedInAt
+      if (
+        !claimStatus.checkedInToday ||
+        checkedInAt === undefined ||
+        checkedInAt > Date.now() ||
+        getChatflowsCheckInPeriodBounds(checkedInAt).periodKey !==
+          claimStatus.periodKey
+      ) {
+        return createUnconfirmedCheckInResult(siteAccount, { data: result })
+      }
+
       return withCheckInResponseConfirmation(
         siteAccount,
         {
@@ -161,7 +184,7 @@ export const chatflowsProvider: AutoCheckinProvider = {
             }),
           ],
         },
-        { timestamp: new Date(periodStartAt).toISOString() },
+        { timestamp: new Date(checkedInAt).toISOString() },
       )
     } catch (error) {
       return mapSub2ApiCheckInMutationError(error, context, siteAccount)
