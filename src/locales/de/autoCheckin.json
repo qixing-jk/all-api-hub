@@ -175,8 +175,8 @@
       "name": "Täglicher Check-in über {{source}}"
     },
     "freeDailyDraw": {
-      "description": "Eine kostenlose tägliche Ziehung über {{source}}. Erfordert eine konfigurierte Dashboard-Anmeldung; der Gewinn kann null sein.",
-      "name": "Kostenlose tägliche Ziehung"
+      "description": "Beansprucht verfügbare kostenlose Tagesziehungen und Wohlfahrts-Airdrops bei {{source}}. Eine konfigurierte Dashboard-Anmeldung ist erforderlich.",
+      "name": "Kostenlose Tagesprämien"
     },
     "generic": {
       "name": "Täglicher Check-in"

@@ -13,6 +13,12 @@ import {
   fetchHogLotteryStatus,
   performHogLotteryDraw,
 } from "~/services/apiService/newApiFamily/variants/hogDailyLottery"
+import {
+  fetchHogAirdropClaims,
+  fetchHogClaimableAirdrops,
+  performHogAirdropClaim,
+  type HogAirdropClaim,
+} from "~/services/apiService/newApiFamily/variants/hogWelfareAirdrop"
 import { ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
@@ -44,6 +50,17 @@ vi.mock(
     fetchHogLotteryPublicMarker: vi.fn(),
     fetchHogLotteryStatus: vi.fn(),
     performHogLotteryDraw: vi.fn(),
+  }),
+)
+vi.mock(
+  "~/services/apiService/newApiFamily/variants/hogWelfareAirdrop",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/apiService/newApiFamily/variants/hogWelfareAirdrop")
+    >()),
+    fetchHogAirdropClaims: vi.fn(),
+    fetchHogClaimableAirdrops: vi.fn(),
+    performHogAirdropClaim: vi.fn(),
   }),
 )
 
@@ -105,6 +122,13 @@ const sessionRequest = {
     userId: "1",
   },
 }
+const campaign = { id: 8, quota: 500, endTime: 1795560000 }
+const airClaim: HogAirdropClaim = {
+  id: 70,
+  airdropId: campaign.id,
+  quota: campaign.quota,
+  createdTime: 1795492800,
+}
 
 describe("Hog free daily draw integration", () => {
   beforeEach(() => {
@@ -113,6 +137,9 @@ describe("Hog free daily draw integration", () => {
     vi.setSystemTime(new Date("2026-11-24T03:00:00Z"))
     vi.mocked(fetchHogLotteryPublicMarker).mockResolvedValue(true)
     vi.mocked(fetchHogLotteryStatus).mockResolvedValue(unchecked)
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([])
+    vi.mocked(fetchHogAirdropClaims).mockResolvedValue([])
+    vi.mocked(performHogAirdropClaim).mockResolvedValue(airClaim)
     vi.mocked(fetchHogLotteryConfigured).mockResolvedValue(true)
     vi.mocked(performHogLotteryDraw).mockResolvedValue({
       prizeCode: "p",
@@ -180,6 +207,107 @@ describe("Hog free daily draw integration", () => {
     expect(createNewApiAuthenticatedSessionRequest).toHaveBeenCalledOnce()
     expect(performHogLotteryDraw).not.toHaveBeenCalled()
   })
+  it("claims an eligible welfare airdrop even when today's lottery was already drawn", async () => {
+    vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])
+    vi.mocked(fetchHogAirdropClaims)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([airClaim])
+
+    const outcome = await hogLotteryProvider.checkIn(account(), context())
+
+    expect(outcome).toMatchObject({
+      status: "success",
+      awards: [
+        {
+          amount: { status: "known", value: "500" },
+          asset: { kind: "quota" },
+          event: { namespace: "hog-welfare-airdrop", id: "70" },
+        },
+      ],
+    })
+    expect(performHogAirdropClaim).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ auth: sessionRequest.auth }),
+      campaign.id,
+      expect.objectContaining({ onDispatch: expect.any(Function) }),
+    )
+    expect(performHogLotteryDraw).not.toHaveBeenCalled()
+  })
+  it("keeps the combined method unchecked while a welfare airdrop is claimable", async () => {
+    vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])
+
+    await expect(
+      hogLotteryProvider.getStatus?.({
+        account: account(),
+        observedAt: Date.now(),
+      }),
+    ).resolves.toMatchObject({
+      outcome: "known",
+      availability: "enabled",
+      today: "not_checked",
+    })
+  })
+  it("does not repost a campaign already present in the account claim history", async () => {
+    vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])
+    vi.mocked(fetchHogAirdropClaims).mockResolvedValue([airClaim])
+
+    await expect(
+      hogLotteryProvider.checkIn(account(), context()),
+    ).resolves.toMatchObject({
+      status: "already_checked",
+    })
+    expect(performHogAirdropClaim).not.toHaveBeenCalled()
+    expect(performHogLotteryDraw).not.toHaveBeenCalled()
+  })
+  it("confirms a lost airdrop response from a new own-claim row without replaying it", async () => {
+    vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])
+    vi.mocked(fetchHogAirdropClaims)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([airClaim])
+    vi.mocked(performHogAirdropClaim).mockImplementationOnce(
+      async (_request, _id, observer) => {
+        observer?.onDispatch()
+        throw new TypeError("lost response")
+      },
+    )
+
+    const outcome = await hogLotteryProvider.checkIn(account(), context())
+
+    expect(outcome).toMatchObject({
+      status: "success",
+      awards: [
+        {
+          amount: { status: "known", value: "500" },
+        },
+      ],
+    })
+    expect(performHogAirdropClaim).toHaveBeenCalledOnce()
+    expect(fetchHogAirdropClaims).toHaveBeenCalledTimes(2)
+  })
+  it("leaves an unverified airdrop claim uncertain and never posts it twice", async () => {
+    vi.mocked(fetchHogLotteryStatus).mockResolvedValue(checked())
+    vi.mocked(fetchHogClaimableAirdrops).mockResolvedValue([campaign])
+    vi.mocked(fetchHogAirdropClaims)
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("history unavailable"))
+    vi.mocked(performHogAirdropClaim).mockRejectedValueOnce(
+      new TypeError("lost response"),
+    )
+    const invocation = context()
+    invocation.mutationLifecycle.onDispatch()
+
+    await expect(
+      hogLotteryProvider.checkIn(account(), invocation),
+    ).resolves.toMatchObject({
+      status: "uncertain",
+      reasonCode: "checkin_unconfirmed",
+    })
+    expect(performHogAirdropClaim).toHaveBeenCalledOnce()
+    expect(performHogLotteryDraw).not.toHaveBeenCalled()
+  })
   it("requires a configured active prize list before the free draw", async () => {
     vi.mocked(fetchHogLotteryConfigured).mockResolvedValue(false)
     expect(
@@ -222,12 +350,14 @@ describe("Hog free daily draw integration", () => {
     },
   )
   it("reconciles a lost response with one GET and never retries the draw", async () => {
-    vi.mocked(performHogLotteryDraw).mockRejectedValue(new TypeError("lost"))
+    vi.mocked(performHogLotteryDraw).mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      throw new TypeError("lost")
+    })
     vi.mocked(fetchHogLotteryStatus)
       .mockResolvedValueOnce(unchecked)
       .mockResolvedValueOnce(checked())
     const invocation = context()
-    invocation.mutationLifecycle.onDispatch()
     expect(
       await hogLotteryProvider.checkIn(account(), invocation),
     ).toMatchObject({ status: "success" })

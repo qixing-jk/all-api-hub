@@ -15,6 +15,7 @@ import {
   getHogLotteryPeriodKey,
   HOG_LOTTERY_ENDPOINTS,
 } from "~/services/apiService/newApiFamily/variants/hogDailyLotteryProtocol"
+import { HOG_AIRDROP_ENDPOINTS } from "~/services/apiService/newApiFamily/variants/hogWelfareAirdrop"
 import {
   XINGYA_CHECK_IN_ORIGINS,
   XINGYA_CHECK_IN_STATUS_ENDPOINT,
@@ -730,7 +731,10 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     statusPeriodKey: getHogLotteryPeriodKey,
     supportsStatusReadback: true,
-    feedbackStatusRoutes: [{ path: HOG_LOTTERY_ENDPOINTS.Status }],
+    feedbackStatusRoutes: [
+      { path: HOG_LOTTERY_ENDPOINTS.Status },
+      { path: HOG_AIRDROP_ENDPOINTS.List },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },

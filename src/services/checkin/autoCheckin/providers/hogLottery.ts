@@ -34,6 +34,13 @@ import {
   getHogLotteryPeriodKey,
   HOG_LOTTERY_ENDPOINTS,
 } from "~/services/apiService/newApiFamily/variants/hogDailyLotteryProtocol"
+import {
+  fetchHogAirdropClaims,
+  fetchHogClaimableAirdrops,
+  performHogAirdropClaim,
+  type HogAirdropCampaign,
+  type HogAirdropClaim,
+} from "~/services/apiService/newApiFamily/variants/hogWelfareAirdrop"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   API_DIRECT_REQUEST_REASONS,
@@ -69,11 +76,15 @@ const toStatus = (
   status: HogLotteryStatus,
   enabled: boolean,
   observedAt: number,
+  claimableAirdrops: readonly HogAirdropCampaign[] = [],
 ) =>
   ({
     outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
     availability: enabled ? "enabled" : "disabled",
-    today: status.remaining === 0 ? "checked" : "not_checked",
+    today:
+      status.remaining === 0 && claimableAirdrops.length === 0
+        ? "checked"
+        : "not_checked",
     evidence: {
       source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
       observedAt,
@@ -87,11 +98,18 @@ const toStatus = (
 async function readStatus(request: ApiServiceRequest) {
   const period = getHogLotteryPeriodKey(Date.now())
   const status = await fetchHogLotteryStatus(request)
+  const claimableAirdrops = await fetchHogClaimableAirdrops(request)
   const enabled =
-    status.remaining === 0 || (await fetchHogLotteryConfigured(request))
+    status.remaining === 0 ||
+    claimableAirdrops.length > 0 ||
+    (await fetchHogLotteryConfigured(request))
   if (period !== getHogLotteryPeriodKey(Date.now()))
     throw new Error("Hog status crossed its day boundary")
-  return { status, methodStatus: toStatus(status, enabled, Date.now()) }
+  return {
+    status,
+    claimableAirdrops,
+    methodStatus: toStatus(status, enabled, Date.now(), claimableAirdrops),
+  }
 }
 
 const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
@@ -120,7 +138,7 @@ async function drawInSession(
   const before = await readStatus(request)
   if (admittedPeriod !== getHogLotteryPeriodKey(Date.now()))
     return createUnconfirmedCheckInResult(account)
-  if (before.status.remaining === 0) {
+  if (before.status.remaining === 0 && before.claimableAirdrops.length === 0) {
     return withCheckInConfirmation(
       account,
       {
@@ -137,23 +155,109 @@ async function drawInSession(
     return createTerminalFailureResult({
       reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
     })
+  const airdropOutcome = await claimAvailableAirdrops(
+    account,
+    context,
+    request,
+    before.claimableAirdrops,
+  )
+  if (admittedPeriod !== getHogLotteryPeriodKey(Date.now()))
+    return createUnconfirmedCheckInResult(account, {
+      data: { confirmedAirdrops: airdropOutcome.awards.length },
+    })
+  if (airdropOutcome.uncertain) {
+    return withCheckInConfirmation(
+      account,
+      {
+        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+        awards: airdropOutcome.awards,
+        data: { confirmedAirdrops: airdropOutcome.awards.length },
+      },
+      { kind: CHECK_IN_CONFIRMATION_KINDS.Unavailable },
+    )
+  }
+  const canAttemptLottery = before.status.remaining === 1
+  if (!canAttemptLottery) {
+    if (airdropOutcome.awards.length > 0) {
+      if (airdropOutcome.failed) {
+        return withCheckInConfirmation(
+          account,
+          { ...airdropOutcome.failed, awards: airdropOutcome.awards },
+          { kind: CHECK_IN_CONFIRMATION_KINDS.Response },
+        )
+      }
+      return withCheckInConfirmation(
+        account,
+        {
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          messageKey: messages.checkinSuccessful,
+          awards: airdropOutcome.awards,
+          data: { confirmedAirdrops: airdropOutcome.awards.length },
+        },
+        {
+          kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+          status: before.methodStatus,
+        },
+      )
+    }
+    if (airdropOutcome.failed) return airdropOutcome.failed
+    return withCheckInConfirmation(
+      account,
+      {
+        status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+        messageKey: messages.alreadyCheckedToday,
+      },
+      {
+        kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+        status: before.methodStatus,
+      },
+    )
+  }
+  if (
+    airdropOutcome.failed &&
+    airdropOutcome.awards.length === 0 &&
+    !context.mutationLifecycle?.dispatched
+  )
+    return airdropOutcome.failed
   if (
     context.beforeRecoveredMutation &&
     !(await context.beforeRecoveredMutation())
-  )
+  ) {
+    if (airdropOutcome.awards.length > 0) {
+      return withCheckInConfirmation(
+        account,
+        {
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          messageKey: messages.checkinSuccessful,
+          awards: airdropOutcome.awards,
+        },
+        { kind: CHECK_IN_CONFIRMATION_KINDS.Response },
+      )
+    }
     return createTerminalFailureResult({
       reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
     })
+  }
   if (admittedPeriod !== getHogLotteryPeriodKey(Date.now()))
-    return createUnconfirmedCheckInResult(account)
+    return createUnconfirmedWithAwards(account, airdropOutcome.awards)
 
   const startedAt = Date.now()
+  let lotteryDispatched = false
   let mutationError: unknown
   let applied: Awaited<ReturnType<typeof performHogLotteryDraw>> | undefined
   try {
     applied = await performHogLotteryDraw({
       ...request,
-      observer: context.mutationLifecycle,
+      observer: {
+        onDispatch() {
+          lotteryDispatched = true
+          context.mutationLifecycle?.onDispatch()
+        },
+        onResponse() {
+          context.mutationLifecycle?.onResponse()
+        },
+      },
     })
   } catch (error) {
     mutationError = error
@@ -163,27 +267,37 @@ async function drawInSession(
   try {
     after = await readStatus(request)
   } catch {
-    return createUnconfirmedCheckInResult(account)
+    return createUnconfirmedWithAwards(account, airdropOutcome.awards)
   }
   if (admittedPeriod !== getHogLotteryPeriodKey(Date.now()))
-    return createUnconfirmedCheckInResult(account)
+    return createUnconfirmedWithAwards(account, airdropOutcome.awards)
   if (
     mutationError instanceof ApiError &&
     mutationError.upstreamCode === "LOTTERY_DAILY_LIMIT_REACHED"
   ) {
     return after.status.remaining === 0
-      ? withCheckInConfirmation(
-          account,
-          {
-            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-            messageKey: messages.alreadyCheckedToday,
-          },
-          {
-            kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
-            status: after.methodStatus,
-          },
-        )
-      : createUnconfirmedCheckInResult(account)
+      ? airdropOutcome.awards.length > 0
+        ? withCheckInConfirmation(
+            account,
+            {
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              messageKey: messages.checkinSuccessful,
+              awards: airdropOutcome.awards,
+            },
+            { kind: CHECK_IN_CONFIRMATION_KINDS.Response },
+          )
+        : withCheckInConfirmation(
+            account,
+            {
+              status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+              messageKey: messages.alreadyCheckedToday,
+            },
+            {
+              kind: CHECK_IN_CONFIRMATION_KINDS.Observed,
+              status: after.methodStatus,
+            },
+          )
+      : createUnconfirmedWithAwards(account, airdropOutcome.awards)
   }
   // A definite rejection cannot make another tab's concurrent draw ours.
   if (
@@ -193,7 +307,12 @@ async function drawInSession(
         mutationError.statusCode >= 400 &&
         mutationError.statusCode < 500))
   )
-    return resolveProviderErrorResult({ error: mutationError })
+    return {
+      ...resolveProviderErrorResult({ error: mutationError }),
+      ...(airdropOutcome.awards.length > 0
+        ? { awards: airdropOutcome.awards }
+        : {}),
+    }
   const draw = after.status.my_draw
   const confirmedResponse =
     applied &&
@@ -203,7 +322,7 @@ async function drawInSession(
     applied.prizeLabel === draw.prizeLabel
   const confirmedLostResponse =
     !applied &&
-    context.mutationLifecycle?.dispatched === true &&
+    lotteryDispatched &&
     draw &&
     Date.parse(draw.createdAt) >= startedAt
   if (
@@ -211,12 +330,13 @@ async function drawInSession(
     draw &&
     (confirmedResponse || confirmedLostResponse)
   ) {
-    return withCheckInConfirmation(
+    const lotteryOutcome = withCheckInConfirmation(
       account,
       {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
         messageKey: messages.checkinSuccessful,
         awards: [
+          ...airdropOutcome.awards,
           accountAward(account, {
             id: "daily-draw",
             operation: HOG_LOTTERY_ENDPOINTS.Status,
@@ -237,14 +357,216 @@ async function drawInSession(
         status: after.methodStatus,
       },
     )
+    if (airdropOutcome.failed) {
+      return withCheckInConfirmation(
+        account,
+        { ...airdropOutcome.failed, awards: lotteryOutcome.awards },
+        { kind: CHECK_IN_CONFIRMATION_KINDS.Response },
+      )
+    }
+    return lotteryOutcome
   }
+  if (airdropOutcome.awards.length > 0) {
+    if (mutationError) {
+      const lotteryError = resolveProviderErrorResult({
+        error: mutationError,
+        mutationDispatched: lotteryDispatched,
+      })
+      if (
+        lotteryError.status === CHECKIN_RESULT_STATUS.UNCERTAIN ||
+        lotteryError.status === CHECKIN_RESULT_STATUS.FAILED
+      )
+        return { ...lotteryError, awards: airdropOutcome.awards }
+    }
+    return withCheckInConfirmation(
+      account,
+      {
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+        messageKey: messages.checkinSuccessful,
+        awards: airdropOutcome.awards,
+        data: { confirmedAirdrops: airdropOutcome.awards.length },
+      } as AutoCheckinProviderOutcome,
+      { kind: CHECK_IN_CONFIRMATION_KINDS.Response },
+    )
+  }
+  if (airdropOutcome.failed) return airdropOutcome.failed
   if (mutationError && after.status.remaining === 1) {
     return resolveProviderErrorResult({
       error: mutationError,
-      mutationDispatched: context.mutationLifecycle?.dispatched,
+      mutationDispatched: lotteryDispatched,
     })
   }
   return createUnconfirmedCheckInResult(account)
+}
+
+/** Keep earlier confirmed grants when a later Hog mutation cannot be verified. */
+function createUnconfirmedWithAwards(
+  account: SiteAccount,
+  awards: NonNullable<AutoCheckinProviderOutcome["awards"]>,
+) {
+  return withCheckInConfirmation(
+    account,
+    {
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      ...(awards.length > 0 ? { awards } : {}),
+    },
+    { kind: CHECK_IN_CONFIRMATION_KINDS.Unavailable },
+  )
+}
+
+/** Match a returned own-claim row to the eligible campaign's native quota. */
+function claimMatches(
+  claim: HogAirdropClaim | undefined,
+  campaign: HogAirdropCampaign,
+) {
+  return Boolean(
+    claim && claim.airdropId === campaign.id && claim.quota === campaign.quota,
+  )
+}
+
+/** Convert the server-confirmed quota grant without retaining its redemption key. */
+function toAirdropAward(
+  account: SiteAccount,
+  campaign: HogAirdropCampaign,
+  claim: HogAirdropClaim,
+) {
+  return accountAward(account, {
+    id: `welfare-airdrop:${claim.id}`,
+    operation: `/api/welfare-airdrop/claim/${campaign.id}`,
+    field: "quota",
+    value: claim.quota,
+    asset: {
+      kind: ASSET_KINDS.Quota,
+      ...newApiQuotaAsset(account.site_url),
+    },
+    target: AWARD_TARGETS.Wallet,
+    fulfillment: AWARD_FULFILLMENT.Credited,
+    event: { namespace: "hog-welfare-airdrop", id: String(claim.id) },
+  })
+}
+
+/** Claim eligible campaigns serially and reconcile each mutation once. */
+async function claimAvailableAirdrops(
+  account: SiteAccount,
+  context: AutoCheckinProviderContext,
+  request: ApiServiceRequest,
+  campaigns: readonly HogAirdropCampaign[],
+) {
+  const awards: NonNullable<AutoCheckinProviderOutcome["awards"]> = []
+  let uncertain = false
+  let failed: AutoCheckinProviderOutcome | undefined
+  if (campaigns.length === 0) return { awards, uncertain, failed }
+
+  let beforeClaims: HogAirdropClaim[]
+  try {
+    beforeClaims = await fetchHogAirdropClaims(request)
+  } catch {
+    return { awards, uncertain: true, failed }
+  }
+  const knownClaimIds = new Set(beforeClaims.map((claim) => claim.airdropId))
+  const nowSeconds = Math.floor(Date.now() / 1000)
+  const pending = campaigns.filter(
+    (campaign) =>
+      !knownClaimIds.has(campaign.id) && campaign.endTime >= nowSeconds,
+  )
+
+  for (const campaign of pending) {
+    if (
+      context.beforeRecoveredMutation &&
+      !(await context.beforeRecoveredMutation())
+    ) {
+      failed = createTerminalFailureResult({
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
+      })
+      break
+    }
+    let dispatched = false
+    let applied: HogAirdropClaim | undefined
+    let error: unknown
+    const startedAt = Math.floor(Date.now() / 1000)
+    try {
+      applied = await performHogAirdropClaim(request, campaign.id, {
+        onDispatch() {
+          dispatched = true
+          context.mutationLifecycle?.onDispatch()
+        },
+        onResponse() {
+          context.mutationLifecycle?.onResponse()
+        },
+      })
+    } catch (claimError) {
+      error = claimError
+    }
+
+    let afterClaims: HogAirdropClaim[]
+    try {
+      afterClaims = await fetchHogAirdropClaims(request)
+    } catch {
+      uncertain = true
+      break
+    }
+    const matching = afterClaims.find(
+      (claim) => claim.airdropId === campaign.id,
+    )
+    const prior = beforeClaims.find((claim) => claim.airdropId === campaign.id)
+    const isNew = matching !== undefined && matching.id !== prior?.id
+    const responseConfirmed =
+      applied !== undefined &&
+      claimMatches(applied, campaign) &&
+      matching?.id === applied.id &&
+      matching.createdTime === applied.createdTime
+    const lostResponseConfirmed =
+      error !== undefined &&
+      !(
+        error instanceof ApiError &&
+        error.statusCode !== undefined &&
+        error.statusCode >= 400 &&
+        error.statusCode < 500
+      ) &&
+      dispatched &&
+      isNew &&
+      matching.createdTime >= startedAt - 2 &&
+      matching.quota === campaign.quota
+
+    if (matching && (responseConfirmed || lostResponseConfirmed)) {
+      awards.push(toAirdropAward(account, campaign, matching))
+      beforeClaims = afterClaims
+      continue
+    }
+
+    if (
+      error instanceof ApiError &&
+      error.statusCode === 409 &&
+      matching !== undefined
+    ) {
+      beforeClaims = afterClaims
+      continue
+    }
+    if (error) {
+      if (
+        dispatched &&
+        !(
+          error instanceof ApiError &&
+          error.statusCode !== undefined &&
+          error.statusCode >= 400 &&
+          error.statusCode < 500
+        )
+      ) {
+        uncertain = true
+        break
+      }
+      failed = resolveProviderErrorResult({
+        error,
+        mutationDispatched: dispatched,
+      })
+      continue
+    }
+    // A success envelope without a matching own-claims record is not a grant.
+    uncertain = true
+    break
+  }
+  return { awards, uncertain, failed }
 }
 
 /** Implements a free daily draw using a verified, transient account session. */

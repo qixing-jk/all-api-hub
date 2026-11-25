@@ -171,8 +171,8 @@
       "name": "{{source}} 签到"
     },
     "freeDailyDraw": {
-      "description": "使用 {{source}} 的免费每日抽奖。需要配置控制台登录，奖励可能为零。",
-      "name": "免费每日抽奖"
+      "description": "领取 {{source}} 符合条件的免费每日抽奖和福利空投。需要配置控制台登录。",
+      "name": "免费每日奖励"
     },
     "generic": {
       "name": "每日签到"

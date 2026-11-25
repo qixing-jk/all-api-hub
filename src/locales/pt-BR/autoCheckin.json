@@ -179,8 +179,8 @@
       "name": "Check-in diário do {{source}}"
     },
     "freeDailyDraw": {
-      "description": "Um sorteio diário gratuito usando {{source}}. Requer login configurado no painel; o prêmio pode ser zero.",
-      "name": "Sorteio diário gratuito"
+      "description": "Resgata sorteios diários gratuitos e airdrops de benefícios disponíveis de {{source}}. Requer login configurado no painel.",
+      "name": "Recompensas diárias gratuitas"
     },
     "generic": {
       "name": "Check-in diário"

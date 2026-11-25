@@ -9,6 +9,12 @@ import {
   performHogLotteryDraw,
 } from "~/services/apiService/newApiFamily/variants/hogDailyLottery"
 import { getHogLotteryPeriodKey } from "~/services/apiService/newApiFamily/variants/hogDailyLotteryProtocol"
+import {
+  fetchHogAirdropClaims,
+  fetchHogClaimableAirdrops,
+  HOG_AIRDROP_ENDPOINTS,
+  performHogAirdropClaim,
+} from "~/services/apiService/newApiFamily/variants/hogWelfareAirdrop"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -168,5 +174,117 @@ describe("Hog lottery source contract", () => {
       "lost response",
     )
     expect(newApiFamilyRequests.envelope).toHaveBeenCalledOnce()
+  })
+
+  it("selects only active one-per-user campaigns the server says are claimable", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+      success: true,
+      message: "",
+      data: [
+        {
+          id: 8,
+          quota: 500,
+          canClaim: true,
+          claimedByMe: 0,
+          perUserLimit: 1,
+          state: "active",
+          startTime: Math.floor(Date.now() / 1000) - 30,
+          endTime: Math.floor(Date.now() / 1000) + 60,
+          remaining: 3,
+          unlimited: false,
+        },
+        {
+          id: 9,
+          quota: 700,
+          canClaim: false,
+          claimedByMe: 0,
+          perUserLimit: 1,
+          state: "upcoming",
+          startTime: Math.floor(Date.now() / 1000) + 100,
+          endTime: Math.floor(Date.now() / 1000) + 200,
+          remaining: 1,
+          unlimited: false,
+        },
+      ],
+    })
+
+    await expect(fetchHogClaimableAirdrops(request)).resolves.toEqual([
+      {
+        id: 8,
+        quota: 500,
+        endTime: Math.floor(Date.now() / 1000) + 60,
+      },
+    ])
+    expect(newApiFamilyRequests.envelope).toHaveBeenCalledWith(
+      expect.objectContaining({ allowAccountCredentialRecovery: false }),
+      expect.objectContaining({
+        endpoint: HOG_AIRDROP_ENDPOINTS.List,
+        options: { method: "GET", cache: "no-store" },
+      }),
+    )
+  })
+
+  it("sends one identified campaign mutation with fallback and credential recovery disabled", async () => {
+    const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+      success: true,
+      message: "",
+      data: {
+        id: 70,
+        airdropId: 8,
+        quota: 500,
+        createdTime: 1795492800,
+        redemptionKey: "must-not-be-retained",
+      },
+    })
+
+    await expect(performHogAirdropClaim(request, 8, observer)).resolves.toEqual(
+      {
+        id: 70,
+        airdropId: 8,
+        quota: 500,
+        createdTime: 1795492800,
+      },
+    )
+    expect(newApiFamilyRequests.envelope).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        allowAccountCredentialRecovery: false,
+        observer,
+      }),
+      expect.objectContaining({
+        endpoint: "/api/welfare-airdrop/claim/8",
+        operationSemantics: "mutation",
+        currentTabTransport: "disabled",
+        tempWindowFallback: { codes: [], statusCodes: [] },
+        options: { method: "POST", cache: "no-store", body: "{}" },
+      }),
+    )
+  })
+
+  it("reads the caller's claim history and strips the one-time redemption key", async () => {
+    vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
+      success: true,
+      message: "",
+      data: [
+        {
+          id: 70,
+          airdropId: 8,
+          quota: 500,
+          createdTime: 1795492800,
+          redemptionKey: "must-not-be-retained",
+        },
+      ],
+    })
+
+    await expect(fetchHogAirdropClaims(request)).resolves.toEqual([
+      { id: 70, airdropId: 8, quota: 500, createdTime: 1795492800 },
+    ])
+    expect(newApiFamilyRequests.envelope).toHaveBeenCalledWith(
+      expect.objectContaining({ allowAccountCredentialRecovery: false }),
+      expect.objectContaining({
+        endpoint: HOG_AIRDROP_ENDPOINTS.History,
+        options: { method: "GET", cache: "no-store" },
+      }),
+    )
   })
 })

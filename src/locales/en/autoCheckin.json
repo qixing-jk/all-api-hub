@@ -175,8 +175,8 @@
       "name": "{{source}} daily check-in"
     },
     "freeDailyDraw": {
-      "description": "One free daily draw using {{source}}. Requires a configured dashboard login; prizes may be zero.",
-      "name": "Free daily draw"
+      "description": "Claims eligible free daily draws and welfare airdrops from {{source}}. Requires a configured dashboard login.",
+      "name": "Free daily rewards"
     },
     "generic": {
       "name": "Daily check-in"

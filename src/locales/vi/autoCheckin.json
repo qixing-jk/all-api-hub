@@ -171,8 +171,8 @@
       "name": "Điểm danh hằng ngày qua {{source}}"
     },
     "freeDailyDraw": {
-      "description": "Một lượt rút thăm miễn phí mỗi ngày qua {{source}}. Cần cấu hình đăng nhập bảng điều khiển; phần thưởng có thể bằng không.",
-      "name": "Rút thăm miễn phí hằng ngày"
+      "description": "Nhận lượt rút thăm miễn phí hằng ngày và airdrop phúc lợi đủ điều kiện từ {{source}}. Cần cấu hình đăng nhập bảng điều khiển.",
+      "name": "Phần thưởng miễn phí hằng ngày"
     },
     "generic": {
       "name": "Điểm danh hằng ngày"
