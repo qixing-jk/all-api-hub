@@ -66,6 +66,9 @@ describe("BizDecipher free daily check-in protocol", () => {
     vi.mocked(fetchApiResponse).mockReset()
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date("2026-11-24T05:00:00Z"))
+    vi.spyOn(userCheckInProtocol, "resolveUserCheckInTimezone").mockReturnValue(
+      "UTC",
+    )
   })
   afterEach(() => {
     vi.restoreAllMocks()
@@ -84,7 +87,7 @@ describe("BizDecipher free daily check-in protocol", () => {
       expect(fetchApiResponse).toHaveBeenCalledExactlyOnceWith(
         expect.anything(),
         {
-          endpoint: `/api/v1/user/checkin/status?timezone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+          endpoint: "/api/v1/user/checkin/status?timezone=UTC",
           options: {
             method: "GET",
             cache: "no-store",
@@ -152,7 +155,7 @@ describe("BizDecipher free daily check-in protocol", () => {
           throw new TypeError("Lost response")
         }
         expect(input.endpoint).toBe(
-          `/api/v1/user/checkin/operations/${operationId}?timezone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+          `/api/v1/user/checkin/operations/${operationId}?timezone=UTC`,
         )
         expect(actualRequest.observer).toBeUndefined()
         return response(receipt(operationId))
@@ -205,7 +208,7 @@ describe("BizDecipher free daily check-in protocol", () => {
   })
 
   it("checks the native GET timezone day rather than the UTC date", async () => {
-    vi.spyOn(userCheckInProtocol, "resolveUserCheckInTimezone").mockReturnValue(
+    vi.mocked(userCheckInProtocol.resolveUserCheckInTimezone).mockReturnValue(
       "Asia/Shanghai",
     )
     vi.setSystemTime(new Date("2026-11-23T16:00:01Z"))
@@ -219,7 +222,7 @@ describe("BizDecipher free daily check-in protocol", () => {
   })
 
   it("does not label a status read crossing the requested timezone midnight as today", async () => {
-    vi.spyOn(userCheckInProtocol, "resolveUserCheckInTimezone").mockReturnValue(
+    vi.mocked(userCheckInProtocol.resolveUserCheckInTimezone).mockReturnValue(
       "Asia/Shanghai",
     )
     vi.setSystemTime(new Date("2026-11-23T15:59:59Z"))
@@ -234,7 +237,7 @@ describe("BizDecipher free daily check-in protocol", () => {
   })
 
   it("keeps a claim crossing midnight uncertain even when the old operation receipt exists", async () => {
-    vi.spyOn(userCheckInProtocol, "resolveUserCheckInTimezone").mockReturnValue(
+    vi.mocked(userCheckInProtocol.resolveUserCheckInTimezone).mockReturnValue(
       "Asia/Shanghai",
     )
     vi.setSystemTime(new Date("2026-11-24T15:59:59Z"))
@@ -257,7 +260,7 @@ describe("BizDecipher free daily check-in protocol", () => {
   })
 
   it("does not submit against a pre-mutation proof from the previous day", async () => {
-    vi.spyOn(userCheckInProtocol, "resolveUserCheckInTimezone").mockReturnValue(
+    vi.mocked(userCheckInProtocol.resolveUserCheckInTimezone).mockReturnValue(
       "Asia/Shanghai",
     )
     const observedAt = new Date("2026-11-23T15:59:59Z").getTime()

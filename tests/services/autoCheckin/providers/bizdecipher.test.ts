@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
+import * as userCheckInProtocol from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -105,8 +106,14 @@ describe("registered BizDecipher free daily check-in", () => {
     vi.mocked(refreshSub2ApiTokens).mockReset()
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date("2026-11-24T05:00:00Z"))
+    vi.spyOn(userCheckInProtocol, "resolveUserCheckInTimezone").mockReturnValue(
+      "UTC",
+    )
   })
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
 
   it.each([false, true])(
     "renews an expiring credential only for authorized admission (authorized=%s)",
