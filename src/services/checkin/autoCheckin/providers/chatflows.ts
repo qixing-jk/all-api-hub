@@ -14,7 +14,8 @@ import {
 } from "~/services/apiService/sub2api/checkin/chatflowsCheckIn"
 import {
   CHATFLOWS_CHECK_IN_ENDPOINT,
-  getChatflowsCheckInPeriod,
+  getChatflowsCheckInPeriodBounds,
+  getChatflowsCheckInPeriodStartAt,
 } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
 import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import {
@@ -83,12 +84,22 @@ export const chatflowsProvider: AutoCheckinProvider = {
   async checkIn(account, context) {
     const siteAccount = account as SiteAccount
     const proof = context.statusProof
+    const periodKey =
+      proof && "periodKey" in proof.evidence
+        ? proof.evidence.periodKey
+        : undefined
+    const periodStartAt = periodKey
+      ? getChatflowsCheckInPeriodStartAt(periodKey)
+      : undefined
     if (
       proof?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
       proof.today !== CHECK_IN_METHOD_TODAY_STATUSES.NotChecked ||
       !("observedAt" in proof.evidence) ||
-      getChatflowsCheckInPeriod(proof.evidence.observedAt) !==
-        getChatflowsCheckInPeriod(Date.now())
+      periodKey === undefined ||
+      periodStartAt === undefined ||
+      getChatflowsCheckInPeriodBounds(proof.evidence.observedAt).periodKey !==
+        periodKey ||
+      getChatflowsCheckInPeriodBounds(Date.now()).periodKey !== periodKey
     ) {
       return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE)
     }
@@ -122,9 +133,9 @@ export const chatflowsProvider: AutoCheckinProvider = {
         )
       }
 
-      // The authoritative status proof establishes the claim period. Keep its
-      // timestamp through result persistence if a successful POST response
-      // arrives after the next noon reset.
+      // period_key from the validated status response establishes the claimed
+      // cycle. Use its opening time for grant attribution even if the POST
+      // receipt arrives after the next noon reset.
       return withCheckInResponseConfirmation(
         siteAccount,
         {
@@ -150,7 +161,7 @@ export const chatflowsProvider: AutoCheckinProvider = {
             }),
           ],
         },
-        { timestamp: new Date(proof.evidence.observedAt).toISOString() },
+        { timestamp: new Date(periodStartAt).toISOString() },
       )
     } catch (error) {
       return mapSub2ApiCheckInMutationError(error, context, siteAccount)

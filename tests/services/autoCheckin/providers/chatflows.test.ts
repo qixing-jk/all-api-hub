@@ -11,6 +11,7 @@ import {
   fetchChatflowsCheckInStatus,
   performChatflowsCheckIn,
 } from "~/services/apiService/sub2api/checkin/chatflowsCheckIn"
+import { getChatflowsCheckInPeriodBounds } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -77,7 +78,11 @@ const proof = (observedAt = Date.now()) => ({
   outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
   availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
   today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-  evidence: { source: "probe" as const, observedAt },
+  evidence: {
+    source: "probe" as const,
+    observedAt,
+    periodKey: getChatflowsCheckInPeriodBounds(observedAt).periodKey,
+  },
 })
 const status = (checkedInToday = false) => ({
   enabled: true,
@@ -162,7 +167,7 @@ describe("ChatflowsAI check-in integration", () => {
 
     expect(result).toMatchObject({
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-      evidence: { observedAt: afterNoon },
+      evidence: { observedAt: afterNoon, periodKey: "2026-11-24" },
     })
   })
 
@@ -212,7 +217,7 @@ describe("ChatflowsAI check-in integration", () => {
     )
   })
 
-  it("attributes a successful claim to its proven period if the response crosses noon", async () => {
+  it("attributes a successful claim to the server period when the response crosses noon", async () => {
     const beforeNoon = Date.parse("2026-11-24T03:59:59.000Z")
     const afterNoon = Date.parse("2026-11-24T04:00:01.000Z")
     vi.setSystemTime(beforeNoon)
@@ -229,7 +234,7 @@ describe("ChatflowsAI check-in integration", () => {
 
     expect(execution).toMatchObject({
       kind: "executed",
-      completedAt: beforeNoon,
+      completedAt: Date.parse("2026-11-23T04:00:00.000Z"),
       result: { status: "success" },
     })
     expect(performChatflowsCheckIn).toHaveBeenCalledOnce()

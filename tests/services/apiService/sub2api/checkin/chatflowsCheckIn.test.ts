@@ -8,6 +8,7 @@ import {
   parseChatflowsCheckInStatusResponse,
   performChatflowsCheckIn,
 } from "~/services/apiService/sub2api/checkin/chatflowsCheckIn"
+import { getChatflowsCheckInPeriodStartAt } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
@@ -95,6 +96,13 @@ describe("ChatflowsAI public check-in contract", () => {
         response({ code: 0, data: statusData() }),
       ),
     ).toMatchObject({ checkedInToday: false })
+  })
+
+  it("maps a validated period key to its noon opening time", () => {
+    expect(getChatflowsCheckInPeriodStartAt("2026-11-23")).toBe(
+      Date.parse("2026-11-23T04:00:00.000Z"),
+    )
+    expect(getChatflowsCheckInPeriodStartAt("2026-02-30")).toBeUndefined()
   })
 
   it.each([

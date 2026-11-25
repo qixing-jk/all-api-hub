@@ -66,7 +66,7 @@ export function parseChatflowsCheckInStatusResponse(
   return {
     enabled: true,
     checkedInToday: !data.can_checkin,
-    periodKey: data.period_key,
+    periodKey: currentPeriod.periodKey,
     nextResetAt,
   }
 }

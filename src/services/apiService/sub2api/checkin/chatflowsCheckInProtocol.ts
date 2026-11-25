@@ -17,3 +17,19 @@ export function getChatflowsCheckInPeriodBounds(timestamp: number) {
     nextResetAt: (period + 1) * DAY_MS + RESET_UTC_OFFSET_MS,
   }
 }
+
+/** Return the authoritative period opening timestamp encoded by period_key. */
+export function getChatflowsCheckInPeriodStartAt(periodKey: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(periodKey)) return undefined
+  const dayStart = Date.parse(`${periodKey}T00:00:00.000Z`)
+  if (
+    !Number.isFinite(dayStart) ||
+    new Date(dayStart).toISOString().slice(0, 10) !== periodKey
+  ) {
+    return undefined
+  }
+  const periodStartAt = dayStart + RESET_UTC_OFFSET_MS
+  return getChatflowsCheckInPeriodBounds(periodStartAt).periodKey === periodKey
+    ? periodStartAt
+    : undefined
+}

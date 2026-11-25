@@ -98,6 +98,8 @@ export type CheckInMethodStatus =
         | {
             source: typeof CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe
             observedAt: number
+            /** Transient server cycle identifier for protocols that expose one. */
+            periodKey?: string
           }
         | {
             source: typeof CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution

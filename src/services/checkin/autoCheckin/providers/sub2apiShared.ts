@@ -97,7 +97,7 @@ export const createSub2ApiCheckInMutationRequest = (
   )
 
 export const toSub2ApiCheckInStatus = (
-  status: { enabled: boolean; checkedInToday: boolean },
+  status: { enabled: boolean; checkedInToday: boolean; periodKey?: string },
   observedAt: number,
 ) => {
   return {
@@ -111,6 +111,7 @@ export const toSub2ApiCheckInStatus = (
     evidence: {
       source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
       observedAt,
+      ...(status.periodKey ? { periodKey: status.periodKey } : {}),
     },
   } as const
 }
