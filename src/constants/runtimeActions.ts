@@ -43,6 +43,9 @@ export const RuntimeMessageTypes = {
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
  */
 export const RuntimeActionIds = {
+  ContentPrepareNewApiTokenSession: "prepareNewApiTokenSession",
+  ContentNewApiTokenPasskey: "newApiTokenPasskey",
+  ContentCancelNewApiTokenPasskey: "cancelNewApiTokenPasskey",
   ContentSyncDahlKeyNames: "contentSyncDahlKeyNames",
   ContentPrepareNewApiOAuth: "prepareNewApiOAuth",
   ContentNewApiPasswordUi: "newApiPasswordUi",
@@ -213,6 +216,7 @@ export const RuntimeActionIds = {
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",
   ContentPerformTempWindowFetch: "performTempWindowFetch",
   ContentInspectCredentialPage: "inspectCredentialPage",
+  ContentHighlightAccessTokenSection: "highlightAccessTokenSection",
   ContentGetRenderedTitle: "getRenderedTitle",
   ContentShowShieldBypassUi: "showShieldBypassUi",
   ContentStarPromotionReport: "starPromotionReport",

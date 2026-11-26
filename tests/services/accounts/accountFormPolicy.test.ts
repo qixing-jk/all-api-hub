@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
-import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
+import {
+  getAccountFormIssues,
+  isValidAccount,
+} from "~/services/accounts/editing/accountFormValidation"
 import * as definitions from "~/services/accountSiteDefinitions/registry"
 import { AuthTypeEnum } from "~/types"
 
@@ -18,6 +21,23 @@ const fields = {
 afterEach(() => vi.restoreAllMocks())
 
 describe("registered account form policy", () => {
+  it("locates missing identity before credential and reports a later invalid amount", () => {
+    expect(
+      getAccountFormIssues({
+        ...fields,
+        siteType: SITE_TYPES.NEW_API,
+        siteName: " ",
+        accessToken: "",
+        exchangeRate: "-1",
+      }),
+    ).toEqual([
+      { field: "siteName", kind: "missing" },
+      { field: "userId", kind: "missing" },
+      { field: "accessToken", kind: "missing" },
+      { field: "exchangeRate", kind: "invalid" },
+    ])
+  })
+
   it("requires choosing a Vercel team before saving", () => {
     expect(
       isValidAccount({ ...fields, siteType: SITE_TYPES.VERCEL_AI_GATEWAY }),

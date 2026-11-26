@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import type { AccessTokenContinuationAction } from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
-import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
+import type {
+  AccountDialogRecoveryAction,
+  AccountDialogRecoveryState,
+} from "~/features/AccountManagement/components/AccountDialog/models"
 import {
   canUseAccountDialogRecoverySidePanel,
   discardAccountDialogRecovery,
@@ -12,6 +14,15 @@ import {
 } from "~/features/AccountManagement/dialogs/accountDialogRecovery"
 import { closeIfPopup } from "~/utils/navigation/popup"
 
+export interface AccountRecoveryContinuation {
+  onContinue: (action?: AccountDialogRecoveryAction) => void
+  isPending: boolean
+  pendingAction?: AccountDialogRecoveryAction
+  sidePanelSupported: boolean
+  disabled?: boolean
+  errorMessage?: string | null
+}
+
 /** Keeps a popup form ready before the user invokes the native sidebar API. */
 export function useAccountDialogRecoveryHandoff({
   enabled,
@@ -19,7 +30,7 @@ export function useAccountDialogRecoveryHandoff({
 }: {
   enabled: boolean
   state: AccountDialogRecoveryState | null
-}): AccessTokenContinuationAction | undefined {
+}): AccountRecoveryContinuation | undefined {
   const { t } = useTranslation("accountDialog")
   const queue = useRef<Promise<PreparedAccountDialogRecovery | null>>(
     Promise.resolve(null),
@@ -33,7 +44,10 @@ export function useAccountDialogRecoveryHandoff({
     state: AccountDialogRecoveryState
     preparation: boolean
   } | null>(null)
-  const [opening, setOpening] = useState(false)
+  const [handoff, setHandoff] = useState<{
+    action?: AccountDialogRecoveryAction
+  } | null>(null)
+  const opening = handoff !== null
 
   useEffect(() => {
     if (!enabled || !state) return
@@ -74,30 +88,36 @@ export function useAccountDialogRecoveryHandoff({
   const ready = prepared?.state === state
   const currentFailure = failure?.state === state ? failure : null
 
+  const triggerContinue = (action?: AccountDialogRecoveryAction) => {
+    if (!ready || opening || handoffStarted.current) return
+    handoffStarted.current = true
+    setHandoff({ action })
+    setFailure(null)
+    // Starts synchronously in the click handler; the form is already staged.
+    const openingHandoff = action
+      ? openAccountDialogRecovery(prepared.handle, { recoveryAction: action })
+      : openAccountDialogRecovery(prepared.handle)
+    void openingHandoff
+      .then(
+        () => closeIfPopup(),
+        () => {
+          handoffStarted.current = false
+          setFailure({ state, preparation: false })
+        },
+      )
+      .finally(() => setHandoff(null))
+  }
+
   return {
     sidePanelSupported: canUseAccountDialogRecoverySidePanel(),
     isPending: opening || (!ready && !currentFailure),
+    pendingAction: handoff?.action,
     disabled: !ready,
     errorMessage: currentFailure
       ? currentFailure.preparation
         ? t("accessTokenVerification.prepareFailed")
         : t("accessTokenVerification.continueFailed")
       : null,
-    onContinue: () => {
-      if (!ready || opening || handoffStarted.current) return
-      handoffStarted.current = true
-      setOpening(true)
-      setFailure(null)
-      // Starts synchronously in the click handler; the form is already staged.
-      void openAccountDialogRecovery(prepared.handle)
-        .then(
-          () => closeIfPopup(),
-          () => {
-            handoffStarted.current = false
-            setFailure({ state, preparation: false })
-          },
-        )
-        .finally(() => setOpening(false))
-    },
+    onContinue: triggerContinue,
   }
 }

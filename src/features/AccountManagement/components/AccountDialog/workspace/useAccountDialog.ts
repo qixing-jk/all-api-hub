@@ -31,6 +31,7 @@ import { useSub2ApiAccountSession } from "~/features/AccountManagement/component
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
   ACCOUNT_DIALOG_PHASES,
+  ACCOUNT_DIALOG_RECOVERY_ACTIONS,
   getInitialFlowState,
   type AccountDialogFormSource,
   type AccountDialogPhase,
@@ -43,11 +44,9 @@ import { useAccountDialogSaveWorkflow } from "~/features/AccountManagement/compo
 import { useAccountDuplicateConfirmation } from "~/features/AccountManagement/components/AccountDialog/saving/useAccountDuplicateConfirmation"
 import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
 import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
-import {
-  isValidAccount,
-  parseManualQuotaFromUsd,
-} from "~/services/accounts/editing/accountFormValidation"
+import { getAccountFormIssues } from "~/services/accounts/editing/accountFormValidation"
 import { isAccessTokenRecoveryError } from "~/services/accounts/utils/autoDetectUtils"
+import { supportsNewApiTokenSetup } from "~/services/apiService/newApiFamily/accessTokens/validation"
 import { parseNovitaCredentials } from "~/services/apiService/novita/constants"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
@@ -55,10 +54,11 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { type CheckInConfig, type DisplaySiteData } from "~/types"
+import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import { isExtensionPopup } from "~/utils/browser"
 import { createLogger } from "~/utils/core/logger"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 import { openSettingsTab } from "~/utils/navigation"
 
 /**
@@ -694,7 +694,7 @@ export function useAccountDialog({
   const normalizedFormSiteType = isAccountSiteType(siteType)
     ? siteType
     : SITE_TYPES.UNKNOWN
-  const isFormValid = isValidAccount({
+  const validationIssues = getAccountFormIssues({
     loginChange: draft.loginChanged ? draft.login : undefined,
     loginMethods:
       draft.loginChanged && draft.login
@@ -712,12 +712,13 @@ export function useAccountDialog({
     accessToken,
     cookieAuthSessionCookie,
     exchangeRate,
+    manualBalanceUsd,
+    refreshTokenRequired: !sub2ApiSession.isValid,
   })
-  const isManualBalanceUsdInvalid =
-    manualBalanceUsd.trim() !== "" &&
-    parseManualQuotaFromUsd(manualBalanceUsd) === undefined
-  const isAccountFormValid =
-    isFormValid && sub2ApiSession.isValid && !isManualBalanceUsdInvalid
+  const isManualBalanceUsdInvalid = validationIssues.some(
+    ({ field }) => field === "manualBalanceUsd",
+  )
+  const isAccountFormValid = validationIssues.length === 0
 
   const cookieRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
     if (
@@ -731,7 +732,7 @@ export function useAccountDialog({
     )
       return null
     return {
-      recoveryAction: "cookie",
+      recoveryAction: ACCOUNT_DIALOG_RECOVERY_ACTIONS.Cookie,
       url,
       draft,
       ...(mode === DIALOG_MODES.EDIT && account
@@ -750,7 +751,8 @@ export function useAccountDialog({
     }
     if (
       isExtensionPopup() ||
-      recoveryState?.recoveryAction !== "cookie" ||
+      recoveryState?.recoveryAction !==
+        ACCOUNT_DIALOG_RECOVERY_ACTIONS.Cookie ||
       continuedRecovery.current === recoveryState ||
       url !== recoveryState.url ||
       draft.siteType !== recoveryState.draft.siteType ||
@@ -763,9 +765,16 @@ export function useAccountDialog({
   }, [cookieSession, draft, isOpen, recoveryState, url])
 
   const tokenRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
+    const canHandOffNewApiTokenSetup =
+      phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
+      supportsNewApiTokenSetup(draft.siteType) &&
+      draft.authType === AuthTypeEnum.AccessToken &&
+      isHttpUrl(url) &&
+      Boolean(draft.userId.trim())
     if (
       !isAccessTokenRecoveryError(detectionError) &&
-      draft.siteType !== SITE_TYPES.NOVITA
+      draft.siteType !== SITE_TYPES.NOVITA &&
+      !canHandOffNewApiTokenSetup
     )
       return null
     return {
@@ -785,7 +794,7 @@ export function useAccountDialog({
       checkInSelectionChanged: checkInSelectionChangedRef.current,
       checkInDiscoveryBaseSelection: checkInDiscoveryBaseSelectionRef.current,
     }
-  }, [account, detectionError, draft, mode, url])
+  }, [account, detectionError, draft, mode, phase, url])
 
   return {
     state: {
@@ -826,6 +835,7 @@ export function useAccountDialog({
       sub2apiRefreshToken,
       sub2apiTokenExpiresAt,
       isFormValid: isAccountFormValid,
+      validationIssues,
       isAutoConfiguring,
       openRouterBootstrapRecovery: openRouterOnboardingRecovery,
       cookieAuthSessionCookie,

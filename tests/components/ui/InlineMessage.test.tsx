@@ -6,6 +6,30 @@ import { NoticeActionButton } from "~/components/ui/NoticeActionButton"
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("InlineMessage", () => {
+  it("scales its default icon with compact message text", () => {
+    render(
+      <>
+        <InlineMessage size="sm">Compact message</InlineMessage>
+        <InlineMessage>Regular message</InlineMessage>
+      </>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    const compact = screen
+      .getByText("Compact message")
+      .closest('[role="status"]')
+    const regular = screen
+      .getByText("Regular message")
+      .closest('[role="status"]')
+    expect(compact).toHaveClass("text-xs")
+    expect(compact?.querySelector("svg")).toHaveClass("size-3.5")
+    expect(regular?.querySelector("svg")).toHaveClass("size-4")
+  })
+
   it("keeps text-only guidance readable when its icon is intentionally omitted", () => {
     render(
       <InlineMessage icon={null} role="note">

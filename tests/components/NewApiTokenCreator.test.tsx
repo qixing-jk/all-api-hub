@@ -1,0 +1,350 @@
+import { act, render, screen, waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { expect, it, vi } from "vitest"
+
+import { NewApiTokenCreator } from "~/features/AccountManagement/components/AccountDialog/newApiToken/NewApiTokenCreator"
+import { resolveAccountSiteRouteUrl } from "~/services/accounts/utils/siteRouteResolver"
+import { openNewApiAccessTokenCreation } from "~/services/apiService/newApiFamily/accessTokens/client"
+import {
+  NewApiTokenCreationUncertainError,
+  type NewApiAccessTokenCreation,
+} from "~/services/apiService/newApiFamily/accessTokens/creation"
+import {
+  NewApiTokenSessionError,
+  NEW_API_TOKEN_SESSION_ERRORS as SESSION_ERRORS,
+} from "~/services/apiService/newApiFamily/accessTokens/sessionError"
+import { createTab, getCurrentTab, getTab } from "~/utils/browser/tabs"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+
+const { reloadSite, focusSite } = vi.hoisted(() => ({
+  reloadSite: vi.fn(),
+  focusSite: vi.fn(),
+}))
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}))
+vi.mock("~/services/apiService/newApiFamily/accessTokens/client", () => ({
+  openNewApiAccessTokenCreation: vi.fn(),
+  reloadNewApiTokenTab: reloadSite,
+  focusNewApiTokenTab: focusSite,
+}))
+vi.mock(
+  "~/services/accounts/utils/siteRouteResolver",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/utils/siteRouteResolver")
+    >()),
+    resolveAccountSiteRouteUrl: vi.fn(),
+  }),
+)
+vi.mock("~/utils/browser/tabs", () => ({
+  createTab: vi.fn(),
+  getCurrentTab: vi.fn(),
+  getActiveTab: vi.fn(),
+  getTab: vi.fn(),
+}))
+
+const selfHostedSite = "https://self-hosted-new-api.example.invalid"
+
+function renderCreator(siteUrl = selfHostedSite, footer?: HTMLElement) {
+  const onReturnToAccount = vi.fn()
+  render(
+    <NewApiTokenCreator
+      siteUrl={siteUrl}
+      userId="42"
+      footer={footer ?? null}
+      onBusyChange={vi.fn()}
+      onCreated={vi.fn()}
+      onReturnToAccount={onReturnToAccount}
+    />,
+  )
+  return onReturnToAccount
+}
+
+function mockSession(methods = [{ method: "password", available: true }]) {
+  const flow = {
+    load: vi.fn().mockResolvedValue({
+      catalog: {
+        default_expiry_days: 30,
+        groups: [
+          {
+            resources: [{ resource: "profile", actions: [{ action: "read" }] }],
+          },
+        ],
+      },
+      verification: { methods, oauth_providers: [] },
+    }),
+    create: vi.fn(),
+  }
+  vi.mocked(openNewApiAccessTokenCreation).mockResolvedValueOnce({
+    flow: flow as unknown as NewApiAccessTokenCreation,
+    cancel: vi.fn(),
+  })
+  return flow
+}
+
+it("counts the full wait across the website session and token options", async () => {
+  vi.useFakeTimers()
+  try {
+    const { promise, resolve } =
+      createDeferred<
+        Awaited<ReturnType<typeof openNewApiAccessTokenCreation>>
+      >()
+    vi.mocked(openNewApiAccessTokenCreation).mockReturnValueOnce(promise)
+    renderCreator()
+    await act(() => vi.advanceTimersByTimeAsync(2000))
+    await act(() =>
+      resolve({
+        flow: {
+          load: () => new Promise(() => {}),
+        } as unknown as NewApiAccessTokenCreation,
+        cancel: vi.fn(),
+      }),
+    )
+    expect(screen.getByRole("status")).toHaveAccessibleName(
+      "common:status.loading",
+    )
+    await act(() => vi.advanceTimersByTimeAsync(1000))
+    expect(
+      screen.getByRole("button", { name: "tokenCreation.createOnSite" }),
+    ).toBeVisible()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it("offers the website by default after a slow load and resolves its token page on click", async () => {
+  vi.useFakeTimers()
+  try {
+    vi.mocked(openNewApiAccessTokenCreation).mockReturnValueOnce(
+      new Promise(() => {}),
+    )
+    vi.mocked(getCurrentTab).mockResolvedValueOnce({
+      windowId: 5,
+      cookieStoreId: "firefox-container-2",
+    } as Awaited<ReturnType<typeof getCurrentTab>>)
+    vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValueOnce(
+      `${selfHostedSite}/profile`,
+    )
+    const returnToAccount = renderCreator()
+
+    expect(screen.getByRole("status")).toHaveAccessibleName(
+      "common:status.loading",
+    )
+    await act(() => vi.advanceTimersByTimeAsync(2999))
+    expect(
+      screen.queryByRole("button", { name: "tokenCreation.createOnSite" }),
+    ).not.toBeInTheDocument()
+    await act(() => vi.advanceTimersByTimeAsync(1))
+    expect(screen.getByRole("status")).toHaveAccessibleName(
+      "tokenCreation.slowLoading",
+    )
+    const siteAction = screen.getByRole("button", {
+      name: "tokenCreation.createOnSite",
+    })
+    expect(siteAction).toHaveAccessibleDescription(
+      "tokenCreation.siteFallbackSlow",
+    )
+    expect(createTab).not.toHaveBeenCalled()
+    expect(resolveAccountSiteRouteUrl).not.toHaveBeenCalled()
+    vi.useRealTimers()
+    await userEvent.setup().click(siteAction)
+    expect(createTab).toHaveBeenCalledWith(`${selfHostedSite}/profile`, true, {
+      windowId: 5,
+      cookieStoreId: "firefox-container-2",
+    })
+    expect(returnToAccount).toHaveBeenCalledOnce()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+function renderWithFooter() {
+  const { container } = render(<footer />)
+  const footer = container.querySelector("footer")!
+  const onReturnToAccount = renderCreator(selfHostedSite, footer)
+  return { footer: within(footer), onReturnToAccount }
+}
+
+it.each([
+  [SESSION_ERRORS.UNAVAILABLE, "sessionRequired"],
+  [SESSION_ERRORS.IDENTITY_MISMATCH, "identityMismatch"],
+] as const)(
+  "shows %s guidance with site, retry, and fallback actions",
+  async (code, message) => {
+    vi.mocked(openNewApiAccessTokenCreation).mockRejectedValueOnce(
+      new NewApiTokenSessionError(code, 9),
+    )
+    const user = userEvent.setup()
+    const { footer } = renderWithFooter()
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveAttribute("data-slot", "inline-message")
+    expect(alert).toHaveTextContent(`tokenCreation.connection.${message}`)
+    const site = footer.getByRole("button", {
+      name: "tokenCreation.connection.openSite",
+    })
+    const retry = footer.getByRole("button", { name: "common:actions.retry" })
+    expect(site).toHaveAttribute("data-variant", "outline")
+    expect(retry).toHaveAttribute("data-variant", "default")
+    await user.click(site)
+    expect(focusSite).toHaveBeenCalledWith(selfHostedSite, 9)
+    expect(
+      screen.getByRole("button", { name: "tokenCreation.createOnSite" }),
+    ).toHaveAccessibleDescription("tokenCreation.siteFallbackUnavailable")
+    mockSession()
+    await user.click(retry)
+    expect(await screen.findByLabelText("tokenCreation.password")).toBeVisible()
+  },
+)
+
+it("keeps the refresh action in the footer while reloading, then reconnects to that tab", async () => {
+  vi.mocked(openNewApiAccessTokenCreation).mockRejectedValueOnce(
+    new NewApiTokenSessionError(SESSION_ERRORS.RELOAD_REQUIRED, 9),
+  )
+  const reloading = createDeferred<number>()
+  reloadSite.mockReturnValueOnce(reloading.promise)
+  const user = userEvent.setup()
+  const { footer } = renderWithFooter()
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "tokenCreation.connection.reloadRequired",
+  )
+  const refresh = footer.getByRole("button", {
+    name: "tokenCreation.connection.reloadAndRetry",
+  })
+  await user.click(refresh)
+  expect(refresh).toHaveAttribute("aria-busy", "true")
+  expect(reloadSite).toHaveBeenCalledExactlyOnceWith(selfHostedSite, 9)
+  expect(openNewApiAccessTokenCreation).toHaveBeenCalledOnce()
+  mockSession()
+  await act(() => reloading.resolve(11))
+  expect(openNewApiAccessTokenCreation).toHaveBeenLastCalledWith(
+    selfHostedSite,
+    "42",
+    11,
+  )
+  expect(await screen.findByLabelText("tokenCreation.password")).toBeVisible()
+})
+
+it("promotes website token creation for unsupported deployments", async () => {
+  vi.mocked(openNewApiAccessTokenCreation).mockRejectedValueOnce(
+    new NewApiTokenSessionError(SESSION_ERRORS.UNSUPPORTED, 9),
+  )
+  vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValueOnce(
+    `${selfHostedSite}/profile`,
+  )
+  const siteTab = {
+    id: 23,
+    url: `${selfHostedSite}/profile`,
+    status: "complete",
+  } as browser.tabs.Tab
+  vi.mocked(createTab).mockResolvedValueOnce(siteTab)
+  vi.mocked(getTab).mockResolvedValue(siteTab)
+  const sendMessage = vi.spyOn(browser.tabs, "sendMessage")
+  sendMessage.mockRejectedValueOnce(new Error("Missing host permission"))
+  const { footer, onReturnToAccount } = renderWithFooter()
+  const alert = await screen.findByRole("alert")
+  expect(alert).toHaveTextContent("tokenCreation.connection.unsupported")
+  expect(
+    screen.queryByText("tokenCreation.siteFallbackUnavailable"),
+  ).not.toBeInTheDocument()
+  expect(
+    screen.queryByText("tokenCreation.connection.sessionRequired"),
+  ).not.toBeInTheDocument()
+  expect(
+    footer.getByRole("button", { name: "common:actions.retry" }),
+  ).toHaveAttribute("data-variant", "outline")
+  const siteAction = footer.getByRole("button", {
+    name: "tokenCreation.createOnSite",
+  })
+  expect(siteAction).toHaveAttribute("data-variant", "default")
+  await userEvent.setup().click(siteAction)
+  expect(createTab).toHaveBeenCalledWith(
+    `${selfHostedSite}/profile`,
+    true,
+    expect.anything(),
+  )
+  expect(onReturnToAccount).toHaveBeenCalledOnce()
+  await waitFor(() =>
+    expect(sendMessage).toHaveBeenCalledWith(
+      siteTab.id,
+      { action: "highlightAccessTokenSection", openedSite: selfHostedSite },
+      { frameId: 0 },
+    ),
+  )
+  expect(
+    screen.queryByText("accessTokenVerification.openSecurityFailed"),
+  ).not.toBeInTheDocument()
+  sendMessage.mockRestore()
+  vi.mocked(getTab).mockReset()
+})
+
+it("offers the website immediately when creation options fail to load", async () => {
+  const flow = mockSession()
+  flow.load.mockRejectedValueOnce(new Error())
+  const { footer } = renderWithFooter()
+  expect(await screen.findByText("tokenCreation.unavailable")).toBeVisible()
+  expect(
+    footer.getByRole("button", { name: "common:actions.retry" }),
+  ).toBeVisible()
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.createOnSite" }),
+  ).toHaveAccessibleDescription("tokenCreation.siteFallbackUnavailable")
+})
+
+it.each(["https://ai.facai.cloudns.org", "https://api.facai.cloudns.org"])(
+  "omits the website fallback for the known unsupported deployment %s",
+  async (siteUrl) => {
+    const flow = mockSession()
+    flow.load.mockRejectedValueOnce(new Error())
+    renderCreator(siteUrl)
+    expect(await screen.findByText("tokenCreation.unavailable")).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "tokenCreation.createOnSite" }),
+    ).not.toBeInTheDocument()
+  },
+)
+
+it("offers the website when the extension cannot present a verification method", async () => {
+  mockSession([])
+  renderCreator()
+  expect(await screen.findByText("tokenCreation.noMethods")).toBeVisible()
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.createOnSite" }),
+  ).toBeVisible()
+})
+
+it("offers the website after a failed verification but prioritizes recovery after uncertain issuance", async () => {
+  const flow = mockSession()
+  flow.create
+    .mockRejectedValueOnce(new Error())
+    .mockRejectedValueOnce(new NewApiTokenCreationUncertainError())
+  const user = userEvent.setup()
+  renderCreator()
+  const password = await screen.findByLabelText("tokenCreation.password")
+  const create = screen.getByRole("button", { name: "tokenCreation.create" })
+  expect(
+    screen.queryByRole("button", { name: "tokenCreation.createOnSite" }),
+  ).not.toBeInTheDocument()
+
+  await user.type(password, "first attempt")
+  await user.click(create)
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "tokenCreation.failed",
+  )
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.createOnSite" }),
+  ).toBeVisible()
+
+  await user.type(password, "second attempt")
+  await user.click(create)
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "tokenCreation.uncertain",
+  )
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.reviewTokens" }),
+  ).toBeVisible()
+  expect(
+    screen.queryByRole("button", { name: "tokenCreation.createOnSite" }),
+  ).not.toBeInTheDocument()
+})

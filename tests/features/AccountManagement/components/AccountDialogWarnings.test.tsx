@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import AutoDetectErrorAlert from "~/features/AccountManagement/components/AccountDialog/detection/AutoDetectErrorAlert"
 import { AccessTokenVerificationGuide } from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
+import { NEW_API_TOKEN_RECOVERY_REASONS } from "~/features/AccountManagement/components/AccountDialog/newApiToken/tokenVerification"
 import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/components/AccountDialog/postSave/ManagedSiteConfigPromptDialog"
 import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/saving/DuplicateAccountWarningDialog"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
@@ -35,7 +36,42 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 import { server } from "~~/tests/msw/server"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+it("announces token completion guidance without making the editable form a live region", () => {
+  server.use(
+    http.get("https://token.example.com/", () =>
+      HttpResponse.text("<html></html>"),
+    ),
+  )
+  render(
+    <AccessTokenVerificationGuide
+      recoveryReason={NEW_API_TOKEN_RECOVERY_REASONS.MISSING}
+      siteUrl="https://token.example.com"
+      siteType={SITE_TYPES.NEW_API}
+      onStartTokenCreation={vi.fn()}
+    />,
+  )
+  const status = screen.getByRole("status")
+  expect(status).toHaveTextContent("tokenCreation.setupDescription")
+  expect(status).not.toHaveClass("sr-only")
+  expect(status).toHaveAttribute("aria-live", "polite")
+  expect(within(status).queryByRole("button")).toBeNull()
+  expect(
+    screen.queryByRole("heading", { name: "tokenCreation.setupTitle" }),
+  ).not.toBeInTheDocument()
+  const actions = screen.getByRole("group", { name: "form.accessToken" })
+  const [siteAction, createAction] = within(actions).getAllByRole("button")
+  expect(siteAction).toHaveTextContent("tokenCreation.openSite")
+  expect(siteAction).toHaveAttribute("data-variant", "outline")
+  expect(createAction).toHaveTextContent("tokenCreation.title")
+  expect(createAction).toHaveAttribute("data-variant", "default")
+  expect(createAction?.querySelector(".lucide-shield-plus")).toBeInTheDocument()
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.manualSetup" }),
+  ).toHaveAttribute("aria-expanded", "false")
+})
 
 const { openLoginTabMock, reloadCurrentTabMock } = vi.hoisted(() => ({
   openLoginTabMock: vi.fn(),
@@ -890,6 +926,45 @@ describe("AccountDialog warnings", () => {
     expect(reloadCurrentTabMock).toHaveBeenCalledTimes(1)
     expect(openLoginTabMock).not.toHaveBeenCalled()
   })
+
+  it.each(["success", "failed", "unmounted"] as const)(
+    "waits for the site reload before retrying detection (%s)",
+    async (outcome) => {
+      const siteUrl = "https://specific-site.example"
+      const reloading = createDeferred<void>()
+      reloadCurrentTabMock.mockReturnValueOnce(reloading.promise)
+      const onRetryAutoDetect = vi.fn()
+      const { unmount } = render(
+        <AutoDetectErrorAlert
+          error={{
+            type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+            message: "Reload required",
+            actionText: "Reload this page",
+          }}
+          siteUrl={siteUrl}
+          onRetryAutoDetect={onRetryAutoDetect}
+        />,
+      )
+
+      const action = screen.getByRole("button", {
+        name: "tokenCreation.connection.reloadAndRetry",
+      })
+      fireEvent.click(action)
+      fireEvent.click(action)
+      expect(action).toHaveAttribute("aria-busy", "true")
+      expect(reloadCurrentTabMock).toHaveBeenCalledExactlyOnceWith(siteUrl)
+      expect(onRetryAutoDetect).not.toHaveBeenCalled()
+      if (outcome === "unmounted") unmount()
+      await act(async () => {
+        if (outcome === "failed") reloading.reject(new Error("Reload failed"))
+        else reloading.resolve()
+      })
+      if (outcome === "success")
+        expect(onRetryAutoDetect).toHaveBeenCalledOnce()
+      else expect(onRetryAutoDetect).not.toHaveBeenCalled()
+      if (outcome !== "unmounted") expect(action).toBeEnabled()
+    },
+  )
 
   it("opens the help document in a new tab when no custom help handler is provided", () => {
     render(

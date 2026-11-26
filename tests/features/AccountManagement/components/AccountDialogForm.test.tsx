@@ -2137,11 +2137,13 @@ describe("AccountDialog AccountForm", () => {
 
       const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
-      expect(
-        await screen.findByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
-        ),
-      ).toBeInTheDocument()
+      const recommendation = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
+      )
+      expect(recommendation).toHaveRole("note")
+      expect(recommendation).toHaveTextContent(
+        "accountDialog:form.cookiePermissionNeeded",
+      )
       expect(
         screen.getByText(
           "accountDialog:form.cookiePermissionRecommendationDesc",
@@ -2151,11 +2153,13 @@ describe("AccountDialog AccountForm", () => {
         screen.queryByText("accountDialog:form.cookiePermissionManualFallback"),
       ).not.toBeInTheDocument()
 
-      await user.click(
-        screen.getByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
-        ),
+      const grantButton = screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
       )
+      expect(grantButton).toHaveTextContent(
+        "accountDialog:form.cookiePermissionEnableShort",
+      )
+      await user.click(grantButton)
 
       expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
 

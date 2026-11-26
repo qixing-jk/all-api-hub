@@ -15,10 +15,19 @@ import { getBestEffortLoginUrl } from "~/services/accounts/utils/siteRouteResolv
 import { clearSiteRouteFactsCacheForTests } from "~/services/apiAdapters/newApi/account/accountRoutes"
 import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import {
+  reloadSiteTabAndWait,
+  reloadSiteTabByIdAndWait,
+} from "~/services/browsingContext/siteTabRecovery"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 const { tMock } = vi.hoisted(() => ({
   tMock: vi.fn((key: string) => key),
+}))
+
+vi.mock("~/services/browsingContext/siteTabRecovery", () => ({
+  reloadSiteTabAndWait: vi.fn(),
+  reloadSiteTabByIdAndWait: vi.fn(),
 }))
 
 vi.mock("~/utils/i18n/core", async (importOriginal) => {
@@ -768,6 +777,42 @@ describe("autoDetectUtils", () => {
       await reloadCurrentTab()
 
       expect(browser.tabs.reload).not.toHaveBeenCalled()
+    })
+
+    it("prefers the matching site tab over the current Options tab", async () => {
+      vi.mocked(reloadSiteTabAndWait).mockResolvedValueOnce(45)
+      await reloadCurrentTab("https://site.example/profile")
+      expect(reloadSiteTabAndWait).toHaveBeenCalledExactlyOnceWith({
+        siteUrl: "https://site.example/profile",
+        createIfMissing: false,
+      })
+      expect(browser.tabs.query).not.toHaveBeenCalled()
+      expect(browser.tabs.reload).not.toHaveBeenCalled()
+    })
+
+    it("waits for the active HTTP tab when no matching tab exists", async () => {
+      vi.mocked(reloadSiteTabAndWait).mockResolvedValueOnce(null)
+      vi.mocked(browser.tabs.query).mockResolvedValueOnce([
+        { id: 123, url: "https://fallback.example/path" } as browser.tabs.Tab,
+      ])
+      await reloadCurrentTab("https://site.example")
+      expect(reloadSiteTabByIdAndWait).toHaveBeenCalledExactlyOnceWith(
+        123,
+        "https://fallback.example",
+      )
+    })
+
+    it("preserves the account form when only an extension tab is active", async () => {
+      vi.mocked(reloadSiteTabAndWait).mockResolvedValueOnce(null)
+      vi.mocked(browser.tabs.query).mockResolvedValueOnce([
+        {
+          id: 123,
+          url: "chrome-extension://token/options.html",
+        } as browser.tabs.Tab,
+      ])
+      await reloadCurrentTab("https://site.example")
+      expect(browser.tabs.reload).not.toHaveBeenCalled()
+      expect(reloadSiteTabByIdAndWait).not.toHaveBeenCalled()
     })
   })
 

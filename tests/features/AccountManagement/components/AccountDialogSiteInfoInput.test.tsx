@@ -466,7 +466,7 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
   })
 
-  it("shows one pre-detection cookie permission action when cookie auth is selected", async () => {
+  it("shows a neutral Cookie permission notice before detection when Cookie auth is selected", async () => {
     const user = userEvent.setup()
     const props = createAddModeProps()
     props.authType = AuthTypeEnum.Cookie
@@ -474,17 +474,29 @@ describe("AccountDialog SiteInfoInput", () => {
 
     render(<SiteInfoInput {...withSitePolicy(props)} />)
 
-    expect(
-      await screen.findByText(
-        "accountDialog:form.cookiePermissionRecommendationDesc",
-      ),
-    ).toBeInTheDocument()
-
-    await user.click(
-      screen.getByTestId(
-        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
-      ),
+    const notice = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
     )
+    expect(notice).toHaveRole("note")
+    expect(notice).toHaveAttribute("data-tone", "neutral")
+    expect(notice).toHaveAccessibleDescription(
+      "accountDialog:form.cookiePermissionRecommendationDesc",
+    )
+
+    const grantButton = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
+    )
+    expect(notice).toContainElement(grantButton)
+    expect(grantButton).toHaveAccessibleName(
+      "accountDialog:form.cookiePermissionEnableCookieAuth",
+    )
+    expect(grantButton).toHaveTextContent(
+      "accountDialog:form.cookiePermissionEnableShort",
+    )
+    expect(grantButton).toHaveTextContent(
+      "accountDialog:form.cookiePermissionEnableCookieAuth",
+    )
+    await user.click(grantButton)
 
     expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
   })

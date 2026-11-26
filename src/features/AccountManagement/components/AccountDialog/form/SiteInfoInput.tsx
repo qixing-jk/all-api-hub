@@ -1,24 +1,18 @@
-import { Cookie, Info, KeyRound, Pencil, TriangleAlert } from "lucide-react"
+import { Info, Pencil, TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { HelpHintIcon } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
-import {
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui"
+import { Button } from "~/components/ui"
 import { AccountSiteUrlInput } from "~/features/AccountManagement/components/AccountDialog/form/AccountSiteUrlInput"
 import {
   CookieAuthPermissionRecommendation,
   type CookieAuthPermissionRecommendationProps,
 } from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthPermissionRecommendation"
 import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
+
+import { AccountAuthTypeSelect } from "./AccountAuthTypeSelect"
 
 type SiteInfoInputPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
@@ -148,40 +142,13 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                   </button>
                 </Tooltip>
               </div>
-              <Select
+              <AccountAuthTypeSelect
                 value={props.authType}
-                onValueChange={(value) =>
-                  props.onAuthTypeChange(value as AuthTypeEnum)
-                }
+                onChange={props.onAuthTypeChange}
                 disabled={isAuthTypeLocked}
-              >
-                <SelectTrigger
-                  className="w-full max-w-full [@container(min-width:28rem)]:w-auto"
-                  aria-label={t("siteInfo.authMethod")}
-                  data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
-                  data-auth-type={props.authType}
-                >
-                  <SelectValue
-                    placeholder={t("siteInfo.authMethodPlaceholder")}
-                  />
-                </SelectTrigger>
-                <SelectContent align="end" className="min-w-48">
-                  <SelectItem value={AuthTypeEnum.AccessToken}>
-                    <div className="flex items-center gap-x-2 gap-y-density-2">
-                      <KeyRound className="h-4 w-4" />
-                      <span>{t("siteInfo.authType.accessToken")}</span>
-                    </div>
-                  </SelectItem>
-                  {canUseCookieAuth && (
-                    <SelectItem value={AuthTypeEnum.Cookie}>
-                      <div className="flex items-center gap-x-2 gap-y-density-2">
-                        <Cookie className="h-4 w-4" />
-                        <span>{t("siteInfo.authType.cookieAuth")}</span>
-                      </div>
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+                allowCookie={canUseCookieAuth}
+                triggerClassName="w-full max-w-full [@container(min-width:28rem)]:w-auto"
+              />
             </div>
             <div
               data-layout="site-url-field"

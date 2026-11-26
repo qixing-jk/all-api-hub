@@ -1,5 +1,5 @@
-import { Info } from "lucide-react"
 import {
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -10,36 +10,33 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Button } from "~/components/ui"
-import { Modal } from "~/components/ui/Dialog/Modal"
+import { Alert, Button, InlineMessage } from "~/components/ui"
+import { Modal, MODAL_BODY_SELECTOR } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import AutoDetectErrorAlert from "~/features/AccountManagement/components/AccountDialog/detection/AutoDetectErrorAlert"
 import AutoDetectSlowHintAlert from "~/features/AccountManagement/components/AccountDialog/detection/AutoDetectSlowHintAlert"
 import { useLoginProviderEvidence } from "~/features/AccountManagement/components/AccountDialog/detection/useLoginProviderEvidence"
-import AccountForm, {
-  type AccountFormHandle,
-} from "~/features/AccountManagement/components/AccountDialog/form/AccountForm"
-import type { AccountFormSectionId } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
+import { AccessTokenVerificationGuide } from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
+import {
+  ACCOUNT_FORM_FEEDBACK_STAGES,
+  type AccountFormFeedbackStage,
+  type AccountFormSectionId,
+} from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/form/SiteInfoInput"
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
-import { AihubmixDefaultKeyPromptDialog } from "~/features/AccountManagement/components/AccountDialog/postSave/AihubmixDefaultKeyPromptDialog"
-import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/components/AccountDialog/postSave/ManagedSiteConfigPromptDialog"
+import { NewApiAccessTokenVerificationFeedback } from "~/features/AccountManagement/components/AccountDialog/newApiToken/NewApiAccessTokenVerificationFeedback"
+import { NewApiTokenCreator } from "~/features/AccountManagement/components/AccountDialog/newApiToken/NewApiTokenCreator"
 import { useAccountDialogRecoveryHandoff } from "~/features/AccountManagement/components/AccountDialog/recovery/useAccountDialogRecoveryHandoff"
-import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/saving/DuplicateAccountWarningDialog"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useAccountDialogActions } from "~/features/AccountManagement/dialogs/useDialogStateContext"
-import { normalizeSponsorAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
-import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
-import { SponsorRecommendationsSection } from "~/features/AccountManagement/sponsors/SponsorRecommendationsSection"
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
-import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/creation/AccountKeyProvisioningDialog"
-import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog"
-import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
-import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import { resolveLoginProviderClaims } from "~/services/accountLogin/providerClaims"
+import {
+  ACCOUNT_FORM_FIELDS,
+  type AccountFormIssue,
+} from "~/services/accounts/editing/accountFormValidation"
 import { isAccessTokenRecoveryError } from "~/services/accounts/utils/autoDetectUtils"
 import {
   ACCOUNT_SITE_ACCESS_TOKEN_GUIDES,
@@ -50,24 +47,31 @@ import {
   isCanonicalOpenRouterUrl,
 } from "~/services/accountSiteDefinitions/identifiers"
 import { isCanonicalRequestyUrl } from "~/services/apiAdapters/requesty/account/accountOnboarding"
+import { NEW_API_TOKEN_VALIDATION_STATUSES as VALIDATION_STATUSES } from "~/services/apiService/newApiFamily/accessTokens/protocol"
 import type { DisplaySiteData } from "~/types"
+import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { isExtensionPopup } from "~/utils/browser"
-import { createLogger } from "~/utils/core/logger"
-import {
-  openApiCredentialProfilesPage,
-  openFullBookmarkManagerPage,
-} from "~/utils/navigation"
+import { tryParseHttpUrl } from "~/utils/core/urlParsing"
+import { openApiCredentialProfilesPage } from "~/utils/navigation"
 
+import { AccountDialogWorkflowDialogs } from "./AccountDialogWorkflowDialogs"
 import ActionButtons from "./ActionButtons"
 import DialogHeader from "./DialogHeader"
-import InfoPanel, { AccountSiteDiscoveryHint } from "./InfoPanel"
+import { AccountDialogEditor } from "./form/AccountDialogEditor"
+import { AccountDialogSiteStep } from "./form/AccountDialogSiteStep"
+import type { AccountFormHandle } from "./form/AccountForm"
 import {
   ACCOUNT_DIALOG_PHASES,
-  AUTO_CREATE_ACCESS_TOKEN_STATUSES,
   type AccountDialogRecoveryState,
 } from "./models"
+import {
+  CompactTokenEntryHeader,
+  NewApiTokenCreationHeader,
+} from "./newApiToken/AccountTokenSetupHeaders"
+import { useAccountTokenSetup } from "./newApiToken/useAccountTokenSetup"
+import { useResumeNewApiTokenRecovery } from "./newApiToken/useResumeNewApiTokenRecovery"
 
-const logger = createLogger("AccountDialog")
+const ACCOUNT_FORM_ID = "account-form"
 
 export interface AccountDialogHandle {
   close: () => Promise<void>
@@ -83,8 +87,8 @@ interface AccountDialogProps {
   prefill?: AddAccountPrefill | null
   recoveryState?: AccountDialogRecoveryState | null
   focusSection?: AccountFormSectionId
-  onSuccess: (data: any) => void
-  onError: (error: any) => void
+  onSuccess: (data: AccountSaveResponse) => void
+  onError: (error: unknown) => void
 }
 
 /**
@@ -122,16 +126,11 @@ export default function AccountDialog({
     displayData,
     detectedSiteAccounts,
     detectedAccount,
-    tags,
-    tagCountsById,
-    createTag,
-    renameTag,
-    deleteTag,
     reloadAccountsById,
   } = useAccountDataContext()
   const { openEditAccount } = useAccountDialogActions()
 
-  const { state, setters, handlers } = useAccountDialog({
+  const workspace = useAccountDialog({
     isOpen,
     onClose: () => {
       onClose()
@@ -143,11 +142,31 @@ export default function AccountDialog({
     onPostSaveAccountRefresh: reloadAccountsById,
     onSuccess,
   })
+  const { state, setters, handlers } = workspace
 
+  const [feedbackStage, setFeedbackStage] = useState<AccountFormFeedbackStage>()
+  const [fieldFocus, setFieldFocus] = useState<{
+    field: AccountFormIssue["field"]
+  }>()
+  const detectionPending = useRef(false)
+  const lastRecoveryError = useRef<typeof state.detectionError>(null)
+  const formElementRef = useRef<HTMLFormElement>(null)
   const accountFormRef = useRef<AccountFormHandle>(null)
-  useImperativeHandle(ref, () => ({ close: handlers.handleClose }), [
-    handlers.handleClose,
-  ])
+  const focusField = useCallback((field: AccountFormIssue["field"]) => {
+    setFieldFocus({ field })
+  }, [])
+  const queueAccessTokenFocus = useCallback(() => {
+    focusField(ACCOUNT_FORM_FIELDS.ACCESS_TOKEN)
+  }, [focusField])
+
+  useEffect(() => {
+    if (isOpen) return
+    setFeedbackStage(undefined)
+    setFieldFocus(undefined)
+    detectionPending.current = false
+    lastRecoveryError.current = null
+  }, [isOpen])
+
   // Login-context claims are read from the already-loaded account list, which
   // refreshes with account changes; the edited account never claims against
   // itself, so its own stored selection stays changeable and clearable. The
@@ -166,19 +185,14 @@ export default function AccountDialog({
       }),
     [accounts, account?.id, loginProviderEvidence],
   )
-  const recoveryContinuation = useAccountDialogRecoveryHandoff({
-    enabled: isOpen && isExtensionPopup(),
-    state: state.cookieRecoveryState ?? state.tokenRecoveryState ?? null,
-  })
-  const accessTokenContinuation = state.cookieRecoveryState
-    ? undefined
-    : recoveryContinuation
-  const cookieRecoveryContinuation = state.cookieRecoveryState
-    ? recoveryContinuation
-    : undefined
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    cancelTokenVerification()
+    if (tokenStep) {
+      finishTokenEntry(state.accessToken, true)
+      return
+    }
     if (state.isLoadingAccount || state.accountLoadError) return
     try {
       if (
@@ -190,6 +204,17 @@ export default function AccountDialog({
         }
         return
       }
+      if (
+        isAccountSubmissionBlocked ||
+        state.isSaving ||
+        state.isAutoConfiguring
+      )
+        return
+      if (hasValidationIssues) {
+        reviewIssues()
+        return
+      }
+      if (!state.isFormValid) return
       const result = await handlers.handleSaveAccount()
       if (!result) return
       if (!handlers.shouldDeferAccountSaveSuccess(result)) {
@@ -205,21 +230,6 @@ export default function AccountDialog({
   const showEntryAuthTypeSelector =
     mode === DIALOG_MODES.ADD &&
     state.phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
-  const canShowSponsorRecommendations = isOpen && showEntryAuthTypeSelector
-  const sponsorRecommendations = useSponsorRecommendations({
-    surface: SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog,
-    enabled: canShowSponsorRecommendations,
-  })
-  const showSponsorRecommendations =
-    canShowSponsorRecommendations && sponsorRecommendations.items.length > 0
-  const [selectedSponsorPostClickNote, setSelectedSponsorPostClickNote] =
-    useState<string | null>(null)
-
-  useEffect(() => {
-    if (!canShowSponsorRecommendations) {
-      setSelectedSponsorPostClickNote(null)
-    }
-  }, [canShowSponsorRecommendations])
   const addModeSiteInfoProps =
     mode === DIALOG_MODES.ADD
       ? {
@@ -236,9 +246,14 @@ export default function AccountDialog({
     onRequestCookieAuthPermissions: handlers.handleRequestCookieAuthPermissions,
   }
   const currentSitePolicy = getAccountDialogSitePolicy(state.siteType)
+  const siteOnboarding = getAccountSiteDefinition(state.siteType)?.onboarding
+  const isAimlApiSite = isCanonicalAimlApiUrl(state.url)
+  const isRequestySite = isCanonicalRequestyUrl(state.url)
+  const hasManagementAccessToken =
+    (isAimlApiSite || isRequestySite) && Boolean(state.accessToken.trim())
   const credentialVerification =
     state.credentialVerification &&
-    (!isCanonicalAimlApiUrl(state.url) ||
+    (!isAimlApiSite ||
       state.credentialVerification.aimlApiKey === state.draft.aimlApiKey) &&
     state.credentialVerification.accessToken === state.accessToken &&
     state.credentialVerification.siteType === state.siteType &&
@@ -248,53 +263,48 @@ export default function AccountDialog({
   const hasInlineCredentialError =
     credentialVerification?.status === "error" &&
     state.novitaCredentialOperation !== "account" &&
-    getAccountSiteDefinition(state.siteType)?.onboarding
-      ?.accessTokenVerificationGuide?.copy ===
+    siteOnboarding?.accessTokenVerificationGuide?.copy ===
       ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Novita
+  const needsAimlApiVerification =
+    isAimlApiSite && credentialVerification?.status !== "success"
 
-  const manualAddGuideAnchor = getAccountSiteDefinition(state.siteType)
-    ?.onboarding?.manualAddGuideAnchor
+  const manualAddGuideAnchor = siteOnboarding?.manualAddGuideAnchor
   const isOpenRouterBootstrap = isCanonicalOpenRouterUrl(state.url)
-  const isRequestyBootstrap =
-    isCanonicalRequestyUrl(state.url) && !state.accessToken.trim()
-  const isAimlApiBootstrap =
-    isCanonicalAimlApiUrl(state.url) && !state.accessToken.trim()
+  const isAimlApiBootstrap = isAimlApiSite && !hasManagementAccessToken
+  const managementKeySiteName = isAimlApiBootstrap
+    ? "AI/ML API"
+    : isRequestySite && !hasManagementAccessToken
+      ? "Requesty"
+      : undefined
+  const managementKeyAction = managementKeySiteName
+    ? tAccountDialog("mode.createManagementKey", {
+        siteName: managementKeySiteName,
+      })
+    : tAccountDialog("mode.createOpenRouterManagementKey")
   const autoDetectPresentation =
-    isOpenRouterBootstrap || isRequestyBootstrap || isAimlApiBootstrap
+    isOpenRouterBootstrap || managementKeySiteName
       ? {
           action: {
-            idleLabel:
-              isRequestyBootstrap || isAimlApiBootstrap
-                ? tAccountDialog("mode.createManagementKey", {
-                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
-                  })
-                : tAccountDialog("mode.createOpenRouterManagementKey"),
-            pendingLabel:
-              isRequestyBootstrap || isAimlApiBootstrap
-                ? tAccountDialog("mode.creatingManagementKey", {
-                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
-                  })
-                : tAccountDialog("mode.creatingOpenRouterManagementKey"),
-            reDetectLabel:
-              isRequestyBootstrap || isAimlApiBootstrap
-                ? tAccountDialog("mode.createManagementKey", {
-                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
-                  })
-                : tAccountDialog("mode.createOpenRouterManagementKey"),
+            idleLabel: managementKeyAction,
+            pendingLabel: managementKeySiteName
+              ? tAccountDialog("mode.creatingManagementKey", {
+                  siteName: managementKeySiteName,
+                })
+              : tAccountDialog("mode.creatingOpenRouterManagementKey"),
+            reDetectLabel: managementKeyAction,
             multiline: true,
           },
           info: {
-            title:
-              isRequestyBootstrap || isAimlApiBootstrap
-                ? tAccountDialog("infoPanel.managementKeyBootstrap", {
-                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
-                  })
-                : tAccountDialog("infoPanel.openrouterBootstrap"),
+            title: managementKeySiteName
+              ? tAccountDialog("infoPanel.managementKeyBootstrap", {
+                  siteName: managementKeySiteName,
+                })
+              : tAccountDialog("infoPanel.openrouterBootstrap"),
             description: isAimlApiBootstrap
               ? tAccountDialog("infoPanel.aimlapiBootstrapInfo")
-              : isRequestyBootstrap
+              : managementKeySiteName
                 ? tAccountDialog("infoPanel.managementKeyBootstrapInfo", {
-                    siteName: isAimlApiBootstrap ? "AI/ML API" : "Requesty",
+                    siteName: managementKeySiteName,
                   })
                 : tAccountDialog("infoPanel.openrouterBootstrapInfo"),
           },
@@ -304,52 +314,28 @@ export default function AccountDialog({
     mode === DIALOG_MODES.ADD
       ? tAccountDialog("title.add")
       : tAccountDialog("title.edit")
+  const sharedSiteInfoInputProps = {
+    url: state.url,
+    onUrlChange: handlers.handleUrlChange,
+    isDetected: state.isDetected,
+    onClearUrl: handlers.handleClearUrl,
+    sitePolicy: currentSitePolicy,
+    ...cookieAuthPermissionProps,
+    ...addModeSiteInfoProps,
+  }
   const siteInfoInputProps: ComponentProps<typeof SiteInfoInput> =
     showEntryAuthTypeSelector
       ? {
-          url: state.url,
-          onUrlChange: handlers.handleUrlChange,
-          isDetected: state.isDetected,
-          onClearUrl: handlers.handleClearUrl,
-          sitePolicy: currentSitePolicy,
+          ...sharedSiteInfoInputProps,
           showAuthTypeSelector: true,
           authType: state.authType,
           onAuthTypeChange: setters.setAuthType,
-          ...cookieAuthPermissionProps,
-          ...addModeSiteInfoProps,
         }
-      : {
-          url: state.url,
-          onUrlChange: handlers.handleUrlChange,
-          isDetected: state.isDetected,
-          onClearUrl: handlers.handleClearUrl,
-          sitePolicy: currentSitePolicy,
-          ...cookieAuthPermissionProps,
-          ...addModeSiteInfoProps,
-        }
-
-  const postSaveKeyInputSessionId =
-    typeof state.postSaveKeyInputSessionId === "number"
-      ? state.postSaveKeyInputSessionId
-      : null
-  const postSaveKeyInputDialogHandlers =
-    postSaveKeyInputSessionId !== null &&
-    typeof handlers.getPostSaveKeyInputDialogHandlers === "function"
-      ? handlers.getPostSaveKeyInputDialogHandlers(postSaveKeyInputSessionId)
-      : null
-
-  const postSaveOneTimeKeySaveAction = state.postSaveOneTimeSecret
-    ? buildOneTimeApiKeyProfileSaveAction({
-        result: state.postSaveOneTimeSecret,
-        t,
-        logger,
-        source: "AccountDialog",
-      })
-    : undefined
+      : sharedSiteInfoInputProps
 
   const handleOpenApiCredentialProfilesFromDetectFailure = () => {
     void openApiCredentialProfilesPage()
-    handlers.handleClose()
+    handleClose()
   }
 
   const openRouterRecovery = state.openRouterBootstrapRecovery
@@ -364,6 +350,193 @@ export default function AccountDialog({
     state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
     !state.isLoadingAccount &&
     !state.accountLoadError
+  const isAccountSubmissionBlocked =
+    !showAccountForm || (mode === DIALOG_MODES.ADD && needsAimlApiVerification)
+  const validationIssues = state.validationIssues
+  const hasValidationIssues = showAccountForm && validationIssues.length > 0
+  const firstIssue = validationIssues[0]
+  const tokenSetup = useAccountTokenSetup({
+    state,
+    mode,
+    isOpen,
+    showAccountForm,
+    validationIssues,
+    accountFormRef,
+    setAccessToken: setters.setAccessToken,
+    focusField,
+  })
+  const {
+    canEnterTokenStep,
+    newApiTokenRecovery,
+    showTokenSetup,
+    tokenStep,
+    activeTokenSetup,
+    tokenRecoveryReason,
+    tokenNeedsReplacement,
+    hasVerifiedCreatedToken,
+    tokenVerificationStatus,
+    cancelTokenVerification,
+    finishTokenEntry,
+    openFullForm,
+    setCompactAccount,
+    tokenStepActions,
+    setTokenStepActions,
+    creation,
+  } = tokenSetup
+  const needsTokenHandoff =
+    isAccessTokenRecoveryError(state.detectionError) ||
+    siteOnboarding?.accessTokenVerificationGuide?.copy ===
+      ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Novita ||
+    Boolean(tokenRecoveryReason)
+  const recoveryContinuation = useAccountDialogRecoveryHandoff({
+    enabled: isOpen && isExtensionPopup(),
+    state:
+      state.cookieRecoveryState ??
+      (needsTokenHandoff ? state.tokenRecoveryState : null) ??
+      null,
+  })
+  const accessTokenContinuation = state.cookieRecoveryState
+    ? undefined
+    : recoveryContinuation
+  const cookieRecoveryContinuation = state.cookieRecoveryState
+    ? recoveryContinuation
+    : undefined
+  const isCreatingToken = creation.isOpen
+  const { handleClose: closeAccountDialog } = handlers
+  const handleClose = useCallback(() => {
+    cancelTokenVerification()
+    return closeAccountDialog()
+  }, [cancelTokenVerification, closeAccountDialog])
+  useImperativeHandle(ref, () => ({ close: handleClose }), [handleClose])
+
+  const reviewIssues = () => {
+    if (!firstIssue) return
+    setFeedbackStage(ACCOUNT_FORM_FEEDBACK_STAGES.SUBMITTED)
+    focusField(firstIssue.field)
+  }
+
+  const hasDetectionAlert = Boolean(
+    state.detectionError && !hasInlineCredentialError && !newApiTokenRecovery,
+  )
+  const hasTopBanner =
+    hasDetectionAlert || Boolean(openRouterRecovery && showOpenRouterRecovery)
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (state.isDetecting) {
+      detectionPending.current = true
+      return
+    }
+    if (!showAccountForm) return
+    const accessTokenRecovery = isAccessTokenRecoveryError(state.detectionError)
+    const newRecovery =
+      accessTokenRecovery && state.detectionError !== lastRecoveryError.current
+    const justDetected = detectionPending.current
+    detectionPending.current = false
+    lastRecoveryError.current = state.detectionError
+    if (!justDetected && !newRecovery) return
+    setFeedbackStage(ACCOUNT_FORM_FEEDBACK_STAGES.DETECTED)
+    setCompactAccount(canEnterTokenStep)
+    if (hasTopBanner) {
+      const body =
+        formElementRef.current?.closest<HTMLElement>(MODAL_BODY_SELECTOR)
+      if (body) body.scrollTop = 0
+      return
+    }
+    if (firstIssue) focusField(firstIssue.field)
+    else if (showTokenSetup) queueAccessTokenFocus()
+  }, [
+    isOpen,
+    state.isDetecting,
+    state.detectionError,
+    showAccountForm,
+    canEnterTokenStep,
+    hasTopBanner,
+    firstIssue,
+    focusField,
+    queueAccessTokenFocus,
+    setCompactAccount,
+    showTokenSetup,
+  ])
+
+  const { siteOpenFailed, clearSiteOpenFailure } = useResumeNewApiTokenRecovery(
+    {
+      isOpen,
+      showAccountForm,
+      recoveryState,
+      siteType: state.siteType,
+      url: state.url,
+      userId: state.userId,
+      startTokenCreation: creation.start,
+      focusAccessToken: queueAccessTokenFocus,
+    },
+  )
+
+  useEffect(() => {
+    if (!fieldFocus || !showAccountForm || isCreatingToken) return
+    accountFormRef.current?.focusIssue(fieldFocus.field)
+    setFieldFocus(undefined)
+  }, [fieldFocus, showAccountForm, isCreatingToken])
+
+  const tokenCreationTitle = tAccountDialog("tokenCreation.title")
+  const focusAccessToken = () => {
+    clearSiteOpenFailure()
+    accountFormRef.current?.focusAccessToken()
+  }
+  const accessTokenSetup = tokenRecoveryReason ? (
+    <AccessTokenVerificationGuide
+      recoveryReason={tokenRecoveryReason}
+      siteUrl={state.url}
+      siteType={state.siteType}
+      manualAddGuideAnchor={manualAddGuideAnchor}
+      continuation={accessTokenContinuation}
+      onPrepareAccessTokenInput={focusAccessToken}
+      onStartTokenCreation={creation.start}
+      tokenActionsTarget={tokenStep ? tokenStepActions : undefined}
+      externalNavigationFailed={siteOpenFailed}
+    />
+  ) : siteOpenFailed ? (
+    <InlineMessage role="alert" tone="warning" size="sm">
+      {tAccountDialog("accessTokenVerification.openSecurityFailed")}
+    </InlineMessage>
+  ) : undefined
+  const detectionAlert =
+    hasDetectionAlert && state.detectionError ? (
+      <AutoDetectErrorAlert
+        error={state.detectionError}
+        siteUrl={state.url}
+        siteType={state.siteType}
+        accessTokenContinuation={accessTokenContinuation}
+        manualAddGuideAnchor={
+          mode === DIALOG_MODES.ADD ? manualAddGuideAnchor : undefined
+        }
+        onPrepareAccessTokenInput={focusAccessToken}
+        onRetryAutoDetect={handlers.handleAutoDetect}
+        onApiCredentialProfilesClick={
+          handleOpenApiCredentialProfilesFromDetectFailure
+        }
+      />
+    ) : null
+  const tokenHost = tokenStep ? tryParseHttpUrl(state.url)?.host : undefined
+  const compactTitle = tAccountDialog("validation.tokenNeeded", {
+    site: state.siteName || tokenHost || state.url,
+  })
+  const detectedDetails = [state.draft.username, tokenHost]
+    .filter(Boolean)
+    .join(" · ")
+  const tokenFeedback = tokenVerificationStatus ? (
+    <NewApiAccessTokenVerificationFeedback status={tokenVerificationStatus} />
+  ) : hasVerifiedCreatedToken ? (
+    <InlineMessage tone="success" size="sm">
+      {tAccountDialog("tokenCreation.complete")}
+    </InlineMessage>
+  ) : undefined
+  const tokenFeedbackVariant = tokenNeedsReplacement
+    ? "warning"
+    : tokenVerificationStatus === VALIDATION_STATUSES.VALID ||
+        (!tokenVerificationStatus && hasVerifiedCreatedToken)
+      ? "success"
+      : undefined
 
   return (
     <>
@@ -371,53 +544,106 @@ export default function AccountDialog({
         isOpen={isOpen}
         onCloseComplete={onCloseComplete}
         focusWorkflowId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
-        onClose={handlers.handleClose}
-        size="xl"
+        onClose={handleClose}
+        size={tokenStep ? (isCreatingToken ? "lg" : "md") : "xl"}
         panelClassName={
           mode === DIALOG_MODES.EDIT
             ? "h-[calc(100dvh-2rem)] sm:h-[calc(100dvh-4rem)]"
-            : undefined
+            : tokenStep && !isCreatingToken
+              ? "max-w-lg"
+              : undefined
         }
-        title={dialogTitle}
+        title={
+          isCreatingToken
+            ? tokenCreationTitle
+            : tokenStep
+              ? compactTitle
+              : dialogTitle
+        }
+        showCloseButton={!isCreatingToken}
+        closeOnEsc={!isCreatingToken}
+        closeOnBackdropClick={!isCreatingToken}
         panelTestId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
-        header={<DialogHeader mode={mode} />}
+        header={
+          isCreatingToken ? (
+            <NewApiTokenCreationHeader
+              title={tokenCreationTitle}
+              siteUrl={state.url}
+              siteName={state.siteName}
+              headingRef={creation.headingRef}
+              busy={creation.busy}
+              onBack={creation.goBack}
+            />
+          ) : tokenStep ? (
+            <CompactTokenEntryHeader
+              title={compactTitle}
+              details={detectedDetails}
+              onOpenFullForm={openFullForm}
+            />
+          ) : (
+            <DialogHeader mode={mode} />
+          )
+        }
         footer={
-          <ActionButtons
-            mode={mode}
-            url={state.url}
-            autoDetectPresentation={autoDetectPresentation?.action}
-            phase={state.phase}
-            formSource={state.formSource}
-            isDetecting={state.isDetecting}
-            onAutoDetect={handlers.handleAutoDetect}
-            detectFromCredential={
-              isCanonicalAimlApiUrl(state.url) &&
-              !!state.accessToken.trim() &&
-              credentialVerification?.status !== "success"
-            }
-            onShowManualForm={handlers.handleShowManualForm}
-            onClose={handlers.handleClose}
-            isFormValid={
-              !state.isLoadingAccount &&
-              !state.accountLoadError &&
-              state.isFormValid &&
-              (mode !== DIALOG_MODES.ADD ||
-                !isCanonicalAimlApiUrl(state.url) ||
-                credentialVerification?.status === "success")
-            }
-            isSaving={state.isSaving}
-            onAutoConfig={handlers.handleAutoConfig}
-            isAutoConfiguring={state.isAutoConfiguring}
-            accountPostSaveWorkflowStep={state.accountPostSaveWorkflowStep}
-            // ensure submit button in footer can submit the form by linking via form id
-            formId="account-form"
-          />
+          isCreatingToken ? (
+            <div ref={creation.setFooter} />
+          ) : (
+            <ActionButtons
+              showAccountActions={activeTokenSetup}
+              compactTokenActions={
+                tokenStep ? (
+                  <div
+                    ref={setTokenStepActions}
+                    className="w-full min-w-0 sm:ml-auto sm:w-auto"
+                  />
+                ) : undefined
+              }
+              hasValidationIssues={hasValidationIssues}
+              mode={mode}
+              url={state.url}
+              autoDetectPresentation={autoDetectPresentation?.action}
+              phase={state.phase}
+              formSource={state.formSource}
+              isDetecting={state.isDetecting}
+              onAutoDetect={handlers.handleAutoDetect}
+              detectFromCredential={
+                needsAimlApiVerification && hasManagementAccessToken
+              }
+              onShowManualForm={handlers.handleShowManualForm}
+              onClose={handleClose}
+              isFormValid={state.isFormValid}
+              isSubmissionBlocked={isAccountSubmissionBlocked}
+              isSaving={state.isSaving}
+              onAutoConfig={() => {
+                cancelTokenVerification()
+                return handlers.handleAutoConfig()
+              }}
+              isAutoConfiguring={state.isAutoConfiguring}
+              accountPostSaveWorkflowStep={state.accountPostSaveWorkflowStep}
+              // ensure submit button in footer can submit the form by linking via form id
+              formId={ACCOUNT_FORM_ID}
+            />
+          )
         }
       >
-        <div>
+        {isCreatingToken && (
+          <div key="token-creation" ref={creation.bodyRef}>
+            <NewApiTokenCreator
+              siteUrl={state.url}
+              userId={state.userId}
+              onReturnToAccount={creation.goBack}
+              footer={creation.footer}
+              onBusyChange={creation.setBusy}
+              onCreated={creation.finish}
+            />
+          </div>
+        )}
+        <div hidden={isCreatingToken}>
           <form
-            id="account-form"
+            ref={formElementRef}
+            id={ACCOUNT_FORM_ID}
             onSubmit={handleSubmit}
+            noValidate={hasValidationIssues}
             className="flex flex-col gap-x-2 gap-y-density-2"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountForm}
             data-account-form-ready={showAccountForm ? "" : undefined}
@@ -437,23 +663,7 @@ export default function AccountDialog({
                 </Button>
               </Alert>
             )}
-            {state.detectionError && !hasInlineCredentialError && (
-              <AutoDetectErrorAlert
-                error={state.detectionError}
-                siteUrl={state.url}
-                siteType={state.siteType}
-                accessTokenContinuation={accessTokenContinuation}
-                onPrepareAccessTokenInput={() =>
-                  accountFormRef.current?.focusAccessToken()
-                }
-                manualAddGuideAnchor={
-                  mode === DIALOG_MODES.ADD ? manualAddGuideAnchor : undefined
-                }
-                onApiCredentialProfilesClick={
-                  handleOpenApiCredentialProfilesFromDetectFailure
-                }
-              />
-            )}
+            {detectionAlert}
 
             {openRouterRecovery && showOpenRouterRecovery && (
               <Alert
@@ -491,77 +701,25 @@ export default function AccountDialog({
               <AutoDetectSlowHintAlert />
             )}
 
-            {state.phase !== ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
-              <div className="min-w-0 space-y-density-3">
-                <div className="min-w-0 space-y-density-4">
-                  <SiteInfoInput {...siteInfoInputProps} />
-                  {selectedSponsorPostClickNote ? (
-                    <div
-                      className="flex items-start gap-x-2 gap-y-density-2 rounded-md bg-primary-soft px-2 py-density-2 text-xs leading-5 text-primary-soft-foreground"
-                      data-testid={
-                        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote
-                      }
-                    >
-                      <Info
-                        aria-hidden="true"
-                        className="mt-0.5 h-4 w-4 shrink-0"
-                      />
-                      <span>{selectedSponsorPostClickNote}</span>
-                    </div>
-                  ) : null}
-                </div>
-                {showSponsorRecommendations ? (
-                  <div className="min-w-0">
-                    <SponsorRecommendationsSection
-                      layout="grid"
-                      surface={SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog}
-                      items={sponsorRecommendations.items}
-                      onContinueAddAccount={(nextPrefill) => {
-                        const normalizedPrefill =
-                          normalizeSponsorAddAccountPrefill(nextPrefill)
-                        if (!normalizedPrefill) return
-
-                        handlers.handleUrlChange(normalizedPrefill.siteUrl, {
-                          applyAuthDefault: false,
-                        })
-                        setters.setSiteType(normalizedPrefill.siteType)
-                        if (normalizedPrefill.authType) {
-                          setters.setAuthType(normalizedPrefill.authType)
-                        }
-                        const selectedSponsor =
-                          sponsorRecommendations.items.find(
-                            (item) => item.id === normalizedPrefill.sponsorId,
-                          )
-                        setSelectedSponsorPostClickNote(
-                          selectedSponsor?.postClickNote ?? null,
-                        )
-                      }}
-                      onOpenBookmarkManager={(prefill) => {
-                        void openFullBookmarkManagerPage({ create: prefill })
-                      }}
-                      onOpenApiCredentialProfiles={(prefill) => {
-                        void openApiCredentialProfilesPage({ create: prefill })
-                      }}
-                    />
-                  </div>
-                ) : null}
-                {mode === DIALOG_MODES.ADD && (
-                  <div className="space-y-density-3 border-t border-border pt-density-3">
-                    <InfoPanel
-                      mode={mode}
-                      phase={state.phase}
-                      formSource={state.formSource}
-                      presentation="inline"
-                      autoDetectPresentation={autoDetectPresentation?.info}
-                      manualAddGuideAnchor={
-                        state.detectionError ? undefined : manualAddGuideAnchor
-                      }
-                    />
-                    <AccountSiteDiscoveryHint />
-                  </div>
-                )}
-              </div>
-            )}
+            <AccountDialogSiteStep
+              isOpen={isOpen}
+              mode={mode}
+              phase={state.phase}
+              formSource={state.formSource}
+              siteInfoInput={<SiteInfoInput {...siteInfoInputProps} />}
+              autoDetectPresentation={autoDetectPresentation?.info}
+              manualAddGuideAnchor={
+                state.detectionError ? undefined : manualAddGuideAnchor
+              }
+              onApplyPrefill={(nextPrefill) => {
+                handlers.handleUrlChange(nextPrefill.siteUrl, {
+                  applyAuthDefault: false,
+                })
+                setters.setSiteType(nextPrefill.siteType)
+                if (nextPrefill.authType)
+                  setters.setAuthType(nextPrefill.authType)
+              }}
+            />
 
             {state.isLoadingAccount && (
               <div
@@ -575,209 +733,32 @@ export default function AccountDialog({
               </div>
             )}
             {showAccountForm && (
-              <AccountForm
-                continuous
-                focusSection={focusSection}
-                guidance={
-                  <InfoPanel
-                    mode={mode}
-                    phase={state.phase}
-                    formSource={state.formSource}
-                    presentation="guidance"
-                    manualAddGuideAnchor={
-                      state.detectionError ? undefined : manualAddGuideAnchor
-                    }
-                  />
-                }
+              <AccountDialogEditor
+                workspace={workspace}
+                account={account}
+                mode={mode}
+                formRef={accountFormRef}
                 siteInfoInput={<SiteInfoInput {...siteInfoInputProps} />}
-                siteUrl={state.url}
-                ref={accountFormRef}
-                draft={state.draft}
-                feedbackAccountId={
-                  account &&
-                  account.baseUrl === state.url &&
-                  account.siteType === state.draft.siteType &&
-                  String(account.userId) === state.draft.userId
-                    ? account.id
-                    : undefined
-                }
-                feedbackBaseUrl={state.url}
-                feedbackOriginalBaseUrl={account?.baseUrl}
                 sitePolicy={currentSitePolicy}
                 claimedLoginProviders={claimedLoginProviders}
-                isDetected={state.isDetected}
-                showAccessTokenGuidance={
-                  hasInlineCredentialError ||
-                  !isAccessTokenRecoveryError(state.detectionError) ||
-                  !getAccountSiteDefinition(state.siteType)?.onboarding
-                    ?.accessTokenVerificationGuide
-                }
-                isImportingSub2apiSession={state.isImportingSub2apiSession}
-                isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}
-                showAccessToken={state.showAccessToken}
-                onSiteNameChange={setters.setSiteName}
-                onUsernameChange={setters.setUsername}
-                onUserIdChange={setters.setUserId}
-                onAccessTokenChange={setters.setAccessToken}
-                novitaCredentialActions={
-                  getAccountSiteDefinition(state.siteType)?.onboarding
-                    ?.accessTokenVerificationGuide?.copy ===
-                  ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Novita
-                    ? {
-                        onAcquireConsole: () =>
-                          void handlers.handleAcquireNovitaConsole(),
-                        onVerify: () =>
-                          void handlers.handleVerifyNovitaCredential(),
-                        isVerifying: state.isDetecting,
-                        operation: state.novitaCredentialOperation,
-                        verification: credentialVerification,
-                        continuation: accessTokenContinuation ?? undefined,
-                      }
-                    : undefined
-                }
-                autoCreateAccessToken={
-                  currentSitePolicy.canAutoCreateAccessToken
-                    ? {
-                        enabled: true,
-                        status: state.isDetecting
-                          ? AUTO_CREATE_ACCESS_TOKEN_STATUSES.Working
-                          : AUTO_CREATE_ACCESS_TOKEN_STATUSES.Idle,
-                        onCreate: () => {
-                          void handlers.handleAutoDetect()
-                        },
-                      }
-                    : undefined
-                }
-                onAimlApiKeyChange={setters.setAimlApiKey}
-                onSub2apiUseRefreshTokenChange={
-                  handlers.handleSub2apiUseRefreshTokenChange
-                }
-                onSub2apiRefreshTokenChange={setters.setSub2apiRefreshToken}
-                onImportSub2apiSession={handlers.handleImportSub2apiSession}
-                onExchangeRateChange={setters.setExchangeRate}
-                onManualBalanceUsdChange={setters.setManualBalanceUsd}
-                onShowAccessTokenChange={setters.setShowAccessToken}
-                onNotesChange={setters.setNotes}
-                onSelectedTagIdsChange={setters.setTagIds}
-                onExcludeFromTotalBalanceChange={
-                  setters.setExcludeFromTotalBalance
-                }
-                onExcludeFromTodayIncomeChange={
-                  setters.setExcludeFromTodayIncome
-                }
-                tags={tags}
-                tagCountsById={tagCountsById}
-                createTag={createTag}
-                renameTag={renameTag}
-                deleteTag={deleteTag}
-                onLoginChange={setters.setLogin}
-                onCheckInChange={setters.setCheckIn}
-                onCheckInSelectionChange={setters.setCheckInSelection}
-                onRedetectCheckInMethods={handlers.handleRedetectCheckInMethods}
-                isRedetectingCheckInMethods={state.isRedetectingCheckInMethods}
-                checkInRedetectionFeedback={state.checkInRedetectionFeedback}
-                onSiteTypeChange={setters.setSiteType}
-                onAuthTypeChange={setters.setAuthType}
-                isImportingCookies={state.isImportingCookies}
-                cookieRecovery={{
-                  pending:
-                    state.isRecoveringCookies ||
-                    cookieRecoveryContinuation?.isPending === true,
-                  disabled: cookieRecoveryContinuation?.disabled,
-                  errorMessage: cookieRecoveryContinuation?.errorMessage,
-                  verifiedCookie: state.verifiedCookie,
-                  onRecover:
-                    cookieRecoveryContinuation?.onContinue ??
-                    (() => void handlers.handleRecoverCookieSession()),
-                }}
-                showCookiePermissionWarning={state.showCookiePermissionWarning}
-                cookieAuthPermissionsGranted={
-                  state.cookieAuthPermissionsGranted
-                }
-                isRequestingCookieAuthPermissions={
-                  state.isRequestingCookieAuthPermissions
-                }
-                onCookieAuthSessionCookieChange={
-                  setters.setCookieAuthSessionCookie
-                }
-                onImportCookieAuthSessionCookie={
-                  handlers.handleImportCookieAuthSessionCookie
-                }
-                onOpenCookiePermissionSettings={
-                  handlers.handleOpenCookiePermissionSettings
-                }
-                onRequestCookieAuthPermissions={
-                  handlers.handleRequestCookieAuthPermissions
-                }
+                feedbackStage={feedbackStage}
+                focusSection={focusSection}
+                tokenSetup={tokenSetup}
+                accessTokenSetup={accessTokenSetup}
+                accessTokenFeedback={tokenFeedback}
+                accessTokenFeedbackVariant={tokenFeedbackVariant}
+                accessTokenContinuation={accessTokenContinuation}
+                cookieRecoveryContinuation={cookieRecoveryContinuation}
+                credentialVerification={credentialVerification}
+                hasInlineCredentialError={hasInlineCredentialError}
+                manualAddGuideAnchor={manualAddGuideAnchor}
               />
             )}
           </form>
         </div>
       </Modal>
 
-      <DuplicateAccountWarningDialog
-        isOpen={state.duplicateAccountWarning.isOpen}
-        siteUrl={state.duplicateAccountWarning.siteUrl}
-        existingAccountsCount={
-          state.duplicateAccountWarning.existingAccountsCount
-        }
-        existingUsername={state.duplicateAccountWarning.existingUsername}
-        existingUserId={state.duplicateAccountWarning.existingUserId}
-        onCancel={handlers.handleDuplicateAccountWarningCancel}
-        onContinue={handlers.handleDuplicateAccountWarningContinue}
-        onDisableWarningAndContinue={
-          handlers.handleDuplicateAccountWarningDisableAndContinue
-        }
-      />
-
-      <ManagedSiteConfigPromptDialog
-        isOpen={state.managedSiteConfigPrompt.isOpen}
-        managedSiteLabel={state.managedSiteConfigPrompt.managedSiteLabel}
-        managedSiteType={state.managedSiteConfigPrompt.managedSiteType}
-        missingMessage={state.managedSiteConfigPrompt.missingMessage}
-        onClose={handlers.handleManagedSiteConfigPromptClose}
-        onOpenSettings={handlers.handleOpenManagedSiteSettings}
-      />
-
-      <AihubmixDefaultKeyPromptDialog
-        isOpen={state.aihubmixPostSaveKeyPrompt.isOpen}
-        accountName={state.aihubmixPostSaveKeyPrompt.accountName}
-        isCreating={state.aihubmixPostSaveKeyPrompt.isCreating}
-        onCancel={handlers.handleAihubmixPostSaveKeyPromptCancel}
-        onConfirm={handlers.handleAihubmixPostSaveKeyPromptConfirm}
-      />
-
-      {state.postSaveKeyProvisioning ? (
-        <AccountKeyProvisioningDialog
-          account={state.postSaveKeyProvisioning.account}
-          mode={state.postSaveKeyProvisioning.mode}
-          onClose={handlers.handlePostSaveKeyProvisioningClose}
-        />
-      ) : null}
-
-      {state.postSaveKeyInputAccount ? (
-        <AddTokenDialog
-          isOpen={true}
-          onClose={
-            postSaveKeyInputDialogHandlers?.onClose ??
-            handlers.handlePostSaveKeyInputTokenDialogClose
-          }
-          availableAccounts={[state.postSaveKeyInputAccount]}
-          preSelectedAccountId={state.postSaveKeyInputAccount.id}
-          onSuccess={
-            postSaveKeyInputDialogHandlers?.onSuccess ??
-            handlers.handlePostSaveKeyInputTokenCreated
-          }
-          showOneTimeKeyDialog={false}
-        />
-      ) : null}
-
-      <OneTimeSecretDialog
-        isOpen={!!state.postSaveOneTimeSecret}
-        result={state.postSaveOneTimeSecret}
-        onClose={handlers.handlePostSaveOneTimeSecretClose}
-        saveAction={postSaveOneTimeKeySaveAction}
-      />
+      <AccountDialogWorkflowDialogs state={state} handlers={handlers} />
     </>
   )
 }

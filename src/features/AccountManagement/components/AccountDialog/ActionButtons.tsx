@@ -1,4 +1,5 @@
 import { Check, Pencil, Sparkles, Zap } from "lucide-react"
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ActionGroup, Button } from "~/components/ui"
@@ -32,6 +33,8 @@ interface ActionButtonsProps {
   isDetecting: boolean
   isSaving: boolean
   isFormValid: boolean
+  hasValidationIssues?: boolean
+  isSubmissionBlocked?: boolean
   onAutoDetect: () => void
   detectFromCredential?: boolean
   onShowManualForm: () => void
@@ -40,6 +43,8 @@ interface ActionButtonsProps {
   isAutoConfiguring: boolean
   accountPostSaveWorkflowStep: AccountPostSaveWorkflowStep
   formId?: string
+  showAccountActions?: boolean
+  compactTokenActions?: ReactNode
 }
 
 /**
@@ -55,6 +60,8 @@ export default function ActionButtons({
   isDetecting,
   isSaving,
   isFormValid,
+  hasValidationIssues = false,
+  isSubmissionBlocked = false,
   onAutoDetect,
   detectFromCredential,
   onShowManualForm,
@@ -63,6 +70,8 @@ export default function ActionButtons({
   isAutoConfiguring,
   accountPostSaveWorkflowStep,
   formId,
+  showAccountActions = false,
+  compactTokenActions,
 }: ActionButtonsProps) {
   const { t } = useTranslation(["accountDialog", "common", "settings"])
   const { managedSiteType } = useUserPreferencesContext()
@@ -70,10 +79,15 @@ export default function ActionButtons({
   const isDetected = formSource === ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
   const shouldShowAddDetectionActions =
     isAddMode &&
+    !showAccountActions &&
     (phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT ||
-      (!isDetected && !isFormValid))
+      (!hasValidationIssues &&
+        !isDetected &&
+        (!isFormValid || isSubmissionBlocked)))
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
-  const autoConfigTitle = isFormValid
+  const canAutoConfigure = isFormValid && !isSubmissionBlocked
+  const canSubmit = !isSubmissionBlocked && (isFormValid || hasValidationIssues)
+  const autoConfigTitle = canAutoConfigure
     ? t("accountDialog:actions.autoConfigTitle", {
         managedSite: managedSiteLabel,
       })
@@ -107,8 +121,9 @@ export default function ActionButtons({
     autoConfigLoadingLabelByStep[accountPostSaveWorkflowStep] ??
     t("accountDialog:actions.configuring")
   const autoDetectLabel = isDetecting
-    ? autoDetectPresentation?.pendingLabel ?? t("accountDialog:mode.detecting")
-    : autoDetectPresentation?.idleLabel ?? t("accountDialog:mode.autoDetect")
+    ? (autoDetectPresentation?.pendingLabel ??
+      t("accountDialog:mode.detecting"))
+    : (autoDetectPresentation?.idleLabel ?? t("accountDialog:mode.autoDetect"))
 
   const detectionActions = (
     <>
@@ -152,12 +167,33 @@ export default function ActionButtons({
 
   const actions = (
     <>
+      {hasValidationIssues &&
+        !isDetected &&
+        !detectFromCredential &&
+        isAddMode && (
+          <Button
+            type="button"
+            onClick={onAutoDetect}
+            disabled={!url.trim()}
+            loading={isDetecting}
+            className="w-full sm:w-auto"
+            variant="outline"
+            leftIcon={
+              !isDetecting ? <Sparkles className="h-4 w-4" /> : undefined
+            }
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton}
+          >
+            {autoDetectLabel}
+          </Button>
+        )}
       {detectFromCredential && !(mode === DIALOG_MODES.EDIT && !isDetected) && (
         <Button
           type="button"
           onClick={onAutoDetect}
           loading={isDetecting}
+          className="w-full sm:w-auto"
           variant="outline"
+          leftIcon={!isDetecting ? <Sparkles className="h-4 w-4" /> : undefined}
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton}
         >
           {autoDetectLabel}
@@ -175,16 +211,16 @@ export default function ActionButtons({
         >
           {isDetecting
             ? autoDetectLabel
-            : autoDetectPresentation?.reDetectLabel ??
-              t("accountDialog:mode.reDetect")}
+            : (autoDetectPresentation?.reDetectLabel ??
+              t("accountDialog:mode.reDetect"))}
         </Button>
       )}
 
-      {isAddMode && (
+      {isAddMode && !hasValidationIssues && (
         <Button
           type="button"
           onClick={onAutoConfig}
-          disabled={!isFormValid || isSaving}
+          disabled={!canAutoConfigure || isSaving}
           loading={isAutoConfiguring}
           className="w-full sm:w-auto"
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton}
@@ -207,8 +243,8 @@ export default function ActionButtons({
 
       <Button
         type="submit"
-        {...(formId ? { form: formId } : {})}
-        disabled={!isFormValid || isAutoConfiguring}
+        form={formId}
+        disabled={!canSubmit || isAutoConfiguring}
         loading={isSaving}
         className="w-full sm:w-auto"
         variant="default"
@@ -230,18 +266,26 @@ export default function ActionButtons({
       type="button"
       onClick={onClose}
       variant="secondary"
-      className="w-full sm:w-auto"
+      className="hidden sm:inline-flex"
     >
       {t("common:actions.cancel")}
     </Button>
   )
 
   return (
-    <div className="gap-density-2 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className={
+        compactTokenActions
+          ? "flex flex-col gap-density-2 sm:flex-row sm:items-center sm:justify-between"
+          : "flex flex-col-reverse gap-density-2 sm:flex-row sm:items-center sm:justify-between"
+      }
+    >
       {cancel}
-      <ActionGroup className="flex-col-reverse items-stretch sm:flex-row sm:items-center">
-        {actions}
-      </ActionGroup>
+      {compactTokenActions ?? (
+        <ActionGroup className="flex-col-reverse items-stretch sm:flex-row sm:items-center">
+          {actions}
+        </ActionGroup>
+      )}
     </div>
   )
 }

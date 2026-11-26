@@ -141,6 +141,57 @@ describe("account dialog recovery handoff", () => {
     ).resolves.toBe(true)
     expect(accept).toHaveBeenCalledWith(state)
   })
+  it.each(["new-api-token-create", "new-api-token-site"] as const)(
+    "applies %s recovery intent during open while preserving synchronous side-panel activation",
+    async (recoveryAction) => {
+      const original = recoveryState(SITE_TYPES.NEW_API)
+      const prepared = await prepareAccountDialogRecovery(original)
+
+      const opening = openAccountDialogRecovery(prepared, { recoveryAction })
+      // Native open must still run before yielding user activation to async storage.
+      expect(openSidePanel).toHaveBeenCalledWith(activeTab)
+      await expect(opening).resolves.toBe("sidepanel")
+
+      const accept = vi.fn(() => true)
+      await expect(
+        receiveAccountDialogRecovery(prepared.id, accept, activeTab.windowId),
+      ).resolves.toBe(true)
+      expect(accept).toHaveBeenCalledWith({
+        ...original,
+        recoveryAction,
+      })
+    },
+  )
+  it("applies a New API token recovery intent before opening the full-page fallback", async () => {
+    supportsSidePanel.mockReturnValue(false)
+    const original = recoveryState(SITE_TYPES.NEW_API)
+    const prepared = await prepareAccountDialogRecovery(original)
+
+    await expect(
+      openAccountDialogRecovery(prepared, {
+        recoveryAction: "new-api-token-site",
+      }),
+    ).resolves.toBe("tab")
+
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledWith({
+      ...original,
+      recoveryAction: "new-api-token-site",
+    })
+  })
+  it("rejects a New API token recovery intent for unsupported sites", async () => {
+    const original = recoveryState(SITE_TYPES.APIYI)
+    await expect(
+      prepareAccountDialogRecovery({
+        ...original,
+        recoveryAction: "new-api-token-create",
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+    expect(sessionValues.size).toBe(0)
+  })
   it("retains an explicit API-key method before any credential is pasted", async () => {
     const original = recoveryState(SITE_TYPES.NOVITA)
     const state = {
@@ -323,9 +374,8 @@ describe("account dialog recovery handoff", () => {
     const first = await prepareAccountDialogRecovery(recoveryState())
     await openAccountDialogRecovery(first)
     vi.resetModules()
-    const otherContext = await import(
-      "~/features/AccountManagement/dialogs/accountDialogRecovery"
-    )
+    const otherContext =
+      await import("~/features/AccountManagement/dialogs/accountDialogRecovery")
     const second =
       await otherContext.prepareAccountDialogRecovery(recoveryState())
     const cleanupRead = createDeferred<void>()
