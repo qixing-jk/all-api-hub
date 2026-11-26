@@ -114,10 +114,10 @@ async function withMessageRetry<T>(
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     options?.abortSignal?.throwIfAborted()
-    options?.retrySignal?.throwIfAborted()
     try {
       return await runAbortableTask(
         () => {
+          options?.retrySignal?.throwIfAborted()
           if (attempt > 0) options?.onReceiverRetryWait?.(false)
           return work()
         },
