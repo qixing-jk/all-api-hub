@@ -121,6 +121,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "nexavlinks"
   | "xingya"
   | "apiKeyCasa"
+  | "zifeiyu"
   | "agentRouter"}`
 
 export type CheckInMethodPresentationMetadata = {
@@ -742,6 +743,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "ZIFEIYU game center",
     },
+    presentation: { sourceNameKey: "methods.sources.zifeiyu" },
     supportsStatusReadback: false,
     feedbackStatusRoutes: [],
     legacy: false,
