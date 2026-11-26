@@ -113,7 +113,7 @@ export async function runNanoGptCurrentTabDetection(options) {
               userIdInput: identity.depositAddress,
               accessTokenInput: "",
             },
-            saveState: "absent",
+            saveState: "validates-access-token",
             guidance: "Complete NanoGPT credentials",
             timeoutMs: 60000,
           })
@@ -267,7 +267,7 @@ async function detectDraft(options, page, identity, capture) {
       accessTokenInput: "",
       exchangeRateInput: "7.2",
     },
-    saveState: "absent",
+    saveState: "validates-access-token",
     guidance: "Complete NanoGPT credentials",
     timeoutMs: 60000,
   })
@@ -292,7 +292,7 @@ async function detectDraft(options, page, identity, capture) {
       accessTokenInput: "",
       exchangeRateInput: "7.2",
     },
-    saveState: "absent",
+    saveState: "validates-access-token",
     guidance: "Complete NanoGPT credentials",
   })
   await expect(

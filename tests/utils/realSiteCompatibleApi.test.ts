@@ -35,6 +35,7 @@ function createResponse(status: number, body: unknown) {
   return {
     ok: () => status >= 200 && status < 300,
     status: () => status,
+    json: vi.fn().mockResolvedValue(body),
     text: vi.fn().mockResolvedValue(JSON.stringify(body)),
   }
 }
@@ -95,6 +96,99 @@ function createPage(
 }
 
 describe("compatible real-site login", () => {
+  it.each([false, true])(
+    "limits cleanup to a unique run-owned token (duplicate: %s)",
+    async (duplicate) => {
+      const tokenPath = `${ORIGIN}/api/user/access_tokens`
+      const name = "current-run"
+      const scope = "access_token.revoke"
+      const methodsUrl = `${ORIGIN}/api/verify/methods?scope=${scope}`
+      let present = true
+      const get = vi.fn(async (url: string) => {
+        if (url === methodsUrl)
+          return createResponse(200, {
+            success: true,
+            data: { scope, methods: [{ method: "password", available: true }] },
+          })
+        if (url !== tokenPath) throw new Error(`Unexpected request: ${url}`)
+        return createResponse(200, {
+          success: true,
+          data: {
+            items: [
+              { id: 4, name: "another-run" },
+              ...(present ? [{ id: 8, name }] : []),
+              ...(duplicate ? [{ id: 9, name }] : []),
+            ],
+          },
+        })
+      })
+      const post = vi.fn(async (url: string) =>
+        createResponse(
+          200,
+          url === `${ORIGIN}/api/verify`
+            ? {
+                success: true,
+                data: { scope, proof_token: "proof-placeholder" },
+              }
+            : createAuthBundle(),
+        ),
+      )
+      const remove = vi.fn(async () => {
+        present = false
+        return createResponse(200, { success: true })
+      })
+      const { page } = createPage(post, {
+        getRequest: get,
+        deleteRequest: remove,
+      })
+      const session = await loginToCompatibleApiRealSite(page, config, {
+        label: "New API",
+        envPrefix: "NEW_API",
+        authBundle: true,
+        ownedScopedTokenName: name,
+      })
+      const token = session.ownedScopedToken!
+      expect(token).toBeDefined()
+      if (duplicate) {
+        await expect(token.revoke()).rejects.toThrow(
+          "unique run-owned token name",
+        )
+        expect(remove).not.toHaveBeenCalled()
+        return
+      }
+      await expect(token.find()).resolves.toBe(8)
+      await token.revoke()
+      expect(get).toHaveBeenCalledWith(
+        methodsUrl,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "X-Auth-Session": "session-id-placeholder",
+          }),
+        }),
+      )
+      expect(post).toHaveBeenCalledWith(
+        `${ORIGIN}/api/verify`,
+        expect.objectContaining({
+          data: {
+            method: "password",
+            password: config.password,
+            scope,
+            context: { token_id: 8 },
+          },
+        }),
+      )
+      expect(remove).toHaveBeenCalledExactlyOnceWith(
+        `${tokenPath}/8`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "X-Security-Proof": "proof-placeholder",
+          }),
+        }),
+      )
+      await expect(token.find()).resolves.toBeUndefined()
+    },
+  )
+
   it("keeps a failed scoped-token probe inconclusive without another login", async () => {
     const post = vi
       .fn()

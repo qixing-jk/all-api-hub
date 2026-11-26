@@ -426,7 +426,7 @@ test("clearing the primary key blocks saving even when a regular key remains", a
     await form.regular.fill(regular)
     await expect(form.save).toHaveCount(0)
     await form.primary.clear()
-    await expect(form.save).toHaveCount(0)
+    await expect(form.save).toBeDisabled()
     await expect(form.regular).toHaveValue(regular)
   } finally {
     await form.page.close()

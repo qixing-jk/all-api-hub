@@ -30,7 +30,12 @@ export const InlineMessage = React.forwardRef<
     ref,
   ) => {
     const { Icon, indicator: iconClassName } = feedbackToneStyles[tone]
-    const resolvedIcon = icon === undefined ? <Icon className="size-4" /> : icon
+    const resolvedIcon =
+      icon === undefined ? (
+        <Icon className={size === "sm" ? "size-3.5" : "size-4"} />
+      ) : (
+        icon
+      )
     return (
       <div
         ref={ref}

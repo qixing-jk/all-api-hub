@@ -35,9 +35,39 @@ import {
 } from "~~/e2e/utils/realSite/accountAdd"
 import { waitForNewUserFacingCredentialPage } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const manualToken = "e2e-manually-copied-management-pat"
-const tokenPageHtml = `<h1>Token page</h1><h2 id="security-access">Sessions &amp; Access</h2><label>Access Token<input readonly value="${manualToken}"></label>`
+
+function tokenPageHtml(legacy: boolean) {
+  return `<!doctype html>
+    <meta charset="utf-8">
+    <h1>Token page</h1>
+    <div style="height: 150vh" aria-hidden="true"></div>
+    <template id="credential-content">
+      <section ${legacy ? "" : 'aria-labelledby="security-access"'}>
+        <h2 ${legacy ? "" : 'id="security-access"'}>${legacy ? "Profile" : "Sessions &amp; Access"}</h2>
+        ${legacy ? "" : '<div data-slot="card"><div data-slot="card-title">Login sessions</div></div>'}
+        <div ${legacy ? 'class="semi-card"' : 'data-slot="card"'}
+          style="max-width: 36rem; margin: auto; padding: 1rem; border-radius: 8px;">
+          ${legacy ? "<h6>系统访问令牌</h6>" : '<div data-slot="card-title">Access tokens</div>'}
+          <label>Access Token <input readonly value="${manualToken}"></label>
+          <button type="button" onclick="this.dataset.activated = 'true'">
+            ${legacy ? "创建访问令牌" : "Create access token"}
+          </button>
+        </div>
+      </section>
+    </template>
+    <div style="height: 100vh" aria-hidden="true"></div>
+    <script>
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          const template = document.querySelector("#credential-content");
+          template.replaceWith(template.content);
+        }, 750);
+      });
+    </script>`
+}
 
 const test = base.extend<{ profileSite: string }>({
   profileSite: async ({ extensionId }, runFixture) => {
@@ -57,7 +87,7 @@ const test = base.extend<{ profileSite: string }>({
       } else if (path === "/assets/index.routes.js") {
         response.end('const route = "/_authenticated/profile/";')
       } else if (path === "/profile") {
-        response.end(tokenPageHtml)
+        response.end(tokenPageHtml(true))
       } else {
         response.writeHead(404)
         response.end()
@@ -99,6 +129,147 @@ async function getNativeSidePanel(bridge: Page) {
     return view as Window & typeof globalThis
   }, SIDEPANEL_PAGE_PATH)
 }
+
+/** Lets Playwright attach before the opened tab can request the APIyi fixture. */
+async function holdCredentialTabNavigation(
+  opener: JSHandle<Window & typeof globalThis>,
+  destination: string,
+) {
+  return opener.evaluateHandle((view, url) => {
+    let release = () => {}
+    const attached = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const tabs = view.chrome.tabs
+    const createTab = tabs.create.bind(tabs)
+    tabs.create = async (options) => {
+      if (options.url !== url) return createTab(options)
+      tabs.create = createTab
+      const tab = await createTab({ ...options, url: "about:blank" })
+      if (tab.id == null) throw new Error("Credential fixture tab unavailable")
+      await attached
+      return tabs.update(tab.id, { url })
+    }
+    return release
+  }, destination)
+}
+
+test("slow account detection shows inline troubleshooting while pending", async ({
+  context,
+  extensionId,
+  extensionDir,
+  page,
+}) => {
+  const baseUrl = "https://slow-detection.example.invalid"
+  let detectionRequested = false
+  const { promise: responseGate, resolve: releaseResponse } =
+    createDeferred<void>()
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await stubNewApiSiteRoutes(context, { baseUrl })
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, {
+    autoFillCurrentSiteUrlOnAccountAdd: false,
+    tempWindowFallback: { enabled: false },
+  })
+  const sitePage = await context.newPage()
+  await sitePage.goto(baseUrl)
+  await sitePage.evaluate(() => {
+    localStorage.setItem("user", JSON.stringify({ id: 1, username: "owner" }))
+  })
+  await context.route(`${baseUrl}/api/user/self`, async (route) => {
+    detectionRequested = true
+    await responseGate
+    await route.fulfill({
+      status: 401,
+      json: { success: false, message: "Sign in again" },
+    })
+  })
+
+  await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+  await sitePage.bringToFront()
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+  const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  await dialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
+    .fill(baseUrl)
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger).click()
+  await page.getByRole("option", { name: /Cookie/ }).click()
+  const detect = dialog.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton,
+  )
+  const help = dialog.getByRole("button", { name: "Troubleshooting guide" })
+  const status = dialog.getByRole("status").filter({
+    hasText: "Auto-detect is taking longer than expected.",
+  })
+  const cookieNotice = dialog.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
+  )
+
+  try {
+    await page.clock.install()
+    await detect.click()
+    await expect.poll(() => detectionRequested).toBe(true)
+    await expect(help).toBeHidden()
+    await page.clock.fastForward(10_000)
+    await expect(help).toBeVisible()
+    await expect(status).toHaveAttribute("data-tone", "info")
+    await expect(
+      status.getByRole("button", { name: "Troubleshooting guide" }),
+    ).toBeVisible()
+    await expect(cookieNotice).toHaveRole("note")
+    await expect(cookieNotice).toHaveAttribute("data-tone", "neutral")
+    const grantButtonName = "Grant permissions for Cookie multi-account auth"
+    const grantButton = cookieNotice.getByRole("button", {
+      name: grantButtonName,
+    })
+    const shortGrantLabel = grantButton.getByText("Grant access", {
+      exact: true,
+    })
+    const fullGrantLabel = grantButton.getByText(grantButtonName, {
+      exact: true,
+    })
+
+    await page.setViewportSize({ width: 340, height: 680 })
+    await expect(shortGrantLabel).toBeVisible()
+    await expect(fullGrantLabel).toBeHidden()
+    expect(
+      await shortGrantLabel.evaluate((label) => {
+        const range = document.createRange()
+        range.selectNodeContents(label)
+        return range.getClientRects().length
+      }),
+    ).toBe(1)
+
+    await page.setViewportSize({ width: 1249, height: 900 })
+    await expect(fullGrantLabel).toBeVisible()
+    await expect(shortGrantLabel).toBeHidden()
+
+    await captureVisualViews({
+      page,
+      ready: help,
+      captureTarget: dialog,
+      id: "auto-detect-slow-hint",
+      extensionDir,
+      views: [
+        { id: "narrow", width: 340, height: 680, theme: "light" },
+        { id: "desktop", width: 1249, height: 900, theme: "light" },
+        { id: "dark", width: 1249, height: 900, theme: "dark" },
+      ],
+    })
+  } finally {
+    releaseResponse()
+  }
+
+  const error = dialog.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
+  )
+  await expect(error).toContainText("rejected")
+  await expect(dialog.getByText(/Auto-detect is taking longer/)).toBeHidden()
+})
 
 for (const status of [401, 403]) {
   test(`opens help after Cookie auto-detection HTTP ${status}`, async ({
@@ -183,7 +354,7 @@ for (const scenario of [
     name: "New API",
     baseUrl: "https://new-api-verification.example.invalid",
     tokenPagePath: "/security#security-access",
-    openTokenSettingsLabel: "Open token page",
+    openTokenSettingsLabel: "Get from site",
     tokenRequests: 1,
     tokenFailureCode: "SECURITY_PROOF_REQUIRED",
   },
@@ -192,7 +363,7 @@ for (const scenario of [
     name: "New API manual completion",
     baseUrl: "https://new-api-manual.example.invalid",
     tokenPagePath: "/security#security-access",
-    openTokenSettingsLabel: "Open token page",
+    openTokenSettingsLabel: "Get from site",
     tokenRequests: 1,
     tokenFailureCode: null,
   },
@@ -201,7 +372,7 @@ for (const scenario of [
     name: "New API server failure",
     baseUrl: "https://new-api-server.example.invalid",
     tokenPagePath: "/security#security-access",
-    openTokenSettingsLabel: "Open token page",
+    openTokenSettingsLabel: "Get from site",
     tokenRequests: 1,
     tokenFailureCode: null,
     tokenFailureStatus: 503,
@@ -223,7 +394,7 @@ for (const scenario of [
     name: `New API empty HTTP ${status}`,
     baseUrl: `https://new-api-empty-${status}.example.invalid`,
     tokenPagePath: "/security#security-access",
-    openTokenSettingsLabel: "Open token page",
+    openTokenSettingsLabel: "Get from site",
     tokenRequests: 1,
     tokenFailureCode: null,
     tokenFailureStatus: status,
@@ -235,7 +406,7 @@ for (const scenario of [
     name: "Gemai profile",
     baseUrl: null,
     tokenPagePath: "/profile",
-    openTokenSettingsLabel: "Open token page",
+    openTokenSettingsLabel: "Get from site",
     tokenRequests: 1,
     tokenFailureCode: "SECURITY_PROOF_REQUIRED",
   },
@@ -370,7 +541,7 @@ for (const scenario of [
         await route.fulfill({
           status: 200,
           contentType: "text/html",
-          body: tokenPageHtml,
+          body: tokenPageHtml(tokenPagePath !== "/security#security-access"),
         })
       },
     )
@@ -400,46 +571,6 @@ for (const scenario of [
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton)
       .click()
 
-    await expect(
-      popupDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
-    ).toHaveValue("1")
-    await expect(
-      popupDialog.getByTestId(
-        ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
-      ),
-    ).toBeVisible()
-    await captureVisualViews({
-      page,
-      ready: popupDialog,
-      id: "token-recovery-popup",
-      extensionDir,
-    })
-    if (
-      "expectedFailureMessage" in scenario &&
-      scenario.expectedFailureMessage
-    ) {
-      await expect(
-        popupDialog.getByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
-        ),
-      ).toHaveText(scenario.expectedFailureMessage)
-    }
-    await expect(
-      popupDialog.getByText("Enter an Access Token manually"),
-    ).toBeVisible()
-    const originalFailureMessage = await popupDialog
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage)
-      .innerText()
-    await popupDialog
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
-      .fill("Keep this site name")
-    await popupDialog
-      .getByPlaceholder("Optional, enter notes")
-      .fill("Keep my popup notes")
-    await expect(
-      popupDialog.getByRole("button", { name: openTokenSettingsLabel }),
-    ).toHaveCount(0)
-
     const supportsNativeSidePanel = await page.evaluate(
       () =>
         typeof chrome.sidePanel?.open === "function" &&
@@ -447,100 +578,241 @@ for (const scenario of [
     )
     let bridge: Page
     let recoveryView: JSHandle<Window & typeof globalThis>
-    if (supportsNativeSidePanel) {
-      await popupDialog
-        .getByRole("button", { name: "Continue in side panel", exact: true })
-        .click()
-      bridge = await context.newPage()
-      await bridge.goto(
-        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
-      )
-      recoveryView = await getNativeSidePanel(bridge)
-    } else {
-      const [fullPage] = await Promise.all([
-        context.waitForEvent("page"),
-        popupDialog
-          .getByRole("button", { name: "Continue in full page", exact: true })
-          .click(),
-      ])
-      await expect(fullPage).toHaveURL(
-        (url) =>
-          url.protocol === "chrome-extension:" &&
-          url.hostname === extensionId &&
-          url.pathname === `/${OPTIONS_PAGE_PATH}` &&
-          url.searchParams.has(
-            ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery,
-          ) &&
-          url.hash === `#${MENU_ITEM_IDS.ACCOUNT}`,
-      )
-      await waitForExtensionRoot(fullPage)
-      recoveryView = await fullPage.evaluateHandle(() => window)
-      // Runtime messages do not echo back to the view that sends them.
-      bridge = await context.newPage()
-      await bridge.goto(
-        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
-      )
-    }
-    await expect.poll(() => page.isClosed()).toBe(true)
+    let securityPagePromise: ReturnType<
+      typeof waitForNewUserFacingCredentialPage
+    >
 
-    await expect
-      .poll(() =>
-        recoveryView.evaluate((view, ids) => {
-          const dialog = view.document.querySelector(
-            `[data-testid="${ids.accountDialog}"]`,
-          )
-          if (!dialog) return null
-          const value = (id: string) =>
-            dialog.querySelector<HTMLInputElement>(`[data-testid="${id}"]`)
-              ?.value
-          return {
-            url: value(ids.siteUrlInput),
-            siteName: value(ids.siteNameInput),
-            username: value(ids.usernameInput),
-            userId: value(ids.userIdInput),
-            failureMessage: dialog.querySelector(
-              `[data-testid="${ids.autoDetectErrorMessage}"]`,
-            )?.textContent,
-          }
-        }, ACCOUNT_MANAGEMENT_TEST_IDS),
-      )
-      .toEqual({
-        url: baseUrl,
-        siteName: "Keep this site name",
-        username: "e2e-user",
-        userId: "1",
-        failureMessage: originalFailureMessage,
+    if (siteType === SITE_TYPES.NEW_API) {
+      await expect(
+        popupDialog.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
+        ),
+      ).toHaveText(`Account detected (e2e-user · ${new URL(baseUrl).host})`)
+      await expect(
+        popupDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+      ).toBeFocused()
+      await expect(
+        popupDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
+      ).toHaveCount(0)
+      await expect(
+        popupDialog.getByText(
+          supportsNativeSidePanel
+            ? "Creating a token or getting one from the site continues in the side panel with this form kept, or in a full page if the side panel cannot open."
+            : "Creating a token or getting one from the site continues in a full page so this form stays open.",
+        ),
+      ).toBeVisible()
+      await captureVisualViews({
+        page,
+        ready: popupDialog,
+        id: `token-recovery-popup-${scenario.name.toLowerCase().replaceAll(" ", "-")}`,
+        extensionDir,
       })
 
-    await recoveryView.evaluate((view, ids) => {
-      const section = view.document.querySelector(
-        `[data-testid="${ids.accountFormSectionAuth}"]`,
-      )
-      const toggle = section?.querySelector<HTMLButtonElement>(
-        '[data-slot="collapsible-trigger"]',
-      )
-      if (toggle?.getAttribute("aria-expanded") === "true") toggle.click()
-    }, ACCOUNT_MANAGEMENT_TEST_IDS)
+      await popupDialog.getByRole("button", { name: "Open full form" }).click()
+      await expect(
+        popupDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
+      ).toHaveValue("1")
+      await popupDialog
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
+        .fill("Keep this site name")
+      await popupDialog
+        .getByPlaceholder("Optional, enter notes")
+        .fill("Keep my popup notes")
 
-    // Route discovery may open a temporary window at the exact same URL.
-    // Match the document in the user's window, not the first matching URL.
-    const sourceTab = await bridge.evaluate(() => chrome.tabs.getCurrent())
-    if (sourceTab?.windowId == null) {
-      throw new Error("Credential recovery requires the source window")
-    }
-    const securityPagePromise = waitForNewUserFacingCredentialPage(
-      context,
-      serviceWorker,
-      sourceTab.windowId,
-    )
-    await recoveryView.evaluate((view, label) => {
-      const button = Array.from(view.document.querySelectorAll("button")).find(
-        (candidate) => candidate.textContent?.trim() === label,
+      const sourceWindowId = await page.evaluate(
+        async () => (await chrome.windows.getCurrent()).id,
       )
-      if (!button || button.disabled)
-        throw new Error("Security settings action unavailable")
-      button.click()
-    }, openTokenSettingsLabel)
+      if (sourceWindowId == null) {
+        throw new Error("Credential recovery requires the source window")
+      }
+      securityPagePromise = waitForNewUserFacingCredentialPage(
+        context,
+        serviceWorker,
+        sourceWindowId,
+      )
+      const openSiteButton = popupDialog.getByRole("button", {
+        name: openTokenSettingsLabel,
+        exact: true,
+      })
+      if (supportsNativeSidePanel) {
+        await openSiteButton.click()
+        bridge = await context.newPage()
+        await bridge.goto(
+          `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
+        )
+        recoveryView = await getNativeSidePanel(bridge)
+      } else {
+        const [fullPage] = await Promise.all([
+          context.waitForEvent("page", {
+            predicate: (candidate) =>
+              candidate.url().includes(`/${OPTIONS_PAGE_PATH}`) ||
+              candidate.url() === "about:blank",
+          }),
+          openSiteButton.click(),
+        ])
+        await expect(fullPage).toHaveURL(
+          (url) =>
+            url.protocol === "chrome-extension:" &&
+            url.hostname === extensionId &&
+            url.pathname === `/${OPTIONS_PAGE_PATH}` &&
+            url.searchParams.has(
+              ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery,
+            ) &&
+            url.hash === `#${MENU_ITEM_IDS.ACCOUNT}`,
+        )
+        await waitForExtensionRoot(fullPage)
+        recoveryView = await fullPage.evaluateHandle(() => window)
+        // Runtime messages do not echo back to the view that sends them.
+        bridge = await context.newPage()
+        await bridge.goto(
+          `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
+        )
+      }
+      await expect.poll(() => page.isClosed()).toBe(true)
+    } else {
+      await expect(
+        popupDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
+      ).toHaveValue("1")
+      await expect(
+        popupDialog.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
+        ),
+      ).toBeVisible()
+      await captureVisualViews({
+        page,
+        ready: popupDialog,
+        id: `token-recovery-popup-${scenario.name.toLowerCase().replaceAll(" ", "-")}`,
+        extensionDir,
+      })
+      await expect(
+        popupDialog.getByRole("heading", {
+          name: "Enter an Access Token manually",
+        }),
+      ).toBeVisible()
+      await expect(
+        popupDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+      ).not.toBeFocused()
+      const originalFailureMessage = await popupDialog
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage)
+        .innerText()
+      await popupDialog
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
+        .fill("Keep this site name")
+      await popupDialog
+        .getByPlaceholder("Optional, enter notes")
+        .fill("Keep my popup notes")
+      await expect(
+        popupDialog.getByRole("button", { name: openTokenSettingsLabel }),
+      ).toHaveCount(0)
+
+      if (supportsNativeSidePanel) {
+        await popupDialog
+          .getByRole("button", { name: "Continue in side panel", exact: true })
+          .click()
+        bridge = await context.newPage()
+        await bridge.goto(
+          `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
+        )
+        recoveryView = await getNativeSidePanel(bridge)
+      } else {
+        const [fullPage] = await Promise.all([
+          context.waitForEvent("page"),
+          popupDialog
+            .getByRole("button", { name: "Continue in full page", exact: true })
+            .click(),
+        ])
+        await expect(fullPage).toHaveURL(
+          (url) =>
+            url.protocol === "chrome-extension:" &&
+            url.hostname === extensionId &&
+            url.pathname === `/${OPTIONS_PAGE_PATH}` &&
+            url.searchParams.has(
+              ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery,
+            ) &&
+            url.hash === `#${MENU_ITEM_IDS.ACCOUNT}`,
+        )
+        await waitForExtensionRoot(fullPage)
+        recoveryView = await fullPage.evaluateHandle(() => window)
+        // Runtime messages do not echo back to the view that sends them.
+        bridge = await context.newPage()
+        await bridge.goto(
+          `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
+        )
+      }
+      await expect.poll(() => page.isClosed()).toBe(true)
+
+      await expect
+        .poll(() =>
+          recoveryView.evaluate((view, ids) => {
+            const dialog = view.document.querySelector(
+              `[data-testid="${ids.accountDialog}"]`,
+            )
+            return dialog?.querySelector(
+              `[data-testid="${ids.autoDetectErrorMessage}"]`,
+            )?.textContent
+          }, ACCOUNT_MANAGEMENT_TEST_IDS),
+        )
+        .toBe(originalFailureMessage)
+
+      await recoveryView.evaluate((view, id) => {
+        const save = view.document.querySelector<HTMLButtonElement>(
+          `[data-testid="${id}"]`,
+        )
+        if (!save || save.disabled || save.type !== "submit")
+          throw new Error("Save cannot review the incomplete recovered draft")
+        save.click()
+      }, ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton)
+      await expect
+        .poll(() =>
+          recoveryView.evaluate((view, id) => {
+            const token = view.document.querySelector(`[data-testid="${id}"]`)
+            return (
+              token?.getAttribute("aria-invalid") === "true" &&
+              view.document.activeElement === token
+            )
+          }, ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+        )
+        .toBe(true)
+
+      await recoveryView.evaluate((view, ids) => {
+        const section = view.document.querySelector(
+          `[data-testid="${ids.accountFormSectionAuth}"]`,
+        )
+        const toggle = section?.querySelector<HTMLButtonElement>(
+          '[data-slot="collapsible-trigger"]',
+        )
+        if (toggle?.getAttribute("aria-expanded") === "true") toggle.click()
+      }, ACCOUNT_MANAGEMENT_TEST_IDS)
+
+      // Route discovery may open a temporary window at the exact same URL.
+      // Match the document in the user's window, not the first matching URL.
+      const sourceTab = await bridge.evaluate(() => chrome.tabs.getCurrent())
+      if (sourceTab?.windowId == null) {
+        throw new Error("Credential recovery requires the source window")
+      }
+      securityPagePromise = waitForNewUserFacingCredentialPage(
+        context,
+        serviceWorker,
+        sourceTab.windowId,
+      )
+      const releaseNavigation = await holdCredentialTabNavigation(
+        recoveryView,
+        `${baseUrl}${tokenPagePath}`,
+      )
+      await Promise.all([
+        context.waitForEvent("page"),
+        recoveryView.evaluate((view, label) => {
+          const button = Array.from(
+            view.document.querySelectorAll("button"),
+          ).find((candidate) => candidate.textContent?.trim() === label)
+          if (!button || button.disabled)
+            throw new Error("Security settings action unavailable")
+          button.click()
+        }, openTokenSettingsLabel),
+      ])
+      await releaseNavigation.evaluate((release) => release())
+      await releaseNavigation.dispose()
+    }
     const securityPage = await securityPagePromise
     let securityUrl = ""
     await expect
@@ -555,12 +827,43 @@ for (const scenario of [
         return securityUrl
       })
       .toBe(`${baseUrl}${tokenPagePath}`)
-    // tabs.create can navigate before Playwright attaches route interception.
-    // Preserve the actual destination, including its section anchor.
-    await securityPage.goto(securityUrl)
+    await expect(securityPage).toHaveURL(securityUrl)
     await expect(
       securityPage.getByRole("heading", { name: "Token page" }),
     ).toBeVisible()
+    const tokenControl = securityPage.getByRole("button", {
+      name:
+        tokenPagePath === "/security#security-access"
+          ? "Create access token"
+          : "创建访问令牌",
+    })
+    const credentialCard = securityPage
+      .locator('[data-slot="card"], .semi-card')
+      .filter({ has: tokenControl })
+    const cueMarker = "data-all-api-hub-highlight"
+    if (siteType === SITE_TYPES.NEW_API) {
+      await expect(credentialCard).toHaveAttribute(cueMarker, "access-token")
+      await expect(tokenControl).toHaveAttribute(cueMarker, "access-token")
+      await expect(securityPage.locator("section")).not.toHaveAttribute(
+        cueMarker,
+      )
+      await expect
+        .poll(() =>
+          credentialCard.evaluate((card) => {
+            const { top, height } = card.getBoundingClientRect()
+            return Math.abs(top + height / 2 - window.innerHeight / 2)
+          }),
+        )
+        .toBeLessThan(8)
+      const cueScreenshot = test.info().outputPath("access-token-highlight.png")
+      await securityPage.screenshot({ path: cueScreenshot })
+      await test
+        .info()
+        .attach("Access Token highlight", { path: cueScreenshot })
+      await expect(credentialCard).not.toHaveAttribute(cueMarker)
+    }
+    await expect(tokenControl).not.toHaveAttribute(cueMarker)
+    await expect(tokenControl).not.toHaveAttribute("data-activated")
     await securityPage.bringToFront()
     await expect
       .poll(() =>
@@ -594,6 +897,17 @@ for (const scenario of [
           `[data-testid="${id}"]`,
         )
         if (!input) throw new Error("Manual Access Token field unavailable")
+        const clipboardData = new view.DataTransfer()
+        clipboardData.setData("text/plain", token)
+        const useDefault = input.dispatchEvent(
+          new view.ClipboardEvent("paste", {
+            clipboardData,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+        if (!useDefault) return
+        // Synthetic clipboard events cannot apply the browser's default paste.
         const valueSetter = Object.getOwnPropertyDescriptor(
           view.HTMLInputElement.prototype,
           "value",
@@ -618,6 +932,29 @@ for (const scenario of [
         }, ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
       )
       .toBe(false)
+    await expect
+      .poll(() =>
+        recoveryView.evaluate((view, ids) => {
+          const dialog = view.document.querySelector(
+            `[data-testid="${ids.accountDialog}"]`,
+          )
+          const value = (id: string) =>
+            dialog?.querySelector<HTMLInputElement>(`[data-testid="${id}"]`)
+              ?.value
+          return {
+            url: value(ids.siteUrlInput),
+            siteName: value(ids.siteNameInput),
+            username: value(ids.usernameInput),
+            userId: value(ids.userIdInput),
+          }
+        }, ACCOUNT_MANAGEMENT_TEST_IDS),
+      )
+      .toEqual({
+        url: baseUrl,
+        siteName: "Keep this site name",
+        username: "e2e-user",
+        userId: "1",
+      })
     const postSaveRefresh = await bridge.evaluateHandle((action) => {
       const observed = { accountIds: [] as string[] }
       const listener = (message: {
@@ -724,12 +1061,16 @@ test("inspects rendered credential pages without generating tokens", async ({
     const request = route.request()
     if (request.method() !== "GET") writes += 1
     const path = new URL(request.url()).pathname
+    const htmlByPath: Record<string, string> = {
+      "/profile": "<h1>Profile</h1><button>Access Token</button>",
+      "/console/personal":
+        '<div class="semi-card"><div role="tab" data-tabkey="semiTabsecurity">Security Settings</div></div>',
+    }
     await route.fulfill({
       contentType: "text/html",
       body:
-        path === "/profile"
-          ? "<h1>Profile</h1><button>Access Token</button>"
-          : "<h1>404</h1><p>Page not found</p>",
+        htmlByPath[path] ??
+        '<div class="semi-empty-description">Page not found, please check if your browser address is correct</div>',
     })
   })
   const serviceWorker = await getServiceWorker(context)
@@ -741,6 +1082,7 @@ test("inspects rendered credential pages without generating tokens", async ({
   for (const [path, state] of [
     ["/security", "not_found"],
     ["/profile", "credential"],
+    ["/console/personal", "credential"],
   ]) {
     const result = await page.evaluate(
       async ({ originUrl, action }) =>
