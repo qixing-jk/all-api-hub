@@ -44,6 +44,7 @@ import {
 } from "~/services/checkin/autoCheckin/providers/contracts"
 import { readProviderDetectResult } from "~/services/checkin/autoCheckin/providers/detection"
 import {
+  getCheckInResetTimeZone,
   isCheckInMethodId,
   NON_REPEAT_SAFE_CHECKIN_METHOD_IDS,
   type AutoCheckinMethodRegistration,
@@ -325,6 +326,7 @@ const reconcileProviderResult = async (input: {
 }> => {
   const execution = await confirmCheckInAttempt({
     account: input.account,
+    timeZone: getCheckInResetTimeZone(input.methodId),
     result: input.providerResult,
     startedAt: input.startedAt,
     readStatus: input.getStatus
@@ -817,18 +819,23 @@ async function executeSelectedCheckInOnce(
     registration.provider.ownsStatusAdmission?.(account) === true
   let refreshedConfig: CheckInConfig | undefined
   let statusProof: AutoCheckinProviderContext["statusProof"]
-  if (registration.provider.getStatus && !ownsStatusAdmission) {
+  const operations =
+    registration.provider.forExecution?.(input.context) ?? registration.provider
+  if (operations.getStatus && !ownsStatusAdmission) {
     try {
-      const stable = await readDayStableCheckInObservation(() =>
-        registration.provider.getStatus!({
-          account,
-          observedAt: Date.now(),
-          dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
-          authenticationRecovery: {
-            tempWindowRequestSource: input.context.tempWindowRequestSource,
-            protectionBypassExecution: input.context.protectionBypassExecution,
-          },
-        }),
+      const stable = await readDayStableCheckInObservation(
+        () =>
+          operations.getStatus!({
+            account,
+            observedAt: Date.now(),
+            dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
+            authenticationRecovery: {
+              tempWindowRequestSource: input.context.tempWindowRequestSource,
+              protectionBypassExecution:
+                input.context.protectionBypassExecution,
+            },
+          }),
+        getCheckInResetTimeZone(registration.id),
       )
       const status = stable?.observation
       if (status) {
@@ -927,7 +934,7 @@ async function executeSelectedCheckInOnce(
     isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
   })
   const startedAt = Date.now()
-  const providerResult = await registration.provider.checkIn(currentAccount, {
+  const providerResult = await operations.checkIn(currentAccount, {
     ...input.context,
     mutationLifecycle,
     ...(statusProof ? { statusProof } : {}),
@@ -952,7 +959,7 @@ async function executeSelectedCheckInOnce(
     methodId: registration.id,
     providerResult,
     startedAt,
-    getStatus: registration.provider.getStatus,
+    getStatus: operations.getStatus,
   })
   return {
     kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,

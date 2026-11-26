@@ -84,6 +84,10 @@ export type AutoCheckinProviderReadiness =
 
 /** Executable compatibility contract for a registered check-in method. */
 export interface AutoCheckinProvider {
+  /** Share transient resources between admission, submission and readback for one attempt. */
+  forExecution?: (
+    context: AutoCheckinProviderContext,
+  ) => Pick<AutoCheckinProvider, "getStatus" | "checkIn">
   /** Maps provider-specific status errors for both discovery and execution. */
   classifyStatusError?: (error: unknown) => CheckInMethodUnknownReason
   /**

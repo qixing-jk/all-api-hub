@@ -1,3 +1,4 @@
+import { readSub2ApiFailureEnvelope } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 
@@ -11,6 +12,22 @@ const getHttpErrorCode = (status: number) => {
   if (status === 403) return API_ERROR_CODES.HTTP_403
   if (status === 429) return API_ERROR_CODES.HTTP_429
   return API_ERROR_CODES.HTTP_OTHER
+}
+
+/** Some check-in deployments report string business codes outside the family envelope. */
+function readCheckInFailure(body: Record<string, unknown> | null) {
+  if (
+    !body ||
+    typeof body.message !== "string" ||
+    (typeof body.code !== "string" && typeof body.code !== "number")
+  )
+    return null
+  return {
+    message: body.message.trim(),
+    upstreamCode: String(body.code),
+    reason:
+      typeof body.reason === "string" && body.reason ? body.reason : undefined,
+  }
 }
 
 /**
@@ -32,43 +49,23 @@ export function createCheckInCodeEnvelopeParser(sourceName: string) {
     endpoint: string,
   ): Record<string, unknown> => {
     const envelope = toRecord(response.body)
-    if (
-      !envelope ||
-      (typeof envelope.code !== "string" &&
-        typeof envelope.code !== "number") ||
-      typeof envelope.message !== "string"
-    ) {
-      if (!response.ok) {
-        throw new ApiError(
-          `${sourceName} daily check-in request failed with HTTP ${response.status}`,
-          response.status,
-          endpoint,
-          getHttpErrorCode(response.status),
-        )
-      }
-      throw invalidResponse(endpoint)
-    }
-
-    const upstreamCode =
-      typeof envelope.reason === "string" && envelope.reason
-        ? envelope.reason
-        : String(envelope.code)
-    const message = envelope.message.trim() || undefined
-    const isSuccessEnvelope = envelope.code === 0 && response.ok
-
-    if (!isSuccessEnvelope) {
+    if (!response.ok || envelope?.code !== 0) {
+      const failure =
+        (!response.ok ? readSub2ApiFailureEnvelope(envelope) : null) ??
+        readCheckInFailure(envelope)
+      if (response.ok && !failure) throw invalidResponse(endpoint)
       throw new ApiError(
-        message ??
+        failure?.message ||
           `${sourceName} daily check-in request failed with HTTP ${response.status}`,
         response.ok ? undefined : response.status,
         endpoint,
         response.ok
           ? API_ERROR_CODES.BUSINESS_ERROR
           : getHttpErrorCode(response.status),
-        upstreamCode,
+        failure?.reason ?? failure?.upstreamCode,
       )
     }
-
+    if (typeof envelope.message !== "string") throw invalidResponse(endpoint)
     const data = toRecord(envelope.data)
     if (!data) throw invalidResponse(endpoint)
     return data

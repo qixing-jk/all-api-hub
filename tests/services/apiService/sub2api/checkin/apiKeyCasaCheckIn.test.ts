@@ -1,5 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
+import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfile/sub2apiAuthSession"
 import { fetchSub2ApiAuthIdentity } from "~/services/apiService/sub2api/auth/authIdentity"
 import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
@@ -21,7 +24,12 @@ import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
+import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
@@ -61,6 +69,123 @@ const response = (
 
 describe("ApiKey Casa daily check-in protocol", () => {
   beforeEach(() => vi.resetAllMocks())
+  afterEach(() => vi.restoreAllMocks())
+
+  it.each([
+    {
+      source: "existing_tab",
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 17,
+        origin: "https://apikey.casa",
+      },
+      affinity: { currentTabFallback: "forbid" },
+      loseClaimResponse: false,
+    },
+    {
+      source: "temp_window",
+      fetchContext: {
+        kind: "browser-context",
+        cookieStoreId: "fixture-container",
+      },
+      affinity: { forceTempWindow: true },
+      loseClaimResponse: true,
+    },
+  ] as const)(
+    "submits once in the same authenticated $source as the admission read",
+    async ({ source, fetchContext, affinity, loseClaimResponse }) => {
+      const methodId = AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn
+      const account = buildSiteAccount({
+        site_type: SITE_TYPES.SUB2API,
+        site_url: "https://apikey.casa",
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "automatic", methodId },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: Date.now() },
+                },
+              },
+            },
+          },
+        },
+      })
+      let accessToken = account.account_info.access_token
+      vi.spyOn(accountSub2ApiAuthSession, "getLatestAuth").mockImplementation(
+        async () => ({
+          userId: account.account_info.id,
+          origin: account.site_url,
+          accessToken,
+        }),
+      )
+      vi.spyOn(
+        accountSub2ApiAuthSession,
+        "persistAuthUpdate",
+      ).mockImplementation(async (_id, update) => {
+        accessToken = update.accessToken
+        return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.PERSISTED }
+      })
+      vi.mocked(recoverSub2ApiBrowserAuth).mockResolvedValue({
+        accessToken: "renewed-fixture",
+        userId: account.account_info.id,
+        source,
+        fetchContext,
+      })
+      const transport = vi.mocked(fetchApiResponse)
+      let checkedIn = false
+      transport.mockImplementation(async (request, options) => {
+        if (
+          request.fetchContext?.kind !== fetchContext.kind ||
+          request.auth.accessToken !== "renewed-fixture"
+        ) {
+          return response(
+            {
+              code: "SESSION_BINDING_MISMATCH",
+              reason: "NETWORK_CHANGED",
+              message: "Session changed",
+            },
+            401,
+          )
+        }
+        expect(request).toMatchObject({ fetchContext, ...affinity })
+        if (options.options?.method === "POST") {
+          request.observer?.onDispatch()
+          checkedIn = true
+          if (loseClaimResponse) throw new TypeError("Failed to fetch")
+        }
+        return response({
+          code: 0,
+          message: "ok",
+          data: { checked_in: checkedIn, reward: 1 },
+        })
+      })
+      const result = await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          ),
+        },
+      })
+      expect(
+        transport.mock.calls.map(([, options]) => options.options?.method),
+      ).toEqual(
+        loseClaimResponse
+          ? ["GET", "GET", "POST", "GET"]
+          : ["GET", "GET", "POST"],
+      )
+      expect(result).toMatchObject({
+        kind: "executed",
+        result: { status: "success" },
+      })
+      expect(recoverSub2ApiBrowserAuth).toHaveBeenCalledOnce()
+    },
+  )
 
   it("reads status with the same browser-timezone query as the dashboard", () => {
     expect(createApiKeyCasaDailyCheckInStatusEndpoint("Asia/Singapore")).toBe(
@@ -134,6 +259,29 @@ describe("ApiKey Casa daily check-in protocol", () => {
       ),
     ).toThrow(expect.objectContaining({ code: "JSON_PARSE_ERROR" }))
   })
+
+  it.each(["Session network changed", undefined])(
+    "preserves a session binding failure with message %s",
+    (message) => {
+      expect(() =>
+        parseApiKeyCasaDailyCheckInStatusResponse(
+          response(
+            {
+              code: "SESSION_BINDING_MISMATCH",
+              reason: "NETWORK_CHANGED",
+              message,
+            },
+            401,
+          ),
+        ),
+      ).toThrow(
+        expect.objectContaining({
+          statusCode: 401,
+          upstreamCode: "SESSION_BINDING_MISMATCH",
+        }),
+      )
+    },
+  )
 
   it("rejects a business error even when its data looks checked", () => {
     expect(() =>

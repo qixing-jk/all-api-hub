@@ -174,6 +174,7 @@ export function completeSessionCheckIn(
 
 /** Read while a provider-owned session is alive, or reuse evidence it already obtained. */
 export async function confirmCheckInAttempt(input: {
+  timeZone?: string
   account: SiteAccount
   result: AutoCheckinProviderOutcome
   startedAt: number
@@ -239,7 +240,10 @@ export async function confirmCheckInAttempt(input: {
       confirmation = { ...scope, kind: CHECK_IN_CONFIRMATION_KINDS.Unsupported }
     } else {
       try {
-        const stable = await readDayStableCheckInObservation(input.readStatus)
+        const stable = await readDayStableCheckInObservation(
+          input.readStatus,
+          input.timeZone,
+        )
         const observation = stable?.observation
         confirmation = observation
           ? {

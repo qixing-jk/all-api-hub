@@ -13,7 +13,11 @@ import {
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
-import { getCheckInDiscoveryPriority } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getCheckInDiscoveryPriority,
+  getCheckInResetTimeZone,
+} from "~/services/checkin/autoCheckin/providers/registry"
+import { isCheckInObservationCurrent } from "~/services/checkin/statusObservation"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -28,7 +32,6 @@ import type {
   CheckInSelectionState,
   PersistedCheckInMethodId,
 } from "~/types/checkIn"
-import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 const uniqueCandidateMethodIds = (
   candidateMethodIds: readonly CheckInMethodId[],
@@ -342,14 +345,11 @@ const deriveExecutionEligibility = (
   const checkedStatusIsCurrent =
     statusControlsExecution &&
     knownStatus?.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked &&
-    getDayKeyFromUnixSeconds(
-      Math.floor(statusObservedAt / 1000),
-      input.timeZone,
-    ) ===
-      getDayKeyFromUnixSeconds(
-        Math.floor((input.now ?? Date.now()) / 1000),
-        input.timeZone,
-      )
+    isCheckInObservationCurrent(
+      statusObservedAt,
+      getCheckInResetTimeZone(methodId) ?? input.timeZone,
+      input.now,
+    )
   if (
     statusControlsExecution &&
     knownStatus?.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled

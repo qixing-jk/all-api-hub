@@ -41,10 +41,18 @@ const noCredentialRecovery = {
   recoverUnauthorized: false,
 }
 
+export type CasaBrowserBinding = Pick<
+  ApiServiceRequest,
+  "fetchContext" | "forceTempWindow" | "currentTabFallback"
+>
+
 /** Only an authorized execution may renew credentials while reading eligibility. */
 export function fetchApiKeyCasaDailyCheckInStatus(
   request: ApiServiceRequest,
-  options: { allowAuthenticationRecovery?: boolean } = {},
+  options: {
+    allowAuthenticationRecovery?: boolean
+    onAuthenticatedTransport?: (binding: CasaBrowserBinding) => void
+  } = {},
 ) {
   const endpoint = createApiKeyCasaDailyCheckInStatusEndpoint()
   return executeAuthenticatedSub2ApiRequest(
@@ -55,7 +63,15 @@ export function fetchApiKeyCasaDailyCheckInStatus(
         endpoint,
         options: { method: "GET", cache: "no-store" },
       })
-      return parseApiKeyCasaDailyCheckInStatusResponse(response)
+      const status = parseApiKeyCasaDailyCheckInStatusResponse(response)
+      const { fetchContext, forceTempWindow, currentTabFallback } =
+        authenticatedRequest
+      options.onAuthenticatedTransport?.({
+        fetchContext,
+        forceTempWindow,
+        currentTabFallback,
+      })
+      return status
     },
     options.allowAuthenticationRecovery ? undefined : noCredentialRecovery,
   )

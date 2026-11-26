@@ -5,6 +5,7 @@ import {
 import {
   fetchApiKeyCasaDailyCheckInStatus,
   performApiKeyCasaDailyCheckIn,
+  type CasaBrowserBinding,
 } from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
@@ -17,6 +18,7 @@ import {
 
 import type {
   AutoCheckinProvider,
+  AutoCheckinProviderContext,
   AutoCheckinProviderReadContext,
 } from "./contracts"
 import {
@@ -28,26 +30,35 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) => {
-  const status = await fetchApiKeyCasaDailyCheckInStatus(
-    createSub2ApiCheckInReadRequest(context),
-    { allowAuthenticationRecovery: Boolean(context.authenticationRecovery) },
-  )
-  return toSub2ApiCheckInStatus(status, context.observedAt)
-}
+/** Keep the browser binding from a successful admission for the lifetime of this attempt. */
+function createOperations(execution?: AutoCheckinProviderContext) {
+  let binding: CasaBrowserBinding | undefined
+  const rememberBinding = (authenticated: CasaBrowserBinding) => {
+    binding =
+      authenticated.fetchContext || authenticated.forceTempWindow
+        ? authenticated
+        : undefined
+  }
+  const getStatus = async (context: AutoCheckinProviderReadContext) => {
+    // A passive readback can reuse the admitted browser without renewing credentials.
+    const request = createSub2ApiCheckInReadRequest(
+      context,
+      context.authenticationRecovery ?? (binding ? execution : undefined),
+    )
+    const status = await fetchApiKeyCasaDailyCheckInStatus(
+      { ...request, ...binding },
+      {
+        allowAuthenticationRecovery: Boolean(context.authenticationRecovery),
+        onAuthenticatedTransport:
+          execution && context.authenticationRecovery
+            ? rememberBinding
+            : undefined,
+      },
+    )
+    return toSub2ApiCheckInStatus(status, context.observedAt)
+  }
 
-export const apiKeyCasaProvider: AutoCheckinProvider = {
-  requiresAuthoritativeStatusBeforeMutation: true,
-
-  getReadiness: getSub2ApiCheckInReadiness,
-
-  detect(context) {
-    return detectWithStatusReadback(context, readStatus)
-  },
-
-  getStatus: readStatus,
-
-  async checkIn(account, context) {
+  const checkIn: AutoCheckinProvider["checkIn"] = async (account, context) => {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -58,7 +69,13 @@ export const apiKeyCasaProvider: AutoCheckinProvider = {
 
     try {
       await performApiKeyCasaDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...createSub2ApiCheckInMutationRequest(
+            account as SiteAccount,
+            context,
+          ),
+          ...binding,
+        },
         { beforeRecoveredMutation: context.beforeRecoveredMutation },
       )
       // `reward` is the configured daily amount, not a receipt for this claim.
@@ -74,5 +91,17 @@ export const apiKeyCasaProvider: AutoCheckinProvider = {
         account as SiteAccount,
       )
     }
+  }
+  return { getStatus, checkIn }
+}
+
+const operations = createOperations()
+export const apiKeyCasaProvider: AutoCheckinProvider = {
+  ...operations,
+  requiresAuthoritativeStatusBeforeMutation: true,
+  getReadiness: getSub2ApiCheckInReadiness,
+  forExecution: createOperations,
+  detect(context) {
+    return detectWithStatusReadback(context, operations.getStatus)
   },
 }

@@ -7,10 +7,13 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { getSiteCheckInDisplayState } from "~/features/AccountManagement/checkInStatus"
 import {
   fetchApiKeyCasaDailyCheckInStatus,
   performApiKeyCasaDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn"
+import { buildAutoCheckinAccountSnapshot } from "~/services/checkin/autoCheckin/accountSnapshot"
+import { inspectCheckInMethods } from "~/services/checkin/autoCheckin/domain"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/apiKeyCasa"
@@ -96,6 +99,44 @@ describe("ApiKey Casa check-in provider", () => {
 
   afterEach(() => vi.restoreAllMocks())
 
+  it.each([
+    ["2026-11-26T15:59Z", "2026-11-26T16:01Z", true, "outdated"],
+    ["2026-11-26T23:59Z", "2026-11-27T00:01Z", false, "current"],
+  ] as const)(
+    "expires checked status on the Beijing day (%s to %s)",
+    (start, end, eligible, display) => {
+      const account = createAccount()
+      const observedAt = Date.parse(start)
+      const now = Date.parse(end)
+      vi.spyOn(Date, "now").mockReturnValue(now)
+      account.checkIn.methodKnowledge.methods[METHOD_ID]!.status = {
+        ...notCheckedStatus,
+        today: "checked",
+        evidence: { source: "probe", observedAt },
+      }
+      expect(
+        inspectCheckInMethods({
+          config: account.checkIn,
+          candidateMethodIds: [METHOD_ID],
+          timeZone: "UTC",
+          now,
+        }).executionEligibility.eligible,
+      ).toBe(eligible)
+      expect(
+        getSiteCheckInDisplayState({
+          checkIn: account.checkIn,
+          siteType: SITE_TYPES.SUB2API,
+          baseUrl: account.site_url,
+        })?.kind,
+      ).toBe(display)
+      const snapshot = buildAutoCheckinAccountSnapshot(account, "Casa")
+      expect(snapshot.isCheckedInToday).toBe(eligible ? undefined : true)
+      expect(snapshot.skipReason).toBe(
+        eligible ? undefined : "already_checked_today",
+      )
+    },
+  )
+
   it("offers the method to Sub2API accounts", () => {
     expect(
       autoCheckinMethodRegistry
@@ -114,6 +155,25 @@ describe("ApiKey Casa check-in provider", () => {
         .getCandidates(SITE_TYPES.NEW_API, "https://apikey.casa")
         .map((candidate) => candidate.id),
     ).not.toContain(METHOD_ID)
+  })
+
+  it("reads eligibility again when the admission GET crosses Beijing midnight", async () => {
+    let now = Date.parse("2026-11-26T15:59:59Z")
+    vi.spyOn(Date, "now").mockImplementation(() => now)
+    vi.mocked(fetchApiKeyCasaDailyCheckInStatus)
+      .mockImplementationOnce(async () => {
+        now = Date.parse("2026-11-26T16:00:01Z")
+        return { enabled: true, checkedInToday: false }
+      })
+      .mockResolvedValueOnce({ enabled: true, checkedInToday: true })
+    const result = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: executionContext(),
+    })
+    expect(result).toMatchObject({ kind: "skipped", reason: "already_checked" })
+    expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenCalledTimes(2)
+    expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
   })
 
   it("discovers status without submitting a claim", async () => {
@@ -174,7 +234,7 @@ describe("ApiKey Casa check-in provider", () => {
         ...context,
         directRequestReason: undefined,
       }),
-      { allowAuthenticationRecovery: true },
+      expect.objectContaining({ allowAuthenticationRecovery: true }),
     )
   })
 

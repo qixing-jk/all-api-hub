@@ -59,6 +59,7 @@ const hasText = (value: unknown): value is string =>
 
 export const createSub2ApiCheckInReadRequest = (
   context: AutoCheckinProviderReadContext,
+  transportPolicy = context.authenticationRecovery,
 ): ApiServiceRequest => {
   const request =
     context.request ??
@@ -70,9 +71,13 @@ export const createSub2ApiCheckInReadRequest = (
     ...request,
     ...(context.signal ? { abortSignal: context.signal } : {}),
   }
-  return context.authenticationRecovery
+  return transportPolicy
     ? bindApiTransportRequest(
-        { ...readRequest, ...context.authenticationRecovery },
+        {
+          ...readRequest,
+          tempWindowRequestSource: transportPolicy.tempWindowRequestSource,
+          protectionBypassExecution: transportPolicy.protectionBypassExecution,
+        },
         API_DIRECT_REQUEST_REASONS.CallerManaged,
       )
     : readRequest

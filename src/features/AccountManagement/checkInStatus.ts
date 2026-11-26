@@ -11,7 +11,11 @@ import {
   inspectAccountCheckIn,
   resolveSelectedCheckInMethod,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
-import { supportsCheckInStatusReadback } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getCheckInResetTimeZone,
+  supportsCheckInStatusReadback,
+} from "~/services/checkin/autoCheckin/providers/registry"
+import { isCheckInObservationCurrent } from "~/services/checkin/statusObservation"
 import type { DisplaySiteData } from "~/types"
 import type {
   CheckInExecutionSkipReason,
@@ -84,11 +88,14 @@ export function getCheckInObservationTime(
 export function isSelectedCheckInStatusCurrent(
   account: StatusAccount,
 ): boolean {
-  const status = getSelectedCheckInStatus({
+  const methodId = resolveSelectedCheckInMethod({
     config: account.checkIn,
     siteType: account.siteType,
     siteUrl: account.baseUrl,
   })
+  if (!methodId) return false
+  const timeZone = getCheckInResetTimeZone(methodId)
+  const status = account.checkIn.methodKnowledge.methods[methodId]?.status
   if (!status || status.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
     return false
   }
@@ -97,14 +104,20 @@ export function isSelectedCheckInStatusCurrent(
     status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe ||
     status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution
   ) {
-    return isCheckInStatusDetectedToday(status.evidence.observedAt)
+    return isCheckInObservationCurrent(status.evidence.observedAt, timeZone)
   }
 
   if (status.evidence.legacyObservedAt !== undefined) {
-    return isCheckInStatusDetectedToday(status.evidence.legacyObservedAt)
+    return isCheckInObservationCurrent(
+      status.evidence.legacyObservedAt,
+      timeZone,
+    )
   }
 
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+  const todayKey = getDayKeyFromUnixSeconds(
+    Math.floor(Date.now() / 1000),
+    timeZone,
+  )
   return status.evidence.legacyDayKey === todayKey
 }
 
@@ -171,17 +184,6 @@ export function getSiteCheckInDisplayState(
       ? SITE_CHECK_IN_DISPLAY_KINDS.Pending
       : SITE_CHECK_IN_DISPLAY_KINDS.Manual,
   }
-}
-
-/** Returns whether a persisted check-in detection belongs to the current local day. */
-function isCheckInStatusDetectedToday(detectedAt?: number): boolean {
-  if (typeof detectedAt !== "number" || !Number.isFinite(detectedAt)) {
-    return false
-  }
-
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-  const detectedKey = getDayKeyFromUnixSeconds(Math.floor(detectedAt / 1000))
-  return detectedKey === todayKey
 }
 
 /** Summarizes saved intent and known execution gates without claiming a provider request will succeed. */

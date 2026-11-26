@@ -129,6 +129,8 @@ export type CheckInMethodPresentationMetadata = {
 }
 
 interface AutoCheckinMethodDefinitionBase {
+  /** Calendar used by the site to reset its daily check-in. Defaults to the device calendar. */
+  readonly resetTimeZone?: string
   readonly presentation?: Partial<
     Pick<CheckInMethodPresentationMetadata, "kind" | "sourceNameKey">
   >
@@ -666,6 +668,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: {
+    resetTimeZone: "Asia/Shanghai",
     // Public dashboard contract observed at https://apikey.casa/redeem.
     discoveryOrigins: ["https://apikey.casa"],
     presentation: { sourceNameKey: "methods.sources.apiKeyCasa" },
@@ -727,6 +730,15 @@ export function getCheckInDiscoveryPriority(methodId: CheckInMethodId): number {
   const definition: AutoCheckinMethodDefinition =
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
   return definition.discoveryPriority ?? CHECK_IN_DISCOVERY_PRIORITIES.Specific
+}
+
+/** A missing reset zone uses the device calendar. */
+export function getCheckInResetTimeZone(
+  methodId: CheckInMethodId,
+): string | undefined {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.resetTimeZone
 }
 
 /** Returns whether the selected method can verify today without posting. */
