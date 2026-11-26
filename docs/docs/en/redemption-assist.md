@@ -37,6 +37,10 @@ You can also select a redemption code and choose **"Redeem selected codes"** fro
 
 After completing the above steps, you can start experiencing the global redemption assistance capability.
 
+### Add whitelist rules from open tabs
+
+In **Basic Settings → Check-in & Redeem → Redemption Assist**, turn on **Enable URL whitelist**. Under **Custom regex patterns**, use **Choose from open tabs** to add a rule for all pages on the selected tab's origin. Deselecting a site removes its rule and leaves other rules in place. You can also edit the patterns directly. Click **Save** to apply your changes.
+
 ### Tutorial Two: Typical Redemption Process in Daily Use
 
 1. **Open the page containing the redemption code**

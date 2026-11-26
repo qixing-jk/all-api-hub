@@ -25,6 +25,7 @@ import {
 } from "./executionTypes"
 import {
   CHECKIN_FEEDBACK_ISSUE_LIMITS,
+  CHECKIN_FEEDBACK_ISSUE_TEMPLATE,
   CHECKIN_FEEDBACK_ISSUE_URL,
   CHECKIN_FEEDBACK_ISSUE_FIELDS as fields,
 } from "./githubIssue"
@@ -39,6 +40,7 @@ const DIAGNOSTIC_VALUES = {
 export interface CheckInFeedbackSnapshot {
   siteType: AccountSiteType
   baseUrl: string
+  siteName?: string
   authType?: AuthConfig["authType"]
   refresh?: Pick<SiteAccount, "health" | "last_sync_time">
   checkIn: CheckInConfig
@@ -69,14 +71,20 @@ export function getFeedbackExecutionRecord(
   return input.executionRecord ?? FEEDBACK_EXECUTION_RECORDS.NotLinked
 }
 
-/** Keeps only the deployment origin; malformed and non-web addresses are omitted. */
-export function getFeedbackOrigin(value: string): string | null {
+/** Parses only web addresses using the URL parser's native whitespace rules. */
+function parseFeedbackSite(value: string | null | undefined): URL | null {
+  if (!value) return null
   try {
     const url = new URL(value)
-    return ["http:", "https:"].includes(url.protocol) ? url.origin : null
+    return url.protocol === "http:" || url.protocol === "https:" ? url : null
   } catch {
     return null
   }
+}
+
+/** Keeps only the deployment origin; malformed and non-web addresses are omitted. */
+export function getFeedbackOrigin(value: string): string | null {
+  return parseFeedbackSite(value)?.origin ?? null
 }
 
 /** Omits absent or invalid persisted timestamps from public diagnostics. */
@@ -210,25 +218,35 @@ export function buildCheckInFeedbackIssue(
   title: string,
   context?: {
     origin: string | null
+    siteName?: string
     version: string
     notes: string
+    titleSummary?: string
+    titleFallback?: string
     browserInfo?: string
     /** Diagnostics only, when the form carries the site and description separately. */
     feedbackBody?: string
   },
 ) {
   const url = new URL(CHECKIN_FEEDBACK_ISSUE_URL)
-  url.searchParams.set(fields.TEMPLATE, "checkin_adaptation.yml")
+  const sharedSite = parseFeedbackSite(context?.origin)
+  const titleSiteName = sharedSite ? undefined : context?.siteName
+  const siteLabel = sharedSite?.host ?? titleSiteName
+  const notes = context?.notes.trim()
+  const summaryLine = notes?.split(/\r?\n/)[0] || context?.titleSummary
+  const titleDetail =
+    [siteLabel, summaryLine].filter(Boolean).join(" · ") ||
+    context?.titleFallback
+  url.searchParams.set(fields.TEMPLATE, CHECKIN_FEEDBACK_ISSUE_TEMPLATE)
   url.searchParams.set(
     fields.TITLE,
-    [title, context?.notes.trim().split(/\r?\n/)[0]]
+    [title, titleDetail]
       .filter(Boolean)
       .join(" ")
       .slice(0, CHECKIN_FEEDBACK_ISSUE_LIMITS.titleLength),
   )
   if (context) {
-    const origin = context.origin && getFeedbackOrigin(context.origin)
-    if (origin) url.searchParams.set(fields.SITE_URL, origin)
+    if (sharedSite) url.searchParams.set(fields.SITE_URL, sharedSite.origin)
     url.searchParams.set(
       fields.VERSION,
       context.version.slice(0, CHECKIN_FEEDBACK_ISSUE_LIMITS.versionLength),
@@ -241,7 +259,7 @@ export function buildCheckInFeedbackIssue(
           CHECKIN_FEEDBACK_ISSUE_LIMITS.browserInfoLength,
         ),
       )
-    if (context.notes.trim()) {
+    if (notes) {
       url.searchParams.set(
         fields.SUMMARY,
         context.notes.slice(0, CHECKIN_FEEDBACK_ISSUE_LIMITS.summaryLength),
@@ -279,5 +297,11 @@ export function buildCheckInFeedbackIssue(
       url.searchParams.delete(field)
     }
   }
-  return { url: url.href, needsCopy }
+  return {
+    url: url.href,
+    // Use the encoded title in case truncation split a Unicode surrogate pair.
+    title: url.searchParams.get(fields.TITLE) ?? "",
+    titleSiteName,
+    needsCopy,
+  }
 }

@@ -15,7 +15,9 @@ export async function assertAccountDetectionOutcome({
     !expectedType ||
     !fields ||
     !Object.keys(fields).length ||
-    !["absent", "disabled", "enabled"].includes(saveState)
+    !["absent", "disabled", "enabled", "validates-access-token"].includes(
+      saveState,
+    )
   )
     throw new Error(
       "Detection outcome requires type, expected fields and save state",
@@ -46,7 +48,13 @@ export async function assertAccountDetectionOutcome({
   const save = dialog.getByTestId(accounts.confirmAddButton)
   if (saveState === "absent")
     await expect(save).toHaveCount(0, { timeout: timeoutMs })
-  else {
+  else if (saveState === "validates-access-token") {
+    await save.click({ timeout: timeoutMs })
+    await expect(dialog).toBeVisible({ timeout: timeoutMs })
+    await expect(dialog.getByTestId(accounts.accessTokenInput)).toBeFocused({
+      timeout: timeoutMs,
+    })
+  } else {
     await expect(save).toBeVisible({ timeout: timeoutMs })
     if (saveState === "enabled")
       await expect(save).toBeEnabled({ timeout: timeoutMs })
@@ -116,6 +124,34 @@ export async function detectAccountSiteType({
     await outcome.dispose()
   }
   return dialog
+}
+
+/** Cancel pending duplicate confirmation and let any dispatched save finish. */
+export async function settleAccountSaveForCleanup(
+  page,
+  { timeoutMs = 60_000 } = {},
+) {
+  const busySave = page.locator(
+    `[data-testid="${accounts.confirmAddButton}"][aria-busy="true"]`,
+  )
+  const duplicateWarning = page.getByRole("dialog").filter({
+    has: page.getByTestId(accounts.duplicateWarningContinueButton),
+  })
+  await expect
+    .poll(
+      async () => {
+        if (await duplicateWarning.isVisible())
+          await duplicateWarning
+            .getByRole("button", { name: /^(取消|Cancel)$/i })
+            .click({ timeout: timeoutMs })
+        return !(await busySave.isVisible())
+      },
+      {
+        timeout: timeoutMs,
+        message: "The account save must settle before cleanup",
+      },
+    )
+    .toBe(true)
 }
 
 /** Close an owned draft through its application control and wait for closure. */

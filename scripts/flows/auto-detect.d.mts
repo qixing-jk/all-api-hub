@@ -1,5 +1,10 @@
 import type { Locator, Page } from "@playwright/test"
 
+export function settleAccountSaveForCleanup(
+  page: Page,
+  options?: { timeoutMs?: number },
+): Promise<void>
+
 export function closeAccountDraft(
   page: Page,
   options?: { timeoutMs?: number },
@@ -19,7 +24,7 @@ export function assertAccountDetectionOutcome(options: {
       string
     >
   >
-  saveState: "absent" | "disabled" | "enabled"
+  saveState: "absent" | "disabled" | "enabled" | "validates-access-token"
   guidance?: string | RegExp
   timeoutMs?: number
 }): Promise<Locator>

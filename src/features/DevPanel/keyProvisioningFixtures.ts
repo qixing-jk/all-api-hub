@@ -7,6 +7,11 @@ import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/account
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
 import {
+  ACCOUNT_KEY_PROVISIONING_COVERAGE,
+  ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
+  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESOURCE_STATUSES,
   AccountKeyResourceError,
   type AccountKeyProvisioningRequirement,
   type AccountKeyProvisioningSnapshot,
@@ -15,6 +20,7 @@ import {
   type AccountKeyResourceSession,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
 import { createFreeModelKeyEditor } from "~/services/apiAdapters/freemodel/keyResources"
 import { createGrsaiKeyEditor } from "~/services/apiAdapters/grsai/keyResourceEditor"
@@ -28,8 +34,12 @@ import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keys/
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
-import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
+import {
+  ACCOUNT_KEY_AUTO_PROVISION_MODES,
+  type AccountKeyAutoProvisionMode,
+} from "~/types/accountKeyAutoProvisioning"
 
 import type { KeyProvisioningPreviewScenario } from "./keyProvisioningPreview"
 
@@ -73,53 +83,58 @@ const groupedRequirements = (availableGroups: Groups) => async () =>
   availableGroups.map((group) => ({
     requirementKey: group.requirementKey,
     displayName: group.displayName,
-    provisioning: { kind: "automatic" as const },
+    provisioning: {
+      kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+    },
   }))
 
+const compatibleKeyFixture = ({
+  siteType,
+  availableGroups,
+}: FixtureParams): Fixture => {
+  const variant = resolveNewApiKeyVariant(siteType)
+  const groupCatalog = Object.fromEntries(
+    availableGroups.map((group) => [
+      group.displayName,
+      { desc: group.description, ratio: group.ratio },
+    ]),
+  )
+  let requirementSnapshot: readonly AccountKeyProvisioningRequirement[] = []
+  const requirements = async () =>
+    (requirementSnapshot = await variant.group.loadRequirements(
+      async () => groupCatalog,
+      "Preview account",
+    ))
+  return {
+    requirements,
+    emptyRequirementsAction: "default-creation",
+    editor: (requirementKey) =>
+      createNewApiKeyEditor(
+        variant,
+        previewRequest,
+        undefined,
+        requirementKey
+          ? {
+              preferredGroup: variant.group.resolveRequirementGroup(
+                requirementSnapshot,
+                requirementKey,
+              ),
+            }
+          : undefined,
+      ),
+    fieldOptions: {
+      fieldId: "group",
+      values: availableGroups.map((group) => ({
+        value: group.displayName,
+        displayLabel: group.displayName,
+      })),
+    },
+  }
+}
+
 const fixtures = {
-  [ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily]: ({
-    siteType,
-    availableGroups,
-  }: FixtureParams): Fixture => {
-    const variant = resolveNewApiKeyVariant(siteType)
-    const groupCatalog = Object.fromEntries(
-      availableGroups.map((group) => [
-        group.displayName,
-        { desc: group.description, ratio: group.ratio },
-      ]),
-    )
-    let requirementSnapshot: readonly AccountKeyProvisioningRequirement[] = []
-    const requirements = async () =>
-      (requirementSnapshot = await variant.group.loadRequirements(
-        async () => groupCatalog,
-        "Preview account",
-      ))
-    return {
-      requirements,
-      emptyRequirementsAction: "default-creation",
-      editor: (requirementKey) =>
-        createNewApiKeyEditor(
-          variant,
-          previewRequest,
-          undefined,
-          requirementKey
-            ? {
-                preferredGroup: variant.group.resolveRequirementGroup(
-                  requirementSnapshot,
-                  requirementKey,
-                ),
-              }
-            : undefined,
-        ),
-      fieldOptions: {
-        fieldId: "group",
-        values: availableGroups.map((group) => ({
-          value: group.displayName,
-          displayLabel: group.displayName,
-        })),
-      },
-    }
-  },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily]: compatibleKeyFixture,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily]: compatibleKeyFixture,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2]: ({
     availableGroups,
   }: FixtureParams): Fixture => ({
@@ -256,6 +271,7 @@ export function getKeyProvisioningFixture(
   singleTarget = false,
 ) {
   const capabilities = getSiteTypeCapabilities(siteType)
+  if (!capabilities.account?.keyResourceManagement) return undefined
   const family = capabilities.family
   const factory =
     family && Object.hasOwn(fixtures, family)
@@ -283,7 +299,10 @@ export async function createKeyProvisioningFixtureSession(
     account.siteType,
     options.scenario === "single-target",
   )
-  if (!fixture) throw new AccountKeyResourceError({ code: "unavailable" })
+  if (!fixture)
+    throw new AccountKeyResourceError({
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+    })
   const requirements = await fixture.requirements?.()
   const facts = new Map<string, AccountKeyResourceFacts>()
   const scope = {
@@ -299,12 +318,16 @@ export async function createKeyProvisioningFixtureSession(
       await new Promise((resolve) => setTimeout(resolve, options.delayMs))
     options.signal?.throwIfAborted()
     const lastRequirement =
-      mode === "all-groups" ? requirements?.at(-1)?.requirementKey : undefined
+      mode === ACCOUNT_KEY_AUTO_PROVISION_MODES.AllGroups
+        ? requirements?.at(-1)?.requirementKey
+        : undefined
     if (
       options.scenario === "uncertain" &&
       (!lastRequirement || requirementKey === lastRequirement)
     )
-      throw new AccountKeyResourceError({ code: "mutation_state_uncertain" })
+      throw new AccountKeyResourceError({
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      })
     const label =
       requirements?.find((entry) => entry.requirementKey === requirementKey)
         ?.displayName ?? account.name
@@ -318,7 +341,7 @@ export async function createKeyProvisioningFixtureSession(
       ref,
       displayName: label,
       maskedLabel: "sk-preview…",
-      status: "enabled",
+      status: ACCOUNT_KEY_RESOURCE_STATUSES.Enabled,
       fields: [],
       actions: { canUpdate: false, canDelete: false },
     }
@@ -338,7 +361,7 @@ export async function createKeyProvisioningFixtureSession(
                 accountName: account.name,
                 baseUrl: account.baseUrl,
                 siteType: account.siteType,
-                apiType: "openai",
+                apiType: API_TYPES.OPENAI,
                 tagIds: [],
               },
             }),
@@ -347,7 +370,9 @@ export async function createKeyProvisioningFixtureSession(
     }
   }
   const unavailable = () => {
-    throw new AccountKeyResourceError({ code: "unavailable" })
+    throw new AccountKeyResourceError({
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+    })
   }
   return {
     resolveDefaultScope: async () => scope,
@@ -373,9 +398,9 @@ export async function createKeyProvisioningFixtureSession(
                         scopeKey: scope.scopeKey,
                         resourceId: `covered-${index}`,
                       },
-                      coverage: "usable" as const,
+                      coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable,
                       placement: {
-                        kind: "requirement" as const,
+                        kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
                         requirementKeys: [requirement.requirementKey],
                       },
                     }))
@@ -385,14 +410,19 @@ export async function createKeyProvisioningFixtureSession(
             provision: async (requirementKey) => {
               try {
                 const result = await create(requirementKey)
-                return { certainty: "applied" as const, value: result }
+                return {
+                  certainty: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
+                  value: result,
+                }
               } catch (error) {
                 if (
                   error instanceof AccountKeyResourceError &&
-                  error.failure.code === "mutation_state_uncertain"
+                  error.failure.code ===
+                    ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
                 )
                   return {
-                    certainty: "possibly-applied" as const,
+                    certainty:
+                      NATIVE_RESOURCE_MUTATION_CERTAINTIES.PossiblyApplied,
                     failure: error.failure,
                   }
                 throw error
@@ -412,7 +442,7 @@ export async function createKeyProvisioningFixtureSession(
           const validation = definition.validate(values)
           if (!validation.valid)
             throw new AccountKeyResourceError({
-              code: "validation_failed",
+              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
               fieldIssues: validation.issues,
             })
           return create(requirementKey)
@@ -420,7 +450,9 @@ export async function createKeyProvisioningFixtureSession(
         loadOptions: async (fieldId, values) => {
           options.signal?.throwIfAborted()
           if (options.scenario === "option-failure")
-            throw new AccountKeyResourceError({ code: "unavailable" })
+            throw new AccountKeyResourceError({
+              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+            })
           if (fieldId === fixture.fieldOptions?.fieldId)
             return fixture.fieldOptions.values
           return fixture.useNativeOptionLoader

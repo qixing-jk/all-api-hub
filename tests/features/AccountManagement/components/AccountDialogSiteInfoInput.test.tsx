@@ -30,6 +30,29 @@ describe("AccountDialog SiteInfoInput", () => {
       }),
     ).toBeInTheDocument()
   })
+  it.each([AuthTypeEnum.Cookie, AuthTypeEnum.AccessToken])(
+    "describes the selected Shell authentication method (%s)",
+    async (authType) => {
+      const props = createAddModeProps()
+      props.testSiteType = SITE_TYPES.SHELL_API
+      props.authType = authType
+      render(<SiteInfoInput {...withSitePolicy(props)} />)
+      const helpKey =
+        authType === AuthTypeEnum.Cookie
+          ? "accountDialog:siteInfo.browserCookieSession"
+          : "accountDialog:siteInfo.cookieWarning"
+      expect(
+        await screen.findByRole("button", { name: helpKey }),
+      ).toBeInTheDocument()
+      if (authType === AuthTypeEnum.AccessToken) {
+        expect(
+          screen.queryByRole("button", {
+            name: "accountDialog:siteInfo.browserCookieSession",
+          }),
+        ).not.toBeInTheDocument()
+      }
+    },
+  )
   beforeEach(() => {
     mockGetAllTabs.mockReset().mockResolvedValue([])
   })
@@ -49,6 +72,7 @@ describe("AccountDialog SiteInfoInput", () => {
       {
         url: "https://recent.example/account?token=secret",
         title: "Recent",
+        favIconUrl: "https://recent.example/favicon.ico",
         lastAccessed: 50,
       },
       {
@@ -85,6 +109,11 @@ describe("AccountDialog SiteInfoInput", () => {
       "Older — https://older.example",
       "https://untitled.example",
     ])
+    expect(
+      screen
+        .getByRole("option", { name: "Recent — https://recent.example" })
+        .querySelector("img"),
+    ).toHaveAttribute("src", "https://recent.example/favicon.ico")
     fireEvent.change(selector, { target: { value: "older" } })
     rerender(<SiteInfoInput {...withSitePolicy({ ...props, url: "older" })} />)
     expect(screen.getAllByRole("option")).toHaveLength(1)
@@ -111,10 +140,9 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(props.onUrlChange).toHaveBeenCalledWith("https://manual.example")
   })
 
-  it("does not query recent tabs when the current site is available, editing, or locked", async () => {
+  it("does not query recent tabs when editing or the URL is locked", async () => {
     const props = createAddModeProps()
-    const { rerender } = render(<SiteInfoInput {...withSitePolicy(props)} />)
-    rerender(
+    const { rerender } = render(
       <SiteInfoInput
         {...withSitePolicy({
           ...props,
@@ -206,6 +234,8 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(input).toHaveValue("")
     expect(props.onClearUrl).toHaveBeenCalledTimes(1)
     await user.type(input, "https://manual.example")
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+    expect(dropdownButton).toBeEnabled()
     await user.tab()
     expect(input).toHaveValue("https://manual.example")
     await user.click(
@@ -217,8 +247,9 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(input).toHaveValue("https://manual.example")
   })
 
-  it("discards pending recent sites when a current site becomes available", async () => {
-    let resolveTabs!: (tabs: { url: string }[]) => void
+  it("offers the current site alongside recent sites that finish loading later", async () => {
+    const user = userEvent.setup()
+    let resolveTabs!: (tabs: { url: string; title: string }[]) => void
     mockGetAllTabs.mockReturnValue(
       new Promise((resolve) => {
         resolveTabs = resolve
@@ -228,6 +259,8 @@ describe("AccountDialog SiteInfoInput", () => {
     props.currentTabUrl = null
     const { rerender } = render(<SiteInfoInput {...withSitePolicy(props)} />)
     await waitFor(() => expect(mockGetAllTabs).toHaveBeenCalledTimes(1))
+    const input = screen.getByLabelText("accountDialog:siteInfo.siteUrl")
+    await user.click(input)
     rerender(
       <SiteInfoInput
         {...withSitePolicy({
@@ -236,18 +269,28 @@ describe("AccountDialog SiteInfoInput", () => {
         })}
       />,
     )
-    resolveTabs([{ url: "https://stale.example" }])
+    resolveTabs([{ url: "https://other.example/dashboard", title: "Other" }])
+    const dropdown = await screen.findByRole("button", {
+      name: "accountDialog:siteInfo.recentTabSites",
+    })
+    expect(input).toHaveFocus()
     expect(
-      await screen.findByRole("button", {
+      screen.getByRole("button", {
         name: "accountDialog:siteInfo.useCurrent",
       }),
     ).toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", {
-        name: "accountDialog:siteInfo.recentTabSites",
-      }),
-    ).not.toBeInTheDocument()
+    await user.click(dropdown)
     expect(props.onUrlChange).not.toHaveBeenCalled()
+    await user.click(
+      await screen.findByRole("option", {
+        name: "Other — https://other.example",
+      }),
+    )
+    expect(props.onUrlChange).toHaveBeenLastCalledWith("https://other.example")
+    await user.click(
+      screen.getByRole("button", { name: "accountDialog:siteInfo.useCurrent" }),
+    )
+    expect(props.onUseCurrentTab).toHaveBeenCalledTimes(1)
   })
 
   it("clears recent site options when recent tabs are disabled and does not retain stale options on re-enable", async () => {
@@ -270,12 +313,12 @@ describe("AccountDialog SiteInfoInput", () => {
       }),
     ).toBeInTheDocument()
 
-    // Disable recent tabs by providing a currentTabUrl
+    // Disable recent tabs by locking the URL after detection.
     rerender(
       <SiteInfoInput
         {...withSitePolicy({
           ...props,
-          currentTabUrl: "https://current.example",
+          isDetected: true,
         })}
       />,
     )
@@ -443,7 +486,7 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
   })
 
-  it("shows one pre-detection cookie permission action when cookie auth is selected", async () => {
+  it("shows a neutral Cookie permission notice before detection when Cookie auth is selected", async () => {
     const user = userEvent.setup()
     const props = createAddModeProps()
     props.authType = AuthTypeEnum.Cookie
@@ -451,17 +494,29 @@ describe("AccountDialog SiteInfoInput", () => {
 
     render(<SiteInfoInput {...withSitePolicy(props)} />)
 
-    expect(
-      await screen.findByText(
-        "accountDialog:form.cookiePermissionRecommendationDesc",
-      ),
-    ).toBeInTheDocument()
-
-    await user.click(
-      screen.getByTestId(
-        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
-      ),
+    const notice = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
     )
+    expect(notice).toHaveRole("note")
+    expect(notice).toHaveAttribute("data-tone", "neutral")
+    expect(notice).toHaveAccessibleDescription(
+      "accountDialog:form.cookiePermissionRecommendationDesc",
+    )
+
+    const grantButton = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
+    )
+    expect(notice).toContainElement(grantButton)
+    expect(grantButton).toHaveAccessibleName(
+      "accountDialog:form.cookiePermissionEnableCookieAuth",
+    )
+    expect(grantButton).toHaveTextContent(
+      "accountDialog:form.cookiePermissionEnableShort",
+    )
+    expect(grantButton).toHaveTextContent(
+      "accountDialog:form.cookiePermissionEnableCookieAuth",
+    )
+    await user.click(grantButton)
 
     expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
   })
@@ -545,23 +600,27 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(
       screen.queryByText("https://current.example.com"),
     ).not.toBeInTheDocument()
-    expect(useCurrentButton).toHaveAttribute(
-      "title",
+    await user.hover(useCurrentButton)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "https://current.example.com",
     )
     // Narrow viewports keep the URL readable by dropping the action label.
     expect(useCurrentButton.querySelector("span")).toHaveClass(
       "hidden",
-      "min-[360px]:inline",
+      "@min-[22rem]:inline",
     )
 
     await user.click(useCurrentButton)
     expect(props.onUseCurrentTab).toHaveBeenCalledTimes(1)
   })
 
-  it("hides the reuse action while the field already holds that site", async () => {
+  it("keeps the site dropdown available when the current site is already filled", async () => {
     const props = createAddModeProps()
     props.url = "https://current.example.com"
+    mockGetAllTabs.mockResolvedValue([
+      { url: "https://current.example.com/dashboard" },
+      { url: "https://other.example.com/" },
+    ])
 
     const { rerender } = render(<SiteInfoInput {...withSitePolicy(props)} />)
 
@@ -574,10 +633,10 @@ describe("AccountDialog SiteInfoInput", () => {
       }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole("button", {
+      await screen.findByRole("button", {
         name: "accountDialog:siteInfo.recentTabSites",
       }),
-    ).not.toBeInTheDocument()
+    ).toBeEnabled()
 
     // A trailing slash or a path is still the site the action would fill.
     rerender(

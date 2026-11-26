@@ -65,9 +65,11 @@
       "includeAccountSiteUrlsDesc": "各アカウントのサイト URL オリジン配下のすべてのページを許可します。",
       "includeCheckInAndRedeemUrls": "チェックイン / 引き換え URL を含める",
       "includeCheckInAndRedeemUrlsDesc": "各アカウントのチェックインページと引き換えページ（カスタムまたは既定）を許可します。",
+      "noTabs": "一致するウェブタブはありません。下の欄にパターンを入力できます。",
       "patterns": "カスタム正規表現パターン",
       "patternsDesc": "1 行につき 1 つの JavaScript RegExp パターンを入力します。大文字小文字を区別しない一致が適用されます。",
-      "patternsPlaceholder": "^https://example\\.com/console/topup"
+      "patternsPlaceholder": "^https://example\\.com/console/topup",
+      "tabPicker": "開いているタブから選択"
     }
   }
 }

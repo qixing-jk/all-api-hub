@@ -53,6 +53,10 @@ import {
   expectAccountListItemVisibleBySite,
   waitForSavedAccount,
 } from "~~/e2e/utils/realSite/accountAdd"
+import {
+  closeAccountDraft,
+  settleAccountSaveForCleanup,
+} from "~~/scripts/flows/auto-detect.mjs"
 
 parallelizeShardableSpec()
 
@@ -1597,10 +1601,11 @@ test("adds a Grsai account from its logged-in console session", async ({
 })
 
 for (const scenario of [
-  { userId: 99, duplicate: true },
-  { userId: 100, duplicate: false },
+  { userId: 99, duplicateAction: "continue" },
+  { userId: 99, duplicateAction: "cancel" },
+  { userId: 100, duplicateAction: null },
 ]) {
-  test(`checks a manual addition by identity before saving: ${scenario.duplicate ? "same user" : "different user"}`, async ({
+  test(`checks a manual addition by identity before saving: ${scenario.duplicateAction ? `${scenario.duplicateAction} duplicate` : "different user"}`, async ({
     context,
     extensionId,
     page,
@@ -1665,12 +1670,22 @@ for (const scenario of [
     await page.getByPlaceholder("Please enter exchange rate").fill("7")
     await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
 
-    if (scenario.duplicate) {
+    if (scenario.duplicateAction) {
       await expect(duplicateHeading).toBeVisible()
       await expect(
         page.getByText(/user ID 99 is already saved \(existing-user\)/),
       ).toBeVisible()
       expect(await readStoredAccounts(serviceWorker)).toHaveLength(1)
+      if (scenario.duplicateAction === "cancel") {
+        await expect(
+          page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
+        ).toHaveAttribute("aria-busy", "true")
+        await settleAccountSaveForCleanup(page, { timeoutMs: 5_000 })
+        await expect(duplicateHeading).toBeHidden()
+        await closeAccountDraft(page)
+        expect(await readStoredAccounts(serviceWorker)).toHaveLength(1)
+        return
+      }
       await page
         .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.duplicateWarningContinueButton)
         .click()

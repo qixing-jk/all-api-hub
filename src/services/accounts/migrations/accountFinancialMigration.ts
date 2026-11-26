@@ -6,6 +6,7 @@ import {
   currentDailyUsdContract,
   normalizeRecordedDailyReportScope,
 } from "~/services/accounts/migrations/financialObservationCompatibility"
+import { isCompatibleAccountFamily } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
   balanceSnapshotSchema,
@@ -131,7 +132,7 @@ function normalizeCurrentConsumptionContracts(
       )
         cumulative = true
     } else if (
-      adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily &&
+      isCompatibleAccountFamily(adapterFamily) &&
       source.adapter === siteType &&
       (source.operation === "/api/log/self/stat:quota" ||
         source.operation === "/api/log/self:consumption") &&

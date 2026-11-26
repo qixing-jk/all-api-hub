@@ -8,6 +8,7 @@ import { FeedbackReportPreview } from "./FeedbackReportPreview"
 /** Keeps preview, diagnostic editing and manual copying in native disclosures. */
 export function FeedbackReportEditor({
   id,
+  issueTitle,
   report,
   details,
   setDetails,
@@ -20,6 +21,7 @@ export function FeedbackReportEditor({
   setRawOpen,
 }: {
   id: string
+  issueTitle: string
   report: string
   details: string
   setDetails: (value: string) => void
@@ -36,15 +38,21 @@ export function FeedbackReportEditor({
     <details
       open={previewOpen}
       onToggle={(event) => setPreviewOpen(event.currentTarget.open)}
-      className="group corners-concentric border-border rounded-lg border [--corner-inset:1px]"
+      className="group rounded-lg border border-border [--corner-inset:1px] corners-concentric"
     >
-      <summary className="hover:bg-surface-subtle focus-visible:outline-ring dark:hover:bg-card/50 gap-y-density-2 py-density-3 flex cursor-pointer list-none items-center justify-between gap-x-2 rounded-[var(--corner-inner-radius)] px-4 text-sm font-medium group-open:rounded-b-none focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-x-2 gap-y-density-2 rounded-[var(--corner-inner-radius)] px-4 py-density-3 text-sm font-medium group-open:rounded-b-none hover:bg-surface-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dark:hover:bg-card/50 [&::-webkit-details-marker]:hidden">
         {t("checkInFeedback.preview")}
         <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
       </summary>
-      <div className="border-border space-y-density-4 py-density-4 border-t px-4">
+      <div className="space-y-density-4 border-t border-border px-4 py-density-4">
+        <dl className="space-y-density-1">
+          <dt className="text-xs font-medium text-muted-foreground">
+            {t("checkInFeedback.titlePreview")}
+          </dt>
+          <dd className="text-sm font-medium break-words">{issueTitle}</dd>
+        </dl>
         <FeedbackReportPreview content={report} />
-        <details className="border-border pt-density-3 border-t">
+        <details className="border-t border-border pt-density-3">
           <summary className="cursor-pointer text-xs font-medium">
             {t("checkInFeedback.editReport")}
           </summary>
@@ -82,7 +90,7 @@ export function FeedbackReportEditor({
         <details
           open={rawOpen}
           onToggle={(event) => setRawOpen(event.currentTarget.open)}
-          className="border-border pt-density-3 border-t"
+          className="border-t border-border pt-density-3"
         >
           <summary className="cursor-pointer text-xs font-medium">
             {t("checkInFeedback.fullReport")}

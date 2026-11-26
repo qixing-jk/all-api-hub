@@ -20,6 +20,7 @@ import {
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
 } from "~/services/accounts/accountSiteProfile/contracts"
 import {
+  ACCOUNT_SITE_ACCESS_TOKEN_GUIDES,
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_DEFINITION_SCOPES,
   ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS,
@@ -103,9 +104,9 @@ describe("access-token verification guide metadata", () => {
     const projection = getAccountSiteOnboardingDefinitions().find(
       (row) => row.siteType === SITE_TYPES.NEW_API,
     )!
-    definition.onboarding!.accessTokenVerificationGuide!.showRotationWarning =
-      false
-    projection.accessTokenVerificationGuide!.copy = "apiyi"
+    definition.onboarding!.accessTokenVerificationGuide!.showRotationWarning = false
+    projection.accessTokenVerificationGuide!.copy =
+      ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.ApiYi
 
     expect(
       getAccountSiteDefinition(SITE_TYPES.NEW_API)?.onboarding
@@ -145,6 +146,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.NEW_API
   | typeof SITE_TYPES.APIYI
   | typeof SITE_TYPES.LAOZHANG
+  | typeof SITE_TYPES.SHELL_API
   | typeof SITE_TYPES.MODELFLARE
   | typeof SITE_TYPES.ANYROUTER
   | typeof SITE_TYPES.VELOERA
@@ -526,6 +528,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.NEW_API,
       SITE_TYPES.APIYI,
       SITE_TYPES.LAOZHANG,
+      SITE_TYPES.SHELL_API,
       SITE_TYPES.MODELFLARE,
       SITE_TYPES.ANYROUTER,
       SITE_TYPES.VELOERA,

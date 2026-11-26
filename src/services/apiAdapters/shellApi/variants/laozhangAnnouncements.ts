@@ -2,7 +2,7 @@ import type { SiteAnnouncementsCapability } from "~/services/apiAdapters/contrac
 import {
   fetchLaoZhangMessages,
   markLaoZhangMessageRead,
-} from "~/services/apiService/newApiFamily/variants/laozhangMessages"
+} from "~/services/apiService/shellApiFamily/laozhangMessages"
 
 export const laoZhangAccountAnnouncements: SiteAnnouncementsCapability = {
   fetch: fetchLaoZhangMessages,

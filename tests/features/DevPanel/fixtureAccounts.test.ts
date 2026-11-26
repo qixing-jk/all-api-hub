@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_SITE_TYPE_VALUES } from "~/constants/siteType"
 import {
   addDevFinancialFixtureAccounts,
   addDevFixtureAccounts,
@@ -79,18 +80,18 @@ const realAccount = {
 describe("dev fixture accounts", () => {
   it("creates native zero, missing and stale examples through the dev generator", async () => {
     await expect(addDevFinancialFixtureAccounts("site-states")).resolves.toBe(
-      121,
+      ACCOUNT_SITE_TYPE_VALUES.length * 3 + 1,
     )
     const accounts = addAccountMock.mock.calls.map(([account]) => account)
     expect(
       accounts.filter((a) => a.site_name.endsWith(" · zero")),
-    ).toHaveLength(40)
+    ).toHaveLength(ACCOUNT_SITE_TYPE_VALUES.length)
     expect(
       accounts.filter((a) => a.site_name.endsWith(" · missing")),
-    ).toHaveLength(40)
+    ).toHaveLength(ACCOUNT_SITE_TYPE_VALUES.length)
     expect(
       accounts.filter((a) => a.site_name.endsWith(" · stale")),
-    ).toHaveLength(40)
+    ).toHaveLength(ACCOUNT_SITE_TYPE_VALUES.length)
   })
   it("mocks native site types with their default units and independent funds", async () => {
     await addDevFinancialFixtureAccounts(DEV_FINANCIAL_FIXTURE_KINDS.SiteTypes)
@@ -98,6 +99,10 @@ describe("dev fixture accounts", () => {
     const find = (type: string) =>
       accounts.find((account) => account.site_type === type)
     expect(find("new-api")?.account_info.balance.positions[0]).toMatchObject({
+      asset: { kind: "currency", code: "USD" },
+      amount: { value: "10", source: { amountInputs: { quota: "5000000" } } },
+    })
+    expect(find("shell-api")?.account_info.balance.positions[0]).toMatchObject({
       asset: { kind: "currency", code: "USD" },
       amount: { value: "10", source: { amountInputs: { quota: "5000000" } } },
     })

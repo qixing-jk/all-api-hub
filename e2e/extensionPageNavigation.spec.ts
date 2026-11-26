@@ -47,6 +47,38 @@ test("reuses an already matching extension tab", async ({
   expect(targetPage).toBe(existingPage)
 })
 
+for (const initiallyOpen of [false, true]) {
+  test(`recognizes a consumed navigation parameter in ${initiallyOpen ? "an existing" : "a new"} extension tab`, async ({
+    context,
+    extensionId,
+  }) => {
+    await context.addInitScript(() => {
+      const destination = new URL(location.href)
+      if (destination.searchParams.has("navigationTest")) {
+        destination.searchParams.delete("navigationTest")
+        history.replaceState(null, "", destination.href)
+      }
+    })
+    const existingPage = initiallyOpen ? await context.newPage() : null
+    const params = {
+      extensionId,
+      path: OPTIONS_PAGE_PATH,
+      hash: `#${MENU_ITEM_IDS.ABOUT}`,
+      searchParams: { navigationTest: "consumed" },
+      timeoutMs: 5_000,
+    }
+    const targetPagePromise = waitForExtensionPage(context, params)
+    const targetPage = existingPage ?? (await context.newPage())
+    await targetPage.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?navigationTest=consumed${params.hash}`,
+    )
+    expect(new URL(targetPage.url()).searchParams.has("navigationTest")).toBe(
+      false,
+    )
+    expect(await targetPagePromise).toBe(targetPage)
+  })
+}
+
 test("waits for a new matching tab when existing-tab reuse is disabled", async ({
   context,
   extensionId,

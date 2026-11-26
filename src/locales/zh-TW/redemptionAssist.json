@@ -65,9 +65,11 @@
       "includeAccountSiteUrlsDesc": "允許每個帳號站點 URL（同源）下的所有頁面。",
       "includeCheckInAndRedeemUrls": "包含簽到/兌換 URL",
       "includeCheckInAndRedeemUrlsDesc": "允許每個帳號的簽到與兌換頁面（自定義或預設）。",
+      "noTabs": "沒有符合的網頁分頁。你可以在下方輸入比對規則。",
       "patterns": "自定義正則規則",
       "patternsDesc": "每行一條 JavaScript RegExp 語法的正規表示式（匹配時會忽略大小寫）。",
-      "patternsPlaceholder": "^https://example\\.com/console/topup"
+      "patternsPlaceholder": "^https://example\\.com/console/topup",
+      "tabPicker": "從已開啟的分頁選擇"
     }
   }
 }

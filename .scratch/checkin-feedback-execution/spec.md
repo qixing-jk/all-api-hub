@@ -87,3 +87,6 @@ pnpm knip
 英文手机场景在 run3 以修正后的断言通过。此前黄色背景条
 方案已按用户反馈取消，`diagnostics-results/issue1880-failure-emphasis/` 仅留本地
 供对照，不作为最终预览；这些阶段证据不提交或自动删除。
+
+标题预览和站点名称回退重构的[本地验收报告](../../diagnostics-results/checkin-feedback-title-scout/README.md)
+记录了分支审查范围、行为检查及 Chromium 对照截图。

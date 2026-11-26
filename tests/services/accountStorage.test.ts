@@ -3513,6 +3513,41 @@ describe("accountStorage core behaviors", () => {
     return account.account_info.balance
   }
 
+  it.each(["/api/log/self/stat:quota", "/api/log/self:consumption"])(
+    "reconciles the persisted Shell usage contract for %s with a verified USD wallet",
+    (operation) => {
+      const account = createAccount({ site_type: SITE_TYPES.SHELL_API })
+      const { positions } = setReportedUsd(account, "3", {
+        consumption: "1",
+        income: "0.5",
+      })
+      const wallet = positions[0]!
+      const usage = account.account_info.settledConsumption![0]!
+      usage.scope = wallet.scope
+      Object.assign(wallet.amount.source, {
+        adapter: SITE_TYPES.SHELL_API,
+        operation: "/api/user/self:balance",
+        contractVersion: "usd-balance/v1",
+      })
+      Object.assign(usage.amount.source, {
+        adapter: SITE_TYPES.SHELL_API,
+        operation,
+        contractVersion: "standard-usd/v1",
+      })
+
+      const result = migrateAccountFinancialInfo(account.account_info, {
+        accountId: account.id,
+        siteType: account.site_type,
+        siteUrl: account.site_url,
+        capturedAt: 100,
+      })
+      expect(result.settledConsumption?.[0]?.amount).toMatchObject({
+        value: "1",
+        source: { contractVersion: "usd-balance/v1" },
+      })
+    },
+  )
+
   it("getAccountStats should aggregate numeric fields across accounts", async () => {
     const accountA = createAccount({
       id: "stats-a",

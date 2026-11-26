@@ -27,6 +27,7 @@ export const nativeBalanceExpectations: Record<
   [SITE_TYPES.NEW_API]: ["$10.00"],
   [SITE_TYPES.APIYI]: ["$10.00"],
   [SITE_TYPES.LAOZHANG]: ["$10.00"],
+  [SITE_TYPES.SHELL_API]: ["$10.00"],
   [SITE_TYPES.MODELFLARE]: ["$10.00"],
   [SITE_TYPES.ANYROUTER]: ["$10.00"],
   [SITE_TYPES.VELOERA]: ["$10.00"],

@@ -5,13 +5,13 @@ import {
 } from "~/services/apiAdapters/newApi/keys/keyGroupBehavior"
 import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
 
+import type { CompatibleAccountVariant } from "../../compatibleAccountVariantContract"
 import {
   type CredentialPayload,
   type TrimString,
 } from "../variantOperations/credentials"
-import type { NewApiVariantRegistration } from "../variantRegistration"
 
-export const modelflareVariant: NewApiVariantRegistration = {
+export const modelflareVariant: CompatibleAccountVariant = {
   key: {
     initialQuota: -1,
     defaultCreation: creationPolicies.SelectRequirement,

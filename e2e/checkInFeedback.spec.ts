@@ -23,6 +23,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { createUiCapture } from "~~/scripts/cdp/ui-driver.mjs"
 
 for (const { width, language } of [
   { width: 1100, language: "en" },
@@ -51,6 +52,10 @@ for (const { width, language } of [
       })
     })
     const baseUrl = "https://feedback.example.invalid"
+    const siteHost = new URL(baseUrl).host
+    const draftSiteName = "Unsaved account name"
+    const getCapturedIssueUrl = () =>
+      page.evaluate(() => sessionStorage.getItem("feedback-github-url"))
     const requests: string[] = []
     const pageNavigations: string[] = []
     await context.route(`${baseUrl}/**`, async (route) => {
@@ -156,9 +161,8 @@ for (const { width, language } of [
       }
     })
     await feedback.getByRole("button", { name: copy.open }).click()
-    const issueUrl = await page.evaluate(() =>
-      sessionStorage.getItem("feedback-github-url"),
-    )
+    await expect.poll(getCapturedIssueUrl).not.toBeNull()
+    const issueUrl = await getCapturedIssueUrl()
     const issueParams = new URL(issueUrl!).searchParams
     const browserInfo = issueParams.get("browser-info")
     expect(browserInfo).toMatch(/^(Chrome|Chromium|Headless Chrome) \d+/)
@@ -167,7 +171,7 @@ for (const { width, language } of [
       "Website check-in works; extension cannot detect it.",
     )
     expect(issueParams.get("title")).toBe(
-      `${copy.issueTitle} Website check-in works; extension cannot detect it.`,
+      `${copy.issueTitle} ${siteHost} · Website check-in works; extension cannot detect it.`,
     )
     expect(issueParams.get("site-url")).toBe(baseUrl)
     const issueFeedback = issueParams.get("feedback")!
@@ -231,7 +235,7 @@ for (const { width, language } of [
     const editor = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
     await editor
       .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
-      .fill("Unsaved account name")
+      .fill(draftSiteName)
     const section = editor.getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
     )
@@ -265,7 +269,39 @@ for (const { width, language } of [
       animations: "disabled",
       path: testInfo.outputPath(`feedback-${language}-${width}.png`),
     })
+    const addressSwitch = feedback.getByRole("switch", {
+      name: copy.includeAddress,
+    })
+    await addressSwitch.click()
+    await expect(addressSwitch).not.toBeChecked()
+    await expect(
+      feedback.getByText(copy.titleSiteName.replace("{{name}}", draftSiteName)),
+    ).toBeVisible()
+    const capture = createUiCapture({ page, directory: testInfo.outputDir })
+    await capture(`feedback-site-name-${language}-${width}.png`, feedback)
+    await feedback.getByRole("button", { name: copy.open }).click()
+    await expect
+      .poll(async () => {
+        const capturedUrl = await getCapturedIssueUrl()
+        if (!capturedUrl) return null
+        const params = new URL(capturedUrl).searchParams
+        return { title: params.get("title"), siteUrl: params.get("site-url") }
+      })
+      .toEqual({
+        title: `${copy.issueTitle} ${draftSiteName} · Second report`,
+        siteUrl: null,
+      })
+    await addressSwitch.click()
     await feedback.getByText(copy.preview, { exact: true }).click()
+    await expect(
+      feedback.getByText(copy.titlePreview, { exact: true }),
+    ).toBeVisible()
+    const titlePreview = feedback.getByText(
+      `${copy.issueTitle} ${siteHost} · Second report`,
+      { exact: true },
+    )
+    await expect(titlePreview).toBeVisible()
+    await titlePreview.scrollIntoViewIfNeeded()
     await page.screenshot({
       animations: "disabled",
       path: testInfo.outputPath(`feedback-preview-${language}-${width}.png`),
@@ -349,20 +385,12 @@ for (const { width, language } of [
     await expect(
       feedback.getByRole("button", { name: copy.copy, exact: true }),
     ).toHaveCount(0)
-    await expect
-      .poll(() =>
-        page.evaluate(() => sessionStorage.getItem("feedback-github-url")),
-      )
-      .not.toBeNull()
+    await expect.poll(getCapturedIssueUrl).not.toBeNull()
     await page.screenshot({
       animations: "disabled",
       path: testInfo.outputPath(`feedback-paste-${language}-${width}.png`),
     })
-    const longIssueUrl = new URL(
-      (await page.evaluate(() =>
-        sessionStorage.getItem("feedback-github-url"),
-      ))!,
-    )
+    const longIssueUrl = new URL((await getCapturedIssueUrl())!)
     expect(longIssueUrl.searchParams.get("template")).toBe(
       "checkin_adaptation.yml",
     )
@@ -377,7 +405,7 @@ for (const { width, language } of [
     await page.keyboard.press("Escape")
     await expect(
       editor.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
-    ).toHaveValue("Unsaved account name")
+    ).toHaveValue(draftSiteName)
     expect(requests.every((request) => request.startsWith("GET "))).toBe(true)
   })
 }

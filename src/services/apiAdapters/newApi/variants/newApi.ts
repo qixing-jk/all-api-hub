@@ -3,15 +3,15 @@ import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnb
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 
+import type { CompatibleAccountVariant } from "../../compatibleAccountVariantContract"
 import {
   createSafeCredentialError,
   type CredentialFailure,
   type CredentialFailureStage,
 } from "../variantOperations/credentials"
 import { resolveNewApiThemeRoute } from "../variantOperations/routes"
-import type { NewApiVariantRegistration } from "../variantRegistration"
 
-export const newApiVariant: NewApiVariantRegistration = {
+export const newApiVariant: CompatibleAccountVariant = {
   resolveRoutePath: resolveNewApiThemeRoute,
   credentials: {
     selectDashboardAuth: (value) =>

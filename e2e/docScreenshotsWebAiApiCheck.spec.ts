@@ -284,8 +284,6 @@ test(`captures web AI API check screenshots (${localeKey})`, async ({
   })
 
   // 3. Run the probes so the result rows are populated, then capture again.
-  // The probe rows live in the scroll container; each has a run control whose
-  // label flips to Retry after the first run.
   for (const probeId of [
     API_VERIFICATION_PROBE_IDS.Models,
     API_VERIFICATION_PROBE_IDS.TextGeneration,
@@ -293,20 +291,17 @@ test(`captures web AI API check screenshots (${localeKey})`, async ({
     const probe = modal.getByTestId(getWebAiApiCheckProbeTestId(probeId))
     await expect(probe).toBeVisible()
     const runButton = probe
+      .locator("[data-verification-summary]")
       .getByRole("button", {
-        name: /^(测试|Test|Run|テスト|再試行|Retry)$/,
+        name: /^(运行|Run|実行)$/,
       })
-      .first()
     await expect(runButton).toBeEnabled()
     await runButton.click()
-    // The row flips to a stop control while it runs; wait for the run control
-    // to come back instead of guessing at a fixed delay.
     await expect(
-      probe.getByRole("button", {
-        name: /^(测试|Test|重试|Retry|テスト|再試行)$/,
+      probe.locator("[data-verification-summary]").getByText(copy.pass, {
+        exact: true,
       }),
     ).toBeVisible({ timeout: 30_000 })
-    await expect(probe.getByText(copy.pass, { exact: true })).toBeAttached()
   }
 
   // Bring the probe cards (and their pass badges) into view.
@@ -317,21 +312,15 @@ test(`captures web AI API check screenshots (${localeKey})`, async ({
     element.scrollIntoView({ block: "center", behavior: "instant" }),
   )
 
-  // Collapse the execution-result disclosures so both passing cards fit in one
-  // frame; the JSON payloads are noise at README scale.
+  // Collapse open probe details so both passing summaries fit in one frame.
   for (const probeId of [
     API_VERIFICATION_PROBE_IDS.Models,
     API_VERIFICATION_PROBE_IDS.TextGeneration,
   ]) {
     const disclosure = modal
       .getByTestId(getWebAiApiCheckProbeTestId(probeId))
-      .getByRole("button", { name: /执行结果|Execution result|実行結果/ })
-    if (
-      (await disclosure.count()) > 0 &&
-      (await disclosure.first().getAttribute("aria-expanded")) === "true"
-    ) {
-      await disclosure.first().click()
-    }
+      .locator('[data-verification-summary] button[aria-expanded="true"]')
+    if (await disclosure.count()) await disclosure.click()
   }
   await modelsProbe.evaluate((element) =>
     element.scrollIntoView({ block: "center", behavior: "instant" }),
@@ -342,7 +331,7 @@ test(`captures web AI API check screenshots (${localeKey})`, async ({
     })
     .click()
   const preview = modal.getByTestId("pelican-svg-preview")
-  await expect(preview).toBeVisible({ timeout: 10000 })
+  await expect(preview).toBeAttached()
   await expect
     .poll(() =>
       preview.evaluate(
@@ -350,12 +339,7 @@ test(`captures web AI API check screenshots (${localeKey})`, async ({
       ),
     )
     .toBe(true)
-  // Keep the capability list as the main subject; a drawing is one available test.
-  await modal
-    .getByTestId("verification-tools")
-    .getByRole("button", { name: /执行结果|Execution result|実行結果/ })
-    .first()
-    .click()
+  // Keep the drawing result collapsed so the capability list remains in view.
   await expect(preview).toBeHidden()
   await modelsProbe.evaluate((element) =>
     element.scrollIntoView({ block: "start", behavior: "instant" }),

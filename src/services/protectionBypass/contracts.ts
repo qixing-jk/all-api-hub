@@ -417,6 +417,15 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   OpenContext: "open_context",
 } as const
 
+export const CREDENTIAL_PAGE_STATES = {
+  Credential: "credential",
+  NotFound: "not_found",
+  Unknown: "unknown",
+} as const
+
+export type CredentialPageState =
+  (typeof CREDENTIAL_PAGE_STATES)[keyof typeof CREDENTIAL_PAGE_STATES]
+
 /**
  * Public task-kind contract shared by task dispatch and policy metadata.
  */
@@ -517,7 +526,7 @@ type TempContextTaskResultMap = {
   [TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction]: TempWindowRequestyManagementKeyActionResult
   [TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect]: {
     success: boolean
-    state?: "credential" | "not_found" | "unknown"
+    state?: CredentialPageState
   }
   [TEMP_CONTEXT_TASK_KINDS.RenderedTitle]: TempWindowRenderedTitleResponse
   [TEMP_CONTEXT_TASK_KINDS.SessionRead]: TempWindowFetch
