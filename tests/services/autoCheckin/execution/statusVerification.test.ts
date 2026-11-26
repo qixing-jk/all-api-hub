@@ -753,10 +753,40 @@ describe("execution/statusVerification", () => {
     ).resolves.toMatchObject({ outcome: "not_saved" })
   })
 
-  it.each(["unknown", "expired"] as const)(
+  it.each([
+    "unknown",
+    "expired",
+    "expired while waiting for the status lock",
+  ] as const)(
     "does not update stored status when verified status is %s",
     async (state) => {
+      const account = {
+        ...verificationAccount,
+        site_type: SITE_TYPES.SUB2API,
+        checkIn: {
+          ...verificationAccount.checkIn,
+          selection: {
+            mode: "manual",
+            methodId: AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+          },
+          methodKnowledge: {
+            methods: {
+              [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: Date.now() },
+                },
+              },
+            },
+          },
+        },
+      }
+      vi.setSystemTime(new Date("2026-11-26T15:59:59.900Z"))
       let storedStatus: any = {
+        retryState: {
+          day: formatLocalDayKey(),
+          pendingAccountIds: [account.id],
+        },
         perAccount: {
           [verificationAccount.id]: {
             accountId: verificationAccount.id,
@@ -771,6 +801,8 @@ describe("execution/statusVerification", () => {
       )
       mockedAutoCheckinStorage.updateStatus.mockImplementation(
         async (updater: any) => {
+          if (state === "expired while waiting for the status lock")
+            vi.setSystemTime(new Date("2026-11-26T16:00:00.100Z"))
           const applied = updater(storedStatus)
           if (applied.patch) {
             storedStatus = { ...storedStatus, ...applied.patch }
@@ -779,12 +811,10 @@ describe("execution/statusVerification", () => {
         },
       )
 
-      mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
-      mockedAccountStorage.getAllAccounts.mockResolvedValue([
-        verificationAccount,
-      ])
+      mockedAccountStorage.getAccountById.mockResolvedValue(account)
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
       mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
-        verificationAccount,
+        account,
       )
       mockedRefreshSelectedStatus.mockImplementation(
         async ({ onOutcome, config }: any) => {
@@ -803,7 +833,8 @@ describe("execution/statusVerification", () => {
               today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
               evidence: {
                 source: "probe",
-                observedAt: Date.now() - 86_400_000,
+                observedAt:
+                  state === "expired" ? Date.now() - 86_400_000 : Date.now(),
               },
             },
       )
@@ -815,6 +846,7 @@ describe("execution/statusVerification", () => {
         outcome: "verified",
         verifiedStatus: "unknown",
       })
+      expect(storedStatus.retryState.pendingAccountIds).toEqual([account.id])
       expect(storedStatus.perAccount[verificationAccount.id].status).toBe(
         CHECKIN_RESULT_STATUS.UNCERTAIN,
       )

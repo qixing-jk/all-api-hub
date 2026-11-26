@@ -2,6 +2,7 @@ import { type AccountLoginProvider } from "~/constants/accountLogin"
 import {
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
@@ -18,7 +19,6 @@ import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { getCheckInResetTimeZone } from "~/services/checkin/autoCheckin/providers/registry"
 import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
 import { toAutoCheckinSkipReason as toSchedulerSkipReason } from "~/services/checkin/autoCheckin/skipReasons"
-import { replaceCheckInMethodStatus } from "~/services/checkin/autoCheckin/state"
 import { isCheckInObservationCurrent } from "~/services/checkin/statusObservation"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -32,12 +32,14 @@ import {
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
+import type { CheckInMethodId } from "~/types/checkIn"
 import { type TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 
 export interface RunAccountCheckinOptions {
   requireStatusConfirmationBeforeMutation?: boolean
   allowAutomaticDiscovery?: boolean
+  confirmAfterDiscovery?: CheckInMethodId
   /**
    * Provider ownership resolved over the full stored account list. Absent means
    * the guard could not be evaluated and the run stays unblocked.
@@ -60,6 +62,7 @@ export async function executeAccountCheckin(
   {
     requireStatusConfirmationBeforeMutation = false,
     allowAutomaticDiscovery = false,
+    confirmAfterDiscovery,
     loginProviderOwners,
   }: RunAccountCheckinOptions = {},
 ): Promise<AccountCheckinExecutionOutcome> {
@@ -115,6 +118,7 @@ export async function executeAccountCheckin(
             }
           : {}),
         context,
+        confirmAfterDiscovery,
         revalidateAccount: (refreshedConfig) =>
           accountCheckInState.prepareAccountForSelectedCheckIn(
             account.id,
@@ -204,35 +208,43 @@ export async function executeAccountCheckin(
         : {}),
     })
 
-    if (
+    const confirmation = execution.confirmation
+    const completed =
       providerResult.status === CHECKIN_RESULT_STATUS.SUCCESS ||
       providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-    ) {
+    // Today's status can be known even when yesterday's grant is still uncertain.
+    const observedTodayAfterUncertainClaim =
+      providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN &&
+      confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Observed &&
+      confirmation.status.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      confirmation.status.today !== undefined
+    if (completed || observedTodayAfterUncertainClaim) {
       const completedAt = execution.completedAt ?? result.timestamp
-      const confirmation = execution.confirmation
       if (
         confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Unavailable ||
         confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Unsupported
       )
         return { result, ...(execution.reused ? { reused: true } : {}) }
       let persisted: boolean
-      if (
-        confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Observed &&
-        !(
-          confirmation.status.outcome ===
-            CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-          confirmation.status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
-        )
-      ) {
-        const refreshed = replaceCheckInMethodStatus({
-          config: account.checkIn,
-          methodId: execution.methodId,
-          status: confirmation.status,
-        })
+      if (confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Observed) {
+        const observed = confirmation.status
+        // Checked execution evidence wins a same-millisecond admission probe.
+        const status =
+          completed &&
+          observed.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+          observed.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
+            ? {
+                ...observed,
+                evidence: {
+                  source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution,
+                  observedAt: confirmation.observedAt,
+                },
+              }
+            : observed
         persisted =
           (await accountCheckInState.prepareAccountForSelectedCheckIn(
             account.id,
-            refreshed,
+            { methodId: execution.methodId, status },
             account,
           )) !== null
       } else {
@@ -254,7 +266,7 @@ export async function executeAccountCheckin(
         persisted === false
           ? CHECKIN_ACCOUNT_STATE_DURABILITY.FAILED
           : CHECKIN_ACCOUNT_STATE_DURABILITY.PERSISTED
-      logger.info("Check-in completed", {
+      logger.info("Check-in result recorded", {
         accountId: account.id,
         siteName: account.site_name,
         status: providerResult.status,

@@ -48,6 +48,7 @@ import type {
   AutoCheckinProviderOutcome,
   AutoCheckinProviderResult,
 } from "~/services/checkin/autoCheckin/providers/types"
+import { canConfirmSelectedCheckInMethod } from "~/services/checkin/autoCheckin/skipReasons"
 import {
   isPersistableInitialCheckInDetection,
   replaceCheckInMethodDetection,
@@ -420,6 +421,7 @@ const SELECTED_METHOD_CONFIRMATION_OUTCOMES = {
 
 const confirmSelectedCheckInMethod = async (input: {
   account: SiteAccount
+  confirmAfterDiscovery?: CheckInMethodId
   context: AutoCheckinProviderContext
   globalAutomaticExecutionEnabled: boolean
   loginProviderClaimedByAnother?: boolean
@@ -443,6 +445,7 @@ const confirmSelectedCheckInMethod = async (input: {
     input.account.checkIn.methodKnowledge.methods[methodId]?.detection
       ?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched ||
     (input.isAutomaticExecutionEnabled &&
+      input.confirmAfterDiscovery !== methodId &&
       (input.account.checkIn.methodKnowledge.methods[methodId]?.detection ||
         !shouldAutomaticallyDiscoverAccountCheckIn(input.account)))
   ) {
@@ -462,12 +465,7 @@ const confirmSelectedCheckInMethod = async (input: {
   })
   if (
     state.executionEligibility.eligible ||
-    (state.executionEligibility.skipReason !==
-      CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched &&
-      state.executionEligibility.skipReason !==
-        CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported &&
-      state.executionEligibility.skipReason !==
-        CHECK_IN_EXECUTION_SKIP_REASONS.Timeout)
+    !canConfirmSelectedCheckInMethod(state.executionEligibility.skipReason)
   ) {
     return {
       outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
@@ -567,6 +565,8 @@ const confirmSelectedCheckInMethod = async (input: {
 
 type ExecuteSelectedCheckInInput = {
   account: SiteAccount
+  /** This daily run completed passive discovery and the selected protocol required authentication. */
+  confirmAfterDiscovery?: CheckInMethodId
   globalAutomaticExecutionEnabled: boolean
   context: AutoCheckinProviderContext
   revalidateAccount?: RevalidateCheckInAccount

@@ -272,21 +272,25 @@ export async function verifyAccountStatus(
       persistedStatus.today !== selectedStatus?.today)
   )
     return notSaved()
-  const now = Date.now()
-  const today = formatLocalDayKey(new Date(now))
-  const verifiedToday =
-    selectedMethodId &&
-    selectedStatus &&
-    isCheckInMethodStatusCurrent(selectedMethodId, selectedStatus, now)
-      ? selectedStatus.today
-      : undefined
-  const isCheckedInToday =
-    verifiedToday === CHECK_IN_METHOD_TODAY_STATUSES.Checked
-  const isNotCheckedInToday =
-    verifiedToday === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+  const verifiedToday = selectedStatus?.today
+  const unknownStatus = {
+    outcome: "verified",
+    verifiedStatus: "unknown",
+  } as const
+  if (!selectedMethodId || !selectedStatus || !verifiedToday)
+    return unknownStatus
 
-  const statusUpdate = await autoCheckinStorage.updateStatus((current) => {
-    if (!current) return { patch: null, result: false }
+  const statusUpdate = await autoCheckinStorage.updateStatus<
+    typeof verifiedToday | "unknown"
+  >((current) => {
+    // Waiting for another writer can carry a valid read across the site's reset.
+    const now = Date.now()
+    if (!isCheckInMethodStatusCurrent(selectedMethodId, selectedStatus, now))
+      return { patch: null, result: "unknown" }
+    if (!current) return { patch: null }
+    const today = formatLocalDayKey(new Date(now))
+    const isCheckedInToday =
+      verifiedToday === CHECK_IN_METHOD_TODAY_STATUSES.Checked
 
     const currentResult = current.perAccount?.[account.id]
     if (
@@ -294,8 +298,8 @@ export async function verifyAccountStatus(
       observedAt !== undefined &&
       currentResult.timestamp > observedAt
     )
-      return { patch: null, result: false }
-    let updatedResult: CheckinAccountResult | undefined
+      return { patch: null }
+    let updatedResult: CheckinAccountResult
 
     if (isCheckedInToday) {
       updatedResult = {
@@ -305,10 +309,10 @@ export async function verifyAccountStatus(
         messageKey:
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
-        methodId: selectedMethodId ?? currentResult?.methodId,
+        methodId: selectedMethodId,
         timestamp: observedAt ?? now,
       }
-    } else if (isNotCheckedInToday) {
+    } else {
       const reasonCode =
         currentResult?.reasonCode ??
         AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED
@@ -329,16 +333,13 @@ export async function verifyAccountStatus(
             status: CHECKIN_RESULT_STATUS.FAILED,
             reasonCode,
           },
-          selectedMethodId ?? currentResult?.methodId,
+          selectedMethodId,
         ),
-        methodId: selectedMethodId ?? currentResult?.methodId,
+        methodId: selectedMethodId,
         timestamp: observedAt ?? now,
       }
     }
 
-    if (!updatedResult) {
-      return { patch: null, result: false }
-    }
     updatedResult = preserveCheckinAwards(currentResult, updatedResult)
 
     const perAccount: Record<string, CheckinAccountResult> = {
@@ -356,7 +357,7 @@ export async function verifyAccountStatus(
         ...retryState,
         pendingAccountIds,
       }
-    } else if (isNotCheckedInToday) {
+    } else if (!isCheckedInToday) {
       retryState = mergeRunResults({
         today,
         enabled:
@@ -374,7 +375,7 @@ export async function verifyAccountStatus(
     )
 
     return {
-      result: true,
+      result: verifiedToday,
       patch: {
         lastRunResult: getAutoCheckinRunResultFromSummary(summary),
         perAccount,
@@ -389,25 +390,9 @@ export async function verifyAccountStatus(
     }
   })
 
-  if (
-    (isCheckedInToday || isNotCheckedInToday) &&
-    (!statusUpdate.ok || statusUpdate.result !== true)
-  ) {
-    return notSaved()
-  }
+  if (!statusUpdate.ok || !statusUpdate.result) return notSaved()
+  if (statusUpdate.result === "unknown") return unknownStatus
 
-  if (isCheckedInToday || isNotCheckedInToday) {
-    await retryScheduling.scheduleRetryAlarm(config)
-  }
-
-  const verifiedStatus = isCheckedInToday
-    ? ("checked" as const)
-    : isNotCheckedInToday
-      ? ("not_checked" as const)
-      : ("unknown" as const)
-
-  return {
-    outcome: "verified" as const,
-    verifiedStatus,
-  }
+  await retryScheduling.scheduleRetryAlarm(config)
+  return { outcome: "verified" as const, verifiedStatus: statusUpdate.result }
 }

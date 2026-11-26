@@ -28,6 +28,16 @@ FreeAPI 的公开配置将站点命名为“露娜”。其 [已有协议记录]
 
 本轮签到、Sub2API 和账户请求构造的 Vitest 共 111 个文件、3,144 项通过，其中本机 HTTP 测试 117 项。Chromium 使用受控站点运行了 25 个扩展场景，包含原生验证码页和临近零点的自动签到。结果见本地 `artifacts/first-request-unit.log`、`artifacts/first-request-account.log` 和 `artifacts/first-request-chromium.log`。本轮线上账号的续期和领取结果尚未验证。
 
+### 整分支复审
+
+在 `85d3af2293` 上做整分支复审时，Chromium 的「立即运行」重现了导入选择被跳过。新增验收从调度入口和真实扩展页面发起，包含没有探测记录的选择以及只有刷新令牌的账号。每日自动发现保持被动，只有本轮对原选定协议得到认证拒绝时才允许继续确认。[调度测试](../../tests/services/autoCheckin/execution/sub2apiRefreshTokenOnly.test.ts) · [浏览器测试](../../e2e/apiKeyCasaCheckin.spec.ts)
+
+限定标签页的请求只有在该标签页能发出时才会执行。New API 创建令牌的会话头随同源标签页请求发送。取消等待接收端的请求后，扩展不会补发 POST；已经进入发送阶段的请求保留“可能已提交”的判定。[路由](../../tests/services/apiTransport/request.test.ts) · [取消与发送证据](../../tests/services/apiTransport/currentTabTransport.test.ts) · [令牌创建](../../e2e/newApiTokenCreation.spec.ts)
+
+导入账号在本次运行中建立的签到记录可以保存跨日回读的状态和可领取性。上一天的领取回执丢失时，历史仍显示结果不确定，账号保存新一天实际读到的状态。手动验证状态若在等待写入期间跨过站点零点，则保留原历史和重试队列。[Casa 跨日回读](../../tests/services/autoCheckin/providers/apiKeyCasa.test.ts) · [状态验证](../../tests/services/autoCheckin/execution/statusVerification.test.ts)
+
+最终版本通过 134 个 Vitest 文件的 3,973 项测试。Chromium 通过 18 个扩展场景和 1 项构建准备，覆盖 Casa、AI-ROUTER、当前标签页探测和 New API 令牌创建。Firefox 通过 1 个 OAuth 回调场景。类型检查、受影响文件的 ESLint 和 Knip 均通过。本地日志见 `artifacts/whole-final-unit.log`、`artifacts/whole-final-chromium.log`、`artifacts/whole-final-firefox.log` 和 `artifacts/whole-final-types.log`。
+
 ### 前一轮证据
 
 | 场景 | 可复查的证据 |

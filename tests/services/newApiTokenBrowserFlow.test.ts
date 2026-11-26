@@ -158,6 +158,55 @@ it("opens a session only after a newly created tab commits the requested origin"
   session.cancel()
 })
 
+it("reads token creation capabilities with the session header inside the owning tab", async () => {
+  const tab = mockOwningSiteTab()
+  const reads: string[] = []
+  vi.spyOn(browser.tabs, "sendMessage").mockImplementation(
+    async (tabId, message) => {
+      if (message.action !== RuntimeActionIds.ContentPerformTempWindowFetch)
+        return {
+          success: true,
+          data: {
+            token: "transient",
+            sessionId: "sid",
+            expiresAt: Date.now() / 1000 + 900,
+            user: { id: 42 },
+          },
+        }
+      expect(tabId).toBe(tab.id)
+      expect(
+        new Headers(message.fetchOptions.headers).get("X-Auth-Session"),
+      ).toBe("sid")
+      const path = new URL(message.fetchUrl).pathname
+      reads.push(path)
+      const data =
+        path === "/api/user/self"
+          ? { id: 42 }
+          : path.includes("catalog")
+            ? {
+                creation_uncertain: false,
+                default_expiry_days: 7,
+                max_tokens: 1,
+                groups: [],
+              }
+            : {
+                scope: OPERATION_SCOPES.GENERATE,
+                methods: [],
+                oauth_providers: [],
+                password_encryption_enabled: false,
+              }
+      return { success: true, status: 200, data: { success: true, data } }
+    },
+  )
+  const session = await client.openNewApiAccessTokenCreation(tokenSite, "42")
+  try {
+    expect((await session.flow.load()).catalog.max_tokens).toBe(1)
+    expect(reads).toHaveLength(3)
+  } finally {
+    session.cancel()
+  }
+})
+
 it("focuses the verified existing site tab when asked to restore the session", async () => {
   const tab = mockOwningSiteTab()
   const focus = vi.spyOn(browser.tabs, "update").mockResolvedValue(tab)

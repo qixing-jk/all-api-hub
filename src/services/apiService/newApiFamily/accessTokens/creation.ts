@@ -24,7 +24,10 @@ import {
   NEW_API_TOKEN_OPERATION_SCOPES as OPERATION_SCOPES,
   NEW_API_TOKEN_VERIFICATION_ERRORS as VERIFICATION_ERRORS,
 } from "./protocol"
-import { tokenSessionRequest } from "./sessionRequest"
+import {
+  tokenSessionRequest,
+  type NewApiTokenSessionRequest,
+} from "./sessionRequest"
 
 const MIN_TOKEN_EXPIRY_SECONDS = 60 * 60
 
@@ -170,7 +173,7 @@ export class NewApiAccessTokenCreation {
     this.verificationAbort?.abort()
   }
   constructor(
-    private request: ApiServiceRequest,
+    private request: NewApiTokenSessionRequest,
     private readonly expectedUserId: string,
     private interaction?: NewApiTokenInteraction,
     private readonly journal?: TokenIssuanceJournal,

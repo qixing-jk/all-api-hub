@@ -142,7 +142,7 @@ export async function openNewApiAccessTokenCreation(
         userId,
         accessToken: session.token,
       },
-      requestHeaders: { "X-Auth-Session": session.sessionId },
+      newApiSessionId: session.sessionId,
       fetchContext: {
         kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId,

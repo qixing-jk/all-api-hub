@@ -5,25 +5,127 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import { runCheckins } from "~/services/checkin/autoCheckin/execution/runCheckins"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
-import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
+import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
+import type { CheckInMethodDetection } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
-import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const origin = "https://refresh-only.example"
 const methodId = AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn
+const previousTimeout: CheckInMethodDetection = {
+  outcome: "unknown",
+  reason: "timeout",
+  attemptedAt: 100,
+}
+const previousUnsupported: CheckInMethodDetection = {
+  outcome: "unsupported",
+  evidence: { source: "probe", observedAt: 100 },
+}
 
-async function saveAccount(refreshToken?: string) {
+it.each([
+  [AUTO_CHECKIN_RUN_TYPE.MANUAL, "manual", undefined],
+  [AUTO_CHECKIN_RUN_TYPE.MANUAL, "automatic", undefined],
+  [AUTO_CHECKIN_RUN_TYPE.DAILY, "manual", undefined],
+  [AUTO_CHECKIN_RUN_TYPE.DAILY, "automatic", undefined],
+  [AUTO_CHECKIN_RUN_TYPE.MANUAL, "manual", previousTimeout],
+  [AUTO_CHECKIN_RUN_TYPE.MANUAL, "manual", previousUnsupported],
+  [AUTO_CHECKIN_RUN_TYPE.DAILY, "manual", previousUnsupported],
+] as const)(
+  "%s confirms an imported %s choice with prior detection %j using its saved refresh token",
+  async (runType, mode, detection) => {
+    const account = await saveAccount("current-refresh", {
+      automaticExecutionEnabled: true,
+      selection: { mode, methodId },
+      methodKnowledge: {
+        methods: detection ? { [methodId]: { detection } } : {},
+      },
+    })
+    await userPreferences.savePreferences({
+      autoCheckin: { ...DEFAULT_PREFERENCES.autoCheckin!, globalEnabled: true },
+    })
+    const requestsAfterRenewal: string[] = []
+    server.use(
+      http.all(`${origin}/*`, ({ request }) => {
+        const path = new URL(request.url).pathname
+        const ok = (data: unknown) =>
+          HttpResponse.json({ code: 0, message: "ok", data })
+        if (path === "/api/v1/auth/refresh") {
+          requestsAfterRenewal.push(`${request.method} ${path}`)
+          return ok({
+            access_token: "renewed",
+            refresh_token: "rotated",
+            expires_in: 3600,
+          })
+        }
+        if (request.headers.get("Authorization") !== "Bearer renewed")
+          return HttpResponse.json(
+            { code: "INVALID_TOKEN", message: "expired" },
+            { status: 401 },
+          )
+        requestsAfterRenewal.push(`${request.method} ${path}`)
+        if (path === "/api/v1/auth/me")
+          return ok({ id: 1, username: "test", balance: 1 })
+        if (path === "/api/v1/redeem/checkin" && request.method === "GET")
+          return ok({ checked_in: true, reward: 1 })
+        return HttpResponse.json({}, { status: 404 })
+      }),
+    )
+    await runCheckins({
+      runType,
+      protectionBypassExecution:
+        runType === AUTO_CHECKIN_RUN_TYPE.DAILY
+          ? automaticExecution(
+              PROTECTION_BYPASS_FEATURES.Checkin,
+              PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+            )
+          : userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin),
+    })
+    expect(
+      (await autoCheckinStorage.getStatus())?.perAccount?.[account.id]
+        ?.reasonCode,
+    ).toBe("already_checked_today")
+    expect(requestsAfterRenewal).toEqual([
+      "POST /api/v1/auth/refresh",
+      "GET /api/v1/auth/me",
+      "GET /api/v1/redeem/checkin",
+      "GET /api/v1/redeem/checkin",
+    ])
+    expect(
+      (await accountQueries.getAccountById(account.id))?.checkIn.methodKnowledge
+        .methods[methodId]?.detection?.outcome,
+    ).toBe("matched")
+  },
+)
+
+async function saveAccount(
+  refreshToken?: string,
+  checkIn?: SiteAccount["checkIn"],
+) {
   const account = buildSiteAccount({
+    configVersion: CURRENT_CONFIG_VERSION,
     site_url: origin,
     site_type: SITE_TYPES.SUB2API,
     ...(refreshToken ? { sub2apiAuth: { refreshToken } } : {}),
-    checkIn: {
+    checkIn: checkIn ?? {
       automaticExecutionEnabled: true,
       selection: { mode: "automatic", methodId },
       methodKnowledge: {
@@ -45,6 +147,42 @@ async function saveAccount(refreshToken?: string) {
   })
   return account
 }
+
+it("waits for the daily discovery cooldown before renewing an unconfirmed selection", async () => {
+  const account = await saveAccount("current-refresh", {
+    automaticExecutionEnabled: true,
+    selection: { mode: "manual", methodId },
+    methodKnowledge: {
+      lastAutomaticDiscoveryAttemptAt: Date.now(),
+      methods: {
+        [methodId]: {
+          detection: {
+            outcome: "unknown",
+            reason: "authentication_required",
+            attemptedAt: Date.now(),
+          },
+        },
+      },
+    },
+  })
+  await userPreferences.savePreferences({
+    autoCheckin: { ...DEFAULT_PREFERENCES.autoCheckin!, globalEnabled: true },
+  })
+  const unexpectedRequest = vi.fn(() => HttpResponse.error())
+  server.use(http.all(`${origin}/*`, unexpectedRequest))
+  await runCheckins({
+    runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
+    protectionBypassExecution: automaticExecution(
+      PROTECTION_BYPASS_FEATURES.Checkin,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+    ),
+  })
+  expect(
+    (await autoCheckinStorage.getStatus())?.perAccount?.[account.id]
+      ?.reasonCode,
+  ).toBe("method_not_matched")
+  expect(unexpectedRequest).not.toHaveBeenCalled()
+})
 
 function execute(account: SiteAccount) {
   return executeSelectedCheckIn({

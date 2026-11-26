@@ -8,7 +8,9 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getSiteCheckInDisplayState } from "~/features/AccountManagement/checkInStatus"
-import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
+import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
 import {
   fetchApiKeyCasaDailyCheckInStatus,
   performApiKeyCasaDailyCheckIn,
@@ -309,33 +311,47 @@ describe("ApiKey Casa check-in provider", () => {
     )
   })
 
-  it.each(["checked", "not_checked", "unavailable"] as const)(
-    "keeps an undated grant spanning Beijing midnight and caches only verified status (%s)",
-    async (readback) => {
+  it.each([
+    { readback: "checked", imported: false },
+    { readback: "checked_disabled", imported: false },
+    { readback: "not_checked", imported: false },
+    { readback: "not_checked", imported: true },
+    { readback: "unavailable", imported: false },
+  ])(
+    "keeps a grant spanning Beijing midnight and saves verified status (readback=$readback, imported=$imported)",
+    async ({ readback, imported }) => {
       const account = createAccount()
+      account.configVersion = CURRENT_CONFIG_VERSION
+      if (imported) {
+        account.checkIn.selection = { mode: "manual", methodId: METHOD_ID }
+        account.checkIn.methodKnowledge.methods = {}
+      }
+      await accountConfigStore.mutate((config) => {
+        config.accounts = [account]
+        return { changed: true, result: undefined }
+      })
+
+      const beforeReset = Date.parse("2026-11-26T15:59:59Z")
       const afterReset = Date.parse("2026-11-26T16:00:01Z")
-      let now = Date.parse("2026-11-26T15:59:59Z")
+      let now = beforeReset
       vi.spyOn(Date, "now").mockImplementation(() => now)
-      const save = vi
-        .spyOn(accountCheckInState, "prepareAccountForSelectedCheckIn")
-        .mockImplementation(async (_id, config) => ({
-          ...account,
-          checkIn: config ?? account.checkIn,
-        }))
-      const mark = vi
-        .spyOn(accountCheckInState, "markAccountAsSiteCheckedIn")
-        .mockResolvedValue(true)
       vi.mocked(performApiKeyCasaDailyCheckIn).mockImplementationOnce(
         async () => {
           now = afterReset
         },
       )
-      vi.mocked(fetchApiKeyCasaDailyCheckInStatus)
-        .mockResolvedValueOnce({ enabled: true, checkedInToday: false })
-        .mockImplementationOnce(async () => {
-          if (readback === "unavailable") throw new Error("read unavailable")
-          return { enabled: true, checkedInToday: readback === "checked" }
-        })
+      vi.mocked(fetchApiKeyCasaDailyCheckInStatus).mockImplementation(
+        async () => {
+          if (now === afterReset && readback === "unavailable")
+            throw new Error("read unavailable")
+          return {
+            enabled: now !== afterReset || readback !== "checked_disabled",
+            checkedInToday:
+              now === afterReset &&
+              (readback === "checked" || readback === "checked_disabled"),
+          }
+        },
+      )
       const context = executionContext()
       const { result } = await executeAccountCheckin(
         account,
@@ -345,23 +361,24 @@ describe("ApiKey Casa check-in provider", () => {
       )
       expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
       expect(performApiKeyCasaDailyCheckIn).toHaveBeenCalledOnce()
-      expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenCalledTimes(2)
-      if (readback === "checked") {
-        expect(mark).toHaveBeenCalledWith(account.id, afterReset, {
-          account,
-          methodId: METHOD_ID,
-        })
-      } else {
-        expect(mark).not.toHaveBeenCalled()
-        if (readback === "not_checked")
-          expect(
-            save.mock.calls.at(-1)?.[1]?.methodKnowledge.methods[METHOD_ID]
-              ?.status,
-          ).toMatchObject({
-            today: "not_checked",
-            evidence: { observedAt: afterReset },
-          })
-      }
+      expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenCalledTimes(
+        imported ? 3 : 2,
+      )
+      const saved = await accountQueries.getAccountById(account.id)
+      expect(
+        saved?.checkIn.methodKnowledge.methods[METHOD_ID]?.status,
+      ).toMatchObject({
+        availability: readback === "checked_disabled" ? "disabled" : "enabled",
+        today:
+          readback === "checked" || readback === "checked_disabled"
+            ? "checked"
+            : "not_checked",
+        evidence: {
+          observedAt: readback === "unavailable" ? beforeReset : afterReset,
+        },
+      })
+      if (readback !== "unavailable")
+        expect(result.accountStateDurability).toBe("persisted")
     },
   )
 
@@ -401,15 +418,26 @@ describe("ApiKey Casa check-in provider", () => {
           throw new TypeError("Failed to fetch")
         },
       )
-      const result = await executeSelectedCheckIn({
-        account: createAccount(),
-        globalAutomaticExecutionEnabled: true,
-        context: executionContext(),
+      const account = createAccount()
+      account.configVersion = CURRENT_CONFIG_VERSION
+      await accountConfigStore.mutate((config) => {
+        config.accounts = [account]
+        return { changed: true, result: undefined }
       })
-      expect(result).toMatchObject({
-        kind: "executed",
-        retryable: false,
-        result: { status: "uncertain" },
+      const context = executionContext()
+      const { result } = await executeAccountCheckin(
+        account,
+        "Casa",
+        context.tempWindowRequestSource,
+        context.protectionBypassExecution,
+      )
+      expect(result).toMatchObject({ status: "uncertain", retryable: false })
+      const saved = await accountQueries.getAccountById(account.id)
+      expect(
+        saved?.checkIn.methodKnowledge.methods[METHOD_ID]?.status,
+      ).toMatchObject({
+        today: checkedInToday ? "checked" : "not_checked",
+        evidence: { observedAt: now },
       })
       expect(performApiKeyCasaDailyCheckIn).toHaveBeenCalledOnce()
     },
