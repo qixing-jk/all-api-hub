@@ -32,6 +32,7 @@ import { wongGongyiProvider } from "./wong"
 import { xiaobaiCodeProvider } from "./xiaobaiCode"
 import { xiaoenProvider } from "./xiaoen"
 import { xingyaProvider } from "./xingya"
+import { zifeiyuGameProvider } from "./zifeiyuGame"
 
 const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn]: sidruneProvider,
@@ -61,6 +62,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: baiApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: apiKeyCasaProvider,
   [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: xingyaProvider,
+  [AUTO_CHECKIN_METHOD_IDS.ZifeiyuDailyGame]: zifeiyuGameProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

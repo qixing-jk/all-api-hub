@@ -35,6 +35,7 @@ import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import { xiaobaiCodeProvider } from "~/services/checkin/autoCheckin/providers/xiaobaiCode"
 import { xingyaProvider } from "~/services/checkin/autoCheckin/providers/xingya"
+import { zifeiyuGameProvider } from "~/services/checkin/autoCheckin/providers/zifeiyuGame"
 import type { CheckInMethodId } from "~/types/checkIn"
 
 const OFFICIAL_METHOD_SOURCE = {
@@ -99,6 +100,24 @@ describe("autoCheckinMethodRegistry", () => {
         .map(({ id }) => id),
     ).not.toContain(AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn)
   })
+  it("selects ZIFEIYU's session-only game protocol on its exact HTTPS origin", () => {
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://ai.112102.xyz/")
+        .map(({ id }) => id),
+    ).toContain(AUTO_CHECKIN_METHOD_IDS.ZifeiyuDailyGame)
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://other.example/")
+        .map(({ id }) => id),
+    ).not.toContain(AUTO_CHECKIN_METHOD_IDS.ZifeiyuDailyGame)
+    expect(
+      registrationFor(AUTO_CHECKIN_METHOD_IDS.ZifeiyuDailyGame).provider,
+    ).toBe(zifeiyuGameProvider)
+    expect(
+      supportsCheckInStatusReadback(AUTO_CHECKIN_METHOD_IDS.ZifeiyuDailyGame),
+    ).toBe(false)
+  })
   it("registers stable identities without changing legacy method mapping", () => {
     const registrationContracts = autoCheckinMethodRegistry.registrations.map(
       ({ id, siteTypes, provider }) => ({
@@ -130,6 +149,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "new-api:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.MODELFLARE],
           provider: newApiProvider,
+        },
+        {
+          id: "zifeiyu:daily-game",
+          candidateSiteTypes: [SITE_TYPES.NEW_API],
+          provider: zifeiyuGameProvider,
         },
         {
           id: "voapi-v2:daily-checkin",
