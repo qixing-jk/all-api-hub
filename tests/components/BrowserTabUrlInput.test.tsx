@@ -4,6 +4,7 @@ import { useState, type ComponentProps } from "react"
 import { beforeEach, expect, it, vi } from "vitest"
 
 import { BrowserTabUrlInput } from "~/components/BrowserTabUrlInput"
+import { BROWSER_TAB_SITE_URL_MODES } from "~/utils/browser/recentTabSites"
 import { getAllTabs } from "~/utils/browser/tabs"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
@@ -13,6 +14,7 @@ const tabs = [
   {
     title: "Project Console",
     url: "https://project.test/security",
+    favIconUrl: "https://project.test/favicon.ico",
     lastAccessed: 20,
   },
   {
@@ -39,7 +41,7 @@ function Field({
       onUrlChange={setUrl}
       enableRecentTabs
       recentTabsLabel="Use an open tab"
-      urlMode="origin"
+      urlMode={BROWSER_TAB_SITE_URL_MODES.ORIGIN}
       clearAction={
         clear ? { label: "Clear URL", onClear: () => setUrl("") } : undefined
       }
@@ -61,6 +63,10 @@ it("matches open tab titles and selects one origin per site", async () => {
   await user.type(input, "PROJECT")
   const choice = await screen.findByRole("option", { name: /Project Console/ })
   expect(screen.getAllByRole("option")).toEqual([choice])
+  expect(choice.querySelector("img")).toHaveAttribute(
+    "src",
+    "https://project.test/favicon.ico",
+  )
   await user.click(choice)
   expect(input).toHaveValue("https://project.test")
   expect(selected).toHaveBeenCalledExactlyOnceWith(
@@ -71,7 +77,13 @@ it("matches open tab titles and selects one origin per site", async () => {
 
 it("browses full pages from the trigger even when the text matches no tab", async () => {
   const user = userEvent.setup()
-  render(<Field initialUrl="https://manual.test" urlMode="page" clear />)
+  render(
+    <Field
+      initialUrl="https://manual.test"
+      urlMode={BROWSER_TAB_SITE_URL_MODES.PAGE}
+      clear
+    />,
+  )
   const input = screen.getByRole("combobox", { name: "Site URL" })
   const trigger = await screen.findByRole("button", { name: "Use an open tab" })
   expect(screen.queryByRole("listbox")).toBeNull()
@@ -116,8 +128,8 @@ it("ignores an outdated tab response when the field changes URL mode", async () 
   const pending = createDeferred<typeof tabs>()
   vi.mocked(getAllTabs).mockReturnValueOnce(pending.promise)
   const user = userEvent.setup()
-  const view = render(<Field urlMode="origin" />)
-  view.rerender(<Field urlMode="page" />)
+  const view = render(<Field urlMode={BROWSER_TAB_SITE_URL_MODES.ORIGIN} />)
+  view.rerender(<Field urlMode={BROWSER_TAB_SITE_URL_MODES.PAGE} />)
   const trigger = await screen.findByRole("button", { name: "Use an open tab" })
   await act(() => {
     pending.resolve([])

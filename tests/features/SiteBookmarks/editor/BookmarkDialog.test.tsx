@@ -201,6 +201,59 @@ const expectDialogClosedBeforeReload = (onClose: ReturnType<typeof vi.fn>) => {
 }
 
 describe("BookmarkDialog", () => {
+  it.each([
+    { title: "  Tab Guide  ", initialName: "  ", expectedName: "Tab Guide" },
+    { title: "  ", initialName: "", expectedName: "docs.example" },
+    { title: "Tab Guide", initialName: "My docs", expectedName: "My docs" },
+  ])(
+    "picks the full tab URL and saves it as $expectedName",
+    async ({ title, initialName, expectedName }) => {
+      const url = "https://docs.example:8443/guide?language=en#start"
+      getAllTabsMock.mockResolvedValue([
+        { url, title, favIconUrl: "https://docs.example/icon.png" },
+      ])
+      const user = userEvent.setup()
+      renderAddDialog()
+
+      const nameInput = await screen.findByPlaceholderText(
+        "bookmark:form.namePlaceholder",
+      )
+      const submit = screen.getByRole("button", {
+        name: "bookmark:actions.add",
+      })
+      await user.click(submit)
+      expect(screen.getByText("bookmark:validation.nameRequired")).toBeVisible()
+      expect(screen.getByText("bookmark:validation.urlRequired")).toBeVisible()
+      fireEvent.change(nameInput, { target: { value: initialName } })
+      await user.click(
+        await screen.findByRole("button", {
+          name: "bookmark:form.recentTabSites",
+        }),
+      )
+      const option = await screen.findByRole("option", {
+        name: /https:\/\/docs\.example:8443/,
+      })
+      expect(option.querySelector("img")).toHaveAttribute(
+        "src",
+        "https://docs.example/icon.png",
+      )
+      await user.click(option)
+
+      expect(nameInput).toHaveValue(expectedName)
+      expect(
+        screen.getByRole("combobox", { name: /bookmark:form.urlLabel/ }),
+      ).toHaveValue(url)
+      expect(screen.queryByText("bookmark:validation.nameRequired")).toBeNull()
+      expect(screen.queryByText("bookmark:validation.urlRequired")).toBeNull()
+      await user.click(submit)
+      await waitFor(() =>
+        expect(addBookmarkMock).toHaveBeenCalledWith(
+          expect.objectContaining({ name: expectedName, url }),
+        ),
+      )
+    },
+  )
+
   it("validates required fields before submitting", async () => {
     const onClose = vi.fn()
 

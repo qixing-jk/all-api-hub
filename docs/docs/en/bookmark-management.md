@@ -43,6 +43,8 @@ Bookmarks can be any URL, commonly including:
 
 ### 1. Add a Bookmark
 
+Open the dropdown on the right of the URL field to choose from recently active tabs. Selecting a tab fills in the full page URL. If the name is blank, it fills in the tab title or uses the hostname when no title is available.
+
 Fill in the following fields:
 
 | Field | Description |

@@ -72,6 +72,7 @@ describe("AccountDialog SiteInfoInput", () => {
       {
         url: "https://recent.example/account?token=secret",
         title: "Recent",
+        favIconUrl: "https://recent.example/favicon.ico",
         lastAccessed: 50,
       },
       {
@@ -108,6 +109,11 @@ describe("AccountDialog SiteInfoInput", () => {
       "Older — https://older.example",
       "https://untitled.example",
     ])
+    expect(
+      screen
+        .getByRole("option", { name: "Recent — https://recent.example" })
+        .querySelector("img"),
+    ).toHaveAttribute("src", "https://recent.example/favicon.ico")
     fireEvent.change(selector, { target: { value: "older" } })
     rerender(<SiteInfoInput {...withSitePolicy({ ...props, url: "older" })} />)
     expect(screen.getAllByRole("option")).toHaveLength(1)

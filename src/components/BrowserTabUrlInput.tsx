@@ -7,13 +7,12 @@ import {
   type ReactNode,
 } from "react"
 
+import { BrowserTabSiteOptionList } from "~/components/BrowserTabSiteOptionList"
 import Tooltip from "~/components/Tooltip"
 import { ClearableFieldButton } from "~/components/ui/clearableField"
 import {
   Combobox,
   ComboboxContent,
-  ComboboxItem,
-  ComboboxList,
   ComboboxTrigger,
 } from "~/components/ui/combobox"
 import { Input } from "~/components/ui/input"
@@ -23,19 +22,13 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
+import { useRecentBrowserTabSites } from "~/hooks/useRecentBrowserTabSites"
 import {
-  getRecentBrowserTabSites,
+  BROWSER_TAB_SITE_URL_MODES,
+  matchesRecentBrowserTabSite,
+  type BrowserTabSiteUrlMode,
   type RecentBrowserTabSite,
 } from "~/utils/browser/recentTabSites"
-import { getAllTabs } from "~/utils/browser/tabs"
-import { createLogger } from "~/utils/core/logger"
-
-const logger = createLogger("BrowserTabUrlInput")
-
-/** Matches the tab's title and displayed URL case-insensitively. */
-function matchesTabSite(option: RecentBrowserTabSite, query: string) {
-  return option.label.toLowerCase().includes(query.toLowerCase())
-}
 
 interface BrowserTabUrlInputProps {
   inputProps: Omit<ComponentProps<"input">, "value" | "onChange"> & {
@@ -46,7 +39,7 @@ interface BrowserTabUrlInputProps {
   onSelectSite?: (site: RecentBrowserTabSite) => void
   enableRecentTabs: boolean
   recentTabsLabel: string
-  urlMode: "origin" | "page"
+  urlMode: BrowserTabSiteUrlMode
   clearAction?: { label: string; onClear: () => void }
   endActions?: ReactNode
 }
@@ -63,29 +56,15 @@ export function BrowserTabUrlInput({
   clearAction,
   endActions,
 }: BrowserTabUrlInputProps) {
-  const [options, setOptions] = useState<RecentBrowserTabSite[]>([])
+  const options = useRecentBrowserTabSites(enableRecentTabs, urlMode)
   const [isOpen, setIsOpen] = useState(false)
   const [browseRecentSites, setBrowseRecentSites] = useState(false)
   const fieldAnchor = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    setOptions((previous) => (previous.length ? [] : previous))
     setIsOpen(false)
     setBrowseRecentSites(false)
-    if (!enableRecentTabs) return
-
-    let active = true
-    void getAllTabs()
-      .then((tabs) => {
-        if (active) setOptions(getRecentBrowserTabSites(tabs, urlMode))
-      })
-      .catch((error) => {
-        if (active) logger.warn("Could not load recent tab sites", { error })
-      })
-    return () => {
-      active = false
-    }
   }, [enableRecentTabs, urlMode])
 
   const clearButton =
@@ -128,7 +107,9 @@ export function BrowserTabUrlInput({
   }
 
   const getOptionUrl = (site: RecentBrowserTabSite) =>
-    urlMode === "page" ? site.url : site.value
+    urlMode === BROWSER_TAB_SITE_URL_MODES.PAGE ? site.url : site.value
+  const hasMatchingOption = (query: string) =>
+    options.some((option) => matchesRecentBrowserTabSite(option, query))
   const hasOptions = options.length > 0
 
   return (
@@ -139,7 +120,7 @@ export function BrowserTabUrlInput({
       open={isOpen && hasOptions}
       itemToStringLabel={getOptionUrl}
       filter={(option, query) =>
-        browseRecentSites || matchesTabSite(option, query)
+        browseRecentSites || matchesRecentBrowserTabSite(option, query)
       }
       autoHighlight
       disabled={inputProps.disabled}
@@ -153,18 +134,14 @@ export function BrowserTabUrlInput({
           setBrowseRecentSites(true)
           setIsOpen(true)
         } else {
-          setIsOpen(
-            open &&
-              (browseRecentSites ||
-                options.some((option) => matchesTabSite(option, url))),
-          )
+          setIsOpen(open && (browseRecentSites || hasMatchingOption(url)))
         }
       }}
       onInputValueChange={(value, details) => {
         if (details.reason === "input-change") {
           setBrowseRecentSites(false)
           // Manual URLs are valid even when they match no open tab.
-          setIsOpen(options.some((option) => matchesTabSite(option, value)))
+          setIsOpen(hasMatchingOption(value))
           onUrlChange(value)
         }
       }}
@@ -204,15 +181,7 @@ export function BrowserTabUrlInput({
           anchor={fieldAnchor}
           className="min-w-(--anchor-width)"
         >
-          <ComboboxList>
-            {(option: RecentBrowserTabSite) => (
-              <ComboboxItem key={getOptionUrl(option)} value={option}>
-                <span className="min-w-0 flex-1 truncate" title={option.label}>
-                  {option.label}
-                </span>
-              </ComboboxItem>
-            )}
-          </ComboboxList>
+          <BrowserTabSiteOptionList getOptionKey={getOptionUrl} />
         </ComboboxContent>
       )}
     </Combobox>

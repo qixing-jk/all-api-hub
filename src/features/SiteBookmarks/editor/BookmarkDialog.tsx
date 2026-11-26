@@ -28,7 +28,10 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { SiteBookmark } from "~/types"
-import type { RecentBrowserTabSite } from "~/utils/browser/recentTabSites"
+import {
+  BROWSER_TAB_SITE_URL_MODES,
+  type RecentBrowserTabSite,
+} from "~/utils/browser/recentTabSites"
 import { getActiveTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -378,7 +381,7 @@ export default function BookmarkDialog({
               url={url}
               onUrlChange={setUrl}
               onSelectSite={handleSelectTabSite}
-              urlMode="page"
+              urlMode={BROWSER_TAB_SITE_URL_MODES.PAGE}
               enableRecentTabs={isOpen}
               recentTabsLabel={t("bookmark:form.recentTabSites")}
             />

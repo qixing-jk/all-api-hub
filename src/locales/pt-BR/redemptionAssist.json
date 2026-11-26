@@ -67,9 +67,11 @@
       "includeAccountSiteUrlsDesc": "Permitir todas as páginas na origem da URL do site de cada conta.",
       "includeCheckInAndRedeemUrls": "Incluir URLs de check-in e resgate",
       "includeCheckInAndRedeemUrlsDesc": "Permitir as páginas de check-in e resgate (personalizadas ou padrão) de cada conta.",
+      "noTabs": "Nenhuma aba da web corresponde à busca. Você pode inserir um padrão abaixo.",
       "patterns": "Padrões de regex personalizados",
       "patternsDesc": "Um padrão JavaScript RegExp por linha. A correspondência sem distinção entre maiúsculas e minúsculas é aplicada.",
-      "patternsPlaceholder": "^https://example\\.com/console/topup"
+      "patternsPlaceholder": "^https://example\\.com/console/topup",
+      "tabPicker": "Escolher entre abas abertas"
     }
   }
 }
