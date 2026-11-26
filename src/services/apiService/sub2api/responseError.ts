@@ -13,6 +13,12 @@ type Sub2ApiFailureEnvelope = {
   reason?: string
 }
 
+/** The session-binding middleware can answer with only its primary code. */
+export const readSub2ApiSessionBindingMismatch = (body: unknown) =>
+  isRecord(body) && body.code === SUB2API_SESSION_BINDING_MISMATCH_CODE
+    ? SUB2API_SESSION_BINDING_MISMATCH_CODE
+    : undefined
+
 /** Reads only verified Sub2API failure envelopes and machine codes. */
 export const readSub2ApiFailureEnvelope = (
   body: unknown,
@@ -20,8 +26,7 @@ export const readSub2ApiFailureEnvelope = (
   if (!isRecord(body)) return null
 
   const isNumericFailure = typeof body.code === "number" && body.code !== 0
-  const isSessionBindingMismatch =
-    body.code === SUB2API_SESSION_BINDING_MISMATCH_CODE
+  const isSessionBindingMismatch = readSub2ApiSessionBindingMismatch(body)
   if (!isNumericFailure && !isSessionBindingMismatch) return null
 
   const upstreamCode = readSafeUpstreamCode(body.code)

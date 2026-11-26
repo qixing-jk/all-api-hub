@@ -7,9 +7,13 @@ import { AuthTypeEnum } from "~/types"
 import { newApiFamilyRequests } from "../request"
 import { NEW_API_TOKEN_VERIFICATION_ERRORS } from "./protocol"
 
+export type NewApiTokenSessionRequest = ApiServiceRequest & {
+  newApiSessionId?: string
+}
+
 /** A session-bound request cannot recover into another browser session. */
 export function tokenSessionRequest<T>(
-  request: ApiServiceRequest,
+  { newApiSessionId, ...request }: NewApiTokenSessionRequest,
   {
     options,
     ...dispatch
@@ -17,11 +21,13 @@ export function tokenSessionRequest<T>(
 ) {
   if (request.auth.authType !== AuthTypeEnum.AccessToken)
     throw new Error(NEW_API_TOKEN_VERIFICATION_ERRORS.INVALID_CONTEXT)
+  const headers = new Headers(options?.headers)
+  if (newApiSessionId) headers.set("X-Auth-Session", newApiSessionId)
   return newApiFamilyRequests.data<T>(
     { ...request, allowAccountCredentialRecovery: false },
     {
       ...dispatch,
-      options: { ...options, credentials: "omit", redirect: "error" },
+      options: { ...options, headers, credentials: "omit", redirect: "error" },
       tempWindowFallback: { codes: [], statusCodes: [] },
     },
   )

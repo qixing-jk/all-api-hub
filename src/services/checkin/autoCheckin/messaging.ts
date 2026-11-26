@@ -43,13 +43,9 @@ type AutoCheckinPretriggerDailyOnUiOpenResponse =
       error: string
     }
 
-interface AutoCheckinRetryAccountRequest {
+interface AutoCheckinAccountCommandRequest {
   accountId?: string
   protectionBypassExecution?: ProtectionBypassExecution
-}
-
-interface AutoCheckinVerifyAccountStatusRequest {
-  accountId?: string
 }
 
 export interface AutoCheckinGetAccountInfoRequest {
@@ -89,8 +85,7 @@ type AutoCheckinScheduleTodayResponse =
   | { success: false; error: string }
 
 type AutoCheckinGetAccountInfoResponse =
-  | { success: true; data: DisplaySiteData }
-  | { success: false; error: string }
+  { success: true; data: DisplaySiteData } | { success: false; error: string }
 
 type AutoCheckinGetStatusResponse =
   | { success: true; data: AutoCheckinStatus | null }
@@ -127,10 +122,10 @@ interface AutoCheckinProtocolMap {
     data: AutoCheckinPretriggerDailyOnUiOpenRequest,
   ): AutoCheckinPretriggerDailyOnUiOpenResponse
   [AutoCheckinMessageTypes.RetryAccount](
-    data: AutoCheckinRetryAccountRequest,
+    data: AutoCheckinAccountCommandRequest,
   ): AutoCheckinBasicResponse
   [AutoCheckinMessageTypes.VerifyAccountStatus](
-    data: AutoCheckinVerifyAccountStatusRequest,
+    data: AutoCheckinAccountCommandRequest,
   ): AutoCheckinVerifyAccountStatusResponse
   [AutoCheckinMessageTypes.GetAccountInfo](
     data: AutoCheckinGetAccountInfoRequest,

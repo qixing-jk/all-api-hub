@@ -8,10 +8,10 @@ import {
   performBaiApiCheckIn,
 } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { BAI_API_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { ApiError } from "~/services/apiTransport/errors"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
@@ -23,10 +23,13 @@ import {
 } from "~/types/autoCheckin"
 
 import type {
-  AutoCheckinProvider,
   AutoCheckinProviderContext,
   AutoCheckinProviderReadContext,
 } from "./contracts"
+import {
+  createSub2ApiStatusDetector,
+  withSub2ApiCheckInExecution,
+} from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -37,19 +40,25 @@ import {
 } from "./sub2apiShared"
 
 /** Throws for unreadable status so discovery can classify the route's absence. */
-const fetchStatus = async (context: AutoCheckinProviderReadContext) => {
+const fetchStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) => {
   const status = await fetchBaiApiCheckInStatus(
     createSub2ApiCheckInReadRequest(context),
+    undefined,
+    auth,
   )
   return toSub2ApiCheckInStatus(status, context.observedAt)
 }
 
 /** Selected status refresh reports failures as unknown, keeping the selection. */
-const readStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
-  context,
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) => {
   try {
-    return await fetchStatus(context)
+    return await fetchStatus(context, auth)
   } catch (error) {
     return {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
@@ -59,7 +68,7 @@ const readStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
   }
 }
 
-export const baiApiProvider: AutoCheckinProvider = {
+export const baiApiProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
@@ -67,11 +76,11 @@ export const baiApiProvider: AutoCheckinProvider = {
   // A deployment without the daily rewards module answers the host's Go
   // default 404 instead of a status DTO; the shared detector maps that to
   // unsupported so one site's method cannot block another's discovery.
-  detect: (context) => detectWithStatusReadback(context, fetchStatus),
+  detect: createSub2ApiStatusDetector(fetchStatus),
 
   getStatus: readStatus,
 
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -86,8 +95,12 @@ export const baiApiProvider: AutoCheckinProvider = {
 
     try {
       const result = await performBaiApiCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       const awards = readUsdAwards(
         account as SiteAccount,
@@ -112,7 +125,7 @@ export const baiApiProvider: AutoCheckinProvider = {
       return mapBaiApiMutationError(error, context, account as SiteAccount)
     }
   },
-}
+})
 
 /**
  * The deployment's duplicate answer is unverified: its dashboard assumes a

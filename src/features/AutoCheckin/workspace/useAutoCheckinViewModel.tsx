@@ -423,9 +423,14 @@ export function useAutoCheckinViewModel(props: {
 
     try {
       setVerifyingAccountId(accountId)
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.VerifyAccountStatus,
-        { accountId },
+      const response = await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.VerifyCheckinStatus,
+        getCurrentTempWindowRequestSource(),
+        (protectionBypassExecution) =>
+          sendAutoCheckinMessage(AutoCheckinMessageTypes.VerifyAccountStatus, {
+            accountId,
+            protectionBypassExecution,
+          }),
       )
       if (response.success) {
         toast.success(t("messages.success.statusVerified"))

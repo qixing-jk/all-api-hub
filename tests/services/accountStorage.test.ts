@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/checkInStatus"
@@ -3085,6 +3086,54 @@ describe("accountStorage core behaviors", () => {
       accountStorage.markAccountAsSiteCheckedIn("disabled-check-in"),
     ).resolves.toBe(false)
   })
+
+  it.each(["selection", "identity"] as const)(
+    "keeps a completed claim scoped to its original method and identity after a concurrent %s edit",
+    async (edit) => {
+      const methodId = AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn
+      const other = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
+      const matched = {
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 100 },
+        },
+      } as const
+      const account = createAccount({
+        site_type: SITE_TYPES.SUB2API,
+        site_url: "https://apikey.casa",
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "manual", methodId },
+          methodKnowledge: {
+            methods: { [methodId]: matched, [other]: matched },
+          },
+        },
+      })
+      const updated = structuredClone(account)
+      if (edit === "selection")
+        updated.checkIn.selection = { mode: "manual", methodId: other }
+      else updated.site_url = "https://replacement.example"
+      seedStorage([updated])
+      const saved = await accountStorage.markAccountAsSiteCheckedIn(
+        account.id,
+        200,
+        { methodId, account },
+      )
+      const methods = (await accountStorage.getAccountById(account.id))?.checkIn
+        .methodKnowledge.methods
+      expect(methods?.[other]?.status).toBeUndefined()
+      if (edit === "selection") {
+        expect(saved).toBe(true)
+        expect(methods?.[methodId]?.status).toMatchObject({
+          today: "checked",
+          evidence: { observedAt: 200 },
+        })
+      } else {
+        expect(saved).toBe(false)
+        expect(methods?.[methodId]?.status).toBeUndefined()
+      }
+    },
+  )
 
   it("markAccountAsSiteCheckedIn returns false without a selected method", async () => {
     const account = createAccount({

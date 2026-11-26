@@ -18,6 +18,10 @@ import {
 import { PMAPI_ENDPOINTS } from "~/services/apiService/pmapi/constants"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
 import {
+  API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
+  createApiKeyCasaDailyCheckInStatusEndpoint,
+} from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckInProtocol"
+import {
   createBaiApiCheckInStatusEndpoint,
   resolveBaiApiCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
@@ -116,6 +120,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "sidrune"
   | "nexavlinks"
   | "xingya"
+  | "apiKeyCasa"
   | "agentRouter"}`
 
 export type CheckInMethodPresentationMetadata = {
@@ -127,10 +132,14 @@ export type CheckInMethodPresentationMetadata = {
 }
 
 interface AutoCheckinMethodDefinitionBase {
+  /** Calendar used by the site to reset its daily check-in. Defaults to the device calendar. */
+  readonly resetTimeZone?: string
   readonly presentation?: Partial<
     Pick<CheckInMethodPresentationMetadata, "kind" | "sourceNameKey">
   >
   readonly discoveryPriority?: number
+  /** Lower the rank of an inconclusive probe while keeping positive protocol matches as peers. */
+  readonly unknownDiscoveryPriority?: number
   /** Public-domain hints for the last tie-break; never an origin authorization. */
   readonly discoveryOrigins?: readonly string[]
   /** How account login participates in execution, independent of API credentials. */
@@ -148,7 +157,7 @@ interface AutoCheckinMethodDefinitionBase {
   readonly supportsRouteOverride?: boolean
 }
 
-/** Hiyo can award again; DaiGua/Sidrune/FreeAPI/Xingya duplicate guarantees are unverified. Never queue replays. */
+/** These methods can award again or lack a verified duplicate guarantee. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
@@ -156,6 +165,7 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
   ])
 
 /**
@@ -662,6 +672,27 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: {
+    resetTimeZone: API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
+    // Public dashboard contract observed at https://apikey.casa/redeem.
+    discoveryOrigins: ["https://apikey.casa"],
+    // Also probe other Sub2API installations, where this deployment's route
+    // may respond inconclusively while an existing protocol is fully verified.
+    unknownDiscoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Generic,
+    presentation: { sourceNameKey: "methods.sources.apiKeyCasa" },
+    id: AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "ApiKey Casa",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createApiKeyCasaDailyCheckInStatusEndpoint() },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn,
     siteTypes: [SITE_TYPES.EMRANK],
@@ -707,6 +738,26 @@ export function getCheckInDiscoveryPriority(methodId: CheckInMethodId): number {
   const definition: AutoCheckinMethodDefinition =
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
   return definition.discoveryPriority ?? CHECK_IN_DISCOVERY_PRIORITIES.Specific
+}
+
+/** Inconclusive probes normally retain their protocol's rank. */
+export function getUnknownCheckInDiscoveryPriority(
+  methodId: CheckInMethodId,
+): number {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return (
+    definition.unknownDiscoveryPriority ?? getCheckInDiscoveryPriority(methodId)
+  )
+}
+
+/** A missing reset zone uses the device calendar. */
+export function getCheckInResetTimeZone(
+  methodId: CheckInMethodId,
+): string | undefined {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.resetTimeZone
 }
 
 /** Returns whether the selected method can verify today without posting. */

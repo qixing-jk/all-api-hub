@@ -10,6 +10,20 @@ const withStatus = (statusCode: number) =>
 
 describe("auto-checkin error classification", () => {
   it.each([
+    ["identity_mismatch", "identity_mismatch"],
+    ["account_missing", "credential_persistence_failed"],
+    ["write_failed", "credential_persistence_failed"],
+  ])(
+    "preserves Sub2API credential outcome %s in a selected probe",
+    (status, expected) => {
+      const error = Object.assign(new Error("credential update failed"), {
+        result: { status },
+      })
+      expect(getCheckInMethodUnknownReason(error)).toBe(expected)
+    },
+  )
+
+  it.each([
     [401, "authentication_required"],
     [403, "permission_denied"],
     [408, "timeout"],
