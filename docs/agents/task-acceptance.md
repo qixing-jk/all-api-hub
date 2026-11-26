@@ -12,7 +12,7 @@ State a review recommendation within the verified scope. For each unresolved fin
 
 Derive the surface/state inventory from the full in-scope branch delta and its consumers. Capture every related panel and risk-relevant state, including surrounding controls, opened details, scrolling content and affected responsive variants. Keep readable focused views beside contextual panel/window captures. A crop of the changed value alone cannot establish layout quality. Expand the review-relevant images in the maintained report; links to other reports or a directory of filenames do not provide a complete review view.
 
-Record automated behavior results, manual visual review and missing evidence separately for each group. Inspect every materially distinct affected surface, content shape and layout/state in the inventory; reuse unchanged inspection rather than repeatedly opening duplicate captures. An image that was generated but not inspected remains visually unreviewed. Test passes and artifact generation cannot close that status.
+Give each materially distinct UI outcome its own acceptance row, even when several outcomes open the same panel. Name the triggering condition and visible result. Before reusing a passing test, check its fixture and executed assertions against that row. Record the behavior result and link a capture of that state with its surrounding controls after inspecting it. Mark missing behavior or visual evidence in the same row. Reuse unchanged visual inspection across iterations.
 
 ## Account for the behavior changes
 
