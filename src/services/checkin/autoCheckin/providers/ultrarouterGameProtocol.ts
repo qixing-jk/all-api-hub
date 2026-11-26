@@ -66,7 +66,7 @@ export interface UltraRouterGameSnapshot {
   resets_at?: string | number
 }
 
-export interface UltraRouterGameMutationBatch {
+interface UltraRouterGameMutationBatch {
   id: string
   from: number
   inputs: number[]
