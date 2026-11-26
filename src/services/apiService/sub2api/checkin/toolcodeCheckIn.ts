@@ -1,4 +1,5 @@
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   TOOLCODE_DAILY_CHECK_IN_ENDPOINT as CHECK_IN_ENDPOINT,
   createToolcodeCheckInStatusEndpoint,
@@ -12,6 +13,8 @@ import {
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
 
 // https://toolcode.top/engagement, observed 2026-10-04: Bearer-authenticated
 // growth-center status is distinct from the other Sub2API check-in protocols.
@@ -100,11 +103,7 @@ export async function fetchToolcodeDailyCheckInStatus(
         checkedInToday: data.checked_in_today,
       }
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    PASSIVE_CHECK_IN_AUTH,
   )
 }
 
@@ -117,10 +116,10 @@ export async function performToolcodeDailyCheckIn(
     request,
     CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        CHECK_IN_ENDPOINT,
+      )
       const envelope = toRecord(response.body)
       // Live duplicate POST: HTTP 409, code 409, reason CHECKIN_ALREADY_COMPLETED;
       // a follow-up GET confirmed no second award. Do not match arbitrary text/409s.

@@ -4,6 +4,7 @@ import {
   HIYO_CHECK_IN_ENDPOINT,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
@@ -14,6 +15,8 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
 
 const toRecord = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -99,11 +102,7 @@ export async function fetchHiyoDailyCheckInStatus(request: ApiServiceRequest) {
       })
       return parseStatus(parseData(response))
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    PASSIVE_CHECK_IN_AUTH,
   )
 }
 
@@ -121,10 +120,11 @@ export async function performHiyoDailyCheckIn(
     request,
     HIYO_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: HIYO_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store", body: "{}" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        HIYO_CHECK_IN_ENDPOINT,
+        { body: "{}" },
+      )
       const data = parseData(response)
       const status = toRecord(data.status)
       if (

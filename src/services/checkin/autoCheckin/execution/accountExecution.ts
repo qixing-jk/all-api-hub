@@ -2,18 +2,24 @@ import { type AccountLoginProvider } from "~/constants/accountLogin"
 import {
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import { getLoginProviderClaimedByAnother } from "~/services/accountLogin/providerClaims"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { CHECK_IN_CONFIRMATION_KINDS } from "~/services/checkin/autoCheckin/confirmation"
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/discovery/automaticDiscovery"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { CheckInExecutionError } from "~/services/checkin/autoCheckin/errors"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
+import { getCheckInResetTimeZone } from "~/services/checkin/autoCheckin/providers/registry"
 import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
 import { toAutoCheckinSkipReason as toSchedulerSkipReason } from "~/services/checkin/autoCheckin/skipReasons"
+import { replaceCheckInMethodStatus } from "~/services/checkin/autoCheckin/state"
+import { isCheckInObservationCurrent } from "~/services/checkin/statusObservation"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { type ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -27,7 +33,6 @@ import {
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
 import { type TempWindowRequestSource } from "~/types/tempWindowFetch"
-import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 
 export interface RunAccountCheckinOptions {
@@ -204,17 +209,47 @@ export async function executeAccountCheckin(
       providerResult.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
     ) {
       const completedAt = execution.completedAt ?? result.timestamp
-      // Account status uses one timestamp for freshness and local-day attribution.
-      // Prefer the observation within that day, but retain yesterday's grant date.
-      const observedAt =
-        formatLocalDayKey(new Date(completedAt)) ===
-        formatLocalDayKey(new Date(result.timestamp))
+      const confirmation = execution.confirmation
+      if (
+        confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Unavailable ||
+        confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Unsupported
+      )
+        return { result, ...(execution.reused ? { reused: true } : {}) }
+      let persisted: boolean
+      if (
+        confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Observed &&
+        !(
+          confirmation.status.outcome ===
+            CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+          confirmation.status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
+        )
+      ) {
+        const refreshed = replaceCheckInMethodStatus({
+          config: account.checkIn,
+          methodId: execution.methodId,
+          status: confirmation.status,
+        })
+        persisted =
+          (await accountCheckInState.prepareAccountForSelectedCheckIn(
+            account.id,
+            refreshed,
+            account,
+          )) !== null
+      } else {
+        // A dated grant may precede its observation. Preserve its actual reset day.
+        const observedAt = isCheckInObservationCurrent(
+          completedAt,
+          getCheckInResetTimeZone(execution.methodId),
+          result.timestamp,
+        )
           ? result.timestamp
           : completedAt
-      const persisted = await accountCheckInState.markAccountAsSiteCheckedIn(
-        account.id,
-        observedAt,
-      )
+        persisted = await accountCheckInState.markAccountAsSiteCheckedIn(
+          account.id,
+          observedAt,
+          { account, methodId: execution.methodId },
+        )
+      }
       result.accountStateDurability =
         persisted === false
           ? CHECKIN_ACCOUNT_STATE_DURABILITY.FAILED

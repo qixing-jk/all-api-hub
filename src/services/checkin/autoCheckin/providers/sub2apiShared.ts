@@ -59,7 +59,7 @@ const hasText = (value: unknown): value is string =>
 
 export const createSub2ApiCheckInReadRequest = (
   context: AutoCheckinProviderReadContext,
-  transportPolicy = context.authenticationRecovery,
+  transportPolicy?: AutoCheckinProviderContext,
 ): ApiServiceRequest => {
   const request =
     context.request ??

@@ -1,5 +1,6 @@
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   SUB2API_CHECK_IN_RECOVERY_REASONS,
@@ -16,6 +17,8 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
 
 export const DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT =
   "/api/v1/tbe-sponsor-checkin/status"
@@ -237,7 +240,7 @@ export async function fetchDenxioDailyCheckInStatus(
     DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT,
     (authenticatedRequest) =>
       fetchStatusWithRequest(authenticatedRequest, timezone),
-    { proactiveRefresh: false, recoverUnauthorized: false },
+    PASSIVE_CHECK_IN_AUTH,
   )
 }
 
@@ -292,14 +295,11 @@ export async function performDenxioDailyCheckIn(
       request,
       DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT,
       async (authenticatedRequest) => {
-        const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-          endpoint: `${DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT}?timezone=${encodeURIComponent(timezone)}`,
-          options: {
-            method: "POST",
-            cache: "no-store",
-            body: JSON.stringify({ timezone }),
-          },
-        })
+        const response = await postSub2ApiCheckIn(
+          authenticatedRequest,
+          `${DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT}?timezone=${encodeURIComponent(timezone)}`,
+          { body: JSON.stringify({ timezone }) },
+        )
         return {
           challenge: parseDenxioDailyCheckInBeginResponse(response),
           request: authenticatedRequest,
@@ -330,17 +330,16 @@ export async function performDenxioDailyCheckIn(
       beginSession.request,
       DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
       async (authenticatedRequest) => {
-        const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-          endpoint: DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
-          options: {
-            method: "POST",
-            cache: "no-store",
+        const response = await postSub2ApiCheckIn(
+          authenticatedRequest,
+          DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
+          {
             body: JSON.stringify({
               token: beginSession.challenge.token,
               timezone,
             }),
           },
-        })
+        )
         return parseDenxioDailyCheckInClaimResponse(response)
       },
       (recoveredRequest) => fetchStatusWithRequest(recoveredRequest, timezone),

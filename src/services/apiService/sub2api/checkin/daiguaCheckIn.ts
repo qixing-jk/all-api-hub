@@ -5,6 +5,7 @@ import {
   DAIGUA_CHECK_IN_STATUS_ENDPOINT,
   resolveDaiguaCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/daiguaCheckInProtocol"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
@@ -15,6 +16,8 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
 
 const record = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -101,11 +104,7 @@ export async function fetchDaiguaDailyCheckInStatus(
       })
       return parseStatus(parseData(response, DAIGUA_CHECK_IN_STATUS_ENDPOINT))
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    PASSIVE_CHECK_IN_AUTH,
   )
 }
 
@@ -118,10 +117,11 @@ export async function performDaiguaDailyCheckIn(
     request,
     DAIGUA_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: DAIGUA_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store", body: "{}" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        DAIGUA_CHECK_IN_ENDPOINT,
+        { body: "{}" },
+      )
       return parseDaiguaDailyCheckInMutationResponse(response)
     },
     fetchDaiguaDailyCheckInStatus,

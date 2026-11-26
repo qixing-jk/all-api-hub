@@ -133,6 +133,7 @@ const PROTECTION_BYPASS_USER_COMMAND_CATALOG = {
   ManualCheckin: "manual_checkin",
   CheckinFeedback: "checkin_feedback",
   RetryCheckinAccount: "retry_checkin_account",
+  VerifyCheckinStatus: "verify_checkin_status",
   AddAccount: "add_account",
   DetectAccount: "detect_account",
   ReauthenticateAccount: "reauthenticate_account",
@@ -171,6 +172,8 @@ export const PROTECTION_BYPASS_USER_COMMAND_FEATURES = {
   [PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin]:
     PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount]:
+    PROTECTION_BYPASS_FEATURES.Checkin,
+  [PROTECTION_BYPASS_USER_COMMANDS.VerifyCheckinStatus]:
     PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.AddAccount]:
     PROTECTION_BYPASS_FEATURES.AccountOnboarding,

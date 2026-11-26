@@ -17,7 +17,10 @@ import {
 } from "~/services/apiService/newApiFamily/variants/xingyaCheckInProtocol"
 import { PMAPI_ENDPOINTS } from "~/services/apiService/pmapi/constants"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
-import { createApiKeyCasaDailyCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckInProtocol"
+import {
+  API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
+  createApiKeyCasaDailyCheckInStatusEndpoint,
+} from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckInProtocol"
 import {
   createBaiApiCheckInStatusEndpoint,
   resolveBaiApiCheckInTimezone,
@@ -135,6 +138,8 @@ interface AutoCheckinMethodDefinitionBase {
     Pick<CheckInMethodPresentationMetadata, "kind" | "sourceNameKey">
   >
   readonly discoveryPriority?: number
+  /** Lower the rank of an inconclusive probe while keeping positive protocol matches as peers. */
+  readonly unknownDiscoveryPriority?: number
   /** Public-domain hints for the last tie-break; never an origin authorization. */
   readonly discoveryOrigins?: readonly string[]
   /** How account login participates in execution, independent of API credentials. */
@@ -668,9 +673,12 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: {
-    resetTimeZone: "Asia/Shanghai",
+    resetTimeZone: API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
     // Public dashboard contract observed at https://apikey.casa/redeem.
     discoveryOrigins: ["https://apikey.casa"],
+    // Also probe other Sub2API installations, where this deployment's route
+    // may respond inconclusively while an existing protocol is fully verified.
+    unknownDiscoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Generic,
     presentation: { sourceNameKey: "methods.sources.apiKeyCasa" },
     id: AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
@@ -730,6 +738,17 @@ export function getCheckInDiscoveryPriority(methodId: CheckInMethodId): number {
   const definition: AutoCheckinMethodDefinition =
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
   return definition.discoveryPriority ?? CHECK_IN_DISCOVERY_PRIORITIES.Specific
+}
+
+/** Inconclusive probes normally retain their protocol's rank. */
+export function getUnknownCheckInDiscoveryPriority(
+  methodId: CheckInMethodId,
+): number {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return (
+    definition.unknownDiscoveryPriority ?? getCheckInDiscoveryPriority(methodId)
+  )
 }
 
 /** A missing reset zone uses the device calendar. */

@@ -11,6 +11,8 @@ import type {
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
 
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
+
 const { parseEnvelopeData, invalidResponse } =
   createCheckInCodeEnvelopeParser("NexaVlinks")
 
@@ -79,10 +81,6 @@ export async function fetchNexaVlinksDailyCheckInStatus(
       })
       return parseNexaVlinksCheckInStatusResponse(response)
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    PASSIVE_CHECK_IN_AUTH,
   )
 }

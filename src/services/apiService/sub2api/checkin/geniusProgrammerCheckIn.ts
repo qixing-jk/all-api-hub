@@ -2,6 +2,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   classifySiblingStatusDto,
   SIBLING_DTO_VERDICTS,
@@ -21,6 +22,8 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
 
 export const GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
 
@@ -161,11 +164,7 @@ export async function fetchGeniusProgrammerDailyCheckInStatus(
       })
       return parseGeniusProgrammerDailyCheckInStatusResponse(response)
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    PASSIVE_CHECK_IN_AUTH,
   )
 }
 
@@ -182,10 +181,10 @@ export async function performGeniusProgrammerDailyCheckIn(
     request,
     GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
+      )
       return parseGeniusProgrammerDailyCheckInMutationResponse(response)
     },
     fetchGeniusProgrammerDailyCheckInStatus,

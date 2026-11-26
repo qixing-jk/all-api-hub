@@ -819,21 +819,18 @@ async function executeSelectedCheckInOnce(
     registration.provider.ownsStatusAdmission?.(account) === true
   let refreshedConfig: CheckInConfig | undefined
   let statusProof: AutoCheckinProviderContext["statusProof"]
-  const operations =
-    registration.provider.forExecution?.(input.context) ?? registration.provider
-  if (operations.getStatus && !ownsStatusAdmission) {
+  const attempt = registration.provider.forExecution?.(input.context)
+  const operations = attempt ?? registration.provider
+  const getAuthenticatedStatus =
+    attempt?.getAuthenticatedStatus ?? operations.getStatus
+  if (getAuthenticatedStatus && !ownsStatusAdmission) {
     try {
       const stable = await readDayStableCheckInObservation(
         () =>
-          operations.getStatus!({
+          getAuthenticatedStatus({
             account,
             observedAt: Date.now(),
             dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
-            authenticationRecovery: {
-              tempWindowRequestSource: input.context.tempWindowRequestSource,
-              protectionBypassExecution:
-                input.context.protectionBypassExecution,
-            },
           }),
         getCheckInResetTimeZone(registration.id),
       )

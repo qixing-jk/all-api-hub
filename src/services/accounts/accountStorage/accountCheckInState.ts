@@ -312,17 +312,23 @@ class AccountCheckInState {
   async markAccountAsSiteCheckedIn(
     id: string,
     observedAt?: number,
+    execution?: { account: SiteAccount; methodId: CheckInMethodId },
   ): Promise<boolean> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
-        if (account.disabled) {
+        if (
+          account.disabled ||
+          (execution &&
+            !hasSameAccountRequestIdentity(account, execution.account))
+        ) {
           return { nextAccount: account, result: false, changed: false }
         }
-        const selectedMethodId = account.checkIn.selection.methodId
-        const nextCheckIn = isCheckInMethodId(selectedMethodId)
+        const methodId =
+          execution?.methodId ?? account.checkIn.selection.methodId
+        const nextCheckIn = isCheckInMethodId(methodId)
           ? markCheckInMethodExecuted({
               config: account.checkIn,
-              methodId: selectedMethodId,
+              methodId,
               observedAt: observedAt ?? Date.now(),
             })
           : account.checkIn

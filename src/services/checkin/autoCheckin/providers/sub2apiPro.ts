@@ -10,6 +10,7 @@ import {
   fetchSub2ApiProDailyCheckInStatus,
   performSub2ApiProDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/proCheckInExecution"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -19,10 +20,8 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderReadContext,
-} from "./contracts"
+import type { AutoCheckinProviderReadContext } from "./contracts"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -34,14 +33,18 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) => {
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) => {
   const status = await fetchSub2ApiProDailyCheckInStatus(
     createSub2ApiCheckInReadRequest(context),
+    auth,
   )
   return toSub2ApiCheckInStatus(status, context.observedAt)
 }
 
-export const sub2apiProProvider: AutoCheckinProvider = {
+export const sub2apiProProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
@@ -52,7 +55,7 @@ export const sub2apiProProvider: AutoCheckinProvider = {
 
   getStatus: readStatus,
 
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -63,8 +66,12 @@ export const sub2apiProProvider: AutoCheckinProvider = {
 
     try {
       const result = await performSub2ApiProDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       switch (result.kind) {
         case SUB2API_PRO_DAILY_CHECK_IN_RESULT_KINDS.Applied:
@@ -120,4 +127,4 @@ export const sub2apiProProvider: AutoCheckinProvider = {
       )
     }
   },
-}
+})

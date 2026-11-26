@@ -1,4 +1,5 @@
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
@@ -9,6 +10,8 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
 
 const SIDRUNE_CHECK_IN_STATUS_ENDPOINT = "/api/v1/welfare/profile"
 export const SIDRUNE_CHECK_IN_ENDPOINT = "/api/v1/welfare/checkin"
@@ -87,11 +90,7 @@ export async function fetchSidruneDailyCheckInStatus(
         checkedInToday: data.checked_in_today,
       }
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    PASSIVE_CHECK_IN_AUTH,
   )
 }
 
@@ -104,10 +103,10 @@ export async function performSidruneDailyCheckIn(
     request,
     SIDRUNE_CHECK_IN_ENDPOINT,
     async (authenticated) => {
-      const response = await fetchApiResponse<unknown>(authenticated, {
-        endpoint: SIDRUNE_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticated,
+        SIDRUNE_CHECK_IN_ENDPOINT,
+      )
       const data = readData(response, SIDRUNE_CHECK_IN_ENDPOINT)
       const amount = data.reward_amount
       const bonus = data.milestone_bonus

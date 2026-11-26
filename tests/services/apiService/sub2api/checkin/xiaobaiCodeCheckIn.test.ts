@@ -216,6 +216,7 @@ describe("小白Code check-in", () => {
       options: {
         method: "POST",
         cache: "no-store",
+        redirect: "error",
         headers: { "Content-Type": "application/json" },
         body: "{}",
       },
@@ -246,7 +247,7 @@ describe("小白Code check-in", () => {
     await expect(performXiaobaiCodeDailyCheckIn(request)).rejects.toThrow()
   })
 
-  it.each([401, 403, 404, 405, 429, 500])(
+  it.each([403, 404, 405, 429, 500])(
     "preserves HTTP %s for the caller's error mapping",
     async (status) => {
       vi.mocked(fetchApiResponse).mockResolvedValue(
@@ -255,6 +256,28 @@ describe("小白Code check-in", () => {
       await expect(
         performXiaobaiCodeDailyCheckIn(request),
       ).rejects.toMatchObject({ statusCode: status })
+    },
+  )
+
+  it.each([
+    { code: "LOGIN_REQUIRED", message: "请先登录后再签到" },
+    { ok: true, code: "LOGIN_REQUIRED", message: "请先登录后再签到" },
+    {
+      ok: false,
+      code: "LOGIN_REQUIRED",
+      message: "请先登录后再签到",
+      data: { alreadyChecked: true },
+    },
+  ])(
+    "keeps a contradictory or incomplete login rejection unconfirmed",
+    async (body) => {
+      vi.mocked(fetchApiResponse).mockResolvedValue(
+        textResponse(JSON.stringify(body), 401),
+      )
+      await expect(
+        performXiaobaiCodeDailyCheckIn(request),
+      ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+      expect(fetchApiResponse).toHaveBeenCalledOnce()
     },
   )
 

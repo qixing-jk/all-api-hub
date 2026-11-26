@@ -1,6 +1,7 @@
 import { resolveUserCheckInTimezone } from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
 
 export const API_KEY_CASA_DAILY_CHECK_IN_ENDPOINT = "/api/v1/redeem/checkin"
+export const API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE = "Asia/Shanghai"
 
 /**
  * The redeem view calls `/redeem/checkin`; the shared API client adds its

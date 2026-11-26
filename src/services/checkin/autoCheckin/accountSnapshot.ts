@@ -10,10 +10,9 @@ import {
   resolveLoginProviderOwners,
 } from "~/services/accountLogin/providerClaims"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
+import { isCheckInMethodStatusCurrent } from "~/services/checkin/autoCheckin/domain"
 import { inspectSelectedCheckInCompatibility } from "~/services/checkin/autoCheckin/methods"
-import { getCheckInResetTimeZone } from "~/services/checkin/autoCheckin/providers/registry"
 import { toAutoCheckinSkipReason } from "~/services/checkin/autoCheckin/skipReasons"
-import { isCheckInObservationCurrent } from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -43,18 +42,6 @@ export function buildAutoCheckinAccountSnapshot(
   const selectedStatus = detectionEnabled
     ? account.checkIn.methodKnowledge.methods[selectionState.methodId]?.status
     : undefined
-  const timeZone = detectionEnabled
-    ? getCheckInResetTimeZone(selectionState.methodId)
-    : undefined
-  const evidence =
-    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-      ? selectedStatus.evidence
-      : undefined
-  const expired =
-    timeZone &&
-    evidence &&
-    "observedAt" in evidence &&
-    !isCheckInObservationCurrent(evidence.observedAt, timeZone)
 
   const executionEligibility = compatibility.state.executionEligibility
   let skipReason: AutoCheckinSkipReason | undefined =
@@ -79,8 +66,10 @@ export function buildAutoCheckinAccountSnapshot(
     providerAvailable,
     // Display-only field: DO NOT use this for eligibility decisions (provider outcomes are the source of truth).
     isCheckedInToday:
+      detectionEnabled &&
       selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-      !expired
+      selectedStatus.today !== undefined &&
+      isCheckInMethodStatusCurrent(selectionState.methodId, selectedStatus)
         ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
         : undefined,
     lastCheckInDate:

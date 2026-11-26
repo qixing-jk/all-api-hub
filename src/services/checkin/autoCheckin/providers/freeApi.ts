@@ -8,6 +8,7 @@ import {
   performFreeApiDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
 import { FREE_API_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/freeApiCheckInProtocol"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -17,10 +18,8 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderReadContext,
-} from "./contracts"
+import type { AutoCheckinProviderReadContext } from "./contracts"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -31,15 +30,19 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) =>
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) =>
   toSub2ApiCheckInStatus(
     await fetchFreeApiDailyCheckInStatus(
       createSub2ApiCheckInReadRequest(context),
+      auth,
     ),
     context.observedAt,
   )
 
-export const freeApiProvider: AutoCheckinProvider = {
+export const freeApiProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
@@ -55,7 +58,7 @@ export const freeApiProvider: AutoCheckinProvider = {
 
   getStatus: readStatus,
 
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     if (
       context.statusProof?.availability !==
         CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -66,8 +69,12 @@ export const freeApiProvider: AutoCheckinProvider = {
 
     try {
       const result = await performFreeApiDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
@@ -88,4 +95,4 @@ export const freeApiProvider: AutoCheckinProvider = {
       )
     }
   },
-}
+})

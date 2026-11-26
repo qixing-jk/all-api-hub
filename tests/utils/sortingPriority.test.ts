@@ -10,7 +10,9 @@ import {
   DATA_TYPE_NAME,
 } from "~/constants"
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { CURRENCIES } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
 import { accountAllowanceObservation } from "~/services/accounts/allowances"
 import {
   accountBalanceScope,
@@ -1279,6 +1281,53 @@ describe("createDynamicSortComparator", () => {
     )
 
     expect(accounts.map(({ id }) => id)).toEqual(["newest", "alpha", "beta"])
+  })
+
+  it("promotes only a current unchecked observation when sorting by check-in requirement", () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn
+    const now = Date.parse("2026-11-26T16:00:01Z")
+    vi.spyOn(Date, "now").mockReturnValue(now)
+    const accounts = ["A-stale", "Z-current"].map((name, index) =>
+      buildDisplaySiteData({
+        name,
+        siteType: SITE_TYPES.SUB2API,
+        baseUrl: "https://apikey.casa",
+        checkIn: buildCheckInConfig({
+          selection: { mode: "manual", methodId },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: now },
+                },
+                status: {
+                  outcome: "known",
+                  today: "not_checked",
+                  evidence: {
+                    source: "probe",
+                    observedAt: index ? now : now - 2000,
+                  },
+                },
+              },
+            },
+          },
+        }),
+      }),
+    )
+    accounts.sort(
+      createDynamicSortComparator(
+        config(),
+        null,
+        DATA_TYPE_CHECK_IN_REQUIREMENT,
+        CURRENCIES.USD,
+        "desc",
+      ),
+    )
+    expect(accounts.map((account) => account.name)).toEqual([
+      "Z-current",
+      "A-stale",
+    ])
   })
 
   it("keeps name ordering stable for records without a display name", () => {

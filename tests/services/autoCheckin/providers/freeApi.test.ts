@@ -168,10 +168,10 @@ describe("FreeAPI check-in integration", () => {
       signal,
       observedAt: 200,
     })
-    expect(fetchFreeApiDailyCheckInStatus).toHaveBeenCalledWith({
-      ...request,
-      abortSignal: signal,
-    })
+    expect(fetchFreeApiDailyCheckInStatus).toHaveBeenCalledWith(
+      { ...request, abortSignal: signal },
+      undefined,
+    )
     expect(request.abortSignal).toBe(originalSignal)
   })
 

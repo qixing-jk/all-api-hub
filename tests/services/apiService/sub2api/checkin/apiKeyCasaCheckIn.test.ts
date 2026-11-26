@@ -338,6 +338,42 @@ describe("ApiKey Casa daily check-in protocol", () => {
     expect(transport).toHaveBeenCalledOnce()
   })
 
+  it("rechecks eligibility when dispatch preparation crosses Beijing midnight", async () => {
+    const beforeReset = Date.parse("2026-11-26T15:59:59Z")
+    let now = beforeReset
+    vi.spyOn(Date, "now").mockImplementation(() => now)
+    const transport = vi.mocked(fetchApiResponse).mockResolvedValue(
+      response({
+        code: 0,
+        message: "ok",
+        data: { checked_in: true, reward: 1 },
+      }),
+    )
+    await expect(
+      performApiKeyCasaDailyCheckIn(
+        {
+          baseUrl: "https://casa.example",
+          directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "fixture",
+            userId: "42",
+          },
+        },
+        {
+          statusObservedAt: beforeReset,
+          beforeRecoveredMutation: async () => {
+            now = Date.parse("2026-11-26T16:00:01Z")
+            return true
+          },
+        },
+      ),
+    ).rejects.toMatchObject({ reason: "already_checked" })
+    expect(
+      transport.mock.calls.map(([, options]) => options.options?.method),
+    ).toEqual(["GET"])
+  })
+
   it.each([fetchApiKeyCasaDailyCheckInStatus, performApiKeyCasaDailyCheckIn])(
     "does not replay an unauthorized request",
     async (operation) => {
@@ -450,7 +486,7 @@ describe("ApiKey Casa daily check-in protocol", () => {
         auth: expect.objectContaining({ accessToken: "renewed-fixture" }),
       }),
       expect.objectContaining({
-        options: { method: "POST", cache: "no-store" },
+        options: { method: "POST", cache: "no-store", redirect: "error" },
       }),
     )
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
@@ -480,7 +516,7 @@ describe("ApiKey Casa daily check-in protocol", () => {
       expect(transport).toHaveBeenCalledOnce()
       expect(transport).toHaveBeenCalledWith(expect.anything(), {
         endpoint: API_KEY_CASA_DAILY_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
+        options: { method: "POST", cache: "no-store", redirect: "error" },
       })
     },
   )

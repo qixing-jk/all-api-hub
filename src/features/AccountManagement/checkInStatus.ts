@@ -7,21 +7,16 @@ import {
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
 import {
-  getSelectedCheckInStatus,
   inspectAccountCheckIn,
   resolveSelectedCheckInMethod,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
-import {
-  getCheckInResetTimeZone,
-  supportsCheckInStatusReadback,
-} from "~/services/checkin/autoCheckin/providers/registry"
-import { isCheckInObservationCurrent } from "~/services/checkin/statusObservation"
+import { isCheckInMethodStatusCurrent } from "~/services/checkin/autoCheckin/domain"
+import { supportsCheckInStatusReadback } from "~/services/checkin/autoCheckin/providers/registry"
 import type { DisplaySiteData } from "~/types"
 import type {
   CheckInExecutionSkipReason,
   CheckInMethodStatus,
 } from "~/types/checkIn"
-import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 export const SITE_CHECK_IN_DISPLAY_KINDS = {
   Current: "current",
@@ -94,31 +89,10 @@ export function isSelectedCheckInStatusCurrent(
     siteUrl: account.baseUrl,
   })
   if (!methodId) return false
-  const timeZone = getCheckInResetTimeZone(methodId)
-  const status = account.checkIn.methodKnowledge.methods[methodId]?.status
-  if (!status || status.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
-    return false
-  }
-
-  if (
-    status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe ||
-    status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution
-  ) {
-    return isCheckInObservationCurrent(status.evidence.observedAt, timeZone)
-  }
-
-  if (status.evidence.legacyObservedAt !== undefined) {
-    return isCheckInObservationCurrent(
-      status.evidence.legacyObservedAt,
-      timeZone,
-    )
-  }
-
-  const todayKey = getDayKeyFromUnixSeconds(
-    Math.floor(Date.now() / 1000),
-    timeZone,
+  return isCheckInMethodStatusCurrent(
+    methodId,
+    account.checkIn.methodKnowledge.methods[methodId]?.status,
   )
-  return status.evidence.legacyDayKey === todayKey
 }
 
 /** Shared projection for the account icon and filter. Execution preference never changes observed status. */
@@ -145,11 +119,12 @@ export function getSiteCheckInDisplayState(
         : inspection.executionEligibility.skipReason,
     }
   }
-  const status = getSelectedCheckInStatus(input)
+  const status = account.checkIn.methodKnowledge.methods[methodId]?.status
+  const current = isCheckInMethodStatusCurrent(methodId, status)
   if (
     status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
     status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled &&
-    !(status.today !== undefined && isSelectedCheckInStatusCurrent(account))
+    !(status.today !== undefined && current)
   )
     return { kind: SITE_CHECK_IN_DISPLAY_KINDS.SiteDisabled }
   const readable = supportsCheckInStatusReadback(methodId)
@@ -167,7 +142,7 @@ export function getSiteCheckInDisplayState(
     (status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked ||
       status.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked)
   ) {
-    if (isSelectedCheckInStatusCurrent(account))
+    if (current)
       return {
         kind: SITE_CHECK_IN_DISPLAY_KINDS.Current,
         checkedIn: status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked,

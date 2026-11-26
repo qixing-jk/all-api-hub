@@ -6,6 +6,11 @@ import {
   type CheckInStatusObservation,
 } from "~/services/checkin/statusObservation"
 
+import {
+  PASSIVE_CHECK_IN_AUTH,
+  type CheckInBrowserBinding,
+} from "./statusAuthentication"
+
 export type Sub2ApiCheckInRecoveryObservation = CheckInStatusObservation<{
   enabled: boolean
   checkedInToday: boolean
@@ -33,38 +38,39 @@ export class Sub2ApiCheckInRecoveryBlockedError extends Error {
 
 export interface Sub2ApiCheckInRecoveryOptions {
   beforeRecoveredMutation?: () => Promise<boolean>
+  allowAuthenticationRecovery?: boolean
+  onAuthenticatedTransport?: (binding: CheckInBrowserBinding) => void
 }
 
-/** Reuse native status/eligibility while guarding only authentication recovery. */
-function createSub2ApiCheckInRecoveryGuard(
+/** Obtain fresh, day-stable admission for a request whose earlier status may no longer apply. */
+export async function readSub2ApiCheckInAdmission(
+  request: ApiServiceRequest,
   readStatus: (
     request: ApiServiceRequest,
   ) => Promise<{ enabled: boolean; checkedInToday: boolean }>,
   blocked: (
     reason: Sub2ApiCheckInRecoveryReason,
     observation?: Sub2ApiCheckInRecoveryObservation,
-  ) => Error,
+  ) => Error = (reason, observation) =>
+    new Sub2ApiCheckInRecoveryBlockedError(reason, observation),
+  timeZone?: string,
 ) {
-  return async (request: ApiServiceRequest) => {
-    const read = await readDayStableCheckInObservation(() =>
-      readStatus(request),
-    ).catch(() => {
-      throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable)
+  const read = await readDayStableCheckInObservation(
+    () => readStatus({ ...request, observer: undefined }),
+    timeZone,
+  ).catch(() => {
+    throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable)
+  })
+  if (!read) throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable)
+  const status = read.observation
+  if (status.checkedInToday)
+    throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked, {
+      ...read,
+      siteUrl: request.baseUrl,
+      userId: String(request.auth.userId),
     })
-    if (!read)
-      throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable)
-    const status = read.observation
-    if (status.checkedInToday)
-      throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.AlreadyChecked, {
-        ...read,
-        siteUrl: request.baseUrl,
-        userId: String(request.auth.userId),
-      })
-    if (!status.enabled)
-      throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled)
-    // A read must not become evidence that the recovered mutation was dispatched.
-    notifyApiTransportObserver(request.observer, "onPreHandlerUnauthorized")
-  }
+  if (!status.enabled) throw blocked(SUB2API_CHECK_IN_RECOVERY_REASONS.Disabled)
+  return read.observedAt
 }
 
 /** Network loss and business errors never enter the middleware-401 retry path. */
@@ -86,6 +92,13 @@ export function executeSub2ApiCheckInWithRecovery<T>(
     request,
     endpoint,
     async (authenticatedRequest) => {
+      const { fetchContext, forceTempWindow, currentTabFallback } =
+        authenticatedRequest
+      options.onAuthenticatedTransport?.({
+        fetchContext,
+        forceTempWindow,
+        currentTabFallback,
+      })
       // Authentication may await refresh or browser recovery before either POST.
       if (
         options.beforeRecoveredMutation &&
@@ -96,10 +109,21 @@ export function executeSub2ApiCheckInWithRecovery<T>(
       return runner(authenticatedRequest)
     },
     {
-      beforeUnauthorizedRetry: createSub2ApiCheckInRecoveryGuard(
-        readStatus,
-        blocked,
-      ),
+      singleRecovery: options.allowAuthenticationRecovery === true,
+      ...(options.allowAuthenticationRecovery === false
+        ? PASSIVE_CHECK_IN_AUTH
+        : {}),
+      beforeUnauthorizedRetry: async (authenticatedRequest) => {
+        await readSub2ApiCheckInAdmission(
+          authenticatedRequest,
+          readStatus,
+          blocked,
+        )
+        notifyApiTransportObserver(
+          authenticatedRequest.observer,
+          "onPreHandlerUnauthorized",
+        )
+      },
     },
   )
 }

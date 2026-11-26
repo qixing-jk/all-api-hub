@@ -6,6 +6,7 @@ import {
   AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
   createAiRouterCheckInStatusEndpoint,
 } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
@@ -16,6 +17,8 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
 
 /**
  * AI-ROUTER (`https://ai-router.dev`) is a Sub2API fork that keeps the host's
@@ -228,7 +231,7 @@ export async function probeAiRouterDailyCheckInStatus(
       })
       return classifyStatusResponse(response)
     },
-    { proactiveRefresh: false, recoverUnauthorized: false },
+    PASSIVE_CHECK_IN_AUTH,
   )
 }
 
@@ -292,11 +295,11 @@ export async function performAiRouterDailyCheckIn(
     request,
     AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<string>(authenticatedRequest, {
-        endpoint: AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-        responseType: "text",
-      })
+      const response = await postSub2ApiCheckIn<string>(
+        authenticatedRequest,
+        AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
+        { responseType: "text" },
+      )
       return parseClaimResponse(response)
     },
     async (recoveredRequest) => {

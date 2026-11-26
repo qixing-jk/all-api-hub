@@ -8,15 +8,18 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getSiteCheckInDisplayState } from "~/features/AccountManagement/checkInStatus"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import {
   fetchApiKeyCasaDailyCheckInStatus,
   performApiKeyCasaDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn"
 import { buildAutoCheckinAccountSnapshot } from "~/services/checkin/autoCheckin/accountSnapshot"
 import { inspectCheckInMethods } from "~/services/checkin/autoCheckin/domain"
+import { executeAccountCheckin } from "~/services/checkin/autoCheckin/execution/accountExecution"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/apiKeyCasa"
+import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -89,7 +92,7 @@ const notCheckedStatus = {
 
 describe("ApiKey Casa check-in provider", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     vi.mocked(fetchApiKeyCasaDailyCheckInStatus).mockResolvedValue({
       enabled: true,
       checkedInToday: false,
@@ -191,6 +194,74 @@ describe("ApiKey Casa check-in provider", () => {
     expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
   })
 
+  it("uses a single credential recovery opportunity across an explicit verification at Beijing midnight", async () => {
+    const account = createAccount()
+    let now = Date.parse("2026-11-26T15:59:59Z")
+    vi.spyOn(Date, "now").mockImplementation(() => now)
+    vi.mocked(fetchApiKeyCasaDailyCheckInStatus)
+      .mockImplementationOnce(async () => {
+        now = Date.parse("2026-11-26T16:00:01Z")
+        return { enabled: true, checkedInToday: true }
+      })
+      .mockResolvedValueOnce({ enabled: true, checkedInToday: false })
+    const config = await refreshSelectedStatus({
+      account,
+      config: account.checkIn,
+      siteType: account.site_type,
+      verification: userCommandExecution(
+        PROTECTION_BYPASS_USER_COMMANDS.VerifyCheckinStatus,
+      ),
+    })
+    expect(config.methodKnowledge.methods[METHOD_ID]?.status).toMatchObject({
+      today: "not_checked",
+      evidence: { observedAt: now },
+    })
+    expect(
+      vi
+        .mocked(fetchApiKeyCasaDailyCheckInStatus)
+        .mock.calls.map(([, options]) => options?.allowAuthenticationRecovery),
+    ).toEqual([true, false])
+    expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
+  })
+
+  it.each(["discovery", "refresh"] as const)(
+    "records a fresh observation when passive %s crosses Beijing midnight",
+    async (operation) => {
+      const account = createAccount()
+      const beforeReset = Date.parse("2026-11-26T15:59:59Z")
+      const afterReset = Date.parse("2026-11-26T16:00:01Z")
+      let now = beforeReset
+      vi.spyOn(Date, "now").mockImplementation(() => now)
+      vi.mocked(fetchApiKeyCasaDailyCheckInStatus)
+        .mockImplementationOnce(async () => {
+          now = afterReset
+          return { enabled: true, checkedInToday: true }
+        })
+        .mockResolvedValueOnce({ enabled: true, checkedInToday: false })
+
+      const status =
+        operation === "discovery"
+          ? await apiKeyCasaProvider.detect!({
+              account,
+              observedAt: beforeReset,
+            })
+          : (
+              await refreshSelectedStatus({
+                account,
+                config: account.checkIn,
+                siteType: account.site_type,
+                observedAt: beforeReset,
+              })
+            ).methodKnowledge.methods[METHOD_ID]
+
+      expect(status).toMatchObject({
+        status: { today: "not_checked", evidence: { observedAt: afterReset } },
+      })
+      expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenCalledTimes(2)
+      expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
+    },
+  )
+
   it("blocks submission unless the current status proves an enabled unchecked claim", async () => {
     await expect(
       apiKeyCasaProvider.checkIn(createAccount(), executionContext()),
@@ -238,6 +309,62 @@ describe("ApiKey Casa check-in provider", () => {
     )
   })
 
+  it.each(["checked", "not_checked", "unavailable"] as const)(
+    "keeps an undated grant spanning Beijing midnight and caches only verified status (%s)",
+    async (readback) => {
+      const account = createAccount()
+      const afterReset = Date.parse("2026-11-26T16:00:01Z")
+      let now = Date.parse("2026-11-26T15:59:59Z")
+      vi.spyOn(Date, "now").mockImplementation(() => now)
+      const save = vi
+        .spyOn(accountCheckInState, "prepareAccountForSelectedCheckIn")
+        .mockImplementation(async (_id, config) => ({
+          ...account,
+          checkIn: config ?? account.checkIn,
+        }))
+      const mark = vi
+        .spyOn(accountCheckInState, "markAccountAsSiteCheckedIn")
+        .mockResolvedValue(true)
+      vi.mocked(performApiKeyCasaDailyCheckIn).mockImplementationOnce(
+        async () => {
+          now = afterReset
+        },
+      )
+      vi.mocked(fetchApiKeyCasaDailyCheckInStatus)
+        .mockResolvedValueOnce({ enabled: true, checkedInToday: false })
+        .mockImplementationOnce(async () => {
+          if (readback === "unavailable") throw new Error("read unavailable")
+          return { enabled: true, checkedInToday: readback === "checked" }
+        })
+      const context = executionContext()
+      const { result } = await executeAccountCheckin(
+        account,
+        "Casa",
+        context.tempWindowRequestSource,
+        context.protectionBypassExecution,
+      )
+      expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+      expect(performApiKeyCasaDailyCheckIn).toHaveBeenCalledOnce()
+      expect(fetchApiKeyCasaDailyCheckInStatus).toHaveBeenCalledTimes(2)
+      if (readback === "checked") {
+        expect(mark).toHaveBeenCalledWith(account.id, afterReset, {
+          account,
+          methodId: METHOD_ID,
+        })
+      } else {
+        expect(mark).not.toHaveBeenCalled()
+        if (readback === "not_checked")
+          expect(
+            save.mock.calls.at(-1)?.[1]?.methodKnowledge.methods[METHOD_ID]
+              ?.status,
+          ).toMatchObject({
+            today: "not_checked",
+            evidence: { observedAt: afterReset },
+          })
+      }
+    },
+  )
+
   it.each([
     { enabled: true, checkedInToday: true, reason: "already_checked" },
     { enabled: false, checkedInToday: false, reason: "method_disabled" },
@@ -256,6 +383,35 @@ describe("ApiKey Casa check-in provider", () => {
         }),
       ).resolves.toMatchObject({ kind: "skipped", reason })
       expect(performApiKeyCasaDailyCheckIn).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([true, false])(
+    "does not infer the outcome of a lost claim from another Beijing day (checked=%s)",
+    async (checkedInToday) => {
+      let now = Date.parse("2026-11-26T15:59:59Z")
+      vi.spyOn(Date, "now").mockImplementation(() => now)
+      vi.mocked(fetchApiKeyCasaDailyCheckInStatus)
+        .mockResolvedValueOnce({ enabled: true, checkedInToday: false })
+        .mockResolvedValueOnce({ enabled: true, checkedInToday })
+      vi.mocked(performApiKeyCasaDailyCheckIn).mockImplementationOnce(
+        async (request) => {
+          request.observer?.onDispatch()
+          now = Date.parse("2026-11-26T16:00:01Z")
+          throw new TypeError("Failed to fetch")
+        },
+      )
+      const result = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      })
+      expect(result).toMatchObject({
+        kind: "executed",
+        retryable: false,
+        result: { status: "uncertain" },
+      })
+      expect(performApiKeyCasaDailyCheckIn).toHaveBeenCalledOnce()
     },
   )
 

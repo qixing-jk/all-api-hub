@@ -1,6 +1,8 @@
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
+  readSub2ApiCheckInAdmission,
   SUB2API_CHECK_IN_RECOVERY_REASONS,
   Sub2ApiCheckInRecoveryBlockedError,
   type Sub2ApiCheckInRecoveryOptions,
@@ -10,14 +12,23 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+import { isCheckInObservationCurrent } from "~/services/checkin/statusObservation"
 
 import {
+  API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
   API_KEY_CASA_DAILY_CHECK_IN_ENDPOINT,
   createApiKeyCasaDailyCheckInStatusEndpoint,
 } from "./apiKeyCasaCheckInProtocol"
+import {
+  PASSIVE_CHECK_IN_AUTH,
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
-const { parseEnvelopeData, invalidResponse } =
-  createCheckInCodeEnvelopeParser("ApiKey Casa")
+const { parseEnvelopeData, invalidResponse } = createCheckInCodeEnvelopeParser(
+  "ApiKey Casa",
+  { preserveHttpStatusForUnknownEnvelope: true },
+)
 
 /** The native /redeem view uses the same status DTO after GET and POST. */
 export function parseApiKeyCasaDailyCheckInStatusResponse(
@@ -35,74 +46,82 @@ export function parseApiKeyCasaDailyCheckInStatusResponse(
   return { enabled: data.reward > 0, checkedInToday: data.checked_in }
 }
 
-const noCredentialRecovery = {
-  proactiveRefresh: false,
-  recoverMissingAccessToken: false,
-  recoverUnauthorized: false,
+/** Reads the native status using credentials already admitted for this request. */
+async function readAuthenticatedStatus(
+  request: ApiServiceRequest,
+  endpoint = createApiKeyCasaDailyCheckInStatusEndpoint(),
+) {
+  const response = await fetchApiResponse(request, {
+    endpoint,
+    options: { method: "GET", cache: "no-store" },
+  })
+  return parseApiKeyCasaDailyCheckInStatusResponse(response)
 }
-
-export type CasaBrowserBinding = Pick<
-  ApiServiceRequest,
-  "fetchContext" | "forceTempWindow" | "currentTabFallback"
->
 
 /** Only an authorized execution may renew credentials while reading eligibility. */
 export function fetchApiKeyCasaDailyCheckInStatus(
   request: ApiServiceRequest,
-  options: {
-    allowAuthenticationRecovery?: boolean
-    onAuthenticatedTransport?: (binding: CasaBrowserBinding) => void
-  } = {},
+  options?: Sub2ApiCheckInStatusAuth,
 ) {
   const endpoint = createApiKeyCasaDailyCheckInStatusEndpoint()
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     endpoint,
-    async (authenticatedRequest) => {
-      const response = await fetchApiResponse(authenticatedRequest, {
-        endpoint,
-        options: { method: "GET", cache: "no-store" },
-      })
-      const status = parseApiKeyCasaDailyCheckInStatusResponse(response)
-      const { fetchContext, forceTempWindow, currentTabFallback } =
-        authenticatedRequest
-      options.onAuthenticatedTransport?.({
-        fetchContext,
-        forceTempWindow,
-        currentTabFallback,
-      })
-      return status
-    },
-    options.allowAuthenticationRecovery ? undefined : noCredentialRecovery,
+    (authenticated) => readAuthenticatedStatus(authenticated, endpoint),
+    options,
   )
 }
 
 /** The server's duplicate behavior is unknown. Leave reconciliation to status readback. */
 export function performApiKeyCasaDailyCheckIn(
   request: ApiServiceRequest,
-  options: Sub2ApiCheckInRecoveryOptions = {},
+  options: Sub2ApiCheckInRecoveryOptions & { statusObservedAt?: number } = {},
 ) {
   const endpoint = API_KEY_CASA_DAILY_CHECK_IN_ENDPOINT
   return executeAuthenticatedSub2ApiRequest(
     request,
     endpoint,
     async (authenticatedRequest) => {
-      if (
-        options.beforeRecoveredMutation &&
-        !(await options.beforeRecoveredMutation())
-      ) {
-        throw new Sub2ApiCheckInRecoveryBlockedError(
-          SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed,
-        )
+      const revalidate = async () => {
+        if (
+          options.beforeRecoveredMutation &&
+          !(await options.beforeRecoveredMutation())
+        ) {
+          throw new Sub2ApiCheckInRecoveryBlockedError(
+            SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed,
+          )
+        }
       }
-      const response = await fetchApiResponse(authenticatedRequest, {
-        endpoint,
-        options: { method: "POST", cache: "no-store" },
-      })
+      await revalidate()
+      if (
+        options.statusObservedAt !== undefined &&
+        !isCheckInObservationCurrent(
+          options.statusObservedAt,
+          API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
+        )
+      ) {
+        const observedAt = await readSub2ApiCheckInAdmission(
+          authenticatedRequest,
+          readAuthenticatedStatus,
+          undefined,
+          API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
+        )
+        await revalidate()
+        if (
+          !isCheckInObservationCurrent(
+            observedAt,
+            API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
+          )
+        )
+          throw new Sub2ApiCheckInRecoveryBlockedError(
+            SUB2API_CHECK_IN_RECOVERY_REASONS.StatusUnavailable,
+          )
+      }
+      const response = await postSub2ApiCheckIn(authenticatedRequest, endpoint)
       if (!parseApiKeyCasaDailyCheckInStatusResponse(response).checkedInToday) {
         throw invalidResponse(endpoint)
       }
     },
-    noCredentialRecovery,
+    PASSIVE_CHECK_IN_AUTH,
   )
 }

@@ -35,7 +35,10 @@ function readCheckInFailure(body: Record<string, unknown> | null) {
  * Keep reason precedence, HTTP classification and source-specific copy here;
  * deployment status fields and mutation results remain with each adapter.
  */
-export function createCheckInCodeEnvelopeParser(sourceName: string) {
+export function createCheckInCodeEnvelopeParser(
+  sourceName: string,
+  { preserveHttpStatusForUnknownEnvelope = false } = {},
+) {
   const invalidResponse = (endpoint: string) =>
     new ApiError(
       `Invalid ${sourceName} daily check-in response`,
@@ -53,7 +56,11 @@ export function createCheckInCodeEnvelopeParser(sourceName: string) {
       const failure =
         (!response.ok ? readSub2ApiFailureEnvelope(envelope) : null) ??
         readCheckInFailure(envelope)
-      if (response.ok && !failure) throw invalidResponse(endpoint)
+      if (
+        !failure &&
+        (response.ok || (envelope && !preserveHttpStatusForUnknownEnvelope))
+      )
+        throw invalidResponse(endpoint)
       throw new ApiError(
         failure?.message ||
           `${sourceName} daily check-in request failed with HTTP ${response.status}`,

@@ -486,6 +486,29 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
     })
   })
 
+  it("keeps a healthy Pro status request direct and authorizes transport recovery on demand", async () => {
+    vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockResolvedValue({
+      enabled: true,
+      checkedInToday: true,
+    })
+    const result = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: executionContext(),
+    })
+    expect(result).toMatchObject({ kind: "skipped", reason: "already_checked" })
+    const request = vi.mocked(fetchSub2ApiProDailyCheckInStatus).mock
+      .calls[0]?.[0]
+    expect(request).toBeDefined()
+    expect(request?.protectionBypassExecution).toBeUndefined()
+    const auth = vi.mocked(fetchSub2ApiProDailyCheckInStatus).mock.calls[0]?.[1]
+    expect(auth?.allowAuthenticationRecovery).toBe(true)
+    expect(
+      auth?.prepareRecoveryRequest?.(request!)?.protectionBypassExecution,
+    ).toEqual(executionContext().protectionBypassExecution)
+    expect(performSub2ApiProDailyCheckIn).not.toHaveBeenCalled()
+  })
+
   it("preserves disabled and already-checked status dimensions", async () => {
     vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockResolvedValue({
       enabled: false,

@@ -1,6 +1,7 @@
 import { CHECK_IN_METHOD_DETECTION_OUTCOMES } from "~/constants/checkIn"
 import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
@@ -141,16 +142,19 @@ export async function performXiaobaiCodeDailyCheckIn(
     request,
     CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<string>(authenticatedRequest, {
-        endpoint: CHECK_IN_ENDPOINT,
-        options: {
-          method: "POST",
-          cache: "no-store",
+      const response = await postSub2ApiCheckIn<string>(
+        authenticatedRequest,
+        CHECK_IN_ENDPOINT,
+        {
           headers: { "Content-Type": "application/json" },
           body: "{}",
+          responseType: "text",
+          isNativeLoginRejection: (body) =>
+            body.ok === false &&
+            body.code === "LOGIN_REQUIRED" &&
+            Object.keys(body).length === 3,
         },
-        responseType: "text",
-      })
+      )
       if (!response.ok) {
         throw new ApiError(
           `小白Code daily check-in failed with HTTP ${response.status}`,

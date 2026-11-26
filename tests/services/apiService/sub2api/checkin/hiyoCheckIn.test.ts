@@ -11,6 +11,8 @@ import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
+import { expiredCheckInJwt } from "./jwtFixture"
+
 vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
   fetchApiResponse: vi.fn(),
@@ -157,7 +159,12 @@ describe("Hiyo daily check-in protocol", () => {
       expect.objectContaining({ auth: request.auth }),
       {
         endpoint: "/api/v1/checkin",
-        options: { method: "POST", cache: "no-store", body: "{}" },
+        options: {
+          method: "POST",
+          cache: "no-store",
+          redirect: "error",
+          body: "{}",
+        },
       },
     )
   })
@@ -184,7 +191,10 @@ describe("Hiyo daily check-in protocol", () => {
         ok: false,
         status,
         headers: {},
-        body: { code: status, message: "error" },
+        body:
+          status === 401
+            ? expiredCheckInJwt
+            : { code: status, message: "error" },
       })
       await expect(fetchHiyoDailyCheckInStatus(request)).rejects.toMatchObject({
         statusCode: status,

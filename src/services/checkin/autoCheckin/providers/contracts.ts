@@ -24,11 +24,6 @@ export const CHECK_IN_STATUS_DAY_GUARD_OWNERS = {
 /** Read-only context shared by discovery and selected status refresh. */
 export interface AutoCheckinProviderReadContext {
   account?: SiteAccount
-  /** Only authorized execution admission may renew credentials; discovery and reconciliation stay passive. */
-  authenticationRecovery?: Pick<
-    AutoCheckinProviderContext,
-    "tempWindowRequestSource" | "protectionBypassExecution"
-  >
   /** Existing refresh transport context; discovery supplies `account`. */
   request?: ApiServiceRequest
   signal?: AbortSignal
@@ -85,9 +80,12 @@ export type AutoCheckinProviderReadiness =
 /** Executable compatibility contract for a registered check-in method. */
 export interface AutoCheckinProvider {
   /** Share transient resources between admission, submission and readback for one attempt. */
-  forExecution?: (
-    context: AutoCheckinProviderContext,
-  ) => Pick<AutoCheckinProvider, "getStatus" | "checkIn">
+  forExecution?: (context: AutoCheckinProviderContext) => Required<
+    Pick<AutoCheckinProvider, "getStatus" | "checkIn">
+  > & {
+    /** User verification or execution admission may renew credentials on the first status read. */
+    getAuthenticatedStatus: NonNullable<AutoCheckinProvider["getStatus"]>
+  }
   /** Maps provider-specific status errors for both discovery and execution. */
   classifyStatusError?: (error: unknown) => CheckInMethodUnknownReason
   /**

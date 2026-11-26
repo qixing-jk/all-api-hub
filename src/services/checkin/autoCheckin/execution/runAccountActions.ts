@@ -11,6 +11,7 @@ import {
   getSelectedCheckInStatus,
   resolveSelectedCheckInMethod,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { isCheckInMethodStatusCurrent } from "~/services/checkin/autoCheckin/domain"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import type { AutoCheckinRetryScheduling } from "~/services/checkin/autoCheckin/execution/runContracts"
@@ -177,6 +178,7 @@ export async function retryAccount(
 export async function verifyAccountStatus(
   accountId: string,
   retryScheduling: AutoCheckinRetryScheduling,
+  verification?: Extract<ProtectionBypassExecution, { kind: "user_command" }>,
 ) {
   const account = await accountQueries.getAccountById(accountId)
   if (!account) {
@@ -191,6 +193,7 @@ export async function verifyAccountStatus(
     config: account.checkIn,
     siteType: account.site_type,
     account,
+    verification,
     observedAt: Date.now(),
     onOutcome: (outcome) => {
       refreshOutcome = outcome
@@ -221,47 +224,77 @@ export async function verifyAccountStatus(
     }
   }
 
+  const selection = {
+    config: refreshedCheckIn,
+    siteType: account.site_type,
+    siteUrl: account.site_url,
+  }
+  const queriedStatus = getSelectedCheckInStatus(selection)
+  const selectedStatus =
+    queriedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+      ? queriedStatus
+      : undefined
+  const selectedMethodId = resolveSelectedCheckInMethod(selection)
+  const allAccounts = await accountQueries.getAllAccounts()
+  const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)
+  const accountName = accountDisplayNameById.get(account.id) ?? account.id
+  const prefs = await userPreferences.getPreferences()
+  const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+  const notSaved = () => ({
+    outcome: "not_saved" as const,
+    error: t("autoCheckin:messages.error.statusVerificationNotSaved"),
+  })
   const persistedAccount =
     await accountCheckInState.prepareAccountForSelectedCheckIn(
       account.id,
       refreshedCheckIn,
+      account,
     )
-  if (!persistedAccount) {
-    return {
-      outcome: "not_saved" as const,
-      error: t("autoCheckin:messages.error.statusVerificationNotSaved"),
-    }
+  if (!persistedAccount) return notSaved()
+  const persistedSelection = {
+    config: persistedAccount.checkIn,
+    siteType: persistedAccount.site_type,
+    siteUrl: persistedAccount.site_url,
   }
-
-  const selectedStatus = getSelectedCheckInStatus({
-    config: refreshedCheckIn,
-    siteType: account.site_type,
-    siteUrl: account.site_url,
-  })
-  const isCheckedInToday =
-    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-    selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
-  const isNotCheckedInToday =
-    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-    selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
-
+  if (resolveSelectedCheckInMethod(persistedSelection) !== selectedMethodId)
+    return notSaved()
+  const persistedStatus = getSelectedCheckInStatus(persistedSelection)
+  const observedAt =
+    selectedStatus && "observedAt" in selectedStatus.evidence
+      ? selectedStatus.evidence.observedAt
+      : undefined
+  // A concurrent probe or execution can win the account store's timestamp merge.
+  if (
+    observedAt !== undefined &&
+    (persistedStatus?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known ||
+      !("observedAt" in persistedStatus.evidence) ||
+      persistedStatus.evidence.observedAt !== observedAt ||
+      persistedStatus.today !== selectedStatus?.today)
+  )
+    return notSaved()
   const now = Date.now()
-  const today = formatLocalDayKey()
-  const allAccounts = await accountQueries.getAllAccounts()
-  const accountDisplayNameById = buildAccountDisplayNameMap(allAccounts)
-  const accountName = accountDisplayNameById.get(account.id) ?? account.id
-  const selectedMethodId = resolveSelectedCheckInMethod({
-    config: refreshedCheckIn,
-    siteType: account.site_type,
-    siteUrl: account.site_url,
-  })
-  const prefs = await userPreferences.getPreferences()
-  const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
+  const today = formatLocalDayKey(new Date(now))
+  const verifiedToday =
+    selectedMethodId &&
+    selectedStatus &&
+    isCheckInMethodStatusCurrent(selectedMethodId, selectedStatus, now)
+      ? selectedStatus.today
+      : undefined
+  const isCheckedInToday =
+    verifiedToday === CHECK_IN_METHOD_TODAY_STATUSES.Checked
+  const isNotCheckedInToday =
+    verifiedToday === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
 
   const statusUpdate = await autoCheckinStorage.updateStatus((current) => {
     if (!current) return { patch: null, result: false }
 
     const currentResult = current.perAccount?.[account.id]
+    if (
+      currentResult &&
+      observedAt !== undefined &&
+      currentResult.timestamp > observedAt
+    )
+      return { patch: null, result: false }
     let updatedResult: CheckinAccountResult | undefined
 
     if (isCheckedInToday) {
@@ -273,7 +306,7 @@ export async function verifyAccountStatus(
           AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
         reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
         methodId: selectedMethodId ?? currentResult?.methodId,
-        timestamp: now,
+        timestamp: observedAt ?? now,
       }
     } else if (isNotCheckedInToday) {
       const reasonCode =
@@ -299,7 +332,7 @@ export async function verifyAccountStatus(
           selectedMethodId ?? currentResult?.methodId,
         ),
         methodId: selectedMethodId ?? currentResult?.methodId,
-        timestamp: now,
+        timestamp: observedAt ?? now,
       }
     }
 
@@ -360,10 +393,7 @@ export async function verifyAccountStatus(
     (isCheckedInToday || isNotCheckedInToday) &&
     (!statusUpdate.ok || statusUpdate.result !== true)
   ) {
-    return {
-      outcome: "not_saved" as const,
-      error: t("autoCheckin:messages.error.statusVerificationNotSaved"),
-    }
+    return notSaved()
   }
 
   if (isCheckedInToday || isNotCheckedInToday) {
