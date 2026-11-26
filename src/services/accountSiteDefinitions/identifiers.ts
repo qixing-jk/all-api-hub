@@ -75,6 +75,9 @@ export const AGENT_ROUTER_ORIGIN = "https://agentrouter.org"
 
 export const MODELFLARE_HOSTNAME = "modelflare.dev"
 
+/** FreeGG runs a New API-family account API at its canonical console origin. */
+export const FREEGG_DAILY_ALLOWANCE_HOSTNAMES = ["freegg.app"] as const
+
 /**
  * ModelFlare's New API-derived account endpoints expect the user id in this
  * deployment-specific header: https://modelflare.dev/

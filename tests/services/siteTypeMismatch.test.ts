@@ -86,6 +86,24 @@ describe("checkSiteTypeMismatch", () => {
     ).resolves.toEqual({ outcome: "agrees" })
   })
 
+  it("recognizes FreeGG without probing its side-effectful identity endpoint", async () => {
+    let selfRequested = false
+    server.use(
+      http.get("https://freegg.app/api/user/self", () => {
+        selfRequested = true
+        return HttpResponse.json({ id: 1 })
+      }),
+    )
+
+    await expect(
+      checkSiteTypeMismatch({
+        siteUrl: "https://freegg.app/dashboard",
+        storedSiteType: SITE_TYPES.NEW_API,
+      }),
+    ).resolves.toEqual({ outcome: "agrees" })
+    expect(selfRequested).toBe(false)
+  })
+
   it("reports no reading when the site resolves to no registered type at all", async () => {
     server.use(
       serveShellTitle("https://example.com", "Unbranded Console"),
