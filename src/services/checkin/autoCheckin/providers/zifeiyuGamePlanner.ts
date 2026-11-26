@@ -3,7 +3,7 @@ import type { ZifeiyuGameState } from "~/services/apiService/newApiFamily/zifeiy
 export const ZIFEIYU_GAME_DURATION_TICKS = 900
 export const ZIFEIYU_GAME_CLOCK_LIMIT_TICKS = 930
 export const ZIFEIYU_GAME_MAX_INPUT_BATCH = 300
-export const ZIFEIYU_GAME_INPUT_CHUNK_TICKS = 20
+const ZIFEIYU_GAME_INPUT_CHUNK_TICKS = 20
 
 type Point = { x: number; y: number }
 
