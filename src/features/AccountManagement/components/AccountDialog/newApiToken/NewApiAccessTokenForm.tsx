@@ -189,7 +189,7 @@ export function NewApiAccessTokenForm({
                 <Button
                   type="button"
                   size="sm"
-                  disabled={pending || reconnecting}
+                  disabled={pending || reconnecting || recovery.recoveryPending}
                   onClick={onReconnect}
                 >
                   {t("tokenCreation.reconnect")}

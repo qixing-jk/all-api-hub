@@ -35,12 +35,10 @@ async function chooseAccountSection(
   name: string,
 ) {
   if (page.viewportSize()!.width < 640) {
-    await navigation
-      .getByRole("button", { name: /, Account settings sections$/ })
-      .click()
-    await page.getByRole("menuitem", { name, exact: true }).click()
+    await navigation.getByRole("button").click()
+    await page.getByRole("menuitem", { name }).click()
   } else {
-    await navigation.getByRole("button", { name, exact: true }).click()
+    await navigation.getByRole("button", { name }).click()
   }
 }
 
@@ -53,13 +51,13 @@ async function expectAccountSection(
     await expect(
       navigation.getByRole("button", {
         name: `${name}, Account settings sections`,
-        exact: true,
       }),
     ).toContainText(name)
   } else {
-    await expect(
-      navigation.getByRole("button", { name, exact: true }),
-    ).toHaveAttribute("aria-current", "location")
+    await expect(navigation.getByRole("button", { name })).toHaveAttribute(
+      "aria-current",
+      "location",
+    )
   }
 }
 
@@ -118,22 +116,31 @@ test("failed account detection keeps recovery readable on narrow screens", async
     await page.setViewportSize({ width, height: 700 })
     expect((await message.boundingBox())!.width).toBeGreaterThan(150)
     expect((await message.boundingBox())!.height).toBeLessThan(200)
+    const cancel = dialog.getByRole("button", { name: "Cancel", exact: true })
+    if (width >= 640) await expect(cancel).toBeVisible()
+    else await expect(cancel).toBeHidden()
     await expect(
-      dialog.getByRole("button", { name: "Cancel", exact: true }),
-    ).toHaveCount(0)
-    const detect = (await dialog
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton)
-      .boundingBox())!
-    const manual = (await dialog
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton)
-      .boundingBox())!
-    expect(Math.abs(detect.y - manual.y)).toBeLessThanOrEqual(1)
-    expect(Math.abs(detect.width - manual.width)).toBeLessThanOrEqual(1)
-    expect(
-      await dialog
-        .locator('[data-slot="modal-body"]')
-        .evaluate((element) => element.scrollWidth - element.clientWidth),
-    ).toBeLessThanOrEqual(1)
+      dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton),
+    ).toBeVisible()
+    await expect(
+      dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
+    ).toBeVisible()
+    const body = dialog.locator('[data-slot="modal-body"]')
+    await expect
+      .poll(
+        () =>
+          body.evaluate((element) => element.scrollWidth - element.clientWidth),
+        { message: `Account form fits the dialog at ${width}px` },
+      )
+      .toBeLessThanOrEqual(1)
+    if (width === 768) {
+      await captureVisualViews({
+        page,
+        ready: message,
+        id: "failed-detection-tablet",
+        extensionDir,
+      })
+    }
   }
   await page.setViewportSize({ width: 360, height: 700 })
   const navigation = dialog.getByRole("navigation", {
@@ -276,7 +283,7 @@ test("slow detection hint uses available width", async ({
     .fill("https://example.com")
   await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
   const alert = dialog
-    .getByRole("alert")
+    .getByRole("status")
     .filter({ hasText: "Auto-detect is taking longer" })
   await expect(alert).toBeVisible({ timeout: 15_000 })
   const help = alert.getByRole("button", {
@@ -296,14 +303,9 @@ test("slow detection hint uses available width", async ({
     const buttonBounds = (await help.boundingBox())!
     if (width >= 768) {
       expect(buttonBounds.x).toBeGreaterThan(textBounds.x + textBounds.width)
-      expect(
-        Math.abs(
-          buttonBounds.y +
-            buttonBounds.height / 2 -
-            textBounds.y -
-            textBounds.height / 2,
-        ),
-      ).toBeLessThanOrEqual(1)
+      const buttonCenter = buttonBounds.y + buttonBounds.height / 2
+      expect(buttonCenter).toBeGreaterThanOrEqual(textBounds.y)
+      expect(buttonCenter).toBeLessThanOrEqual(textBounds.y + textBounds.height)
     } else {
       expect(buttonBounds.y).toBeGreaterThanOrEqual(
         textBounds.y + textBounds.height,

@@ -6,11 +6,15 @@ import { composeAbortSignals } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   API_DIRECT_REQUEST_REASONS,
+  API_OPERATION_SEMANTICS,
   type ApiServiceRequest,
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
-import type { TokenIssuanceJournal } from "./issuanceJournal"
+import type {
+  TokenIssuanceJournal,
+  TokenIssuanceMarker,
+} from "./issuanceJournal"
 import {
   NEW_API_TOKEN_ACCESS_SCOPES as ACCESS_SCOPES,
   NEW_API_TOKEN_CREATION_ERRORS as CREATION_ERRORS,
@@ -23,6 +27,7 @@ import {
 import { tokenSessionRequest } from "./sessionRequest"
 
 const MIN_TOKEN_EXPIRY_SECONDS = 60 * 60
+const ISSUANCE_TIMEOUT_MS = 30_000
 
 /** Canonicalizes grant scopes for proof binding and returned-grant comparison. */
 function normalizeGrantScopes(scopes: string[]) {
@@ -155,6 +160,7 @@ export class NewApiTokenCreationUncertainError extends Error {
 export class NewApiAccessTokenCreation {
   private inFlight = false
   private uncertain = false
+  private observedIssuance?: TokenIssuanceMarker
   private created: NewApiCreatedToken | undefined
   private createdScopes: string[] = []
   private grantMatches = false
@@ -186,7 +192,8 @@ export class NewApiAccessTokenCreation {
   /** User confirms review/revocation of a previous uncertain issuance before a new attempt. */
   async acknowledgeUncertain() {
     if (this.inFlight) throw new Error(CREATION_ERRORS.BUSY)
-    await this.journal?.acknowledge()
+    await this.journal?.acknowledge(this.observedIssuance)
+    this.observedIssuance = undefined
     this.uncertain = false
   }
 
@@ -212,7 +219,7 @@ export class NewApiAccessTokenCreation {
         `${ENDPOINTS.VERIFICATION_METHODS}?scope=${OPERATION_SCOPES.GENERATE}`,
       ),
     ])
-    if (await this.journal?.pending()) this.uncertain = true
+    await this.observeUncertainIssuance()
     return {
       catalog: catalogSchema.parse(catalog),
       verification: verificationSchema
@@ -326,18 +333,17 @@ export class NewApiAccessTokenCreation {
               }))
             : { password: input.password }
           : { code: input.code.trim() }
-      candidate = await newApiFamilyRequests.data(operationRequest, {
+      candidate = await tokenSessionRequest(operationRequest, {
         endpoint: ENDPOINTS.VERIFY,
+        operationSemantics: API_OPERATION_SEMANTICS.Mutation,
         options: {
           method: "POST",
-          credentials: "omit",
           body: JSON.stringify({
             ...operation,
             method: input.method,
             ...fields,
           }),
         },
-        tempWindowFallback: { codes: [], statusCodes: [] },
       })
     }
     const proof = proofSchema.parse(candidate)
@@ -369,6 +375,7 @@ export class NewApiAccessTokenCreation {
 
   /** Read metadata only; no plaintext can be recovered from the server. */
   async loadRecovery() {
+    const reviewing = !this.inFlight ? await this.journal?.pending() : undefined
     await this.load()
     const verification = verificationSchema.parse(
       await this.read(
@@ -391,6 +398,7 @@ export class NewApiAccessTokenCreation {
         ),
       })
       .parse(await this.read(ENDPOINTS.ACCESS_TOKENS))
+    if (reviewing) this.observedIssuance = reviewing
     return { ...data, verification }
   }
 
@@ -415,15 +423,13 @@ export class NewApiAccessTokenCreation {
         request,
       )
       signal?.throwIfAborted()
-      await newApiFamilyRequests.data(request, {
+      await tokenSessionRequest(request, {
         endpoint: `${ENDPOINTS.ACCESS_TOKENS}/${id}`,
+        operationSemantics: API_OPERATION_SEMANTICS.Mutation,
         options: {
           method: "DELETE",
-          credentials: "omit",
-          redirect: "error",
           headers: { "X-Security-Proof": proof.proof_token },
         },
-        tempWindowFallback: { codes: [], statusCodes: [] },
       })
       if ((await this.loadRecovery()).items.some((item) => item.id === id))
         throw new Error(CREATION_ERRORS.REVOKE_UNCONFIRMED)
@@ -471,71 +477,94 @@ export class NewApiAccessTokenCreation {
         },
         operationRequest,
       )
-      let issued: unknown
-      if (this.journal && !(await this.journal.begin())) {
-        this.uncertain = true
-        throw new NewApiTokenCreationUncertainError()
-      }
-      try {
-        issued = await newApiFamilyRequests.data(operationRequest, {
-          endpoint: ENDPOINTS.ACCESS_TOKENS,
-          options: {
-            method: "POST",
-            credentials: "omit",
-            redirect: "error",
-            headers: { "X-Security-Proof": proof.proof_token },
-            body: JSON.stringify(draft),
-          },
-          tempWindowFallback: { codes: [], statusCodes: [] },
-        })
-      } catch (error) {
-        // Only an explicit server rejection establishes that creation did not succeed.
-        if (
-          !(error instanceof ApiError) ||
-          !error.upstreamCode ||
-          (error.statusCode ?? 0) >= 500
-        ) {
-          return await this.recordUncertainIssuance()
-        }
-        await this.journal?.resolved()
-        throw error
-      }
-      const parsed = z
-        .object({
-          token: z.string().min(1),
-          item: z.object({ id: z.number().int().positive() }).passthrough(),
-        })
-        .safeParse(issued)
-      if (!parsed.success) {
-        return await this.recordUncertainIssuance()
-      }
+      const issue = () => this.issueWithProof(draft, proof, operationRequest)
+      const parsed = await (this.journal
+        ? this.journal.whileIssuing(issue)
+        : issue())
       this.created = {
-        token: parsed.data.token,
-        id: parsed.data.item.id,
+        token: parsed.token,
+        id: parsed.item.id,
         verified: false,
       }
       this.createdScopes = draft.scopes
-      const grant = draftSchema.safeParse(parsed.data.item)
+      const grant = draftSchema.safeParse(parsed.item)
       this.grantMatches =
-        parsed.data.token.startsWith("nap_") &&
+        parsed.token.startsWith("nap_") &&
         grant.success &&
         grant.data.expires_at === draft.expires_at &&
         grant.data.name === draft.name &&
         JSON.stringify(normalizeGrantScopes(grant.data.scopes)) ===
           JSON.stringify(draft.scopes)
-      await this.journal?.resolved()
       try {
-        return await this.checkCreatedToken(this.request.abortSignal)
+        return await this.checkCreatedToken(signal)
       } catch {
         return { ...this.created }
       }
     })
   }
 
+  private async issueWithProof(
+    draft: NewApiTokenDraft,
+    proof: NewApiTokenProof,
+    operationRequest: ApiServiceRequest,
+  ) {
+    operationRequest.abortSignal?.throwIfAborted()
+    if (this.journal && !(await this.journal.begin())) {
+      await this.observeUncertainIssuance()
+      throw new NewApiTokenCreationUncertainError()
+    }
+    let issued: unknown
+    try {
+      issued = await tokenSessionRequest(
+        { ...operationRequest, requestTimeoutMs: ISSUANCE_TIMEOUT_MS },
+        {
+          endpoint: ENDPOINTS.ACCESS_TOKENS,
+          operationSemantics: API_OPERATION_SEMANTICS.Mutation,
+          options: {
+            method: "POST",
+            headers: { "X-Security-Proof": proof.proof_token },
+            body: JSON.stringify(draft),
+          },
+        },
+      )
+    } catch (error) {
+      // Only an explicit server rejection establishes that creation did not succeed.
+      if (
+        !(error instanceof ApiError) ||
+        !error.upstreamCode ||
+        (error.statusCode ?? 0) >= 500
+      ) {
+        return await this.recordUncertainIssuance()
+      }
+      await this.journal?.resolved()
+      throw error
+    }
+    const parsed = z
+      .object({
+        token: z.string().min(1),
+        item: z.object({ id: z.number().int().positive() }).passthrough(),
+      })
+      .safeParse(issued)
+    if (!parsed.success) {
+      return await this.recordUncertainIssuance()
+    }
+    await this.journal?.resolved()
+    return parsed.data
+  }
+
+  private async observeUncertainIssuance() {
+    const attempt = await this.journal?.pending()
+    if (attempt) {
+      this.observedIssuance ??= attempt
+      this.uncertain = true
+    }
+  }
+
   /** Preserve the journal marker when the server may have accepted issuance. */
   private async recordUncertainIssuance(): Promise<never> {
     this.uncertain = true
     await this.journal?.uncertain()
+    await this.observeUncertainIssuance()
     throw new NewApiTokenCreationUncertainError()
   }
 }

@@ -110,6 +110,7 @@ export function AccountAccessTokenField({
       ? t("novitaCredentials.apiKey")
       : t(labelKey ?? "form.accessToken")
   const accessTokenFieldHintId = useId()
+  const accessTokenInputId = useId()
   const accessTokenFeedbackId = useId()
   const showAccessTokenFieldHint = compact && Boolean(accessTokenSetup)
   const credentialFeedbackId = useId()
@@ -131,6 +132,9 @@ export function AccountAccessTokenField({
     !isAccountOperation &&
     novitaCredentialActions?.isVerifying
   const newApiTokenStatus = newApiTokenVerification?.status
+  const hasTokenFeedback = Boolean(
+    newApiTokenStatus || accessTokenFeedbackVariant === "success",
+  )
   const isVerifyingNewApiToken =
     newApiTokenStatus === TOKEN_VERIFICATION_CHECKING
   const verifyTokenLabel = isVerifyingNewApiToken
@@ -154,10 +158,12 @@ export function AccountAccessTokenField({
   return (
     <FormField
       label={accessTokenLabel}
+      htmlFor={accessTokenInputId}
       labelAction={labelAction}
       required={required}
     >
       <Input
+        id={accessTokenInputId}
         ref={accessTokenInputRef}
         type="password"
         revealable
@@ -191,7 +197,7 @@ export function AccountAccessTokenField({
             validationAttributes["aria-describedby"],
             showAccessTokenFieldHint ? accessTokenFieldHintId : undefined,
             credentialFeedback ? credentialFeedbackId : undefined,
-            accessTokenFeedback ? accessTokenFeedbackId : undefined,
+            hasTokenFeedback ? accessTokenFeedbackId : undefined,
           ]
             .filter(Boolean)
             .join(" ") || undefined
@@ -248,11 +254,13 @@ export function AccountAccessTokenField({
         onBlur={
           onCompleteCompactToken &&
           ((event) => {
-            // The compact field and its helper controls are removed together.
-            const focusToken = Boolean(
-              event.relatedTarget && containsFocusTarget?.(event.relatedTarget),
+            // Keep a helper mounted long enough to handle the activation.
+            if (
+              event.relatedTarget &&
+              containsFocusTarget?.(event.relatedTarget)
             )
-            onCompleteCompactToken(event.currentTarget.value, focusToken)
+              return
+            onCompleteCompactToken(event.currentTarget.value, false)
           })
         }
         onKeyDown={
@@ -297,7 +305,12 @@ export function AccountAccessTokenField({
       )}
       {validationFeedback}
       {accessTokenFeedback && (
-        <div id={accessTokenFeedbackId}>{accessTokenFeedback}</div>
+        <div
+          id={accessTokenFeedbackId}
+          className={hasTokenFeedback ? undefined : "sr-only"}
+        >
+          {accessTokenFeedback}
+        </div>
       )}
       {compact && accessTokenSetup}
     </FormField>

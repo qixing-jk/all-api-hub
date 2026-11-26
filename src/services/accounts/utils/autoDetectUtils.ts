@@ -31,13 +31,9 @@ import {
   hasUnattributedMessage,
   isAuthenticationRequiredError,
 } from "~/services/apiTransport/errors"
-import {
-  reloadSiteTabAndWait,
-  reloadSiteTabByIdAndWait,
-} from "~/services/browsingContext/siteTabRecovery"
+import { reloadSiteTabAndWait } from "~/services/browsingContext/siteTabRecovery"
 import { createTab, queryTabs, reloadTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
-import { tryParseHttpUrl, tryParseUrl } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
@@ -355,11 +351,10 @@ export async function openLoginTab(
  * a site URL can still reload the active page directly.
  */
 export async function reloadCurrentTab(siteUrl?: string): Promise<void> {
-  if (
-    siteUrl &&
-    (await reloadSiteTabAndWait({ siteUrl, createIfMissing: false })) !== null
-  )
+  if (siteUrl) {
+    await reloadSiteTabAndWait({ siteUrl, createIfMissing: false })
     return
+  }
   const tabs = await queryTabs({
     active: true,
     currentWindow: true,
@@ -367,15 +362,5 @@ export async function reloadCurrentTab(siteUrl?: string): Promise<void> {
 
   const activeTab = tabs[0]
   if (typeof activeTab?.id !== "number") return
-  if (siteUrl) {
-    const url = tryParseUrl(activeTab.url)
-    // Refreshing the extension UI would discard the account draft.
-    if (url?.protocol.endsWith("-extension:")) return
-    const origin = tryParseHttpUrl(activeTab.url)?.origin
-    if (origin) {
-      await reloadSiteTabByIdAndWait(activeTab.id, origin)
-      return
-    }
-  }
   await reloadTab(activeTab.id)
 }

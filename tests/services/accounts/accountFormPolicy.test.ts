@@ -50,6 +50,52 @@ describe("registered account form policy", () => {
       }),
     ).toBe(true)
   })
+
+  it("reports provider credential, login and balance errors in editor order", () => {
+    expect(
+      getAccountFormIssues({
+        ...fields,
+        siteType: SITE_TYPES.SUB2API,
+        username: " ",
+        userId: "42",
+        refreshTokenRequired: true,
+        loginChange: { methodId: "unknown" },
+        exchangeRate: " ",
+        manualBalanceUsd: "-1",
+      }),
+    ).toEqual([
+      { field: "refreshToken", kind: "missing" },
+      { field: "login", kind: "invalid" },
+      { field: "exchangeRate", kind: "missing" },
+      { field: "manualBalanceUsd", kind: "invalid" },
+    ])
+  })
+
+  it("requires a nonblank New API username", () => {
+    expect(
+      getAccountFormIssues({
+        ...fields,
+        userId: "42",
+        username: " ",
+        siteType: SITE_TYPES.NEW_API,
+      }),
+    ).toEqual([{ field: "username", kind: "missing" }])
+  })
+
+  it.each([undefined, " ", "session=example"])(
+    "reports only a missing cookie on a manual Cookie site (%s)",
+    (cookie) => {
+      expect(
+        getAccountFormIssues({
+          ...fields,
+          userId: "42",
+          siteType: SITE_TYPES.NEW_API,
+          authType: AuthTypeEnum.Cookie,
+          cookieAuthSessionCookie: cookie,
+        }),
+      ).toEqual(cookie?.trim() ? [] : [{ field: "cookie", kind: "missing" }])
+    },
+  )
   it.each([
     [SITE_TYPES.NEW_API, false],
     [SITE_TYPES.SUB2API, false],

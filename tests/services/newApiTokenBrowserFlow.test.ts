@@ -79,6 +79,92 @@ it.each(["ready", "exhausted", "injection-failed"] as const)(
   },
 )
 
+it("reinjects when a stale content listener closes the session probe without a reply", async () => {
+  mockOwningSiteTab()
+  const inject = vi
+    .spyOn(browser.scripting, "executeScript")
+    .mockResolvedValue([])
+  vi.spyOn(browser.tabs, "sendMessage").mockRejectedValueOnce(
+    new Error("The message port closed before a response was received."),
+  )
+  await expect(
+    client.openNewApiAccessTokenCreation(tokenSite, "42"),
+  ).rejects.toMatchObject({
+    code: "TAB_RELOAD_REQUIRED",
+    tabId: 9,
+  })
+  expect(inject).toHaveBeenCalledOnce()
+})
+
+it.each(["probe", "prepare"] as const)(
+  "preserves a non-receiver failure during the session %s",
+  async (stage) => {
+    mockOwningSiteTab()
+    const denied = new Error("Missing host permission")
+    const send = vi.spyOn(browser.tabs, "sendMessage")
+    if (stage === "prepare") send.mockResolvedValueOnce({ success: true })
+    send.mockRejectedValueOnce(denied)
+    const inject = vi.spyOn(browser.scripting, "executeScript")
+    await expect(
+      client.openNewApiAccessTokenCreation(tokenSite, "42"),
+    ).rejects.toBe(denied)
+    expect(inject).not.toHaveBeenCalled()
+  },
+)
+
+it("needs an account identity before opening the site session", async () => {
+  const open = vi.spyOn(browser.tabs, "create")
+  const send = vi.spyOn(browser.tabs, "sendMessage")
+  await expect(
+    client.openNewApiAccessTokenCreation(tokenSite, ""),
+  ).rejects.toThrow("INVALID_TOKEN_CONTEXT")
+  expect(open).not.toHaveBeenCalled()
+  expect(send).not.toHaveBeenCalled()
+})
+
+it("opens a session only after a newly created tab commits the requested origin", async () => {
+  const tab = mockOwningSiteTab()
+  vi.mocked(browser.tabs.query).mockResolvedValue([])
+  const open = vi.spyOn(browser.tabs, "create").mockResolvedValue(tab)
+  const send = vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
+    success: true,
+    passed: true,
+    data: {
+      token: "session",
+      sessionId: "sid",
+      expiresAt: Date.now() / 1000 + 900,
+      user: { id: 42 },
+    },
+  })
+  const session = await client.openNewApiAccessTokenCreation(tokenSite, "42")
+  expect(open).toHaveBeenCalledExactlyOnceWith({
+    url: tokenSite,
+    active: true,
+    windowId: tab.windowId,
+  })
+  expect(send).toHaveBeenLastCalledWith(
+    tab.id,
+    {
+      action: RuntimeActionIds.ContentPrepareNewApiTokenSession,
+      expectedOrigin: tokenSite,
+      expectedIdentity: "42",
+    },
+    { frameId: 0 },
+  )
+  expect(send).toHaveBeenCalledWith(
+    tab.id,
+    expect.objectContaining({ action: RuntimeActionIds.ContentCheckCapGuard }),
+  )
+  session.cancel()
+})
+
+it("focuses the verified existing site tab when asked to restore the session", async () => {
+  const tab = mockOwningSiteTab()
+  const focus = vi.spyOn(browser.tabs, "update").mockResolvedValue(tab)
+  await client.focusNewApiTokenTab(tokenSite, tab.id)
+  expect(focus).toHaveBeenCalledExactlyOnceWith(tab.id, { active: true })
+})
+
 it.each([
   "ACCOUNT_IDENTITY_MISMATCH",
   "SCOPED_TOKEN_UNSUPPORTED",
@@ -93,6 +179,43 @@ it.each([
     client.openNewApiAccessTokenCreation(tokenSite, "42"),
   ).rejects.toMatchObject({ code, tabId: 9 })
 })
+
+it.each([
+  ["no reply", undefined, "AUTH_SESSION_UNAVAILABLE"],
+  [
+    "expired bundle",
+    { token: "session", expiresAt: 1 },
+    "AUTH_SESSION_UNAVAILABLE",
+  ],
+  ["non-finite deadline", { expiresAt: NaN }, "AUTH_SESSION_UNAVAILABLE"],
+  ["missing session ID", { sessionId: "" }, "AUTH_SESSION_UNAVAILABLE"],
+  ["missing account ID", { user: {} }, "AUTH_SESSION_UNAVAILABLE"],
+  ["another account", { user: { id: 11 } }, "ACCOUNT_IDENTITY_MISMATCH"],
+] as const)(
+  "rejects a content session with %s",
+  async (_case, change, code) => {
+    mockOwningSiteTab()
+    vi.spyOn(browser.tabs, "sendMessage")
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(
+        change
+          ? {
+              success: true,
+              data: {
+                token: "session",
+                expiresAt: Date.now() / 1000 + 1000,
+                sessionId: "sid",
+                user: { id: 42 },
+                ...change,
+              },
+            }
+          : undefined,
+      )
+    await expect(
+      client.openNewApiAccessTokenCreation(tokenSite, "42"),
+    ).rejects.toMatchObject({ code, tabId: 9 })
+  },
+)
 
 it.each([true, false])(
   "reloads the preferred tab only while it still belongs to the site (%s)",
@@ -216,12 +339,27 @@ it.each([false, true])(
   },
 )
 
-it.each([false, true])("owned OAuth callback (%s)", async (cancelled) => {
+it.each([
+  "success",
+  "marker-retry",
+  "cancelled",
+  "expired",
+  "invalid",
+  "state-expired",
+  "state-without-token",
+  "no-tab",
+  "closed-tab",
+  "navigation-failed",
+  "aborted",
+  "response-timeout",
+] as const)("owned OAuth callback (%s)", async (outcome) => {
   const { verifyNewApiTokenOAuth } =
     await import("~/services/apiService/newApiFamily/accessTokens/oauthBrowser")
   const origin = "https://oauth-token.example"
   let exchanged = false
+  const acknowledge = vi.fn()
   let marker: { requestId: string } | undefined
+  let installs = 0
   let listener:
     | ((
         message: unknown,
@@ -229,19 +367,43 @@ it.each([false, true])("owned OAuth callback (%s)", async (cancelled) => {
         sendResponse: (response?: unknown) => void,
       ) => unknown)
     | undefined
-  vi.spyOn(browser.tabs, "get").mockResolvedValue({
+  const sourceTab = {
     id: 9,
     url: `${origin}/`,
     windowId: 2,
-  } as browser.tabs.Tab)
-  vi.spyOn(browser.tabs, "create").mockResolvedValue({
+  } as browser.tabs.Tab
+  const getTab = vi.spyOn(browser.tabs, "get").mockResolvedValue(sourceTab)
+  const now = Date.now()
+  if (outcome === "response-timeout")
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+  if (outcome === "expired") {
+    getTab.mockResolvedValueOnce(sourceTab).mockImplementationOnce(async () => {
+      vi.spyOn(Date, "now").mockReturnValue(now + 301_000)
+      return sourceTab
+    })
+  }
+  const owned = {
     id: 10,
     url: `${origin}/`,
     status: "loading",
-  } as browser.tabs.Tab)
+  } as browser.tabs.Tab
+  vi.spyOn(browser.tabs, "create").mockResolvedValue(
+    outcome === "no-tab" ? ({} as browser.tabs.Tab) : owned,
+  )
   vi.spyOn(browser.tabs, "remove").mockResolvedValue()
+  const abort = new AbortController()
+  const navigated = createDeferred<void>()
+  let tabRemoved:
+    ((id: number, info: browser.tabs._OnRemovedRemoveInfo) => void) | undefined
+  vi.spyOn(browser.tabs.onRemoved, "addListener").mockImplementation(
+    (callback) => {
+      tabRemoved = callback
+    },
+  )
   vi.spyOn(browser.scripting, "executeScript").mockImplementation(
     async (details) => {
+      if (outcome === "marker-retry" && ++installs === 1)
+        throw new Error("Document starting")
       marker = (details as unknown as { args: [string, { requestId: string }] })
         .args[1]
       return [{ result: true, frameId: 0 }]
@@ -254,22 +416,48 @@ it.each([false, true])("owned OAuth callback (%s)", async (cancelled) => {
   )
   vi.spyOn(browser.tabs, "update").mockImplementation(async (id, change) => {
     if (id === 10 && change.url?.startsWith("https://github.com")) {
+      if (outcome === "navigation-failed")
+        throw new Error("The verification tab became unavailable")
+      navigated.resolve()
       queueMicrotask(() => {
+        if (outcome === "response-timeout") return
+        if (outcome === "closed-tab") {
+          tabRemoved?.(10, { windowId: 2, isWindowClosing: false })
+          return
+        }
+        if (outcome === "aborted") {
+          abort.abort()
+          return
+        }
+        const message = {
+          action: "newApiTokenOAuthCallback",
+          requestId: marker!.requestId,
+          ...(outcome === "cancelled"
+            ? { error: "OAUTH_CANCELLED" }
+            : {
+                callback: {
+                  state: "flow-state",
+                  code: outcome === "invalid" ? "" : "one-use-code",
+                },
+              }),
+        }
+        const sender = {
+          tab: { id: 10 },
+          frameId: 0,
+          url: `${origin}/oauth/github`,
+        } as browser.runtime.MessageSender
         listener?.(
-          {
-            action: "newApiTokenOAuthCallback",
-            requestId: marker!.requestId,
-            ...(cancelled
-              ? { error: "OAUTH_CANCELLED" }
-              : { callback: { state: "flow-state", code: "one-use-code" } }),
-          },
-          {
-            tab: { id: 10 },
-            frameId: 0,
-            url: `${origin}/oauth/github`,
-          } as browser.runtime.MessageSender,
-          () => undefined,
+          { ...message, requestId: "unrelated-operation" },
+          sender,
+          acknowledge,
         )
+        listener?.(message, { ...sender, frameId: 1 }, acknowledge)
+        listener?.(
+          message,
+          { ...sender, url: `${origin}/oauth/other` },
+          acknowledge,
+        )
+        listener?.(message, sender, acknowledge)
       })
     }
     return { id, url: change.url } as browser.tabs.Tab
@@ -290,8 +478,8 @@ it.each([false, true])("owned OAuth callback (%s)", async (cancelled) => {
       return HttpResponse.json({
         success: true,
         data: {
-          flow_token: "flow-state",
-          expires_at: Date.now() / 1000 + 300,
+          flow_token: outcome === "state-without-token" ? "" : "flow-state",
+          expires_at: outcome === "state-expired" ? 1 : now / 1000 + 300,
         },
       })
     }),
@@ -322,6 +510,7 @@ it.each([false, true])("owned OAuth callback (%s)", async (cancelled) => {
     },
     {
       baseUrl: origin,
+      abortSignal: abort.signal,
       directRequestReason: "provider_protocol",
       auth: {
         authType: AuthTypeEnum.AccessToken,
@@ -329,26 +518,72 @@ it.each([false, true])("owned OAuth callback (%s)", async (cancelled) => {
       },
     },
   )
-  if (cancelled) await expect(result).rejects.toThrow("OAUTH_CANCELLED")
-  else await expect(result).resolves.toMatchObject({ method: "oauth" })
-  expect(exchanged).toBe(!cancelled)
-  expect(browser.tabs.remove).toHaveBeenCalledWith(10)
+  const succeeds = outcome === "success" || outcome === "marker-retry"
+  try {
+    if (succeeds)
+      await expect(result).resolves.toMatchObject({ method: "oauth" })
+    else {
+      const rejection = expect(result).rejects.toThrow(
+        {
+          expired: "OAUTH_TIMEOUT",
+          cancelled: "OAUTH_CANCELLED",
+          invalid: "OAUTH_CALLBACK_INVALID",
+          "state-expired": "OAUTH_STATE_INVALID",
+          "state-without-token": "OAUTH_STATE_INVALID",
+          "no-tab": "OAUTH_TAB_UNAVAILABLE",
+          "closed-tab": "OAUTH_CANCELLED",
+          "navigation-failed": "OAUTH_NAVIGATION_FAILED",
+          aborted: "OAUTH_CANCELLED",
+          "response-timeout": "OAUTH_TIMEOUT",
+        }[outcome],
+      )
+      if (outcome === "response-timeout") {
+        await navigated.promise
+        await vi.advanceTimersByTimeAsync(300_000)
+      }
+      await rejection
+    }
+  } finally {
+    if (outcome === "expired") vi.mocked(Date.now).mockRestore()
+    if (outcome === "response-timeout") vi.useRealTimers()
+  }
+  if (succeeds || ["cancelled", "expired", "invalid"].includes(outcome))
+    expect(acknowledge).toHaveBeenCalledExactlyOnceWith(true)
+  else expect(acknowledge).not.toHaveBeenCalled()
+  expect(exchanged).toBe(succeeds)
+  if (["no-tab", "state-expired", "state-without-token"].includes(outcome))
+    expect(browser.tabs.remove).not.toHaveBeenCalled()
+  else expect(browser.tabs.remove).toHaveBeenCalledWith(10)
 })
 
-it.each([false, true])("owning tab Passkey prompt (%s)", async (dismissed) => {
+it.each([
+  "verified",
+  "dismissed",
+  "invalid-challenge",
+  "missing-response",
+  "navigated",
+] as const)("owning tab Passkey prompt (%s)", async (outcome) => {
   const origin = "https://passkey.example"
   let finished = false
-  vi.spyOn(browser.tabs, "get").mockResolvedValue({
+  const tab = {
     id: 9,
     url: `${origin}/`,
     windowId: 2,
-  } as browser.tabs.Tab)
-  vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
+  } as browser.tabs.Tab
+  const getTab = vi.spyOn(browser.tabs, "get").mockResolvedValue(tab)
+  if (outcome === "navigated")
+    getTab
+      .mockResolvedValueOnce(tab)
+      .mockResolvedValueOnce(tab)
+      .mockResolvedValueOnce({ ...tab, url: "https://unrelated.example" })
+  const send = vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
     success: true,
-    data: dismissed
-      ? null
-      : { id: "credential", response: { signature: "signed" } },
+    data:
+      outcome === "dismissed"
+        ? null
+        : { id: "credential", response: { signature: "signed" } },
   })
+  if (outcome === "missing-response") send.mockResolvedValueOnce(undefined)
   vi.spyOn(browser.tabs, "update").mockResolvedValue({} as browser.tabs.Tab)
   vi.spyOn(browser.windows, "update").mockResolvedValue(
     {} as browser.windows.Window,
@@ -364,11 +599,12 @@ it.each([false, true])("owning tab Passkey prompt (%s)", async (dismissed) => {
         expect(await request.json()).toEqual({
           scope: "access_token.generate",
           context: { scopes: ["profile:read"], expires_at: 0 },
+          ...(outcome === "verified" ? { rp_id: "passkey.example" } : {}),
         })
         return HttpResponse.json({
           success: true,
           data: {
-            flow_token: "challenge-flow",
+            flow_token: outcome === "invalid-challenge" ? "" : "challenge-flow",
             options: {
               publicKey: { challenge: "challenge", rpId: "passkey.example" },
             },
@@ -397,14 +633,34 @@ it.each([false, true])("owning tab Passkey prompt (%s)", async (dismissed) => {
     ),
   )
   const interaction = createNewApiTokenInteraction(9, origin)
-  const result = interaction.verify({ method: METHODS.PASSKEY }, operation, {
-    baseUrl: origin,
-    directRequestReason: "provider_protocol",
-    auth: { authType: AuthTypeEnum.AccessToken, accessToken: "session" },
-  })
-  if (dismissed) await expect(result).rejects.toThrow("PASSKEY_CANCELLED")
-  else await expect(result).resolves.toMatchObject({ method: "passkey" })
-  expect(finished).toBe(!dismissed)
+  const result = interaction.verify(
+    {
+      method: METHODS.PASSKEY,
+      ...(outcome === "verified" ? { rpId: "passkey.example" } : {}),
+    },
+    operation,
+    {
+      baseUrl: origin,
+      directRequestReason: "provider_protocol",
+      auth: { authType: AuthTypeEnum.AccessToken, accessToken: "session" },
+    },
+  )
+  if (outcome === "verified")
+    await expect(result).resolves.toMatchObject({ method: "passkey" })
+  else
+    await expect(result).rejects.toThrow(
+      {
+        dismissed: "PASSKEY_CANCELLED",
+        "invalid-challenge": "PASSKEY_CHALLENGE_INVALID",
+        "missing-response": "PASSKEY_VERIFICATION_FAILED",
+        navigated: "SITE_TAB_ORIGIN_CHANGED",
+      }[outcome],
+    )
+  expect(finished).toBe(outcome === "verified")
+  if (outcome === "invalid-challenge") {
+    expect(send).not.toHaveBeenCalled()
+    return
+  }
   expect(browser.tabs.sendMessage).toHaveBeenCalledWith(
     9,
     expect.objectContaining({
@@ -412,6 +668,14 @@ it.each([false, true])("owning tab Passkey prompt (%s)", async (dismissed) => {
       options: {
         publicKey: { challenge: "challenge", rpId: "passkey.example" },
       },
+    }),
+    { frameId: 0 },
+  )
+  expect(send).toHaveBeenLastCalledWith(
+    9,
+    expect.objectContaining({
+      action: RuntimeActionIds.ContentCancelNewApiTokenPasskey,
+      expectedOrigin: origin,
     }),
     { frameId: 0 },
   )

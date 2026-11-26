@@ -20,6 +20,7 @@ import {
   sendTabMessageWithRetry,
 } from "~/utils/browser/runtimeMessages"
 import { injectContentScript } from "~/utils/browser/scripting"
+import { getErrorMessage } from "~/utils/core/error"
 
 import { createNewApiTokenInteraction } from "./browser"
 import { NewApiAccessTokenCreation } from "./creation"
@@ -30,6 +31,16 @@ import {
   NewApiTokenSessionError,
   NEW_API_TOKEN_SESSION_ERRORS as SESSION_ERRORS,
 } from "./sessionError"
+
+/** Recognizes both a missing receiver and an older receiver that drops the probe. */
+function isStaleSessionReceiver(error: unknown) {
+  return (
+    isMessageReceiverUnavailableError(error) ||
+    /(?:message port closed|message channel closed) before a response was received/iu.test(
+      getErrorMessage(error),
+    )
+  )
+}
 
 /** Focus the selected site tab so the user can sign in or switch accounts. */
 export async function focusNewApiTokenTab(
@@ -77,7 +88,7 @@ export async function openNewApiAccessTokenCreation(
       { maxAttempts: 1, frameId: 0 },
     )
   } catch (error) {
-    if (!isMessageReceiverUnavailableError(error)) throw error
+    if (!isStaleSessionReceiver(error)) throw error
     injected = await injectContentScript(tabId, origin)
     if (!injected)
       throw new NewApiTokenSessionError(SESSION_ERRORS.RELOAD_REQUIRED, tabId)
@@ -99,7 +110,7 @@ export async function openNewApiAccessTokenCreation(
       },
     )
   } catch (error) {
-    if (isMessageReceiverUnavailableError(error))
+    if (isStaleSessionReceiver(error))
       throw new NewApiTokenSessionError(SESSION_ERRORS.RELOAD_REQUIRED, tabId)
     throw error
   }

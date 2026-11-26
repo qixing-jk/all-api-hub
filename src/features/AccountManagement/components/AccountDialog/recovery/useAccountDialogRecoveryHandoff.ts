@@ -17,6 +17,7 @@ import { closeIfPopup } from "~/utils/navigation/popup"
 export interface AccountRecoveryContinuation {
   onContinue: (action?: AccountDialogRecoveryAction) => void
   isPending: boolean
+  isOpening?: boolean
   pendingAction?: AccountDialogRecoveryAction
   sidePanelSupported: boolean
   disabled?: boolean
@@ -50,7 +51,14 @@ export function useAccountDialogRecoveryHandoff({
   const opening = handoff !== null
 
   useEffect(() => {
-    if (!enabled || !state) return
+    if (
+      !enabled ||
+      !state ||
+      prepared?.state === state ||
+      opening ||
+      handoffStarted.current
+    )
+      return
     let cancelled = false
     const preparation = queue.current.then((previous) =>
       prepareAccountDialogRecovery(state, previous),
@@ -70,7 +78,7 @@ export function useAccountDialogRecoveryHandoff({
     return () => {
       cancelled = true
     }
-  }, [enabled, state])
+  }, [enabled, opening, prepared, state])
 
   useEffect(
     () => () => {
@@ -111,6 +119,7 @@ export function useAccountDialogRecoveryHandoff({
   return {
     sidePanelSupported: canUseAccountDialogRecoverySidePanel(),
     isPending: opening || (!ready && !currentFailure),
+    isOpening: opening,
     pendingAction: handoff?.action,
     disabled: !ready,
     errorMessage: currentFailure

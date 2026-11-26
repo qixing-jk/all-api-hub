@@ -1,9 +1,17 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { http, HttpResponse } from "msw"
 import { expect, it, vi } from "vitest"
 
 import { NewApiAccessTokenForm } from "~/features/AccountManagement/components/AccountDialog/newApiToken/NewApiAccessTokenForm"
+import { classifyVerificationError } from "~/features/AccountManagement/components/AccountDialog/newApiToken/tokenCreationFeedback"
 import {
   NewApiAccessTokenCreation,
   NewApiTokenCreationUncertainError,
@@ -25,6 +33,85 @@ vi.mock("react-i18next", () => ({
 const expiration = () =>
   screen.getByRole("combobox", { name: "tokenCreation.expiration" })
 
+it.each([
+  [
+    "locked verification",
+    new ApiError(
+      "Private message",
+      400,
+      "/api/verify",
+      undefined,
+      "SECURITY_VERIFICATION_LOCKED",
+    ),
+    "locked",
+  ],
+  [
+    "server token cap",
+    new ApiError(
+      "Private message",
+      409,
+      "/api/user/access_tokens",
+      undefined,
+      "ACCESS_TOKEN_LIMIT",
+    ),
+    "limit",
+  ],
+  [
+    "changed OAuth identity",
+    new ApiError(
+      "Private message",
+      400,
+      "/api/verify",
+      undefined,
+      "OAUTH_ACCOUNT_MISMATCH",
+    ),
+    "identity",
+  ],
+  [
+    "expired browser session",
+    new ApiError("Private message", 401, "/api/verify"),
+    "session",
+  ],
+  [
+    "site credential rejection",
+    new ApiError("Private message", 422, "/api/verify"),
+    "invalidPassword",
+  ],
+  [
+    "provider proxy timeout",
+    new ApiError("Private message", 408, "/api/verify"),
+    "failed",
+  ],
+  [
+    "client-side protection",
+    new ApiError(
+      "Private message",
+      403,
+      "/api/verify",
+      API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
+    ),
+    "failed",
+  ],
+  [
+    "upstream protection code",
+    new ApiError(
+      "Private message",
+      403,
+      "/api/verify",
+      undefined,
+      API_ERROR_CODES.ROBOT_CHALLENGE,
+    ),
+    "failed",
+  ],
+  ["native Passkey dismissal", new Error("PASSKEY_CANCELLED"), "cancelled"],
+  ["unknown messaging failure", "unstructured message", "failed"],
+] as const)(
+  "uses actionable verification feedback for %s",
+  (_case, error, expected) => {
+    expect(classifyVerificationError(error, "password")).toBe(expected)
+  },
+)
+
 async function selectExpiration(
   user: ReturnType<typeof userEvent.setup>,
   name: string,
@@ -37,6 +124,7 @@ function setupGrantForm(
   includeReserved = true,
   defaultDays = 30,
   method: NewApiTokenVerification["method"] = "password",
+  onReconnect?: () => void,
 ) {
   const resources = [
     {
@@ -79,6 +167,10 @@ function setupGrantForm(
     create,
     cancelVerification,
     verifyCreated,
+    loadRecovery: vi.fn(),
+    revokeToken: vi.fn(),
+    reviewRecovery: vi.fn(),
+    acknowledgeUncertain: vi.fn(),
   } as unknown as NewApiAccessTokenCreation
   const user = userEvent.setup()
   const onCreated = vi.fn()
@@ -86,6 +178,7 @@ function setupGrantForm(
     <NewApiAccessTokenForm
       flow={flow}
       onCreated={onCreated}
+      onReconnect={onReconnect}
       renderSiteFallback={() => <p>Site fallback</p>}
     />,
   )
@@ -94,12 +187,86 @@ function setupGrantForm(
     cancelVerification,
     verifyCreated,
     onCreated,
+    flow,
     user,
     catalogScopes: resources.flatMap(({ resource, actions }) =>
       actions.map((action) => `${resource}:${action}`),
     ),
   }
 }
+
+it("requires explicit review before retrying an uncertain issuance and waits for revocation before reconnecting", async () => {
+  const reconnect = vi.fn()
+  const { flow, create, user } = setupGrantForm(true, 30, "password", reconnect)
+  create.mockRejectedValueOnce(new NewApiTokenCreationUncertainError())
+  const token = {
+    id: 12,
+    name: "Earlier attempt",
+    scopes: ["profile:read"],
+    created_at: 100,
+    expires_at: 200,
+    token_hint: "nap_...last",
+  }
+  const verification = {
+    scope: "access_token.revoke" as const,
+    methods: [{ method: "password", available: true }],
+    oauth_providers: [],
+    password_encryption_enabled: false,
+  }
+  vi.mocked(flow.loadRecovery)
+    .mockResolvedValueOnce({ items: [token], verification })
+    .mockResolvedValueOnce({ items: [], verification })
+  const revocation = createDeferred<boolean>()
+  vi.mocked(flow.revokeToken).mockReturnValueOnce(revocation.promise)
+  vi.mocked(flow.reviewRecovery).mockResolvedValueOnce(false)
+  vi.mocked(flow.acknowledgeUncertain)
+    .mockRejectedValueOnce(new Error("Another attempt is pending"))
+    .mockResolvedValueOnce(undefined)
+
+  await user.type(
+    await screen.findByLabelText("tokenCreation.password"),
+    "secret",
+  )
+  await user.click(submitButton())
+  const allow = await screen.findByRole("button", {
+    name: "tokenCreation.allowNewAttempt",
+  })
+  expect(allow).toBeDisabled()
+  expect(submitButton()).toBeDisabled()
+  await user.click(
+    screen.getByRole("button", { name: "tokenCreation.reviewTokens" }),
+  )
+  const review = await screen.findByRole("region", {
+    name: "tokenCreation.reviewTokens",
+  })
+  const recovery = within(review)
+  await user.click(
+    await recovery.findByRole("radio", { name: /Earlier attempt/ }),
+  )
+  await user.type(
+    recovery.getByLabelText("tokenCreation.password"),
+    "revoke secret",
+  )
+  const reconnectButton = screen.getByRole("button", {
+    name: "tokenCreation.reconnect",
+  })
+  await user.click(
+    recovery.getByRole("button", { name: "tokenCreation.revokeSelected" }),
+  )
+  expect(reconnectButton).toBeDisabled()
+  await act(() => revocation.resolve(false))
+  await recovery.findByText("tokenCreation.revoked")
+  expect(reconnectButton).toBeEnabled()
+  await user.click(
+    recovery.getByRole("button", { name: "tokenCreation.reviewComplete" }),
+  )
+  expect(allow).toBeEnabled()
+  await user.click(allow)
+  expect(submitButton()).toBeDisabled()
+  await user.click(allow)
+  expect(submitButton()).toBeEnabled()
+  expect(create).toHaveBeenCalledOnce()
+})
 
 const submitButton = () =>
   screen.getByRole("button", { name: "tokenCreation.create" })
@@ -663,10 +830,16 @@ it.each(["password", "2fa"])(
 it("lets the user choose a grant, verify, and return the independently checked token", async () => {
   const origin = "https://token-form.example"
   let creations = 0
+  const identities: string[] = []
   server.use(
-    http.get(`${origin}/api/user/self`, () =>
-      HttpResponse.json({ success: true, data: { id: 42 } }),
-    ),
+    http.get(`${origin}/api/user/self`, ({ request }) => {
+      const authorization = request.headers.get("Authorization") ?? ""
+      identities.push(authorization)
+      expect(authorization).toBe(
+        creations === 0 ? "Bearer session" : "Bearer nap_checked",
+      )
+      return HttpResponse.json({ success: true, data: { id: 42 } })
+    }),
     http.get(`${origin}/api/user/access_tokens/catalog`, () =>
       HttpResponse.json({
         success: true,
@@ -752,5 +925,6 @@ it("lets the user choose a grant, verify, and return the independently checked t
   await screen.findByText("tokenCreation.complete")
   expect(onCreated).toHaveBeenCalledWith("nap_checked")
   expect(creations).toBe(1)
+  expect(identities.at(-1)).toBe("Bearer nap_checked")
   expect(screen.queryByLabelText("tokenCreation.password")).toBeNull()
 })

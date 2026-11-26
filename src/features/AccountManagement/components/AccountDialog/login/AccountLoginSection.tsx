@@ -103,6 +103,10 @@ export function AccountLoginSection({
       ? selectedMethod.configuration.identity
       : undefined
   const supportsRecovery = supportsAccountCredentialRecovery(target)
+  const invalidUsername = Boolean(
+    passwordIdentity && !credentials.username.trim(),
+  )
+  const invalidPassword = Boolean(passwordIdentity && !credentials.password)
   if (methods.length === 0) return null
   return (
     <AccountFormSection
@@ -145,7 +149,9 @@ export function AccountLoginSection({
           <SelectTrigger
             ref={methodRef}
             aria-label={t("login.method")}
-            {...validationProps}
+            {...(!invalidUsername && !invalidPassword
+              ? validationProps
+              : undefined)}
           >
             <SelectValue placeholder={t("login.notConfigured")} />
           </SelectTrigger>
@@ -230,6 +236,7 @@ export function AccountLoginSection({
           >
             <Input
               id="account-login-username"
+              {...(invalidUsername ? validationProps : undefined)}
               autoComplete="username"
               value={credentials.username}
               onChange={(event) =>
@@ -250,6 +257,7 @@ export function AccountLoginSection({
           >
             <Input
               id="account-login-password"
+              {...(invalidPassword ? validationProps : undefined)}
               type="password"
               autoComplete="off"
               revealable

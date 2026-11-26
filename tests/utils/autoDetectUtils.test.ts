@@ -790,16 +790,14 @@ describe("autoDetectUtils", () => {
       expect(browser.tabs.reload).not.toHaveBeenCalled()
     })
 
-    it("waits for the active HTTP tab when no matching tab exists", async () => {
+    it("leaves an unrelated active HTTP tab alone when no matching tab exists", async () => {
       vi.mocked(reloadSiteTabAndWait).mockResolvedValueOnce(null)
       vi.mocked(browser.tabs.query).mockResolvedValueOnce([
         { id: 123, url: "https://fallback.example/path" } as browser.tabs.Tab,
       ])
       await reloadCurrentTab("https://site.example")
-      expect(reloadSiteTabByIdAndWait).toHaveBeenCalledExactlyOnceWith(
-        123,
-        "https://fallback.example",
-      )
+      expect(browser.tabs.reload).not.toHaveBeenCalled()
+      expect(reloadSiteTabByIdAndWait).not.toHaveBeenCalled()
     })
 
     it("preserves the account form when only an extension tab is active", async () => {

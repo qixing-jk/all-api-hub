@@ -274,10 +274,10 @@ describe("account dialog recovery continuation", () => {
     vi.mocked(openAccountDialogRecovery).mockReturnValueOnce(opening.promise)
 
     const state = snapshot()
-    function ActionGuide() {
+    function ActionGuide({ draft }: { draft: AccountDialogRecoveryState }) {
       const continuation = useAccountDialogRecoveryHandoff({
         enabled: true,
-        state,
+        state: draft,
       })
       return (
         <div>
@@ -300,7 +300,7 @@ describe("account dialog recovery continuation", () => {
       )
     }
 
-    render(<ActionGuide />, {
+    const view = render(<ActionGuide draft={state} />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
@@ -319,6 +319,14 @@ describe("account dialog recovery continuation", () => {
       "data-pending-action",
       "new-api-token-create",
     )
+
+    view.rerender(
+      <ActionGuide
+        draft={{ ...state, draft: { ...state.draft, notes: "Later edit" } }}
+      />,
+    )
+    await act(async () => {})
+    expect(prepareAccountDialogRecovery).toHaveBeenCalledOnce()
 
     await act(async () => opening.resolve("sidepanel"))
     expect(closeIfPopup).toHaveBeenCalledTimes(1)

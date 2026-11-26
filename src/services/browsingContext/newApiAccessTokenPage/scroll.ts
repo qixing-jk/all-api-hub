@@ -40,8 +40,8 @@ export function scrollToAccessTokenCue(
   const isTall =
     group.getBoundingClientRect().height >
     bounds.bottom - bounds.top - 2 * VIEWPORT_INSET
-  const target = isTall && action ? action : group
-  const block = isTall && !action ? "start" : "center"
+  let target = isTall && action ? action : group
+  let block: ScrollLogicalPosition = isTall && !action ? "start" : "center"
   target.scrollIntoView({
     block,
     behavior: resolveNavigationScrollBehavior(),
@@ -53,6 +53,7 @@ export function scrollToAccessTokenCue(
       ? window.scrollY
       : container.scrollTop - container.getBoundingClientRect().top)
   let previousPosition = targetPosition()
+  let stopped = false
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   const scheduleRecenter = () => {
     clearTimeout(debounceTimer)
@@ -82,6 +83,7 @@ export function scrollToAccessTokenCue(
       ? new ResizeObserver(scheduleRecenter)
       : undefined
   const stop = () => {
+    stopped = true
     clearTimeout(debounceTimer)
     mutations.disconnect()
     sizes?.disconnect()
@@ -98,5 +100,20 @@ export function scrollToAccessTokenCue(
   mutations.observe(document.body, { childList: true, subtree: true })
   if (group.parentElement) sizes?.observe(group.parentElement)
   sizes?.observe(container)
-  return stop
+  return {
+    stop,
+    setAction(action: HTMLElement) {
+      if (stopped || !isTall) return
+      target = action
+      block = "center"
+      previousPosition = targetPosition()
+      const bounds = viewport()
+      const rect = action.getBoundingClientRect()
+      if (rect.top < bounds.top || rect.bottom > bounds.bottom)
+        action.scrollIntoView({
+          block,
+          behavior: resolveNavigationScrollBehavior(),
+        })
+    },
+  }
 }

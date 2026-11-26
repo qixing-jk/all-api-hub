@@ -266,6 +266,7 @@ export function useNewApiTokenCreation({
       startReview: () => setRecovering(true),
       finishReview,
       setRecoveryPending,
+      recoveryPending,
       acknowledgeUncertain,
     },
   }

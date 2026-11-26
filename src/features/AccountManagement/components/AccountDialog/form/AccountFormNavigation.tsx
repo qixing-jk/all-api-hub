@@ -61,7 +61,7 @@ export function AccountFormNavigation({
     <nav
       ref={navigationRef}
       aria-label={t("sections.navigation")}
-      className="flex min-w-0 flex-1 gap-1 overflow-x-auto py-density-2 lg:flex-col lg:overflow-visible lg:py-0"
+      className="relative flex min-w-0 flex-1 gap-1 overflow-x-auto py-density-2 lg:flex-col lg:overflow-visible lg:py-0"
     >
       {isCompact ? (
         <DropdownMenu>

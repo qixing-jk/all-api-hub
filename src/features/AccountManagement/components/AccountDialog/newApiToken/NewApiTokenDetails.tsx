@@ -47,6 +47,7 @@ export function NewApiTokenDetails({
           id={`${id}-name`}
           value={name}
           maxLength={NEW_API_TOKEN_NAME_MAX_LENGTH}
+          aria-required="true"
           disabled={disabled}
           onChange={(event) => setName(event.target.value)}
         />
@@ -80,6 +81,7 @@ export function NewApiTokenDetails({
             <Input
               id={`${id}-days`}
               aria-label={t("tokenCreation.days")}
+              aria-required="true"
               type="number"
               inputMode="numeric"
               min={1}

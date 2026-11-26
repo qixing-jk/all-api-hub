@@ -395,6 +395,48 @@ it("scrolls without inheriting CSS smooth scrolling when reduced motion is prefe
   await vi.runOnlyPendingTimersAsync()
 })
 
+it("brings a shifted token card back into its own scroll pane and releases observation when it disappears", async () => {
+  document.body.innerHTML = `<div id="pane" style="overflow-y: auto"><div><section aria-labelledby="security-access">
+    <div data-slot="card"><h4>Access Token</h4><button>Generate</button></div>
+  </section></div></div>`
+  const pane = document.querySelector<HTMLElement>("#pane")!
+  vi.spyOn(pane, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 30, 480, 420),
+  )
+  vi.spyOn(pane, "clientHeight", "get").mockReturnValue(420)
+  const card = document.querySelector<HTMLElement>('[data-slot="card"]')!
+  card.scrollIntoView = vi.fn()
+  const bounds = vi
+    .spyOn(card, "getBoundingClientRect")
+    .mockReturnValue(new DOMRect(0, 60, 480, 100))
+  let resized: ResizeObserverCallback | undefined
+  const disconnect = vi.fn()
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe = vi.fn()
+      disconnect = disconnect
+      constructor(callback: ResizeObserverCallback) {
+        resized = callback
+      }
+    },
+  )
+  await handleHighlightAccessTokenSection(window.location.origin)
+  expect(card.scrollIntoView).toHaveBeenCalledOnce()
+  bounds.mockReturnValue(new DOMRect(0, 400, 480, 100))
+  resized?.([], {} as ResizeObserver)
+  await vi.advanceTimersByTimeAsync(100)
+  expect(card.scrollIntoView).toHaveBeenLastCalledWith({
+    block: "center",
+    behavior: "instant",
+  })
+  card.remove()
+  await vi.advanceTimersByTimeAsync(100)
+  expect(disconnect).toHaveBeenCalled()
+  expect(card.scrollIntoView).toHaveBeenCalledTimes(2)
+  await vi.runOnlyPendingTimersAsync()
+})
+
 it("keeps an unmatched Sessions & Access group and its sessions card untouched", async () => {
   document.body.innerHTML = `
     <section aria-labelledby="security-access">
@@ -426,6 +468,35 @@ it("highlights the rc.40 control when its status request renders the button late
   await pending
   await vi.runOnlyPendingTimersAsync()
 })
+
+it.each([false, true])(
+  "only follows a late action in a tall card before user interaction (%s)",
+  async (interacted) => {
+    document.body.innerHTML = `
+    <section aria-labelledby="security-access">
+      <div data-slot="card"><h4>Access Token</h4><button>Access records</button></div>
+    </section>`
+    const card = document.querySelector<HTMLElement>('[data-slot="card"]')!
+    card.scrollIntoView = vi.fn()
+    vi.spyOn(card, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 400, 2000),
+    )
+    await handleHighlightAccessTokenSection(window.location.origin)
+    expect(card.scrollIntoView).toHaveBeenCalledOnce()
+    if (interacted) window.dispatchEvent(new Event("wheel"))
+    const action = document.createElement("button")
+    action.textContent = "Generate"
+    action.scrollIntoView = vi.fn()
+    vi.spyOn(action, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 1600, 200, 30),
+    )
+    card.append(action)
+    await vi.advanceTimersByTimeAsync(100)
+    expect(action).toHaveAttribute(highlightAttribute, "access-token")
+    expect(action.scrollIntoView).toHaveBeenCalledTimes(interacted ? 0 : 1)
+    await vi.runOnlyPendingTimersAsync()
+  },
+)
 
 it("uses the localized upstream action, leaving access records untouched", async () => {
   document.body.innerHTML = `

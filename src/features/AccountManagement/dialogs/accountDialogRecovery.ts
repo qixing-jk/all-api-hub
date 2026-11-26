@@ -212,9 +212,15 @@ export async function openAccountDialogRecovery(
   const recoveryAction = options?.recoveryAction
   let actionUpdate: Promise<void> | undefined
   const ensureRecoveryAction = () => {
-    if (recoveryAction === undefined) return Promise.resolve()
     actionUpdate ??= recoveryChannel
-      .update(prepared.id, (current) => ({ ...current, recoveryAction }))
+      .update(prepared.id, (current) => ({
+        ...current,
+        recoveryAction:
+          recoveryAction ??
+          (isNewApiTokenRecoveryAction(current.recoveryAction)
+            ? undefined
+            : current.recoveryAction),
+      }))
       .catch(() => {
         throw new Error("Account recovery handoff unavailable")
       })

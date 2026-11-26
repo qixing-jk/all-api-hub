@@ -22,11 +22,22 @@ test("captures an owned OAuth callback before the site script in Firefox", async
     const options = firefoxExtension.page("options.html")
     await options.openInTab()
     await options.evaluate(
-      `(() => { window.callbackObserved = null; browser.runtime.onMessage.addListener((message, sender) => { if (message.action === 'newApiTokenOAuthCallback') window.callbackObserved = {message, frameId: sender.frameId, origin: new URL(sender.url).origin} }); return true })()`,
+      `(() => { window.callbackObserved = null; window.callbackDeliveries = 0; browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.action !== 'newApiTokenOAuthCallback' || ++window.callbackDeliveries === 1) return;
+        window.callbackObserved = {message, frameId: sender.frameId, origin: new URL(sender.url).origin};
+        sendResponse(true);
+      }); return true })()`,
     )
     const tabId = await options.evaluateAsync<number>(
       `browser.tabs.create({url:${JSON.stringify(origin)}}).then(tab=>tab.id)`,
     )
+    await expect
+      .poll(() =>
+        options.evaluateAsync<number[]>(
+          `browser.tabs.query({url:'http://127.0.0.1/*'}).then(tabs=>tabs.map(tab=>tab.id))`,
+        ),
+      )
+      .toContain(tabId)
     await expect
       .poll(() =>
         options.evaluateAsync(
@@ -51,6 +62,7 @@ test("captures an owned OAuth callback before the site script in Firefox", async
         frameId: 0,
         origin,
       })
+    expect(await options.evaluate("window.callbackDeliveries")).toBe(2)
     await expect
       .poll(() =>
         options.evaluateAsync(

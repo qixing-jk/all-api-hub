@@ -69,3 +69,78 @@ it("requires an explicit token selection and fresh verification before revoking"
   )
   expect(reviewed).toHaveBeenCalledOnce()
 })
+
+it("recovers after reconnect and requires a successful server review", async () => {
+  const user = userEvent.setup()
+  const reconnect = vi.fn()
+  const onReviewed = vi.fn()
+  const loadRecovery = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Session lost"))
+    .mockResolvedValue({
+      items: [],
+      verification: {
+        methods: [],
+        oauth_providers: [],
+        password_encryption_enabled: false,
+      },
+    })
+  const reviewRecovery = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Unavailable"))
+    .mockResolvedValue(true)
+  const flow = {
+    loadRecovery,
+    reviewRecovery,
+  } as unknown as NewApiAccessTokenCreation
+  const view = render(
+    <NewApiTokenRecovery
+      flow={flow}
+      onReviewed={onReviewed}
+      onReconnect={reconnect}
+      sessionRevision={0}
+    />,
+  )
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "tokenCreation.recoveryFailed",
+  )
+  await user.click(
+    screen.getByRole("button", { name: "tokenCreation.reconnect" }),
+  )
+  expect(reconnect).toHaveBeenCalledOnce()
+  view.rerender(
+    <NewApiTokenRecovery
+      flow={flow}
+      onReviewed={onReviewed}
+      onReconnect={reconnect}
+      reconnecting
+      sessionRevision={0}
+    />,
+  )
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.reconnect" }),
+  ).toBeDisabled()
+  view.rerender(
+    <NewApiTokenRecovery
+      flow={flow}
+      onReviewed={onReviewed}
+      onReconnect={reconnect}
+      sessionRevision={1}
+    />,
+  )
+  expect(await screen.findByText("tokenCreation.noTokens")).toBeVisible()
+  const done = screen.getByRole("button", {
+    name: "tokenCreation.reviewComplete",
+  })
+  await user.click(done)
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "tokenCreation.recoveryFailed",
+  )
+  expect(done).toBeDisabled()
+  expect(onReviewed).not.toHaveBeenCalled()
+  await user.click(
+    screen.getByRole("button", { name: "common:actions.refresh" }),
+  )
+  await user.click(done)
+  expect(onReviewed).toHaveBeenCalledExactlyOnceWith(true)
+})

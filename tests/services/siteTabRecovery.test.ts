@@ -85,6 +85,16 @@ it("validates the scheme before looking at tabs", async () => {
   expect(queryTabs).not.toHaveBeenCalled()
 })
 
+it("uses a port-free match pattern and still selects the exact origin", async () => {
+  vi.mocked(queryTabs).mockResolvedValue([
+    tab(7, { active: true, url: "http://localhost:4568/profile" }),
+    tab(8, { url: "http://localhost:4567/profile" }),
+  ])
+  const result = await findMatchingSiteTab("http://localhost:4567/security")
+  expect(queryTabs).toHaveBeenCalledWith({ url: "http://localhost/*" })
+  expect(result.tab?.id).toBe(8)
+})
+
 it("creates the origin in the caller's container", async () => {
   vi.mocked(getCurrentTab).mockResolvedValue(undefined)
   vi.mocked(getActiveTab).mockResolvedValue(tab(100))

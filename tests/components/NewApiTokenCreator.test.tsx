@@ -9,10 +9,12 @@ import {
   NewApiTokenCreationUncertainError,
   type NewApiAccessTokenCreation,
 } from "~/services/apiService/newApiFamily/accessTokens/creation"
+import { createTokenIssuanceJournal } from "~/services/apiService/newApiFamily/accessTokens/issuanceJournal"
 import {
   NewApiTokenSessionError,
   NEW_API_TOKEN_SESSION_ERRORS as SESSION_ERRORS,
 } from "~/services/apiService/newApiFamily/accessTokens/sessionError"
+import { ApiError } from "~/services/apiTransport/errors"
 import { createTab, getCurrentTab, getTab } from "~/utils/browser/tabs"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
@@ -76,6 +78,7 @@ function mockSession(methods = [{ method: "password", available: true }]) {
       verification: { methods, oauth_providers: [] },
     }),
     create: vi.fn(),
+    reconnect: vi.fn(),
   }
   vi.mocked(openNewApiAccessTokenCreation).mockResolvedValueOnce({
     flow: flow as unknown as NewApiAccessTokenCreation,
@@ -166,6 +169,130 @@ function renderWithFooter() {
   const onReturnToAccount = renderCreator(selfHostedSite, footer)
   return { footer: within(footer), onReturnToAccount }
 }
+
+it("cancels a site session that finishes opening after the user leaves creation", async () => {
+  const pending =
+    createDeferred<Awaited<ReturnType<typeof openNewApiAccessTokenCreation>>>()
+  vi.mocked(openNewApiAccessTokenCreation).mockReturnValueOnce(pending.promise)
+  const session = {
+    flow: { load: vi.fn() } as unknown as NewApiAccessTokenCreation,
+    cancel: vi.fn(),
+  }
+  const { unmount } = render(
+    <NewApiTokenCreator
+      siteUrl={selfHostedSite}
+      userId="42"
+      onCreated={vi.fn()}
+      onReturnToAccount={vi.fn()}
+      footer={null}
+      onBusyChange={vi.fn()}
+    />,
+  )
+  await waitFor(() =>
+    expect(openNewApiAccessTokenCreation).toHaveBeenCalledOnce(),
+  )
+  unmount()
+  await act(() => pending.resolve(session))
+  expect(session.cancel).toHaveBeenCalledOnce()
+  expect(session.flow.load).not.toHaveBeenCalled()
+})
+
+it("reconnects a creator without discarding the draft already entered", async () => {
+  const flow = mockSession()
+  flow.create.mockRejectedValueOnce(new ApiError("Session expired", 401))
+  const candidate = mockSession()
+  const user = userEvent.setup()
+  renderCreator()
+  const password = await screen.findByLabelText("tokenCreation.password")
+  const name = screen.getByLabelText("tokenCreation.name")
+  await user.clear(name)
+  await user.type(name, "Keep this token name")
+  await user.type(password, "secret")
+  await user.click(screen.getByRole("button", { name: "tokenCreation.create" }))
+  await user.click(
+    await screen.findByRole("button", { name: "tokenCreation.reconnect" }),
+  )
+  await waitFor(() =>
+    expect(flow.reconnect).toHaveBeenCalledExactlyOnceWith(candidate),
+  )
+  expect(name).toHaveValue("Keep this token name")
+  expect(openNewApiAccessTokenCreation).toHaveBeenCalledTimes(2)
+})
+
+it("restores the site-opening actions after focusing the source tab fails", async () => {
+  vi.mocked(openNewApiAccessTokenCreation).mockRejectedValueOnce(
+    new Error("Site closed"),
+  )
+  const focus = createDeferred<void>()
+  focusSite.mockReturnValueOnce(focus.promise)
+  const user = userEvent.setup()
+  const { footer } = renderWithFooter()
+  const openSite = await footer.findByRole("button", {
+    name: "tokenCreation.connection.openSite",
+  })
+  const retry = footer.getByRole("button", { name: "common:actions.retry" })
+  await user.click(openSite)
+  expect(retry).toBeDisabled()
+  await act(() => focus.reject(new Error("Closed")))
+  expect(
+    await screen.findByText("tokenCreation.connection.openSiteFailed"),
+  ).toBeVisible()
+  expect(retry).toBeEnabled()
+})
+
+it("keeps site fallback blocked while an earlier extension issuance is uncertain", async () => {
+  vi.stubGlobal("navigator", {
+    locks: {
+      request: async (
+        name: string,
+        _options: LockOptions,
+        work: (lock: object) => Promise<unknown>,
+      ) => work({ name }),
+    },
+  })
+  const journal = createTokenIssuanceJournal(selfHostedSite, "42")
+  await journal.begin()
+  await journal.uncertain()
+  try {
+    vi.mocked(openNewApiAccessTokenCreation).mockRejectedValueOnce(
+      new NewApiTokenSessionError(SESSION_ERRORS.UNSUPPORTED, 9),
+    )
+    const onReturn = renderCreator()
+    const site = await screen.findByRole("button", {
+      name: "tokenCreation.createOnSite",
+    })
+    await userEvent.click(site)
+    expect(
+      (await screen.findByText("tokenCreation.uncertain")).closest(
+        '[role="alert"]',
+      ),
+    ).toBeVisible()
+    expect(site).toBeEnabled()
+    expect(createTab).not.toHaveBeenCalled()
+    expect(onReturn).not.toHaveBeenCalled()
+  } finally {
+    await journal.resolved()
+    vi.unstubAllGlobals()
+  }
+})
+
+it("keeps the token setup open when the deployment's website route cannot be resolved", async () => {
+  vi.mocked(openNewApiAccessTokenCreation).mockRejectedValueOnce(
+    new NewApiTokenSessionError(SESSION_ERRORS.UNSUPPORTED, 9),
+  )
+  vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValueOnce(null)
+  const onReturn = renderCreator()
+  const site = await screen.findByRole("button", {
+    name: "tokenCreation.createOnSite",
+  })
+  await userEvent.click(site)
+  expect(
+    await screen.findByText("accessTokenVerification.openSecurityFailed"),
+  ).toBeVisible()
+  expect(site).toBeEnabled()
+  expect(createTab).not.toHaveBeenCalled()
+  expect(onReturn).not.toHaveBeenCalled()
+})
 
 it.each([
   [SESSION_ERRORS.UNAVAILABLE, "sessionRequired"],
@@ -347,4 +474,33 @@ it("offers the website after a failed verification but prioritizes recovery afte
   expect(
     screen.queryByRole("button", { name: "tokenCreation.createOnSite" }),
   ).not.toBeInTheDocument()
+})
+
+it("leaves a newer issuance blocked when acknowledging an older review fails", async () => {
+  const session = mockSession()
+  session.create.mockRejectedValueOnce(new NewApiTokenCreationUncertainError())
+  const acknowledge = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Another attempt started"))
+    .mockResolvedValueOnce(undefined)
+  Object.assign(session, { acknowledgeUncertain: acknowledge })
+  const user = userEvent.setup()
+  renderCreator()
+  const password = await screen.findByLabelText("tokenCreation.password")
+  await user.type(password, "test password")
+  await user.click(screen.getByRole("button", { name: "tokenCreation.create" }))
+  const retry = await screen.findByRole("button", {
+    name: "tokenCreation.allowNewAttempt",
+  })
+  expect(retry).toBeDisabled()
+  await user.click(
+    screen.getByRole("checkbox", { name: "tokenCreation.reviewed" }),
+  )
+  await user.click(retry)
+  expect(acknowledge).toHaveBeenCalledOnce()
+  expect(screen.getByRole("alert")).toHaveTextContent("tokenCreation.uncertain")
+  expect(session.create).toHaveBeenCalledOnce()
+  await user.click(retry)
+  await waitFor(() => expect(retry).not.toBeInTheDocument())
+  expect(screen.getByLabelText("tokenCreation.password")).toBeEnabled()
 })

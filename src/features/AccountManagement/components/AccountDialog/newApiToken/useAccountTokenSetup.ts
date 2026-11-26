@@ -67,7 +67,10 @@ export function useAccountTokenSetup({
   const [tokenStepActions, setTokenStepActions] =
     useState<HTMLDivElement | null>(null)
   const [filledToken, setFilledToken] = useState<
-    NewApiAccessTokenTarget & { kind: "entered" | "verified" }
+    NewApiAccessTokenTarget & {
+      kind: "entered" | "verified"
+      detectionError: TokenSetupState["detectionError"]
+    }
   >()
   const restoreTokenFieldFocus = useRef(false)
   const tokenPageBody = useRef<HTMLDivElement>(null)
@@ -126,11 +129,12 @@ export function useAccountTokenSetup({
         userId: state.userId,
         siteType: state.siteType,
         accessToken,
+        detectionError: state.detectionError,
       })
       setCompactAccount(false)
       if (focusToken) focusField(ACCOUNT_FORM_FIELDS.ACCESS_TOKEN)
     },
-    [focusField, state.siteType, state.url, state.userId],
+    [focusField, state.detectionError, state.siteType, state.url, state.userId],
   )
   const finishTokenEntry = (value: string, focusToken: boolean) => {
     if (!value.trim()) return
@@ -141,12 +145,13 @@ export function useAccountTokenSetup({
   useEffect(() => {
     if (!isOpen || !tokenStep || isCreatingToken || !state.accessToken.trim())
       return
-    const timer = setTimeout(
-      () => reviewEnteredToken(state.accessToken, true),
-      TOKEN_ENTRY_PAUSE_MS,
-    )
+    const timer = setTimeout(() => {
+      if (accountFormRef.current?.isAccessTokenFocused())
+        reviewEnteredToken(state.accessToken, true)
+    }, TOKEN_ENTRY_PAUSE_MS)
     return () => clearTimeout(timer)
   }, [
+    accountFormRef,
     isOpen,
     isCreatingToken,
     reviewEnteredToken,
@@ -215,6 +220,10 @@ export function useAccountTokenSetup({
     matchesTokenIdentity &&
     filledToken.kind === "verified" &&
     filledToken.accessToken === state.accessToken
+  const tokenRecoveryHandled =
+    matchesTokenIdentity &&
+    !!state.accessToken.trim() &&
+    filledToken.detectionError === state.detectionError
   const openFullForm = () => {
     if (state.accessToken.trim()) {
       finishTokenEntry(state.accessToken, true)
@@ -235,6 +244,7 @@ export function useAccountTokenSetup({
     setFilledToken({
       kind: "verified",
       accessToken: token,
+      detectionError: state.detectionError,
       baseUrl: state.url,
       userId: state.userId,
       siteType: state.siteType,
@@ -244,7 +254,8 @@ export function useAccountTokenSetup({
 
   return {
     canEnterTokenStep,
-    newApiTokenRecovery,
+    canVerifyToken,
+    tokenRecoveryHandled,
     showTokenSetup,
     tokenStep,
     activeTokenSetup,

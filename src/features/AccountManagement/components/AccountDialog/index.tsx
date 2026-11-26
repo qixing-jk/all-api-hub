@@ -188,7 +188,6 @@ export default function AccountDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    cancelTokenVerification()
     if (tokenStep) {
       finishTokenEntry(state.accessToken, true)
       return
@@ -206,6 +205,7 @@ export default function AccountDialog({
       }
       if (
         isAccountSubmissionBlocked ||
+        recoveryContinuation?.isOpening ||
         state.isSaving ||
         state.isAutoConfiguring
       )
@@ -215,6 +215,7 @@ export default function AccountDialog({
         return
       }
       if (!state.isFormValid) return
+      cancelTokenVerification()
       const result = await handlers.handleSaveAccount()
       if (!result) return
       if (!handlers.shouldDeferAccountSaveSuccess(result)) {
@@ -367,7 +368,8 @@ export default function AccountDialog({
   })
   const {
     canEnterTokenStep,
-    newApiTokenRecovery,
+    canVerifyToken,
+    tokenRecoveryHandled,
     showTokenSetup,
     tokenStep,
     activeTokenSetup,
@@ -416,7 +418,10 @@ export default function AccountDialog({
   }
 
   const hasDetectionAlert = Boolean(
-    state.detectionError && !hasInlineCredentialError && !newApiTokenRecovery,
+    state.detectionError &&
+    !hasInlineCredentialError &&
+    !activeTokenSetup &&
+    !tokenRecoveryHandled,
   )
   const hasTopBanner =
     hasDetectionAlert || Boolean(openRouterRecovery && showOpenRouterRecovery)
@@ -524,12 +529,11 @@ export default function AccountDialog({
   const detectedDetails = [state.draft.username, tokenHost]
     .filter(Boolean)
     .join(" · ")
-  const tokenFeedback = tokenVerificationStatus ? (
-    <NewApiAccessTokenVerificationFeedback status={tokenVerificationStatus} />
-  ) : hasVerifiedCreatedToken ? (
-    <InlineMessage tone="success" size="sm">
-      {tAccountDialog("tokenCreation.complete")}
-    </InlineMessage>
+  const tokenFeedback = canVerifyToken ? (
+    <NewApiAccessTokenVerificationFeedback
+      status={tokenVerificationStatus}
+      created={hasVerifiedCreatedToken}
+    />
   ) : undefined
   const tokenFeedbackVariant = tokenNeedsReplacement
     ? "warning"
@@ -612,7 +616,9 @@ export default function AccountDialog({
               onShowManualForm={handlers.handleShowManualForm}
               onClose={handleClose}
               isFormValid={state.isFormValid}
-              isSubmissionBlocked={isAccountSubmissionBlocked}
+              isSubmissionBlocked={
+                isAccountSubmissionBlocked || recoveryContinuation?.isOpening
+              }
               isSaving={state.isSaving}
               onAutoConfig={() => {
                 cancelTokenVerification()
@@ -644,6 +650,7 @@ export default function AccountDialog({
             id={ACCOUNT_FORM_ID}
             onSubmit={handleSubmit}
             noValidate={hasValidationIssues}
+            inert={recoveryContinuation?.isOpening}
             className="flex flex-col gap-x-2 gap-y-density-2"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountForm}
             data-account-form-ready={showAccountForm ? "" : undefined}

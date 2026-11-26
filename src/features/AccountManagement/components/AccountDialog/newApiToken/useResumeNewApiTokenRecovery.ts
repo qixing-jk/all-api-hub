@@ -28,14 +28,19 @@ export function useResumeNewApiTokenRecovery({
   focusAccessToken: () => void
 }) {
   const resumedRecovery = useRef<AccountDialogRecoveryState | null>(null)
+  const activeRecovery = useRef<AccountDialogRecoveryState | null>(null)
   const [siteOpenFailed, setSiteOpenFailed] = useState(false)
 
   useEffect(() => {
+    activeRecovery.current = isOpen ? (recoveryState ?? null) : null
     if (!isOpen) {
       resumedRecovery.current = null
       setSiteOpenFailed(false)
     }
-  }, [isOpen])
+    return () => {
+      activeRecovery.current = null
+    }
+  }, [isOpen, recoveryState])
 
   useEffect(() => {
     if (
@@ -53,15 +58,15 @@ export function useResumeNewApiTokenRecovery({
     switch (recoveryState.recoveryAction) {
       case ACCOUNT_DIALOG_RECOVERY_ACTIONS.NewApiTokenCreate:
         resumedRecovery.current = recoveryState
+        setSiteOpenFailed(false)
         startTokenCreation()
         return
       case ACCOUNT_DIALOG_RECOVERY_ACTIONS.NewApiTokenSite: {
         resumedRecovery.current = recoveryState
         setSiteOpenFailed(false)
         focusAccessToken()
-        let active = true
         const showFailure = () => {
-          if (active) setSiteOpenFailed(true)
+          if (activeRecovery.current === recoveryState) setSiteOpenFailed(true)
         }
         void openAccountAccessTokenPage({ baseUrl: url, siteType }).then(
           (opened) => {
@@ -69,9 +74,7 @@ export function useResumeNewApiTokenRecovery({
           },
           showFailure,
         )
-        return () => {
-          active = false
-        }
+        return
       }
     }
   }, [

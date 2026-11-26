@@ -11,12 +11,21 @@ import {
 /** Announces progress and the result of the advisory check. */
 export function NewApiAccessTokenVerificationFeedback({
   status,
+  created,
 }: {
   status?: NewApiAccessTokenVerificationStatus
+  created?: boolean
 }) {
   const { t } = useTranslation("accountDialog")
 
-  if (!status) return null
+  if (!status)
+    return created ? (
+      <InlineMessage tone="success" size="sm">
+        {t("tokenCreation.complete")}
+      </InlineMessage>
+    ) : (
+      <InlineMessage icon={null} />
+    )
   if (status === TOKEN_VERIFICATION_CHECKING) {
     return (
       <InlineMessage

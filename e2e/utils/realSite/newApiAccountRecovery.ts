@@ -37,6 +37,7 @@ export function createNewApiAccountRecovery(params: {
   dialogReadyTimeoutMs?: number
   tokenChannel?: "extension" | "official"
   tokenName?: string
+  expectedIdentity?: string
   onCreatorReady?: (creator: Locator) => Promise<void>
 }): {
   extensionPageGuardOptions: ExtensionPageGuardOptions
@@ -97,6 +98,14 @@ export function createNewApiAccountRecovery(params: {
       })
       if (await openFullForm.isVisible()) await openFullForm.click()
 
+      if (params.expectedIdentity) {
+        await expect(dialog.siteTypeTrigger).toHaveAttribute(
+          "data-site-type",
+          "new-api",
+        )
+        await expect(dialog.userIdInput).toHaveValue(params.expectedIdentity)
+      }
+
       const fields = [
         dialog.siteUrlInput,
         dialog.siteNameInput,
@@ -129,7 +138,14 @@ export function createNewApiAccountRecovery(params: {
         await creator
           .getByLabel("Token name", { exact: true })
           .fill(params.tokenName ?? E2E_ACCESS_TOKEN_NAME)
-        await creator.getByLabel("Never expires", { exact: true }).check()
+        const expiration = creator.getByRole("combobox", { name: "Expiration" })
+        if ((await expiration.textContent())?.trim() !== "Never expires") {
+          await expiration.click()
+          await params.page
+            .getByRole("option", { name: "Never expires", exact: true })
+            .click()
+        }
+        await expect(expiration).toHaveText("Never expires")
         await params.onCreatorReady?.(creator)
         // The usage suite needs key creation/reveal as well as read access.
         for (const scope of [
@@ -147,7 +163,11 @@ export function createNewApiAccountRecovery(params: {
           name: "Two-factor authentication (2FA)",
           exact: true,
         })
-        if (params.config.totpSecret && (await secondFactor.isEnabled())) {
+        if (
+          params.config.totpSecret &&
+          (await secondFactor.count()) &&
+          (await secondFactor.isEnabled())
+        ) {
           await secondFactor.check()
           await fillSecret(
             creator.getByLabel("Authenticator code", { exact: true }),
@@ -155,9 +175,11 @@ export function createNewApiAccountRecovery(params: {
             "Authenticator code",
           )
         } else {
-          await creator
-            .getByRole("radio", { name: "Password", exact: true })
-            .check()
+          const password = creator.getByRole("radio", {
+            name: "Password",
+            exact: true,
+          })
+          if (await password.count()) await password.check()
           await fillSecret(
             creator.getByLabel("Account password", { exact: true }),
             params.config.password,
@@ -213,9 +235,10 @@ export function createNewApiAccountRecovery(params: {
           tokenName: params.tokenName ?? E2E_ACCESS_TOKEN_NAME,
           neverExpires: true,
           useClipboard: true,
-          allowLegacyRotation: true,
-          beforeCreateScopedToken: () =>
-            revokeStaleE2eAccessTokens(params.config),
+          allowLegacyRotation: !params.tokenName,
+          beforeCreateScopedToken: params.tokenName
+            ? undefined
+            : () => revokeStaleE2eAccessTokens(params.config),
         })
         await params.page.bringToFront()
         for (const [index, field] of fields.entries()) {

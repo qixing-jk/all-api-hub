@@ -31,7 +31,11 @@ export async function prepareNewApiTokenSession(
     !expectedIdentity
   )
     throw new Error(VERIFICATION_ERRORS.INVALID_CONTEXT)
-  const cached = readNewApiDashboardSessionAuth(location.origin)
+  const remembered = readNewApiDashboardSessionAuth(location.origin)
+  const cached =
+    remembered && String(remembered.data.user.id) === expectedIdentity
+      ? remembered
+      : null
   const refresh = async () => {
     const response = await fetch(NEW_API_DASHBOARD_AUTH_REFRESH_PATH, {
       method: "POST",

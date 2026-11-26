@@ -1,4 +1,5 @@
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+import { sleep } from "~/utils/core/async"
 import { isRecord } from "~/utils/core/object"
 
 import {
@@ -43,7 +44,12 @@ export function captureTokenOAuthCallback() {
     marker.expiresAt <= Date.now()
   )
     return
-  const { requestId, origin, provider, state } = marker
+  const { requestId, origin, provider, state, expiresAt } = marker
+  if (
+    location.pathname !== newApiTokenOAuthCallbackPath(provider) ||
+    new URLSearchParams(location.search).get("state") !== state
+  )
+    return
   const publish = (
     outcome:
       | { callback: NewApiTokenOAuthCallback }
@@ -51,10 +57,23 @@ export function captureTokenOAuthCallback() {
   ) => {
     sessionStorage.removeItem(NEW_API_TOKEN_OAUTH_MARKER)
     history.replaceState(history.state, "", location.pathname)
-    void sendRuntimeMessage(
-      { action: NEW_API_TOKEN_OAUTH_CALLBACK, requestId, ...outcome },
-      { maxAttempts: 1 },
-    ).catch(() => undefined)
+    const deliver = async (expiresAt: number) => {
+      const message = {
+        action: NEW_API_TOKEN_OAUTH_CALLBACK,
+        requestId,
+        ...outcome,
+      }
+      let delay = 100
+      while (Date.now() < expiresAt) {
+        const accepted = await sendRuntimeMessage<boolean>(message, {
+          maxAttempts: 1,
+        }).catch(() => false)
+        if (accepted === true) return
+        await sleep(Math.min(delay, Math.max(0, expiresAt - Date.now())))
+        delay = Math.min(delay * 2, 1000)
+      }
+    }
+    void deliver(expiresAt)
   }
   try {
     const callback = readTokenOAuthCallback(
@@ -65,7 +84,6 @@ export function captureTokenOAuthCallback() {
     )
     if (callback) publish({ callback })
   } catch (error) {
-    if (location.pathname !== newApiTokenOAuthCallbackPath(provider)) return
     publish({
       error:
         error instanceof Error &&

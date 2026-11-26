@@ -1,8 +1,10 @@
+import { constants, generateKeyPairSync, privateDecrypt } from "node:crypto"
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { NewApiAccessTokenCreation } from "~/services/apiService/newApiFamily/accessTokens/creation"
 import { createTokenIssuanceJournal } from "~/services/apiService/newApiFamily/accessTokens/issuanceJournal"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -72,8 +74,296 @@ beforeEach(() => {
 })
 
 describe("New API management token creation", () => {
-  it("reconciles an externally revoked retained token only after explicit recovery review", async () => {
+  it.each([
+    ["another account", request, "7"],
+    ["another site", { ...request, baseUrl: "https://other.example" }, "42"],
+  ] as const)(
+    "does not replace the verified dashboard session with %s",
+    (_case, replacement, identity) => {
+      const flow = new NewApiAccessTokenCreation(request, "42")
+      const other = new NewApiAccessTokenCreation(replacement, identity)
+      expect(() => flow.reconnect(other)).toThrow("ACCOUNT_IDENTITY_MISMATCH")
+    },
+  )
+
+  it("cannot validate a token before any issuance", async () => {
+    const flow = new NewApiAccessTokenCreation(request, "42")
+    await expect(flow.verifyCreated()).rejects.toThrow(
+      "ACCESS_TOKEN_NOT_CREATED",
+    )
+    await expect(flow.reviewRecovery()).resolves.toBe(false)
+  })
+
+  it("retries issuance after an explicit rejection but requires reconciliation after a payload without a token", async () => {
+    const origin = "https://newapi-token.example"
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          name: string,
+          _options: LockOptions,
+          work: (lock: object) => Promise<unknown>,
+        ) => work({ name }),
+      },
+    })
+    let issued = 0
     server.use(
+      http.post(`${origin}/api/verify`, () =>
+        HttpResponse.json({ success: true, data: proof }),
+      ),
+      http.post(`${origin}/api/user/access_tokens`, () => {
+        issued++
+        return issued === 1
+          ? HttpResponse.json(
+              {
+                success: false,
+                code: "ACCESS_TOKEN_LIMIT",
+                message: "Limit reached",
+              },
+              { status: 409 },
+            )
+          : HttpResponse.json({ success: true, data: { item: { id: 3 } } })
+      }),
+    )
+    const journal = createTokenIssuanceJournal(origin, "retry-test")
+    const flow = new NewApiAccessTokenCreation(
+      request,
+      "42",
+      undefined,
+      journal,
+    )
+    const input = { method: "password", password: "secret" } as const
+    await expect(flow.create(draft, input)).rejects.toMatchObject({
+      upstreamCode: "ACCESS_TOKEN_LIMIT",
+    })
+    expect(await journal.pending()).toBeUndefined()
+    await expect(flow.create(draft, input)).rejects.toThrow(
+      "ACCESS_TOKEN_CREATION_UNCERTAIN",
+    )
+    expect(await journal.pending()).toMatchObject({ uncertain: true })
+    await expect(flow.create(draft, input)).rejects.toThrow(
+      "ACCESS_TOKEN_CREATION_UNCERTAIN",
+    )
+    expect(issued).toBe(2)
+  })
+
+  it.each([
+    ["too-short expiry", { expires_at: 1 }, "ACCESS_TOKEN_EXPIRY_INVALID"],
+    [
+      "scope absent from the site's catalog",
+      { scopes: ["profile:read", "admin:write"] },
+      "ACCESS_TOKEN_SCOPE_FORBIDDEN",
+    ],
+  ] as const)(
+    "rejects a %s before requesting proof or issuing a token",
+    async (_reason, change, error) => {
+      const verify = vi.fn(() => HttpResponse.error())
+      const issue = vi.fn(() => HttpResponse.error())
+      server.use(
+        http.post(`${origin}/api/verify`, verify),
+        http.post(`${origin}/api/user/access_tokens`, issue),
+      )
+      const flow = new NewApiAccessTokenCreation(request, "42")
+      await expect(
+        flow.create(
+          {
+            ...draft,
+            ...change,
+            scopes: "scopes" in change ? [...change.scopes] : draft.scopes,
+          },
+          { method: "password", password: "secret" },
+        ),
+      ).rejects.toThrow(error)
+      expect(verify).not.toHaveBeenCalled()
+      expect(issue).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ["another operation", { scope: "access_token.revoke" }],
+    ["another method", { method: "2fa" }],
+    ["a past deadline", { expires_at: 1 }],
+  ] as const)(
+    "never issues when the provider returns proof for %s",
+    async (_reason, change) => {
+      const issue = vi.fn(() => HttpResponse.error())
+      server.use(
+        http.post(`${origin}/api/verify`, () =>
+          HttpResponse.json({ success: true, data: { ...proof, ...change } }),
+        ),
+        http.post(`${origin}/api/user/access_tokens`, issue),
+      )
+      const flow = new NewApiAccessTokenCreation(request, "42")
+      await expect(
+        flow.create(draft, { method: "password", password: "secret" }),
+      ).rejects.toThrow("SECURITY_PROOF_INVALID")
+      expect(issue).not.toHaveBeenCalled()
+    },
+  )
+
+  it("accepts only an available verification method and sends the typed authenticator code", async () => {
+    const verify = vi.fn(async ({ request }: { request: Request }) => {
+      expect(await request.json()).toMatchObject({
+        method: "2fa",
+        code: "123456",
+      })
+      return HttpResponse.json({
+        success: true,
+        data: { ...proof, method: "2fa" },
+      })
+    })
+    const issue = vi.fn(() =>
+      HttpResponse.json({
+        success: true,
+        data: { token: "nap_twofactor", item: { id: 5, ...draft } },
+      }),
+    )
+    server.use(
+      http.get(`${origin}/api/verify/methods`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            scope: "access_token.generate",
+            methods: [
+              { method: "2fa", available: true },
+              { method: "password", available: false },
+            ],
+            oauth_providers: [],
+            password_encryption_enabled: false,
+          },
+        }),
+      ),
+      http.post(`${origin}/api/verify`, verify),
+      http.post(`${origin}/api/user/access_tokens`, issue),
+    )
+    const flow = new NewApiAccessTokenCreation(request, "42")
+    await expect(
+      flow.create(draft, { method: "password", password: "secret" }),
+    ).rejects.toThrow("SECURITY_METHOD_UNAVAILABLE")
+    expect(verify).not.toHaveBeenCalled()
+    await expect(
+      flow.create(draft, { method: "2fa", code: " 123456 " }),
+    ).resolves.toMatchObject({ verified: true, id: 5 })
+    expect(verify).toHaveBeenCalledOnce()
+    expect(issue).toHaveBeenCalledOnce()
+  })
+
+  it("refuses cookie-based token creation before contacting the site", async () => {
+    const contact = vi.fn(() => HttpResponse.error())
+    server.use(http.get(`${origin}/api/user/self`, contact))
+    const flow = new NewApiAccessTokenCreation(
+      {
+        ...request,
+        auth: { authType: AuthTypeEnum.Cookie, userId: 42 },
+      },
+      "42",
+    )
+    await expect(
+      flow.create(draft, { method: "password", password: "secret" }),
+    ).rejects.toThrow("INVALID_TOKEN_CONTEXT")
+    expect(contact).not.toHaveBeenCalled()
+  })
+
+  it("uses the website's password encryption before sending a proof request", async () => {
+    const { publicKey, privateKey } = generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+    })
+    const password = " password with edge spaces "
+    let verificationRequests = 0
+    server.use(
+      http.get(`${origin}/api/verify/methods`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            scope: "access_token.generate",
+            methods: [{ method: "password", available: true }],
+            oauth_providers: [],
+            password_encryption_enabled: true,
+          },
+        }),
+      ),
+      http.get(`${origin}/api/user/login/encryption-key`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            kid: "test-key",
+            public_key: publicKey
+              .export({ type: "spki", format: "pem" })
+              .toString(),
+          },
+        }),
+      ),
+      http.post(`${origin}/api/verify`, async ({ request }) => {
+        verificationRequests++
+        const payload = (await request.json()) as {
+          password_encrypted: string
+          encryption_key_id: string
+        }
+        expect(payload).not.toHaveProperty("password")
+        expect(payload.encryption_key_id).toBe("test-key")
+        const text = privateDecrypt(
+          {
+            key: privateKey,
+            padding: constants.RSA_PKCS1_OAEP_PADDING,
+            oaepHash: "sha256",
+          },
+          Buffer.from(payload.password_encrypted, "base64"),
+        )
+        expect(text.toString()).toBe(password)
+        return HttpResponse.json({ success: true, data: proof })
+      }),
+      http.post(`${origin}/api/user/access_tokens`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { token: "nap_encrypted", item: { id: 7, ...draft } },
+        }),
+      ),
+    )
+    const flow = new NewApiAccessTokenCreation(request, "42")
+    await expect(
+      flow.create(draft, { method: "password", password }),
+    ).resolves.toMatchObject({ verified: true })
+    expect(verificationRequests).toBe(1)
+  })
+
+  it.each([false, true])(
+    "requires an available linked OAuth provider and an owning browser interaction (%s)",
+    async (linked) => {
+      const issue = vi.fn(() => HttpResponse.error())
+      server.use(
+        http.get(`${origin}/api/verify/methods`, () =>
+          HttpResponse.json({
+            success: true,
+            data: {
+              scope: "access_token.generate",
+              methods: [{ method: "oauth", available: true }],
+              oauth_providers: linked
+                ? [{ slug: "github", name: "GitHub" }]
+                : [],
+              password_encryption_enabled: false,
+            },
+          }),
+        ),
+        http.post(`${origin}/api/user/access_tokens`, issue),
+      )
+      const flow = new NewApiAccessTokenCreation(request, "42")
+      await expect(
+        flow.create(draft, { method: "oauth", provider: "github" }),
+      ).rejects.toThrow(
+        linked
+          ? "SECURITY_VERIFICATION_FLOW_REQUIRED"
+          : "SECURITY_METHOD_UNAVAILABLE",
+      )
+      expect(issue).not.toHaveBeenCalled()
+    },
+  )
+
+  it("reconciles an externally revoked retained token only after explicit recovery review", async () => {
+    let present = true
+    let accountId = 42
+    server.use(
+      http.get(`${origin}/api/user/self`, () =>
+        HttpResponse.json({ success: true, data: { id: accountId } }),
+      ),
       http.post(`${origin}/api/verify`, () =>
         HttpResponse.json({ success: true, data: proof }),
       ),
@@ -87,11 +377,21 @@ describe("New API management token creation", () => {
         }),
       ),
       http.get(`${origin}/api/user/access_tokens`, () =>
-        HttpResponse.json({ success: true, data: { items: [] } }),
+        HttpResponse.json({
+          success: true,
+          data: { items: present ? [{ id: 8 }] : [] },
+        }),
       ),
     )
     const flow = new NewApiAccessTokenCreation(request, "42")
     await flow.create(draft, { method: "password", password: "secret" })
+    expect(await flow.reviewRecovery()).toBe(false)
+    accountId = 51
+    await expect(flow.reviewRecovery()).rejects.toThrow(
+      "ACCOUNT_IDENTITY_MISMATCH",
+    )
+    accountId = 42
+    present = false
     expect(await flow.reviewRecovery()).toBe(true)
     await expect(flow.verifyCreated()).rejects.toThrow(
       "ACCESS_TOKEN_NOT_CREATED",
@@ -125,21 +425,28 @@ describe("New API management token creation", () => {
   })
 
   it("renews its session without losing an issued token awaiting validation", async () => {
-    let valid = false
+    let validatedAccount = 51
+    const issue = vi.fn(() =>
+      HttpResponse.json({
+        success: true,
+        data: { token: "nap_retained", item: { id: 8, ...draft } },
+      }),
+    )
     server.use(
       http.post(`${origin}/api/verify`, () =>
         HttpResponse.json({ success: true, data: proof }),
       ),
-      http.post(`${origin}/api/user/access_tokens`, () =>
+      http.post(`${origin}/api/user/access_tokens`, issue),
+      http.get(`${origin}/api/user/self`, ({ request }) =>
         HttpResponse.json({
           success: true,
-          data: { token: "nap_retained", item: { id: 8, ...draft } },
+          data: {
+            id:
+              request.headers.get("Authorization") === "Bearer nap_retained"
+                ? validatedAccount
+                : 42,
+          },
         }),
-      ),
-      http.get(`${origin}/api/user/self`, ({ request }) =>
-        request.headers.get("Authorization") === "Bearer nap_retained" && !valid
-          ? HttpResponse.error()
-          : HttpResponse.json({ success: true, data: { id: 42 } }),
       ),
     )
     const flow = new NewApiAccessTokenCreation(request, "42")
@@ -147,17 +454,23 @@ describe("New API management token creation", () => {
       (await flow.create(draft, { method: "password", password: "secret" }))
         .verified,
     ).toBe(false)
+    await expect(flow.verifyCreated()).rejects.toMatchObject({
+      code: API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH,
+    })
     const replacement = new NewApiAccessTokenCreation(
       { ...request, auth: { ...request.auth, accessToken: "fresh-session" } },
       "42",
     )
     flow.reconnect(replacement)
-    valid = true
-    expect(await flow.verifyCreated()).toEqual({
+    validatedAccount = 42
+    expect(
+      await flow.create(draft, { method: "password", password: "secret" }),
+    ).toEqual({
       token: "nap_retained",
       id: 8,
       verified: true,
     })
+    expect(issue).toHaveBeenCalledOnce()
   })
 
   it("cancels a retained token check and permits another check without issuing again", async () => {
@@ -213,60 +526,145 @@ describe("New API management token creation", () => {
     expect(issues).toBe(1)
   })
 
-  it("verifies the explicitly selected token id before revoking and confirms its absence", async () => {
-    let revoked = false
+  it("cancels the initial readback and retains the issued token for a retry", async () => {
+    const started = createDeferred<AbortSignal>()
+    const release = createDeferred<void>()
+    let checks = 0
+    let issues = 0
     server.use(
-      http.get(`${origin}/api/user/access_tokens`, () =>
-        HttpResponse.json({
-          success: true,
-          data: {
-            items: revoked
-              ? []
-              : [
-                  {
-                    id: 7,
-                    name: "Lost response",
-                    created_at: 100,
-                    expires_at: 0,
-                    scopes: ["profile:read"],
-                    token_hint: "nap_...abcd",
-                  },
-                ],
-          },
-        }),
+      http.post(`${origin}/api/verify`, () =>
+        HttpResponse.json({ success: true, data: proof }),
       ),
-      http.get(`${origin}/api/verify/methods`, ({ request }) =>
-        HttpResponse.json({
-          success: true,
-          data: {
-            scope: new URL(request.url).searchParams.get("scope"),
-            methods: [{ method: "password", available: true }],
-            oauth_providers: [],
-            password_encryption_enabled: false,
-          },
-        }),
-      ),
-      http.post(`${origin}/api/verify`, async ({ request }) => {
-        expect(await request.json()).toMatchObject({
-          scope: "access_token.revoke",
-          context: { token_id: 7 },
-        })
+      http.post(`${origin}/api/user/access_tokens`, () => {
+        issues++
         return HttpResponse.json({
           success: true,
-          data: { ...proof, scope: "access_token.revoke" },
+          data: { token: "nap_retained", item: { id: 8, ...draft } },
         })
       }),
-      http.delete(`${origin}/api/user/access_tokens/7`, ({ request }) => {
-        expect(request.headers.get("X-Security-Proof")).toBe(proof.proof_token)
-        revoked = true
-        return HttpResponse.json({ success: true, data: null })
+      http.get(`${origin}/api/user/self`, async ({ request }) => {
+        if (
+          request.headers.get("Authorization") === "Bearer nap_retained" &&
+          ++checks === 1
+        ) {
+          started.resolve(request.signal)
+          await release.promise
+        }
+        return HttpResponse.json({ success: true, data: { id: 42 } })
       }),
     )
     const flow = new NewApiAccessTokenCreation(request, "42")
-    expect((await flow.loadRecovery()).items).toHaveLength(1)
-    await flow.revokeToken(7, { method: "password", password: "secret" })
-    expect((await flow.loadRecovery()).items).toHaveLength(0)
+    const creation = flow.create(draft, {
+      method: "password",
+      password: "secret",
+    })
+    try {
+      const signal = await started.promise
+      const password = { method: "password", password: "secret" } as const
+      const busy = "ACCESS_TOKEN_CREATION_BUSY"
+      expect(() =>
+        flow.reconnect(new NewApiAccessTokenCreation(request, "42")),
+      ).toThrow(busy)
+      await expect(flow.acknowledgeUncertain()).rejects.toThrow(busy)
+      await expect(flow.reviewRecovery()).rejects.toThrow(busy)
+      await expect(flow.verifyCreated()).rejects.toThrow(busy)
+      await expect(flow.revokeToken(8, password)).rejects.toThrow(busy)
+      await expect(flow.create(draft, password)).rejects.toThrow(busy)
+      flow.cancelVerification()
+      await expect.poll(() => signal.aborted, { timeout: 1000 }).toBe(true)
+    } finally {
+      release.resolve()
+      await creation
+    }
+    await expect(creation).resolves.toMatchObject({ verified: false })
+    await expect(flow.verifyCreated()).resolves.toMatchObject({
+      verified: true,
+    })
+    expect(issues).toBe(1)
   })
+
+  it.each([
+    "confirmed",
+    "still-listed",
+    "already-absent",
+    "wrong-proof-scope",
+  ] as const)(
+    "reconciles revocation of a selected token when it is %s",
+    async (outcome) => {
+      let revoked = outcome === "already-absent"
+      const verify = vi.fn()
+      const deletion = vi.fn()
+      server.use(
+        http.get(`${origin}/api/user/access_tokens`, () =>
+          HttpResponse.json({
+            success: true,
+            data: {
+              items: revoked
+                ? []
+                : [
+                    {
+                      id: 7,
+                      name: "Lost response",
+                      created_at: 100,
+                      expires_at: 0,
+                      scopes: ["profile:read"],
+                      token_hint: "nap_...abcd",
+                    },
+                  ],
+            },
+          }),
+        ),
+        http.get(`${origin}/api/verify/methods`, ({ request }) =>
+          HttpResponse.json({
+            success: true,
+            data: {
+              scope:
+                outcome === "wrong-proof-scope"
+                  ? "access_token.generate"
+                  : new URL(request.url).searchParams.get("scope"),
+              methods: [{ method: "password", available: true }],
+              oauth_providers: [],
+              password_encryption_enabled: false,
+            },
+          }),
+        ),
+        http.post(`${origin}/api/verify`, async ({ request }) => {
+          verify()
+          expect(await request.json()).toMatchObject({
+            scope: "access_token.revoke",
+            context: { token_id: 7 },
+          })
+          return HttpResponse.json({
+            success: true,
+            data: { ...proof, scope: "access_token.revoke" },
+          })
+        }),
+        http.delete(`${origin}/api/user/access_tokens/7`, ({ request }) => {
+          deletion()
+          expect(request.headers.get("X-Security-Proof")).toBe(
+            proof.proof_token,
+          )
+          revoked = outcome === "confirmed"
+          return HttpResponse.json({ success: true, data: null })
+        }),
+      )
+      const flow = new NewApiAccessTokenCreation(request, "42")
+      const result = flow.revokeToken(7, {
+        method: "password",
+        password: "secret",
+      })
+      if (outcome === "wrong-proof-scope")
+        await expect(result).rejects.toThrow("SECURITY_PROOF_INVALID")
+      else if (outcome === "still-listed")
+        await expect(result).rejects.toThrow("ACCESS_TOKEN_REVOKE_UNCONFIRMED")
+      else await expect(result).resolves.toBe(false)
+      const expectsWrite = outcome === "confirmed" || outcome === "still-listed"
+      expect(verify).toHaveBeenCalledTimes(expectsWrite ? 1 : 0)
+      expect(deletion).toHaveBeenCalledTimes(expectsWrite ? 1 : 0)
+      if (outcome === "confirmed")
+        expect((await flow.loadRecovery()).items).toEqual([])
+    },
+  )
   it("rejects an account grant without identity access before verification or issuance", async () => {
     const flow = new NewApiAccessTokenCreation(request, "42")
     await expect(
@@ -458,6 +856,93 @@ describe("New API management token creation", () => {
       reopened.create(draft, { method: "password", password: "secret" }),
     ).rejects.toThrow("ACCESS_TOKEN_CREATION_UNCERTAIN")
     expect(attempts).toBe(1)
+  })
+
+  it("does not let a stale review acknowledge a later uncertain issuance", async () => {
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          name: string,
+          _options: LockOptions,
+          work: (lock: object) => Promise<unknown>,
+        ) => work({ name }),
+      },
+    })
+    const journal = () => createTokenIssuanceJournal(origin, "stale-review")
+    const first = journal()
+    const staleView = new NewApiAccessTokenCreation(
+      request,
+      "42",
+      undefined,
+      journal(),
+    )
+    const freshView = new NewApiAccessTokenCreation(
+      request,
+      "42",
+      undefined,
+      journal(),
+    )
+    expect(await first.begin()).toBe(true)
+    await first.uncertain()
+    expect((await staleView.load()).creationUncertain).toBe(true)
+    expect((await freshView.load()).creationUncertain).toBe(true)
+    await freshView.acknowledgeUncertain()
+    const newer = journal()
+    expect(await newer.begin()).toBe(true)
+    await newer.uncertain()
+
+    await expect(staleView.acknowledgeUncertain()).rejects.toThrow()
+    expect(await journal().pending()).toBeTruthy()
+  })
+
+  it("rejects acknowledgment of an aged marker while its owner is still issuing", async () => {
+    const locked = new Set<string>()
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          name: string,
+          options: LockOptions,
+          work: (lock: object | null) => Promise<unknown>,
+        ) => {
+          if (locked.has(name) && options.ifAvailable) return work(null)
+          locked.add(name)
+          try {
+            return await work({ name })
+          } finally {
+            locked.delete(name)
+          }
+        },
+      },
+    })
+    const journal = () => createTokenIssuanceJournal(origin, "active-review")
+    const owner = journal()
+    const other = journal()
+    const started = createDeferred<void>()
+    const finish = createDeferred<void>()
+    const atStart = Date.now()
+    const clock = vi.spyOn(Date, "now").mockReturnValue(atStart)
+    const issuance = owner.whileIssuing(async () => {
+      expect(await owner.begin()).toBe(true)
+      started.resolve()
+      await finish.promise
+      await owner.uncertain()
+    })
+    try {
+      await started.promise
+      clock.mockReturnValue(atStart + 301_000)
+      const observed = await other.pending()
+      await expect(other.acknowledge(observed)).rejects.toThrow()
+      expect(await other.pending()).toEqual(observed)
+      finish.resolve()
+      await issuance
+      await expect(other.acknowledge(observed)).rejects.toThrow()
+      await other.acknowledge(await other.pending())
+      expect(await other.pending()).toBeUndefined()
+    } finally {
+      finish.resolve()
+      await issuance
+      clock.mockRestore()
+    }
   })
   it("offers the backend's verification methods and linked providers without creating a token", async () => {
     const requests: string[] = []

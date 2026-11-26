@@ -1583,6 +1583,65 @@ describe("AccountDialog", () => {
   const saveAccount = () =>
     screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton)
 
+  it("keeps compact token actions mounted when focus moves from the token field", () => {
+    renderCompactTokenDialog()
+    const token = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput,
+    )
+    const create = screen.getByRole("button", {
+      name: "accountDialog:tokenCreation.title",
+    })
+    fireEvent.change(token, { target: { value: "manual-token" } })
+    fireEvent.blur(token, { relatedTarget: create })
+    expect(create).toBeVisible()
+    expect(verifyEnteredToken).not.toHaveBeenCalled()
+  })
+
+  it("keeps a typed token when explicitly opening the full form from compact entry", async () => {
+    renderCompactTokenDialog()
+    const token = accessTokenField()
+    const openFullForm = screen.getByRole("button", {
+      name: "accountDialog:validation.openFullForm",
+    })
+    fireEvent.change(token, { target: { value: "manual-token" } })
+    fireEvent.blur(token, { relatedTarget: openFullForm })
+    fireEvent.click(openFullForm)
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
+    ).toBeVisible()
+    expect(accessTokenField()).toHaveValue("manual-token")
+    expect(verifyEnteredToken).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ accessToken: "manual-token" }),
+    )
+    expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()
+  })
+
+  it("associates invalid balance and exchange rate feedback with their controls", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.draft.exchangeRate = "0"
+    mockState.draft.manualBalanceUsd = "-1"
+    mockState.isFormValid = false
+    mockState.validationIssues = [
+      { field: "exchangeRate", kind: "invalid" },
+      { field: "manualBalanceUsd", kind: "invalid" },
+    ]
+    renderEditableTokenDialog()
+    await userEvent.setup().click(saveAccount())
+    const rate = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.exchangeRateInput,
+    )
+    const balance = screen.getByLabelText("accountDialog:form.manualBalanceUsd")
+    expect(rate).toHaveAttribute("aria-invalid", "true")
+    expect(rate).toHaveAccessibleDescription(
+      /accountDialog:form.validRateError/,
+    )
+    expect(balance).toHaveAttribute("aria-invalid", "true")
+    expect(balance).toHaveAccessibleDescription(
+      /accountDialog:form.manualBalanceUsdError/,
+    )
+    expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()
+  })
+
   it.each(["paste", "pause", "blur", "enter"] as const)(
     "opens the full form and verifies the token on compact token %s",
     async (trigger) => {
@@ -1961,6 +2020,44 @@ describe("AccountDialog", () => {
       .click(screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton))
     expect(signal?.aborted).toBe(true)
     expect(mockHandlers.handleAutoConfig).toHaveBeenCalledOnce()
+  })
+
+  it("keeps token verification running when Save focuses a missing field", async () => {
+    const view = renderCompactTokenDialog()
+    pasteToken()
+    const checking = await screen.findByText(
+      "accountDialog:accessTokenValidation.checking",
+    )
+    const signal = atIndex(verifyEnteredToken.mock.calls, 0)[0].abortSignal
+    mockState.isFormValid = false
+    mockState.validationIssues = [{ field: "siteName", kind: "missing" }]
+    view.update()
+    await userEvent.click(saveAccount())
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
+    ).toHaveFocus()
+    expect(checking).toBeVisible()
+    expect(signal?.aborted).toBe(false)
+    expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()
+  })
+
+  it("shows a fresh detection failure for a New API draft that already has a token", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.siteType = SITE_TYPES.NEW_API
+    mockState.draft.siteType = SITE_TYPES.NEW_API
+    mockState.accessToken = "saved-token"
+    mockState.draft.accessToken = "saved-token"
+    mockState.detectionError = {
+      type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+      message: "The site's token exchange was blocked",
+    }
+    renderEditableTokenDialog({ mode: DIALOG_MODES.EDIT })
+    expect(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
+      ),
+    ).toBeVisible()
+    expect(accessTokenField()).toHaveValue("saved-token")
   })
 
   it.each(["isSaving", "isAutoConfiguring", "isDetecting"] as const)(
@@ -3045,6 +3142,42 @@ describe("AccountDialog", () => {
     expect(
       screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
     ).toHaveFocus()
+  })
+
+  it("reports a handoff navigation failure after the restored form is edited", async () => {
+    const route = createDeferred<string | null>()
+    const resolveRoute = vi
+      .spyOn(siteRoutes, "resolveAccountSiteRouteUrl")
+      .mockReturnValueOnce(route.promise)
+    onTestFinished(() => resolveRoute.mockRestore())
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.siteType = SITE_TYPES.NEW_API
+    mockState.draft.siteType = SITE_TYPES.NEW_API
+    mockState.userId = mockState.draft.userId
+    mockState.accessToken = "existing-token"
+    mockState.draft.accessToken = "existing-token"
+    mockState.detectionError = null
+    const view = renderEditableTokenDialog({
+      mode: DIALOG_MODES.EDIT,
+      recoveryState: {
+        recoveryAction: "new-api-token-site",
+        url: mockState.url,
+        draft: { ...mockState.draft },
+        accountId: "existing-account",
+        checkInSelectionChanged: false,
+        checkInDiscoveryBaseSelection: null,
+      },
+    })
+    await waitFor(() => expect(resolveRoute).toHaveBeenCalled())
+    mockState.url = "https://later-edit.example"
+    view.update()
+    await act(() => route.resolve(null))
+    expect(
+      await screen.findByText(
+        "accountDialog:accessTokenVerification.openSecurityFailed",
+      ),
+    ).toBeVisible()
+    expect(resolveRoute).toHaveBeenCalledOnce()
   })
 
   it("does not scroll focus away from top-of-form recovery alerts after detection", async () => {

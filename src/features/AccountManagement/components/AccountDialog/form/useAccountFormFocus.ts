@@ -25,6 +25,7 @@ import {
 
 export interface AccountFormHandle {
   focusAccessToken: () => void
+  isAccessTokenFocused: () => boolean
   focusIssue: (field: AccountFormIssue["field"]) => void
 }
 
@@ -67,13 +68,23 @@ export function useAccountFormFocus({
 
   useImperativeHandle(ref, () => {
     const focusIssue = (field: AccountFormIssue["field"]) => {
-      if (ACCOUNT_ISSUE_SECTIONS[field] === ACCOUNT_FORM_SECTIONS.AUTH)
+      if (
+        ACCOUNT_ISSUE_SECTIONS[field] === ACCOUNT_FORM_SECTIONS.AUTH ||
+        field === ACCOUNT_FORM_FIELDS.USERNAME ||
+        field === ACCOUNT_FORM_FIELDS.USER_ID
+      )
         setIsAuthSectionOpen(true)
       if (field === ACCOUNT_FORM_FIELDS.LOGIN) setIsLoginSectionOpen(true)
       setIssueFocusRequested({ field })
     }
     return {
       focusAccessToken: () => focusIssue(ACCOUNT_FORM_FIELDS.ACCESS_TOKEN),
+      isAccessTokenFocused: () =>
+        Boolean(
+          formRootRef.current?.querySelector(
+            `[data-account-validation-field="${ACCOUNT_FORM_FIELDS.ACCESS_TOKEN}"]:focus`,
+          ),
+        ),
       focusIssue,
     }
   }, [])
@@ -93,7 +104,9 @@ export function useAccountFormFocus({
             root?.querySelectorAll<HTMLInputElement>(
               `#${section} input[required]:not([disabled])`,
             ) ?? [],
-          ).find((input) => !input.value)
+          ).find((input) =>
+            input.type === "password" ? !input.value : !input.value.trim(),
+          )
         : undefined
     const tokenBeforeTeam =
       !target &&

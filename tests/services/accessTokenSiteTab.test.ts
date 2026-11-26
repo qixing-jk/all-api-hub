@@ -247,6 +247,22 @@ it("waits through an external OAuth hop and sends only after a same-site return"
   expect(injectContentScript).not.toHaveBeenCalled()
 })
 
+it("waits for the pending navigation even when the prior document is complete", async () => {
+  vi.useFakeTimers()
+  const pendingNavigation = { ...tab, pendingUrl: destination }
+  vi.mocked(browser.tabs.get).mockResolvedValue(pendingNavigation)
+  await openNewApiTab()
+  await vi.advanceTimersByTimeAsync(600)
+  expect(browser.tabs.sendMessage).not.toHaveBeenCalled()
+  vi.mocked(browser.tabs.get).mockResolvedValue(tab)
+  await vi.advanceTimersByTimeAsync(150)
+  expect(browser.tabs.sendMessage).toHaveBeenCalledExactlyOnceWith(
+    tab.id,
+    request,
+    { frameId: 0 },
+  )
+})
+
 it("does not deliver a highlight across two tenants on a private public suffix", async () => {
   vi.useFakeTimers()
   vi.mocked(browser.tabs.get).mockResolvedValue({

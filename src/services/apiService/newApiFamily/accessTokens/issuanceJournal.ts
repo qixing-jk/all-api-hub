@@ -13,7 +13,7 @@ import { NEW_API_TOKEN_CREATION_ERRORS as CREATION_ERRORS } from "./protocol"
 
 const ACTIVE_ISSUANCE_AGE_MS = 300_000
 
-interface TokenIssuanceMarker {
+export interface TokenIssuanceMarker {
   attempt: string
   started: number
   uncertain: boolean
@@ -22,7 +22,8 @@ interface TokenIssuanceMarker {
 /** Store no credentials, proofs, passwords, or returned token plaintext. */
 export function createTokenIssuanceJournal(origin: string, userId: string) {
   const key = `${NEW_API_TOKEN_ISSUANCE_KEY_PREFIX}${encodeURIComponent(origin)}:${encodeURIComponent(userId)}`
-  const attempt = crypto.randomUUID()
+  const operationLock = `${STORAGE_LOCKS.NEW_API_TOKEN_ISSUANCE}:${key}`
+  let attempt: string | undefined
   const locked = <T>(work: () => Promise<T>) =>
     withExtensionStorageWriteLock(STORAGE_LOCKS.NEW_API_TOKEN_ISSUANCE, work, {
       requireCrossContext: true,
@@ -30,12 +31,16 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
   const read = async () =>
     (await getLocalStorageValues(key))[key] as TokenIssuanceMarker | undefined
   return {
-    async pending() {
-      return Boolean(await read())
+    pending: read,
+    whileIssuing<T>(work: () => Promise<T>) {
+      return withExtensionStorageWriteLock(operationLock, work, {
+        requireCrossContext: true,
+      })
     },
     async begin() {
       return locked(async () => {
         if (await read()) return false
+        attempt = crypto.randomUUID()
         await setLocalStorage({
           [key]: { attempt, started: Date.now(), uncertain: false },
         })
@@ -45,7 +50,7 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
     async uncertain() {
       await locked(async () => {
         const marker = await read()
-        if (marker?.attempt === attempt)
+        if (marker && marker.attempt === attempt)
           await setLocalStorage({
             [key]: { ...marker, uncertain: true },
           })
@@ -53,20 +58,30 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
     },
     async resolved() {
       await locked(async () => {
-        if ((await read())?.attempt === attempt) await removeLocalStorage(key)
+        if (attempt && (await read())?.attempt === attempt)
+          await removeLocalStorage(key)
       })
     },
-    async acknowledge() {
-      await locked(async () => {
-        const marker = await read()
-        if (
-          marker &&
-          !marker.uncertain &&
-          Date.now() - marker.started < ACTIVE_ISSUANCE_AGE_MS
-        )
-          throw new Error(CREATION_ERRORS.BUSY)
-        await removeLocalStorage(key)
-      })
+    async acknowledge(reviewed: TokenIssuanceMarker | undefined) {
+      await navigator.locks.request(
+        operationLock,
+        { ifAvailable: true },
+        async (lock) => {
+          if (!lock) throw new Error(CREATION_ERRORS.BUSY)
+          await locked(async () => {
+            const marker = await read()
+            if (!marker) return
+            if (
+              marker.attempt !== reviewed?.attempt ||
+              marker.uncertain !== reviewed.uncertain ||
+              (!marker.uncertain &&
+                Date.now() - marker.started < ACTIVE_ISSUANCE_AGE_MS)
+            )
+              throw new Error(CREATION_ERRORS.BUSY)
+            await removeLocalStorage(key)
+          })
+        },
+      )
     },
   }
 }

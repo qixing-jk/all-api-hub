@@ -626,8 +626,15 @@ for (const trigger of ["paste", "pause", "blur", "Enter"] as const) {
   })
 }
 
-for (const outcome of ["valid", "invalid", "mismatch"] as const) {
-  test(`pasted token verification is advisory when the token is ${outcome}`, async ({
+for (const scenario of [
+  "valid",
+  "invalid",
+  "mismatch",
+  "mismatch-replaced",
+] as const) {
+  const replaceMismatch = scenario === "mismatch-replaced"
+  const outcome = replaceMismatch ? "mismatch" : scenario
+  test(`pasted token verification is advisory when the token is ${scenario}`, async ({
     context,
     page,
     extensionId,
@@ -782,30 +789,31 @@ for (const outcome of ["valid", "invalid", "mismatch"] as const) {
         await expect(
           acquisition.getByRole("button", { name: "Manual setup docs" }),
         ).toBeVisible()
-        await captureVisualViews({
-          page,
-          ready: acquisition,
-          captureTarget: dialog.dialog,
-          id: `token-verification-${outcome}`,
-          extensionDir,
-          beforeCapture: async () => {
-            if ((page.viewportSize()?.width ?? 0) >= 640) return
-            await dialog.dialog
-              .getByRole("navigation", { name: "Account settings sections" })
-              .getByRole("button")
-              .click()
-            await page
-              .getByRole("menuitem", { name: "Account Authentication" })
-              .click()
-            await dialog.accessTokenInput.evaluate((input) =>
-              input.focus({ preventScroll: true }),
-            )
-          },
-          views:
-            outcome === "invalid"
-              ? tokenSetupViews
-              : tokenSetupViews.slice(0, 1),
-        })
+        if (!replaceMismatch)
+          await captureVisualViews({
+            page,
+            ready: acquisition,
+            captureTarget: dialog.dialog,
+            id: `token-verification-${outcome}`,
+            extensionDir,
+            beforeCapture: async () => {
+              if ((page.viewportSize()?.width ?? 0) >= 640) return
+              await dialog.dialog
+                .getByRole("navigation", { name: "Account settings sections" })
+                .getByRole("button")
+                .click()
+              await page
+                .getByRole("menuitem", { name: "Account Authentication" })
+                .click()
+              await dialog.accessTokenInput.evaluate((input) =>
+                input.focus({ preventScroll: true }),
+              )
+            },
+            views:
+              outcome === "invalid"
+                ? tokenSetupViews
+                : tokenSetupViews.slice(0, 1),
+          })
 
         await verifyButton.hover()
         await expect(page.getByRole("tooltip")).toHaveText(verifyLabel)
@@ -813,7 +821,7 @@ for (const outcome of ["valid", "invalid", "mismatch"] as const) {
         await expect.poll(() => observedChecks).toBe(2)
         await expect(feedback).toBeVisible()
       }
-      if (outcome === "mismatch") {
+      if (replaceMismatch) {
         await dialog.accessTokenInput.fill(replacement)
         await expect(feedback).toBeHidden()
         await expect(acquisition).toHaveCount(0)
@@ -834,7 +842,7 @@ for (const outcome of ["valid", "invalid", "mismatch"] as const) {
         siteType: SITE_TYPES.NEW_API,
       })
       expect(saved.account_info.access_token).toBe(
-        outcome === "mismatch" ? replacement : token,
+        replaceMismatch ? replacement : token,
       )
       expect(String(saved.account_info.id)).toBe("1")
     } finally {
@@ -863,6 +871,7 @@ for (const method of [
     extensionDir,
   }) => {
     if (process.env.AAH_VISUAL_CAPTURE_DIR) test.setTimeout(240_000)
+    else if (method === "password") test.setTimeout(90_000)
     const origin = `https://token-${method}.example.invalid`
     const oauth = !["password", "recovery", "2fa", "passkey"].includes(method)
     const verificationMethod = oauth
@@ -1062,6 +1071,7 @@ for (const method of [
         })
       }
       expect(body.scope).toBe("access_token.generate")
+      if (method === "2fa") expect(body.code).toBe("123456")
       if (method === "password") {
         if (body.password === "wrong-fixture-password") {
           return route.fulfill({

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import { readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { request, type Page } from "@playwright/test"
@@ -43,7 +44,6 @@ import {
   throwScenarioError,
 } from "~~/e2e/utils/scenarioErrors"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
-import { revokeNewApiAccessTokenFromUi } from "~~/scripts/flows/new-api-token-ui.mjs"
 
 const tokenChannelTest = test.extend({
   screenshot: "off",
@@ -56,6 +56,8 @@ for (const channel of ["extension", "official"] as const) {
     `real-site New API token channel: ${channel} UI creates, saves and refreshes`,
     async ({ context, page, extensionId, extensionDir }, testInfo) => {
       test.setTimeout(240_000)
+      context.setDefaultTimeout(15_000)
+      page.setDefaultTimeout(15_000)
       const resolution = resolveNewApiRealSiteConfig()
       test.skip(
         !resolution.config,
@@ -63,7 +65,7 @@ for (const channel of ["extension", "official"] as const) {
       )
       const config = resolution.config!
       const origin = new URL(config.baseUrl).origin
-      const tokenName = `All API Hub e2e ${channel} ${Date.now()}`
+      const tokenName = `All API Hub e2e ${channel} ${randomUUID()}`
       const worker = await getServiceWorker(context)
       await forceExtensionLanguage(page, "en")
       await stubLlmMetadataIndex(context)
@@ -75,31 +77,56 @@ for (const channel of ["extension", "official"] as const) {
       const site = await context.newPage()
       let cleanupSession: (() => Promise<void>) | undefined
       let issued = false
+      let creationAttempted = false
+      let cleanupToken: (() => Promise<void>) | undefined
       let primaryError: unknown
       let identity = ""
-      const onResponse = (response: import("@playwright/test").Response) => {
+      const onRequest = (request: import("@playwright/test").Request) => {
         if (
-          response.url() === `${origin}/api/user/access_tokens` &&
-          response.request().method() === "POST" &&
-          response.ok()
+          request.url() !== `${origin}/api/user/access_tokens` ||
+          request.method() !== "POST"
         )
-          issued = true
+          return
+        try {
+          creationAttempted ||= request.postDataJSON()?.name === tokenName
+        } catch {
+          // A request with an unreadable payload does not establish ownership.
+        }
       }
-      context.on("response", onResponse)
+      context.on("request", onRequest)
       try {
         const login = await loginToRealNewApiSite(site, config)
         cleanupSession = login.cleanupOwnedSession
         identity = String(login.user.id)
         test.skip(
-          !(await login.probeScopedAccessTokens?.()),
+          !login.listScopedAccessTokens ||
+            !(await login.probeScopedAccessTokens?.()),
           "This channel requires scoped Access Token support",
         )
+        const listTokens = login.listScopedAccessTokens!
+        const revokeScopedAccessToken = login.revokeScopedAccessToken
+        if (!revokeScopedAccessToken)
+          throw new Error("New API token cleanup is unavailable")
+        const lookupOwnedToken = async () => {
+          const matches = (await listTokens()).filter(
+            ({ name }) => name === tokenName,
+          )
+          expect(
+            matches.length,
+            "unique run-owned token name",
+          ).toBeLessThanOrEqual(1)
+          return matches[0]?.id
+        }
+        expect(await lookupOwnedToken()).toBeUndefined()
+        cleanupToken = () => revokeScopedAccessToken(tokenName, config)
         const recovery = createNewApiAccountRecovery({
           page,
           config,
           tokenChannel: channel,
           tokenName,
+          expectedIdentity: identity,
           onCreatorReady: async (creator) => {
+            if (!process.env.AAH_VISUAL_CAPTURE_DIR) return
             await creator
               .getByLabel("Token name", { exact: true })
               .scrollIntoViewIfNeeded()
@@ -109,7 +136,8 @@ for (const channel of ["extension", "official"] as const) {
               id: "newapi-extension-creation-grant",
               extensionDir,
             })
-            await creator
+            await page
+              .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
               .getByRole("button", {
                 name: "Verify and create token",
                 exact: true,
@@ -129,12 +157,14 @@ for (const channel of ["extension", "official"] as const) {
           serviceWorker: worker,
           baseUrl: config.baseUrl,
           siteType: SITE_TYPES.NEW_API,
-          expectedSiteType: SITE_TYPES.NEW_API,
           prepareDetectedDialog: async (dialog) => {
+            await recovery.prepareDetectedDialog(dialog)
+            expect(creationAttempted).toBe(true)
+            await expect.poll(lookupOwnedToken).toBeGreaterThan(0)
+            issued = true
             await expect(dialog.userIdInput).toHaveValue(identity, {
               timeout: 30_000,
             })
-            await recovery.prepareDetectedDialog(dialog)
             await captureVisualViews({
               page,
               ready: dialog.accessTokenInput,
@@ -151,6 +181,7 @@ for (const channel of ["extension", "official"] as const) {
         expect(String(saved.account_info.id)).toBe(identity)
         expect(saved.account_info.access_token.startsWith("nap_")).toBe(true)
         await site.close()
+        await context.clearCookies()
         const isolated = await request.newContext()
         try {
           const response = await isolated.get(`${origin}/api/user/self`, {
@@ -169,28 +200,35 @@ for (const channel of ["extension", "official"] as const) {
         await page.reload()
         await openAccountManagementPage({ page, extensionId })
         const refreshed = context.waitForEvent("response", {
-          predicate: (response) =>
-            response.url() === `${origin}/api/user/self` && response.ok(),
+          predicate: async (response) =>
+            response.url() === `${origin}/api/user/self` &&
+            response.ok() &&
+            (await response.request().headerValue("authorization")) ===
+              `Bearer ${saved.account_info.access_token}` &&
+            !(await response.request().headerValue("cookie")),
         })
         await page.getByRole("button", { name: "Refresh", exact: true }).click()
         expect(String((await (await refreshed).json()).data?.id)).toBe(identity)
+        const refreshedAccount = await waitForSavedAccount({
+          serviceWorker: worker,
+          baseUrl: config.baseUrl,
+          siteType: SITE_TYPES.NEW_API,
+          predicate: (account) =>
+            account.id === saved.id &&
+            account.last_sync_time > saved.last_sync_time,
+        })
+        expect(String(refreshedAccount.account_info.id)).toBe(identity)
+        expect(
+          refreshedAccount.account_info.access_token ===
+            saved.account_info.access_token,
+        ).toBe(true)
       } catch (error) {
         primaryError = error
       }
       const cleanupError = await collectCleanupError(
         [
           async () => {
-            if (!issued) return
-            const cleanupPage = await context.newPage()
-            try {
-              await revokeNewApiAccessTokenFromUi(cleanupPage, {
-                ...config,
-                origin,
-                tokenName,
-              })
-            } finally {
-              await cleanupPage.close()
-            }
+            await cleanupToken?.()
           },
           async () => {
             await cleanupSession?.()
@@ -201,7 +239,7 @@ for (const channel of ["extension", "official"] as const) {
         ],
         "Token channel cleanup failed",
       )
-      context.off("response", onResponse)
+      context.off("request", onRequest)
       await writeFile(
         testInfo.outputPath(`token-channel-${channel}.json`),
         JSON.stringify(

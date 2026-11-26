@@ -22,10 +22,11 @@ export async function findMatchingSiteTab(
   siteUrl: string,
   preferredTabId?: number,
 ) {
-  const origin = tryParseHttpUrl(siteUrl)?.origin
-  if (!origin) throw new Error("INVALID_SITE_TAB_URL")
+  const site = tryParseHttpUrl(siteUrl)
+  if (!site) throw new Error("INVALID_SITE_TAB_URL")
+  const { origin, protocol, hostname } = site
   const current = (await getCurrentTab()) ?? (await getActiveTab())
-  const tabs = await queryTabs({ url: `${origin}/*` })
+  const tabs = await queryTabs({ url: `${protocol}//${hostname}/*` })
   const matching = tabs.filter(
     (tab) =>
       tab.id != null &&

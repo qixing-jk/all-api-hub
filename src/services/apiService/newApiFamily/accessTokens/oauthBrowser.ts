@@ -131,6 +131,7 @@ export async function verifyNewApiTokenOAuth(
         const onMessage = (
           message: unknown,
           sender: browser.runtime.MessageSender,
+          acknowledge: (accepted: boolean) => void,
         ) => {
           if (
             !isRecord(message) ||
@@ -147,6 +148,7 @@ export async function verifyNewApiTokenOAuth(
             url.pathname !== newApiTokenOAuthCallbackPath(provider)
           )
             return
+          acknowledge(true)
           if (message.error === VERIFICATION_ERRORS.OAUTH_CANCELLED) {
             finish(new Error(VERIFICATION_ERRORS.OAUTH_CANCELLED))
             return
@@ -180,6 +182,8 @@ export async function verifyNewApiTokenOAuth(
       },
     )
     await assertSiteTabOrigin(tabId, origin)
+    if (Date.now() >= state.expires_at * 1000)
+      throw new Error(VERIFICATION_ERRORS.OAUTH_TIMEOUT)
     // This GET consumes a single-use code, so transport recovery must not replay it.
     return await tokenSessionRequest<NewApiTokenProof>(request, {
       endpoint: `/api/oauth/${encodeURIComponent(provider)}?${new URLSearchParams(callback)}`,

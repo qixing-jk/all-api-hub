@@ -1,4 +1,5 @@
 import { ArrowLeftRight, DollarSign } from "lucide-react"
+import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
 import { FormField, Input, Switch } from "~/components/ui"
@@ -49,6 +50,7 @@ export function AccountBalanceSection({
   onExcludeFromTodayIncomeChange: (exclude: boolean) => void
 }) {
   const { t } = useTranslation("accountDialog")
+  const manualBalanceInputId = useId()
   const {
     exchangeRate,
     manualBalanceUsd,
@@ -120,12 +122,14 @@ export function AccountBalanceSection({
 
       <FormField
         label={t("form.manualBalanceUsd")}
+        htmlFor={manualBalanceInputId}
         description={t("form.manualBalanceUsdDesc")}
         error={
           showManualBalanceError ? t("form.manualBalanceUsdError") : undefined
         }
       >
         <Input
+          id={manualBalanceInputId}
           type="number"
           step="any"
           min="0"

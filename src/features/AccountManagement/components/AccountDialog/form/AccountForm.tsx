@@ -355,7 +355,9 @@ export default function AccountForm({
       compact={compact}
       onCompleteCompactToken={onCompleteCompactToken}
       containsFocusTarget={(target) =>
-        Boolean(formRootRef.current?.contains(target))
+        Boolean(
+          formRootRef.current?.closest('[role="dialog"]')?.contains(target),
+        )
       }
       validationAttributes={fieldStatusProps(ACCOUNT_FORM_FIELDS.ACCESS_TOKEN)}
       validationFeedback={fieldStatus(ACCOUNT_FORM_FIELDS.ACCESS_TOKEN)}

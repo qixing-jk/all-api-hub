@@ -544,6 +544,22 @@ describe("account dialog recovery handoff", () => {
     expect(accept).toHaveBeenCalledWith(original)
   })
 
+  it("drops a failed token action when the same draft is opened generically", async () => {
+    supportsSidePanel.mockReturnValue(false)
+    createTab.mockResolvedValueOnce(undefined)
+    const original = recoveryState()
+    const prepared = await prepareAccountDialogRecovery(original)
+    await expect(
+      openAccountDialogRecovery(prepared, {
+        recoveryAction: "new-api-token-create",
+      }),
+    ).rejects.toThrow("Account recovery tab unavailable")
+    await expect(openAccountDialogRecovery(prepared)).resolves.toBe("tab")
+    const accept = vi.fn(() => true)
+    await receiveAccountDialogRecovery(prepared.id, accept)
+    expect(accept).toHaveBeenCalledExactlyOnceWith(original)
+  })
+
   it("restores the edited account identity and the user's check-in selection", async () => {
     const original: AccountDialogRecoveryState = {
       ...recoveryState(),

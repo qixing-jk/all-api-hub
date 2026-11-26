@@ -106,7 +106,7 @@ function mark(element: HTMLElement) {
 function show({ group, findAction }: CueTarget) {
   clearActiveCue?.()
   const action = findAction?.()
-  const stopScrolling = scrollToAccessTokenCue(group, action)
+  const scrolling = scrollToAccessTokenCue(group, action)
   const restoreGroup = mark(group)
   let restoreAction = action ? mark(action) : undefined
   const actionObserver =
@@ -116,13 +116,14 @@ function show({ group, findAction }: CueTarget) {
           if (!button) return
           actionObserver?.disconnect()
           restoreAction = mark(button)
+          scrolling.setAction(button)
         })
       : undefined
   actionObserver?.observe(group, TARGET_OBSERVER_OPTIONS)
   const clear = () => {
     clearTimeout(timer)
     window.removeEventListener("pagehide", clear)
-    stopScrolling()
+    scrolling.stop()
     actionObserver?.disconnect()
     restoreAction?.()
     restoreGroup()
