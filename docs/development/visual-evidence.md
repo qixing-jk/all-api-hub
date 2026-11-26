@@ -4,15 +4,18 @@ Use the [local tooling environment configuration](setup.md#local-tooling-environ
 
 ## Updating documentation screenshots
 
-Use the maintained command after a UI or feature change. Select pages explicitly; ordinary prose edits do not require new screenshots.
+When adding or replacing a screenshot of the extension UI in public documentation, register a repeatable capture under `pnpm docs:screenshots` in the same change. When a UI change affects a registered screenshot, regenerate the affected pages, review the images, and commit them with the change. Maintain third-party site screenshots and illustrations at their source. Ordinary prose edits require new captures only when the screenshots also change.
 
 ```bash
 pnpm docs:screenshots --list
+pnpm docs:screenshots --pages=add-account
 pnpm docs:screenshots "--pages=keys,channels,sync"
 pnpm docs:screenshots "--pages=web-ai-api-check,usage,balance"
 ```
 
-The command builds the required extension variants from the current working tree, captures the selected pages in Chinese, English and Japanese, validates every requested PNG, and updates their existing paths under `docs/docs/static/image/`. README and guide references continue to use those paths. Use `--lang=zh`, `en` or `ja` for a single language; omit `--pages` for a full refresh. Playwright Chromium must already be installed (`pnpm e2e:install`).
+The command builds the required extension variants from the current working tree, captures the selected pages in Chinese, English and Japanese, validates every requested PNG, and writes them to the registered paths under `docs/docs/static/image/`. Use `--lang=zh`, `en` or `ja` for a single language. Omit `--pages` for a full refresh. Playwright Chromium must already be installed (`pnpm e2e:install`).
+
+Define output filenames in the [screenshot registry](../../scripts/doc-screenshot-config.mjs). For workflows driven by the Playwright extension fixture, register their capture specs there. See [adding a New API account](../../e2e/docScreenshotsAddAccount.spec.ts) for an example.
 
 Each run prints a report path under the ignored `.scratch/docs-screenshot-updates/`. It retains original images, newly captured images, command logs, a consolidated Markdown comparison gallery and JSON metadata. Pixel differences are included for matching image dimensions. Missing prior images and dimension changes are labelled explicitly. Existing documentation images have unknown original build provenance; they are asset comparisons, not controlled visual regression baselines.
 
