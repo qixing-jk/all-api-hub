@@ -1025,7 +1025,12 @@ describe("New API management token creation", () => {
       },
     )
     try {
-      await started.promise
+      await Promise.race([
+        started.promise,
+        result.then(() => {
+          throw new Error("Token creation completed without sending the POST")
+        }),
+      ])
       await vi.advanceTimersByTimeAsync(30_001)
       expect(settled).toBe(false)
       release.resolve()
