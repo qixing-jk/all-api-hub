@@ -501,6 +501,10 @@ export class NewApiAccessTokenCreation {
       await this.observeUncertainIssuance()
       throw new NewApiTokenCreationUncertainError()
     }
+    if (operationRequest.abortSignal?.aborted) {
+      await this.journal?.resolved().catch(() => undefined)
+      operationRequest.abortSignal.throwIfAborted()
+    }
     let issued: unknown
     try {
       issued = await tokenSessionRequest(

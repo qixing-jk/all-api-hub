@@ -102,22 +102,26 @@ describe("compatible real-site login", () => {
       const tokenPath = `${ORIGIN}/api/user/access_tokens`
       const name = "current-run"
       const scope = "access_token.revoke"
+      const methodsUrl = `${ORIGIN}/api/verify/methods?scope=${scope}`
       let present = true
-      const get = vi.fn(async (url: string) =>
-        createResponse(200, {
+      const get = vi.fn(async (url: string) => {
+        if (url === methodsUrl)
+          return createResponse(200, {
+            success: true,
+            data: { scope, methods: [{ method: "password", available: true }] },
+          })
+        if (url !== tokenPath) throw new Error(`Unexpected request: ${url}`)
+        return createResponse(200, {
           success: true,
-          data:
-            url === tokenPath
-              ? {
-                  items: [
-                    { id: 4, name: "another-run" },
-                    ...(present ? [{ id: 8, name }] : []),
-                    ...(duplicate ? [{ id: 9, name }] : []),
-                  ],
-                }
-              : { scope, methods: [{ method: "password", available: true }] },
-        }),
-      )
+          data: {
+            items: [
+              { id: 4, name: "another-run" },
+              ...(present ? [{ id: 8, name }] : []),
+              ...(duplicate ? [{ id: 9, name }] : []),
+            ],
+          },
+        })
+      })
       const post = vi.fn(async (url: string) =>
         createResponse(
           200,
@@ -137,7 +141,12 @@ describe("compatible real-site login", () => {
         getRequest: get,
         deleteRequest: remove,
       })
-      const session = await loginToRealNewApiSite(page, config, name)
+      const session = await loginToCompatibleApiRealSite(page, config, {
+        label: "New API",
+        envPrefix: "NEW_API",
+        authBundle: true,
+        ownedScopedTokenName: name,
+      })
       const token = session.ownedScopedToken!
       expect(token).toBeDefined()
       if (duplicate) {
@@ -149,6 +158,14 @@ describe("compatible real-site login", () => {
       }
       await expect(token.find()).resolves.toBe(8)
       await token.revoke()
+      expect(get).toHaveBeenCalledWith(
+        methodsUrl,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "X-Auth-Session": "session-id-placeholder",
+          }),
+        }),
+      )
       expect(post).toHaveBeenCalledWith(
         `${ORIGIN}/api/verify`,
         expect.objectContaining({

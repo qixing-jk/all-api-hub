@@ -931,6 +931,68 @@ describe("New API management token creation", () => {
     }
   })
 
+  it("clears the marker when cancellation interrupts storage before issuance", async () => {
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          _name: string,
+          _options: LockOptions,
+          work: () => Promise<unknown>,
+        ) => work(),
+      },
+    })
+    const started = createDeferred<void>()
+    const release = createDeferred<void>()
+    const save = browser.storage.local.set.bind(browser.storage.local)
+    const persist = vi
+      .spyOn(browser.storage.local, "set")
+      .mockImplementationOnce(async (data) => {
+        started.resolve()
+        await release.promise
+        await save(data)
+      })
+    const issue = vi.fn(() =>
+      HttpResponse.json({
+        success: true,
+        data: { token: "nap_retry", item: { id: 8, ...draft } },
+      }),
+    )
+    server.use(
+      http.post(`${origin}/api/verify`, () =>
+        HttpResponse.json({ success: true, data: proof }),
+      ),
+      http.post(`${origin}/api/user/access_tokens`, issue),
+    )
+    const journal = createTokenIssuanceJournal(origin, "cancel-before-dispatch")
+    const flow = new NewApiAccessTokenCreation(
+      request,
+      "42",
+      undefined,
+      journal,
+    )
+    const password = { method: "password", password: "secret" } as const
+    const first = flow.create(draft, password)
+    const rejected = expect(first).rejects.toMatchObject({ name: "AbortError" })
+    try {
+      await started.promise
+      flow.cancelVerification()
+      release.resolve()
+      await rejected
+      expect(issue).not.toHaveBeenCalled()
+      expect(await journal.pending()).toBeUndefined()
+      await expect(flow.create(draft, password)).resolves.toMatchObject({
+        verified: true,
+        id: 8,
+      })
+      expect(issue).toHaveBeenCalledOnce()
+    } finally {
+      release.resolve()
+      await first.catch(() => undefined)
+      persist.mockRestore()
+      await journal.resolved()
+    }
+  })
+
   it.each([undefined, 360_000])(
     "keeps uncertain issuance blocked until a new post-wait review (proof lifetime %s)",
     async (proofLifetime) => {
