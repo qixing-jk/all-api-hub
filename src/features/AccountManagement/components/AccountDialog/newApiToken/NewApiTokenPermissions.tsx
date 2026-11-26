@@ -5,6 +5,8 @@ import { Checkbox, InlineMessage, ToggleButton } from "~/components/ui"
 import type { getNewApiTokenCatalogPermissions } from "~/services/apiService/newApiFamily/accessTokens/creation"
 import { NEW_API_TOKEN_ACCESS_SCOPES as ACCESS_SCOPES } from "~/services/apiService/newApiFamily/accessTokens/protocol"
 
+import { useNewApiTokenScopeLabels } from "./useNewApiTokenScopeLabels"
+
 const readOnlyScopes = new Set<string>([
   ACCESS_SCOPES.PROFILE_READ,
   ACCESS_SCOPES.USAGE_READ,
@@ -33,18 +35,7 @@ export function NewApiTokenPermissions({
   const { t } = useTranslation("accountDialog")
   const id = useId()
   const catalogScopes = catalogPermissions.map(({ scope }) => scope)
-  const scopeLabels: Partial<Record<string, string>> = {
-    [ACCESS_SCOPES.PROFILE_READ]: t("tokenCreation.profileRead"),
-    [ACCESS_SCOPES.PROFILE_WRITE]: t("tokenCreation.profileWrite"),
-    [ACCESS_SCOPES.API_KEY_READ]: t("tokenCreation.keyRead"),
-    [ACCESS_SCOPES.API_KEY_WRITE]: t("tokenCreation.keyWrite"),
-    [ACCESS_SCOPES.API_KEY_REVEAL]: t("tokenCreation.keyReveal"),
-    [ACCESS_SCOPES.USAGE_READ]: t("tokenCreation.usageRead"),
-    [ACCESS_SCOPES.WALLET_READ]: t("tokenCreation.walletRead"),
-    [ACCESS_SCOPES.WALLET_WRITE]: t("tokenCreation.walletWrite"),
-    [ACCESS_SCOPES.SECURITY_READ]: t("tokenCreation.securityRead"),
-    [ACCESS_SCOPES.SECURITY_WRITE]: t("tokenCreation.securityWrite"),
-  }
+  const scopeLabels = useNewApiTokenScopeLabels()
   const scopeHints: Partial<Record<string, string>> = {
     [ACCESS_SCOPES.WALLET_WRITE]: t("tokenCreation.walletWriteHint"),
   }

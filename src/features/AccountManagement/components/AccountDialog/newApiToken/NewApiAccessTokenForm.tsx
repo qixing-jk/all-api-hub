@@ -1,10 +1,11 @@
 import { RefreshCw } from "lucide-react"
-import type { ReactNode } from "react"
+import { useLayoutEffect, useRef, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { useTranslation } from "react-i18next"
 
 import { Button, InlineMessage } from "~/components/ui"
 import type { NewApiAccessTokenCreation } from "~/services/apiService/newApiFamily/accessTokens/creation"
+import type { NewApiTokenSessionError } from "~/services/apiService/newApiFamily/accessTokens/sessionError"
 
 import { NewApiTokenDetails } from "./NewApiTokenDetails"
 import { NewApiTokenPermissions } from "./NewApiTokenPermissions"
@@ -29,23 +30,31 @@ export function NewApiAccessTokenForm({
   onCreated,
   onReconnect,
   reconnecting = false,
+  reconnectError,
   sessionRevision,
   loadStartedAt,
   renderSiteFallback,
   siteOpening = false,
   footer,
   onBusyChange,
+  reviewing,
+  onReviewingChange,
+  onReturnToAccount,
 }: {
   flow: NewApiAccessTokenCreation
   onCreated: (token: string) => void
   onReconnect?: () => void
   reconnecting?: boolean
+  reconnectError?: NewApiTokenSessionError
   sessionRevision?: unknown
   loadStartedAt?: number
   renderSiteFallback?: (reason: NewApiTokenSiteFallbackReason) => ReactNode
   siteOpening?: boolean
   footer?: HTMLElement | null
   onBusyChange?: (busy: boolean) => void
+  reviewing: boolean
+  onReviewingChange: (reviewing: boolean) => void
+  onReturnToAccount?: () => void
 }) {
   const { t } = useTranslation("accountDialog")
   const {
@@ -73,8 +82,14 @@ export function NewApiAccessTokenForm({
     sessionRevision,
     siteOpening,
     onBusyChange,
+    reviewing,
+    onReviewingChange,
   })
-  const { uncertain, recovering, reviewed } = recovery
+  const { uncertain } = recovery
+  const uncertaintyNotice = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (uncertain && !reviewing) uncertaintyNotice.current?.focus()
+  }, [uncertain, reviewing])
 
   if (complete) return <p role="status">{t("tokenCreation.complete")}</p>
   if (!capabilities) {
@@ -106,12 +121,60 @@ export function NewApiAccessTokenForm({
       </NewApiTokenSetupError>
     )
   }
+  if (reviewing)
+    return (
+      <NewApiTokenRecovery
+        flow={flow}
+        draftName={settings.name}
+        footer={footer}
+        uncertain={uncertain}
+        onReturnToAccount={onReturnToAccount}
+        onPendingChange={recovery.setRecoveryPending}
+        onReconnect={onReconnect}
+        reconnecting={reconnecting}
+        reconnectError={reconnectError}
+        sessionRevision={sessionRevision}
+        onReviewed={recovery.finishReview}
+        onRevokedCreated={recovery.clearCreated}
+      />
+    )
+  if (uncertain) {
+    const reviewAction = (
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {onReturnToAccount && (
+          <Button type="button" variant="ghost" onClick={onReturnToAccount}>
+            {t("tokenCreation.useExistingToken")}
+          </Button>
+        )}
+        <Button type="button" onClick={() => onReviewingChange(true)}>
+          {t("tokenCreation.reviewTokens")}
+        </Button>
+      </div>
+    )
+    return (
+      <section
+        className="space-y-4 text-sm"
+        aria-label={t("tokenCreation.title")}
+      >
+        <InlineMessage
+          ref={uncertaintyNotice}
+          tabIndex={-1}
+          role="alert"
+          tone="warning"
+        >
+          {t("tokenCreation.uncertain")}
+        </InlineMessage>
+        <p className="wrap-anywhere text-muted-foreground">
+          {t("tokenCreation.reviewDraft", { name: settings.name })}
+        </p>
+        {footer ? createPortal(reviewAction, footer) : reviewAction}
+      </section>
+    )
+  }
   const showSiteFallback =
     !pending &&
     !created &&
-    !uncertain &&
     !reconnecting &&
-    !recovering &&
     ((error !== "" && siteFallbackErrors.has(error)) || !hasAvailableMethods)
   const errorCopy: Record<TokenCreationError, string> = {
     [FEEDBACK.UNAVAILABLE]: t("tokenCreation.unavailable"),
@@ -151,14 +214,9 @@ export function NewApiAccessTokenForm({
   )
   const showReconnect =
     onReconnect &&
-    (error === FEEDBACK.SESSION ||
-      error === FEEDBACK.VALIDATION_FAILED ||
-      uncertain)
+    (error === FEEDBACK.SESSION || error === FEEDBACK.VALIDATION_FAILED)
   const showReview =
-    !recovering &&
-    (uncertain ||
-      error === FEEDBACK.LIMIT ||
-      error === FEEDBACK.VALIDATION_FAILED)
+    error === FEEDBACK.LIMIT || error === FEEDBACK.VALIDATION_FAILED
 
   return (
     <section
@@ -190,7 +248,7 @@ export function NewApiAccessTokenForm({
                 <Button
                   type="button"
                   size="sm"
-                  disabled={pending || reconnecting || recovery.recoveryPending}
+                  disabled={pending || reconnecting}
                   onClick={onReconnect}
                 >
                   {t("tokenCreation.reconnect")}
@@ -201,7 +259,7 @@ export function NewApiAccessTokenForm({
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={recovery.startReview}
+                  onClick={() => onReviewingChange(true)}
                 >
                   {t("tokenCreation.reviewTokens")}
                 </Button>
@@ -217,31 +275,6 @@ export function NewApiAccessTokenForm({
             renderSiteFallback?.(TOKEN_SITE_FALLBACK_REASONS.UNAVAILABLE)}
         </div>
       </div>
-      {recovering && (
-        <NewApiTokenRecovery
-          flow={flow}
-          onPendingChange={recovery.setRecoveryPending}
-          onReconnect={onReconnect}
-          reconnecting={reconnecting}
-          sessionRevision={sessionRevision}
-          onReviewed={recovery.finishReview}
-        />
-      )}
-      {uncertain && (
-        <Button
-          type="button"
-          disabled={
-            !reviewed ||
-            pending ||
-            recovering ||
-            reconnecting ||
-            recovery.recoveryPending
-          }
-          onClick={() => void recovery.acknowledgeUncertain()}
-        >
-          {t("tokenCreation.allowNewAttempt")}
-        </Button>
-      )}
       {footer ? createPortal(actions, footer) : actions}
     </section>
   )

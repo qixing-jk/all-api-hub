@@ -61,6 +61,7 @@ export function useAccountTokenSetup({
   const firstIssue = validationIssues[0]
   const [compactAccount, setCompactAccount] = useState(false)
   const [isCreatingToken, setIsCreatingToken] = useState(false)
+  const [isReviewingTokens, setIsReviewingTokens] = useState(false)
   const [tokenCreationBusy, setTokenCreationBusy] = useState(false)
   const [tokenCreationFooter, setTokenCreationFooter] =
     useState<HTMLDivElement | null>(null)
@@ -79,6 +80,7 @@ export function useAccountTokenSetup({
   useEffect(() => {
     if (isOpen) return
     setIsCreatingToken(false)
+    setIsReviewingTokens(false)
     setTokenCreationBusy(false)
     setFilledToken(undefined)
     setCompactAccount(false)
@@ -97,11 +99,12 @@ export function useAccountTokenSetup({
       restoreTokenFieldFocus.current = false
       accountFormRef.current?.focusAccessToken()
     }
-  }, [accountFormRef, isCreatingToken])
+  }, [accountFormRef, isCreatingToken, isReviewingTokens])
 
   const returnToAccount = () => {
     restoreTokenFieldFocus.current = true
     setTokenCreationBusy(false)
+    setIsReviewingTokens(false)
     setIsCreatingToken(false)
   }
   const canSetUpNewApiToken =
@@ -272,6 +275,8 @@ export function useAccountTokenSetup({
     setTokenStepActions,
     creation: {
       isOpen: isCreatingToken,
+      reviewing: isReviewingTokens,
+      setReviewing: setIsReviewingTokens,
       busy: tokenCreationBusy,
       setBusy: setTokenCreationBusy,
       footer: tokenCreationFooter,

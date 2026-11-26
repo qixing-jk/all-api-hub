@@ -28,6 +28,8 @@ export function NewApiTokenCreator({
   userId,
   onCreated,
   onReturnToAccount,
+  reviewing,
+  onReviewingChange,
   footer,
   onBusyChange,
 }: {
@@ -35,6 +37,8 @@ export function NewApiTokenCreator({
   userId: string
   onCreated: (token: string) => void
   onReturnToAccount: () => void
+  reviewing: boolean
+  onReviewingChange: (reviewing: boolean) => void
   footer: HTMLElement | null
   onBusyChange: (busy: boolean) => void
 }) {
@@ -42,6 +46,8 @@ export function NewApiTokenCreator({
   const [session, setSession] = useState<TokenSession>()
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<NewApiTokenSessionError>()
+  const [reviewReconnectError, setReviewReconnectError] =
+    useState<NewApiTokenSessionError>()
   const [loadStartedAt, setLoadStartedAt] = useState<number>()
   const [siteOpening, setSiteOpening] = useState(false)
   const [openingSiteTab, setOpeningSiteTab] = useState(false)
@@ -52,13 +58,14 @@ export function NewApiTokenCreator({
     session?: TokenSession
   }>({ active: false, opening: false })
   const open = useCallback(
-    async (tabId?: number, refresh = false) => {
+    async (tabId?: number, refresh = false, inReview = false) => {
       const current = owner.current
       if (!current.active || current.opening) return
       current.opening = true
       setLoadStartedAt(Date.now())
       setPending(true)
       setSiteTabOpenFailed(false)
+      if (inReview) setReviewReconnectError(undefined)
       let reloading = refresh
       try {
         const { openNewApiAccessTokenCreation, reloadNewApiTokenTab } =
@@ -87,17 +94,18 @@ export function NewApiTokenCreator({
         setSession(session)
         setFailure(undefined)
       } catch (error) {
-        if (current.active)
-          setFailure(
-            error instanceof NewApiTokenSessionError
-              ? error
-              : new NewApiTokenSessionError(
-                  reloading
-                    ? SESSION_ERRORS.RELOAD_REQUIRED
-                    : SESSION_ERRORS.UNAVAILABLE,
-                  tabId,
-                ),
-          )
+        if (!current.active) return
+        const sessionError =
+          error instanceof NewApiTokenSessionError
+            ? error
+            : new NewApiTokenSessionError(
+                reloading
+                  ? SESSION_ERRORS.RELOAD_REQUIRED
+                  : SESSION_ERRORS.UNAVAILABLE,
+                tabId,
+              )
+        if (inReview) setReviewReconnectError(sessionError)
+        else setFailure(sessionError)
       } finally {
         current.opening = false
         if (current.active) setPending(false)
@@ -123,6 +131,9 @@ export function NewApiTokenCreator({
       current.session?.cancel()
     }
   }, [open])
+  useEffect(() => {
+    if (!reviewing) setReviewReconnectError(undefined)
+  }, [reviewing])
 
   const siteTarget = getNewApiWebsiteTokenCreationTarget(siteUrl)
   const renderSiteFallback = (
@@ -191,8 +202,20 @@ export function NewApiTokenCreator({
             }}
             footer={failure ? null : footer}
             onBusyChange={onBusyChange}
-            onReconnect={() => void open()}
+            reviewing={reviewing}
+            onReviewingChange={onReviewingChange}
+            onReturnToAccount={onReturnToAccount}
+            onReconnect={() => {
+              if (reviewing) {
+                void open(
+                  reviewReconnectError?.tabId,
+                  reviewReconnectError?.code === SESSION_ERRORS.RELOAD_REQUIRED,
+                  true,
+                )
+              } else void open()
+            }}
             reconnecting={pending}
+            reconnectError={reviewReconnectError}
             sessionRevision={session}
             loadStartedAt={loadStartedAt}
             renderSiteFallback={failure ? undefined : renderSiteFallback}

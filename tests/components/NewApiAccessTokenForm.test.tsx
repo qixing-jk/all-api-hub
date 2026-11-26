@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { http, HttpResponse } from "msw"
+import { useState, type ComponentProps } from "react"
 import { expect, it, vi } from "vitest"
 
 import { NewApiAccessTokenForm } from "~/features/AccountManagement/components/AccountDialog/newApiToken/NewApiAccessTokenForm"
@@ -22,6 +23,22 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+
+function TokenForm(
+  props: Omit<
+    ComponentProps<typeof NewApiAccessTokenForm>,
+    "reviewing" | "onReviewingChange"
+  >,
+) {
+  const [reviewing, setReviewing] = useState(false)
+  return (
+    <NewApiAccessTokenForm
+      {...props}
+      reviewing={reviewing}
+      onReviewingChange={setReviewing}
+    />
+  )
+}
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -175,7 +192,7 @@ function setupGrantForm(
   const user = userEvent.setup()
   const onCreated = vi.fn()
   render(
-    <NewApiAccessTokenForm
+    <TokenForm
       flow={flow}
       onCreated={onCreated}
       onReconnect={onReconnect}
@@ -195,7 +212,7 @@ function setupGrantForm(
   }
 }
 
-it("requires explicit review before retrying an uncertain issuance and waits for revocation before reconnecting", async () => {
+it("switches to token review and restores the draft after one confirmation without creating again", async () => {
   const reconnect = vi.fn()
   const { flow, create, user } = setupGrantForm(true, 30, "password", reconnect)
   create.mockRejectedValueOnce(new NewApiTokenCreationUncertainError())
@@ -221,16 +238,14 @@ it("requires explicit review before retrying an uncertain issuance and waits for
   vi.mocked(flow.reviewRecovery).mockResolvedValueOnce(false)
   vi.mocked(flow.acknowledgeUncertain).mockResolvedValueOnce(undefined)
 
-  await user.type(
-    await screen.findByLabelText("tokenCreation.password"),
-    "secret",
-  )
+  const name = await screen.findByLabelText("tokenCreation.name")
+  await user.clear(name)
+  await user.type(name, "My saved draft")
+  await user.type(screen.getByLabelText("tokenCreation.password"), "secret")
   await user.click(submitButton())
-  const allow = await screen.findByRole("button", {
-    name: "tokenCreation.allowNewAttempt",
-  })
-  expect(allow).toBeDisabled()
-  expect(submitButton()).toBeDisabled()
+  expect(
+    screen.queryByRole("button", { name: "tokenCreation.create" }),
+  ).not.toBeInTheDocument()
   await user.click(
     screen.getByRole("button", { name: "tokenCreation.reviewTokens" }),
   )
@@ -238,6 +253,13 @@ it("requires explicit review before retrying an uncertain issuance and waits for
     name: "tokenCreation.reviewTokens",
   })
   const recovery = within(review)
+  expect(name).not.toBeInTheDocument()
+  expect(
+    screen.queryByLabelText("tokenCreation.password"),
+  ).not.toBeInTheDocument()
+  expect(
+    recovery.queryByRole("button", { name: "tokenCreation.revokeSelected" }),
+  ).not.toBeInTheDocument()
   await user.click(
     await recovery.findByRole("radio", { name: /Earlier attempt/ }),
   )
@@ -245,23 +267,24 @@ it("requires explicit review before retrying an uncertain issuance and waits for
     recovery.getByLabelText("tokenCreation.password"),
     "revoke secret",
   )
-  const reconnectButton = screen.getByRole("button", {
-    name: "tokenCreation.reconnect",
+  const confirm = screen.getByRole("button", {
+    name: "tokenCreation.reviewAllowRetry",
   })
   await user.click(
     recovery.getByRole("button", { name: "tokenCreation.revokeSelected" }),
   )
-  expect(reconnectButton).toBeDisabled()
+  expect(confirm).toBeDisabled()
   await act(() => revocation.resolve(false))
   await recovery.findByText("tokenCreation.revoked")
-  expect(reconnectButton).toBeEnabled()
-  await user.click(
-    recovery.getByRole("button", { name: "tokenCreation.reviewComplete" }),
+  expect(
+    recovery.queryByRole("button", { name: "tokenCreation.revokeSelected" }),
+  ).not.toBeInTheDocument()
+  await user.click(confirm)
+  expect(await screen.findByLabelText("tokenCreation.name")).toHaveValue(
+    "My saved draft",
   )
-  expect(allow).toBeEnabled()
-  expect(submitButton()).toBeDisabled()
-  await user.click(allow)
-  expect(submitButton()).toBeEnabled()
+  expect(screen.getByLabelText("tokenCreation.password")).toHaveValue("")
+  expect(flow.acknowledgeUncertain).toHaveBeenCalledOnce()
   expect(create).toHaveBeenCalledOnce()
 })
 
@@ -319,14 +342,17 @@ it.each([
       vi.useRealTimers()
     }
     expect(cancelVerification).toHaveBeenCalledOnce()
-    expect(input).toHaveValue(secret)
     expect(screen.queryByText("Site fallback")).not.toBeInTheDocument()
     if (uncertain) {
       expect(screen.getByRole("alert")).toHaveTextContent(
         "tokenCreation.uncertain",
       )
-      expect(submit).toBeDisabled()
+      expect(
+        screen.queryByRole("button", { name: "tokenCreation.create" }),
+      ).not.toBeInTheDocument()
+      expect(input).not.toBeInTheDocument()
     } else {
+      expect(input).toHaveValue(secret)
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
       expect(submit).toBeEnabled()
       await user.click(submit)
@@ -777,11 +803,7 @@ it.each(["password", "2fa"])(
     const reconnect = vi.fn()
     const user = userEvent.setup()
     const rendered = render(
-      <NewApiAccessTokenForm
-        flow={flow}
-        onCreated={vi.fn()}
-        onReconnect={reconnect}
-      />,
+      <TokenForm flow={flow} onCreated={vi.fn()} onReconnect={reconnect} />,
     )
     await screen.findByLabelText("tokenCreation.password")
     await selectExpiration(user, "tokenCreation.customDays")
@@ -809,11 +831,7 @@ it.each(["password", "2fa"])(
       }),
     } as unknown as NewApiAccessTokenCreation
     rendered.rerender(
-      <NewApiAccessTokenForm
-        flow={renewed}
-        onCreated={vi.fn()}
-        onReconnect={reconnect}
-      />,
+      <TokenForm flow={renewed} onCreated={vi.fn()} onReconnect={reconnect} />,
     )
     await waitFor(() => expect(renewed.load).toHaveBeenCalled())
     const secretInput = await screen.findByLabelText(
@@ -911,7 +929,7 @@ it("lets the user choose a grant, verify, and return the independently checked t
   )
   const onCreated = vi.fn()
   const user = userEvent.setup()
-  render(<NewApiAccessTokenForm flow={flow} onCreated={onCreated} />)
+  render(<TokenForm flow={flow} onCreated={onCreated} />)
   await screen.findByLabelText("tokenCreation.password")
   expect(creations).toBe(0)
   await user.type(

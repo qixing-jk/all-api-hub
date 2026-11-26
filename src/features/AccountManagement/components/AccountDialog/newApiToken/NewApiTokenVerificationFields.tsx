@@ -1,5 +1,5 @@
 import { Fingerprint, Lock, ShieldCheck, UserCheck } from "lucide-react"
-import { useId } from "react"
+import { useId, type Ref } from "react"
 import { useTranslation } from "react-i18next"
 
 import { InlineMessage, Input, Label } from "~/components/ui"
@@ -30,8 +30,11 @@ export function NewApiTokenVerificationFields({
   secretInvalid,
   feedbackMessage,
   feedbackTone = "destructive",
+  feedbackRef,
   disabled,
   onSubmit,
+  heading,
+  introduction,
 }: {
   verification: NewApiTokenCapabilities["verification"]
   method: NewApiTokenVerification["method"]
@@ -43,8 +46,11 @@ export function NewApiTokenVerificationFields({
   secretInvalid?: boolean
   feedbackMessage?: string
   feedbackTone?: "neutral" | "destructive"
+  feedbackRef?: Ref<HTMLDivElement>
   disabled: boolean
   onSubmit?: () => void
+  heading?: string
+  introduction?: string
 }) {
   const { t } = useTranslation("accountDialog")
   const id = useId()
@@ -90,6 +96,8 @@ export function NewApiTokenVerificationFields({
   const feedback = feedbackMessage && (
     <InlineMessage
       id={feedbackId}
+      ref={feedbackRef}
+      tabIndex={feedbackRef ? -1 : undefined}
       role={feedbackTone === "neutral" ? "status" : "alert"}
       tone={feedbackTone}
       size="sm"
@@ -103,8 +111,13 @@ export function NewApiTokenVerificationFields({
       className="space-y-3 border-t border-border-subtle pt-4 text-foreground"
     >
       <h3 id={`${id}-verification`} className="font-medium">
-        {t("tokenCreation.verification")}
+        {heading ?? t("tokenCreation.verification")}
       </h3>
+      {introduction && (
+        <p className="text-sm wrap-anywhere text-muted-foreground">
+          {introduction}
+        </p>
+      )}
       {showSecretHelp && (
         <p id={`${id}-secret-help`} className="text-xs text-muted-foreground">
           {usePassword

@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useState, type ComponentProps } from "react"
 import { expect, it, vi } from "vitest"
 
 import { NewApiTokenCreator } from "~/features/AccountManagement/components/AccountDialog/newApiToken/NewApiTokenCreator"
@@ -22,6 +23,22 @@ const { reloadSite, focusSite } = vi.hoisted(() => ({
   reloadSite: vi.fn(),
   focusSite: vi.fn(),
 }))
+
+function TokenCreator(
+  props: Omit<
+    ComponentProps<typeof NewApiTokenCreator>,
+    "reviewing" | "onReviewingChange"
+  >,
+) {
+  const [reviewing, setReviewing] = useState(false)
+  return (
+    <NewApiTokenCreator
+      {...props}
+      reviewing={reviewing}
+      onReviewingChange={setReviewing}
+    />
+  )
+}
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -52,7 +69,7 @@ const selfHostedSite = "https://self-hosted-new-api.example.invalid"
 function renderCreator(siteUrl = selfHostedSite, footer?: HTMLElement) {
   const onReturnToAccount = vi.fn()
   render(
-    <NewApiTokenCreator
+    <TokenCreator
       siteUrl={siteUrl}
       userId="42"
       footer={footer ?? null}
@@ -179,7 +196,7 @@ it("cancels a site session that finishes opening after the user leaves creation"
     cancel: vi.fn(),
   }
   const { unmount } = render(
-    <NewApiTokenCreator
+    <TokenCreator
       siteUrl={selfHostedSite}
       userId="42"
       onCreated={vi.fn()}
@@ -465,15 +482,93 @@ it("offers the website after a failed verification but prioritizes recovery afte
 
   await user.type(password, "second attempt")
   await user.click(create)
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "tokenCreation.uncertain",
-  )
+  const uncertainty = await screen.findByRole("alert")
+  expect(uncertainty).toHaveTextContent("tokenCreation.uncertain")
+  expect(uncertainty).toHaveFocus()
   expect(
     screen.getByRole("button", { name: "tokenCreation.reviewTokens" }),
   ).toBeVisible()
   expect(
     screen.queryByRole("button", { name: "tokenCreation.createOnSite" }),
   ).not.toBeInTheDocument()
+})
+
+it("keeps recovery available when the created token is still present and unverified", async () => {
+  const session = mockSession()
+  session.create.mockResolvedValueOnce({
+    id: 7,
+    token: "nap_issued",
+    verified: false,
+  })
+  Object.assign(session, {
+    loadRecovery: vi.fn().mockResolvedValue({
+      items: [],
+      verification: { methods: [], oauth_providers: [] },
+    }),
+    reviewRecovery: vi.fn().mockResolvedValue(false),
+  })
+  const user = userEvent.setup()
+  renderCreator()
+  await user.type(
+    await screen.findByLabelText("tokenCreation.password"),
+    "secret",
+  )
+  await user.click(screen.getByRole("button", { name: "tokenCreation.create" }))
+  await user.click(
+    await screen.findByRole("button", { name: "tokenCreation.reviewTokens" }),
+  )
+  const confirm = screen.getByRole("button", {
+    name: "tokenCreation.reviewComplete",
+  })
+  await waitFor(() => expect(confirm).toBeEnabled())
+  await user.click(confirm)
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "tokenCreation.validationFailed",
+  )
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.reviewTokens" }),
+  ).toBeVisible()
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.retryValidation" }),
+  ).toBeEnabled()
+})
+
+it("keeps the token review visible when reconnecting the website session fails", async () => {
+  const session = mockSession()
+  session.create.mockRejectedValueOnce(new NewApiTokenCreationUncertainError())
+  Object.assign(session, {
+    loadRecovery: vi.fn().mockRejectedValue(new Error("Session lost")),
+  })
+  vi.mocked(openNewApiAccessTokenCreation).mockRejectedValueOnce(
+    new NewApiTokenSessionError(SESSION_ERRORS.RELOAD_REQUIRED, 18),
+  )
+  const user = userEvent.setup()
+  renderCreator()
+  await user.type(
+    await screen.findByLabelText("tokenCreation.password"),
+    "secret",
+  )
+  await user.click(screen.getByRole("button", { name: "tokenCreation.create" }))
+  await user.click(
+    await screen.findByRole("button", { name: "tokenCreation.reviewTokens" }),
+  )
+  await user.click(
+    await screen.findByRole("button", { name: "tokenCreation.reconnect" }),
+  )
+  const review = screen.getByRole("region", {
+    name: "tokenCreation.reviewTokens",
+  })
+  expect(await within(review).findByRole("alert")).toHaveTextContent(
+    "tokenCreation.connection.reloadRequired",
+  )
+  expect(
+    within(review).getByRole("button", {
+      name: "tokenCreation.connection.reloadAndRetry",
+    }),
+  ).toBeEnabled()
+  expect(
+    screen.getByRole("button", { name: "tokenCreation.reviewAllowRetry" }),
+  ).toBeDisabled()
 })
 
 it("leaves a newer issuance blocked when acknowledging an older review fails", async () => {
@@ -496,29 +591,28 @@ it("leaves a newer issuance blocked when acknowledging an older review fails", a
   const password = await screen.findByLabelText("tokenCreation.password")
   await user.type(password, "test password")
   await user.click(screen.getByRole("button", { name: "tokenCreation.create" }))
-  const retry = await screen.findByRole("button", {
-    name: "tokenCreation.allowNewAttempt",
-  })
-  expect(retry).toBeDisabled()
-  await user.click(retry)
+  await screen.findByText("tokenCreation.uncertain")
+  expect(
+    screen.queryByRole("button", { name: "tokenCreation.reviewAllowRetry" }),
+  ).not.toBeInTheDocument()
   expect(acknowledge).not.toHaveBeenCalled()
-  const reviewList = async () => {
-    await user.click(
-      screen.getByRole("button", { name: "tokenCreation.reviewTokens" }),
-    )
-    await user.click(
-      await screen.findByRole("button", {
-        name: "tokenCreation.reviewComplete",
-      }),
-    )
-  }
-  await reviewList()
+  await user.click(
+    screen.getByRole("button", { name: "tokenCreation.reviewTokens" }),
+  )
+  const retry = await screen.findByRole("button", {
+    name: "tokenCreation.reviewAllowRetry",
+  })
   await user.click(retry)
   expect(acknowledge).toHaveBeenCalledOnce()
-  expect(screen.getByRole("alert")).toHaveTextContent("tokenCreation.uncertain")
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "tokenCreation.recoveryFailed",
+  )
   expect(session.create).toHaveBeenCalledOnce()
   expect(retry).toBeDisabled()
-  await reviewList()
+  await user.click(
+    screen.getByRole("button", { name: "common:actions.refresh" }),
+  )
+  await waitFor(() => expect(retry).toBeEnabled())
   await user.click(retry)
   await waitFor(() => expect(retry).not.toBeInTheDocument())
   expect(screen.getByLabelText("tokenCreation.password")).toBeEnabled()

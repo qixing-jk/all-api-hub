@@ -37,6 +37,8 @@ export function useNewApiTokenCreation({
   sessionRevision,
   siteOpening,
   onBusyChange,
+  reviewing,
+  onReviewingChange,
 }: {
   flow: NewApiAccessTokenCreation
   onCreated: (token: string) => void
@@ -45,6 +47,8 @@ export function useNewApiTokenCreation({
   sessionRevision?: unknown
   siteOpening: boolean
   onBusyChange?: (busy: boolean) => void
+  reviewing: boolean
+  onReviewingChange: (reviewing: boolean) => void
 }) {
   const [capabilities, setCapabilities] = useState<NewApiTokenCapabilities>()
   const [name, setName] = useState("All API Hub")
@@ -60,8 +64,6 @@ export function useNewApiTokenCreation({
   const [created, setCreated] = useState(false)
   const [complete, setComplete] = useState(false)
   const [uncertain, setUncertain] = useState(false)
-  const [reviewed, setReviewed] = useState(false)
-  const [recovering, setRecovering] = useState(false)
   const [recoveryPending, setRecoveryPending] = useState(false)
   const [error, setError] = useState<TokenCreationError | "">("")
   const busy = useRef(false)
@@ -74,7 +76,6 @@ export function useNewApiTokenCreation({
   useEffect(() => {
     let active = true
     setError("")
-    setReviewed(false)
     void flow
       .load()
       .then((value) => {
@@ -118,8 +119,8 @@ export function useNewApiTokenCreation({
   }, [flow, revision, sessionRevision])
 
   useEffect(() => {
-    onBusyChange?.(pending || recoveryPending)
-  }, [onBusyChange, pending, recoveryPending])
+    onBusyChange?.(pending || recoveryPending || (reviewing && reconnecting))
+  }, [onBusyChange, pending, reconnecting, recoveryPending, reviewing])
 
   useEffect(() => {
     if (!pending || canCancelImmediately) return
@@ -141,7 +142,7 @@ export function useNewApiTokenCreation({
     ? availableTokenMethods(capabilities.verification)
     : []
   const blocked =
-    pending || uncertain || reconnecting || recovering || siteOpening
+    pending || uncertain || reconnecting || reviewing || siteOpening
   const disabled = blocked || created
   const expiryDays = Number(
     expiryMode === TOKEN_EXPIRY_MODES.CUSTOM ? days : expiryMode,
@@ -187,6 +188,7 @@ export function useNewApiTokenCreation({
       } else setError(FEEDBACK.VALIDATION_FAILED)
     } catch (error) {
       if (error instanceof NewApiTokenCreationUncertainError) {
+        setVerificationInput((current) => ({ ...current, secret: "" }))
         setUncertain(true)
         setError(FEEDBACK.UNCERTAIN)
       } else if (!cancelledByUser.current) {
@@ -212,27 +214,20 @@ export function useNewApiTokenCreation({
     cancelledByUser.current = true
     flow.cancelVerification()
   }
-  const finishReview = (revokedCreated: boolean) => {
-    if (revokedCreated) setCreated(false)
-    setRecovering(false)
-    setReviewed(true)
+  const clearCreated = () => {
+    setCreated(false)
     if (!uncertain) setError("")
   }
-  const acknowledgeUncertain = async () => {
-    if (busy.current || !reviewed) return
-    busy.current = true
-    setRecoveryPending(true)
-    try {
+  const finishReview = async (revokedCreated: boolean) => {
+    if (revokedCreated) clearCreated()
+    if (uncertain) {
       await flow.acknowledgeUncertain()
       setUncertain(false)
       setError("")
-    } catch {
-      setError(FEEDBACK.UNCERTAIN)
-    } finally {
-      setReviewed(false)
-      setRecoveryPending(false)
-      busy.current = false
+    } else if (!created) {
+      setError("")
     }
+    onReviewingChange(false)
   }
 
   return {
@@ -267,16 +262,9 @@ export function useNewApiTokenCreation({
     submit,
     recovery: {
       uncertain,
-      reviewed,
-      recovering,
-      startReview: () => {
-        setReviewed(false)
-        setRecovering(true)
-      },
       finishReview,
+      clearCreated,
       setRecoveryPending,
-      recoveryPending,
-      acknowledgeUncertain,
     },
   }
 }

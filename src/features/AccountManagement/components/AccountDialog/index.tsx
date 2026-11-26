@@ -483,7 +483,9 @@ export default function AccountDialog({
     setFieldFocus(undefined)
   }, [fieldFocus, showAccountForm, isCreatingToken])
 
-  const tokenCreationTitle = tAccountDialog("tokenCreation.title")
+  const tokenCreationTitle = creation.reviewing
+    ? tAccountDialog("tokenCreation.reviewTokens")
+    : tAccountDialog("tokenCreation.title")
   const focusAccessToken = () => {
     clearSiteOpenFailure()
     accountFormRef.current?.focusAccessToken()
@@ -576,7 +578,12 @@ export default function AccountDialog({
               siteName={state.siteName}
               headingRef={creation.headingRef}
               busy={creation.busy}
-              onBack={creation.goBack}
+              reviewing={creation.reviewing}
+              onBack={
+                creation.reviewing
+                  ? () => creation.setReviewing(false)
+                  : creation.goBack
+              }
             />
           ) : tokenStep ? (
             <CompactTokenEntryHeader
@@ -638,6 +645,8 @@ export default function AccountDialog({
               siteUrl={state.url}
               userId={state.userId}
               onReturnToAccount={creation.goBack}
+              reviewing={creation.reviewing}
+              onReviewingChange={creation.setReviewing}
               footer={creation.footer}
               onBusyChange={creation.setBusy}
               onCreated={creation.finish}

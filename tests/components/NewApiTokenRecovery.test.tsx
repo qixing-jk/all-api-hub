@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { expect, it, vi } from "vitest"
 
@@ -41,32 +41,62 @@ it("requires an explicit token selection and fresh verification before revoking"
   const reviewed = vi.fn()
   const user = userEvent.setup()
   render(<NewApiTokenRecovery flow={flow} onReviewed={reviewed} />)
-  const revoke = await screen.findByRole("button", {
+  const token = await screen.findByRole("radio", { name: /Attempt to recover/ })
+  const permissions = screen.getByText("tokenCreation.permissions (1)")
+  const profile = screen.getByText("tokenCreation.profileRead")
+  expect(profile).not.toBeVisible()
+  await user.click(permissions)
+  expect(profile).toBeVisible()
+  expect(token).not.toBeChecked()
+  expect(
+    screen.queryByRole("button", { name: "tokenCreation.revokeSelected" }),
+  ).not.toBeInTheDocument()
+  await user.click(token)
+  const revoke = screen.getByRole("button", {
     name: "tokenCreation.revokeSelected",
   })
-  expect(revoke).toBeDisabled()
-  await user.click(screen.getByRole("radio", { name: /Attempt to recover/ }))
   expect(revoke).toBeDisabled()
   const password = screen.getByLabelText("tokenCreation.password")
   await user.type(password, "secret")
   await user.click(revoke)
   expect(revoke).toHaveAttribute("aria-busy", "true")
   await act(() => attempt.reject(new Error("Rejected")))
-  expect(screen.getByRole("alert")).toHaveTextContent(
-    "tokenCreation.recoveryFailed",
-  )
+  const revokeRegion = screen.getByRole("region", {
+    name: "tokenCreation.revokeHeading",
+  })
+  const revokeError = within(revokeRegion).getByRole("alert")
+  expect(revokeError).toHaveTextContent("tokenCreation.recoveryFailed")
+  expect(revokeError).toHaveFocus()
   expect(password).toHaveValue("secret")
   expect(revoke).toBeEnabled()
-  await user.click(revoke)
+  await user.click(
+    screen.getByRole("button", { name: "tokenCreation.cancelTokenSelection" }),
+  )
+  const confirm = screen.getByRole("button", {
+    name: "tokenCreation.reviewComplete",
+  })
+  await waitFor(() => expect(confirm).toBeEnabled())
+  expect(flow.loadRecovery).toHaveBeenCalledTimes(2)
+  await user.click(token)
+  await user.type(screen.getByLabelText("tokenCreation.password"), "secret")
+  await user.click(
+    screen.getByRole("button", { name: "tokenCreation.revokeSelected" }),
+  )
   await screen.findByText("tokenCreation.revoked")
+  expect(
+    screen.queryByRole("button", { name: "tokenCreation.revokeSelected" }),
+  ).not.toBeInTheDocument()
   expect(revokeToken).toHaveBeenCalledWith(7, {
     method: "password",
     password: "secret",
   })
   expect(reviewed).not.toHaveBeenCalled()
   await user.click(
-    screen.getByRole("button", { name: "tokenCreation.reviewComplete" }),
+    screen.getByRole("button", { name: "common:actions.refresh" }),
   )
+  expect(screen.queryByText("tokenCreation.revoked")).not.toBeInTheDocument()
+  await waitFor(() => expect(confirm).toBeEnabled())
+  await user.click(confirm)
   expect(reviewed).toHaveBeenCalledOnce()
 })
 
@@ -141,6 +171,7 @@ it("recovers after reconnect and requires a successful server review", async () 
   await user.click(
     screen.getByRole("button", { name: "common:actions.refresh" }),
   )
+  expect(await screen.findByText("tokenCreation.noTokens")).toBeVisible()
   await user.click(done)
   expect(onReviewed).toHaveBeenCalledExactlyOnceWith(true)
 })

@@ -12,6 +12,7 @@ export function NewApiTokenCreationHeader({
   siteName,
   headingRef,
   busy,
+  reviewing,
   onBack,
 }: {
   title: string
@@ -19,6 +20,7 @@ export function NewApiTokenCreationHeader({
   siteName: string
   headingRef: Ref<HTMLHeadingElement>
   busy: boolean
+  reviewing: boolean
   onBack: () => void
 }) {
   const { t } = useTranslation("accountDialog")
@@ -28,7 +30,11 @@ export function NewApiTokenCreationHeader({
         type="button"
         size="sm"
         variant="ghost"
-        aria-label={t("tokenCreation.backToAccount")}
+        aria-label={
+          reviewing
+            ? t("tokenCreation.backToCreation")
+            : t("tokenCreation.backToAccount")
+        }
         disabled={busy}
         onClick={onBack}
       >

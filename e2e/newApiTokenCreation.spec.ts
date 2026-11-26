@@ -855,6 +855,7 @@ for (const scenario of [
 for (const method of [
   "password",
   "recovery",
+  "uncertain",
   "2fa",
   "passkey",
   "github",
@@ -873,10 +874,13 @@ for (const method of [
     if (process.env.AAH_VISUAL_CAPTURE_DIR) test.setTimeout(240_000)
     else if (method === "password") test.setTimeout(90_000)
     const origin = `https://token-${method}.example.invalid`
-    const oauth = !["password", "recovery", "2fa", "passkey"].includes(method)
+    const uncertain = method === "uncertain"
+    const canRecover = method === "recovery" || uncertain
+    const oauth =
+      !canRecover && !["password", "2fa", "passkey"].includes(method)
     const verificationMethod = oauth
       ? "oauth"
-      : method === "recovery"
+      : canRecover
         ? "password"
         : method
     const token = "nap_browser-fixture"
@@ -895,6 +899,7 @@ for (const method of [
     ].sort()
     let issued = 0
     let revoked = false
+    let recoveryList: "failed" | "empty" | "with-token" = "failed"
     let listedDraft: Record<string, unknown> = {}
     let consumedBySite = 0
     let callbackExchanges = 0
@@ -989,6 +994,8 @@ for (const method of [
         }
         issued++
         listedDraft = draft
+        if (uncertain && issued === 1)
+          return route.fulfill({ json: { success: true, data: {} } })
         return route.fulfill({
           json: {
             success: true,
@@ -1005,13 +1012,28 @@ for (const method of [
           },
         })
       }
+      if (uncertain && issued > 0 && recoveryList === "failed")
+        return route.fulfill({
+          status: 503,
+          json: { success: false, message: "List unavailable" },
+        })
       return route.fulfill({
         json: {
           success: true,
           data: {
             items:
-              method === "recovery" && issued > 0 && !revoked
-                ? [{ id: 7, ...listedDraft, created_at: 100 }]
+              canRecover &&
+              issued > 0 &&
+              !revoked &&
+              (!uncertain || recoveryList === "with-token")
+                ? [
+                    {
+                      id: 7,
+                      ...listedDraft,
+                      created_at: Math.floor(Date.now() / 1000),
+                      token_hint: "nap_…7f2a",
+                    },
+                  ]
                 : [],
             legacy: null,
           },
@@ -1063,6 +1085,11 @@ for (const method of [
       expect(body.method).toBe(verificationMethod)
       if (body.scope === "access_token.revoke") {
         expect(body.context).toEqual({ token_id: 7 })
+        if (body.password === "wrong-fixture-password")
+          return route.fulfill({
+            status: 400,
+            json: { success: false, message: "Wrong password" },
+          })
         return route.fulfill({
           json: {
             ...proof(),
@@ -1593,8 +1620,9 @@ for (const method of [
           await customDays.fill("14")
         }
       }
-      if (method === "password" || method === "recovery")
+      if (verificationMethod === "password")
         await passwordInput.fill("test-password")
+      if (uncertain) await tokenName.fill("Recovery test draft")
       if (method === "2fa")
         await creator
           .getByLabel("Authenticator code", { exact: true })
@@ -1744,39 +1772,156 @@ for (const method of [
           .getByRole("link", { name: "Authorize verification" })
           .click()
       }
-      if (method === "recovery") {
-        await creator
-          .getByRole("button", { name: "Review existing tokens", exact: true })
-          .click()
-        const recovery = creator.getByRole("region", {
+      if (canRecover) {
+        const captureRecovery = (
+          id: string,
+          ready: import("@playwright/test").Locator,
+        ) =>
+          captureVisualViews({
+            page,
+            ready,
+            captureTarget: dialog.dialog,
+            extensionDir,
+            id,
+            views: tokenSetupViews.filter(({ theme }) => theme === "light"),
+          })
+        const startReview = dialog.dialog.getByRole("button", {
           name: "Review existing tokens",
           exact: true,
         })
+        if (uncertain) {
+          await expect(create).toHaveCount(0)
+          await expect(dialog.dialog.getByRole("alert")).toBeFocused()
+          await captureRecovery("token-recovery-uncertain", startReview)
+        }
+        await startReview.click()
+        const recovery = dialog.dialog.getByRole("region", {
+          name: "Review existing tokens",
+          exact: true,
+        })
+        const back = dialog.dialog.getByRole("button", {
+          name: "Back to token creation",
+        })
+        await expect(back).toBeEnabled()
         await expect(
-          dialog.dialog.getByRole("button", { name: "Back to account" }),
-        ).toBeEnabled()
-        await recovery.getByRole("radio", { name: /All API Hub/ }).check()
+          dialog.dialog.getByRole("heading", {
+            name: "Review existing tokens",
+          }),
+        ).toBeFocused()
+        await expect(tokenName).toHaveCount(0)
+        const finishReview = footer.getByRole("button", {
+          name: uncertain
+            ? "Reviewed, allow a new attempt"
+            : "I have reviewed the result",
+          exact: true,
+        })
+        if (uncertain) {
+          const listError = recovery.getByRole("alert")
+          await expect(listError).toBeVisible()
+          await expect(finishReview).toBeDisabled()
+          await captureRecovery("token-recovery-unavailable", listError)
+          await back.click()
+          await expect(startReview).toBeVisible()
+          expect(issued).toBe(1)
+          recoveryList = "empty"
+          await startReview.click()
+          const empty = recovery.getByText(/The site returned no tokens/)
+          await expect(empty).toBeVisible()
+          await expect(finishReview).toBeEnabled()
+          await expect(
+            recovery.getByRole("button", {
+              name: "Verify and revoke selected token",
+            }),
+          ).toHaveCount(0)
+          await captureRecovery("token-recovery-empty", empty)
+          recoveryList = "with-token"
+          await recovery
+            .getByRole("button", { name: "Refresh", exact: true })
+            .click()
+        }
+        const tokenToRevoke = recovery.getByRole("radio", {
+          name: uncertain ? /Recovery test draft/ : /All API Hub/,
+        })
+        if (uncertain) {
+          await expect(tokenToRevoke).not.toBeChecked()
+          await captureRecovery("token-recovery-unselected", tokenToRevoke)
+          const permissions = recovery.getByText("Permissions (10)", {
+            exact: true,
+          })
+          const profile = recovery.getByText("View account profile", {
+            exact: true,
+          })
+          await expect(profile).toBeHidden()
+          await permissions.click()
+          await expect(profile).toBeVisible()
+          await expect(tokenToRevoke).not.toBeChecked()
+          await captureRecovery("token-recovery-permissions", permissions)
+          await permissions.click()
+        }
+        await tokenToRevoke.check()
+        const revoke = recovery.getByRole("button", {
+          name: "Verify and revoke selected token",
+          exact: true,
+        })
+        if (uncertain) {
+          const clear = recovery.getByRole("button", {
+            name: "Clear selection",
+          })
+          await clear.click()
+          await expect(tokenToRevoke).toBeFocused()
+          await expect(revoke).toHaveCount(0)
+          await tokenToRevoke.check()
+          await page.setViewportSize({ width: 340, height: 680 })
+          const [revokeBox, clearBox] = await Promise.all([
+            revoke.boundingBox(),
+            clear.boundingBox(),
+          ])
+          expect(revokeBox).not.toBeNull()
+          expect(clearBox).not.toBeNull()
+          expect(
+            Math.max(clearBox!.x, revokeBox!.x) +
+              Math.max(clearBox!.width, revokeBox!.width),
+          ).toBeLessThanOrEqual(340)
+          await page.setViewportSize({ width: 1249, height: 900 })
+          await captureRecovery("token-recovery-selected", revoke)
+          await page.setViewportSize({ width: 340, height: 680 })
+          const revocation = recovery.getByRole("region", {
+            name: "Revoke selected token",
+          })
+          const revokePassword = revocation.getByLabel("Account password", {
+            exact: true,
+          })
+          await revokePassword.fill("wrong-fixture-password")
+          await revoke.click()
+          const wrongPassword = revocation.getByRole("alert")
+          await expect(wrongPassword).toContainText(
+            "Incorrect account password",
+          )
+          await expect(wrongPassword).toBeFocused()
+          await expect(revokePassword).toHaveAttribute("aria-invalid", "true")
+          expect(revoked).toBe(false)
+          await captureRecovery("token-recovery-revoke-failed", wrongPassword)
+          await clear.click()
+          await expect(finishReview).toBeEnabled()
+          await tokenToRevoke.check()
+        }
         await recovery
           .getByLabel("Account password", { exact: true })
           .fill("test-password")
-        await recovery
-          .getByRole("button", {
-            name: "Verify and revoke selected token",
-            exact: true,
-          })
-          .click()
-        await expect(
-          recovery.getByText(
-            "Revocation confirmed. The token is no longer listed.",
-            { exact: true },
-          ),
-        ).toBeVisible()
-        await recovery
-          .getByRole("button", {
-            name: "I have reviewed the result",
-            exact: true,
-          })
-          .click()
+        await revoke.click()
+        const revokedStatus = recovery.getByText(
+          "Revocation confirmed. The token is no longer listed.",
+          { exact: true },
+        )
+        await expect(revokedStatus).toBeVisible()
+        if (uncertain)
+          await captureRecovery("token-recovery-revoked", revokedStatus)
+        await finishReview.click()
+        if (uncertain) {
+          await expect(tokenName).toHaveValue("Recovery test draft")
+          await expect(passwordInput).toHaveValue("")
+          expect(issued).toBe(1)
+        }
         await creator
           .getByLabel("Account password", { exact: true })
           .fill("test-password")
@@ -1821,7 +1966,7 @@ for (const method of [
       })
       expect(saved.account_info.access_token).toBe(token)
       expect(String(saved.account_info.id)).toBe("1")
-      expect(issued).toBe(method === "recovery" ? 2 : 1)
+      expect(issued).toBe(canRecover ? 2 : 1)
       expect(consumedBySite).toBe(0)
       if (oauth) expect(callbackExchanges).toBe(1)
     } finally {
