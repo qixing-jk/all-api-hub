@@ -1,24 +1,18 @@
 import { useTranslation } from "react-i18next"
 
-import {
-  Button,
-  Card,
-  CardContent,
-  CardItem,
-  CardList,
-  Switch,
-  Textarea,
-} from "~/components/ui"
+import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { usePreferenceDraft } from "~/hooks/preferences/usePreferenceDraft"
 import { useSingleFlightActions } from "~/hooks/useSingleFlightActions"
 import toast from "~/lib/notify"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { DEFAULT_REDEMPTION_ASSIST_PREFERENCES } from "~/services/preferences/contentScriptFeatureDefaults"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
+
+import { RedemptionAssistPatternEditor } from "./RedemptionAssistPatternEditor"
 
 /**
  * Unified logger scoped to the Basic Settings redemption assist section.
@@ -41,7 +35,7 @@ type RedemptionAssistSaveAction =
  * Settings section for toggling redemption assist feature.
  */
 export default function RedemptionAssistSettings() {
-  const { t } = useTranslation(["redemptionAssist", "settings", "common"])
+  const { t } = useTranslation(["redemptionAssist", "settings"])
   const {
     preferences: userPrefs,
     updateRedemptionAssist,
@@ -50,14 +44,13 @@ export default function RedemptionAssistSettings() {
   const saveActions = useSingleFlightActions<RedemptionAssistSaveAction>()
 
   const config =
-    userPrefs.redemptionAssist ?? DEFAULT_PREFERENCES.redemptionAssist!
+    userPrefs.redemptionAssist ?? DEFAULT_REDEMPTION_ASSIST_PREFERENCES
 
-  const contextMenu = config.contextMenu ?? {
-    enabled: true,
-  }
+  const contextMenu =
+    config.contextMenu ?? DEFAULT_REDEMPTION_ASSIST_PREFERENCES.contextMenu
 
   const whitelist =
-    config.urlWhitelist ?? DEFAULT_PREFERENCES.redemptionAssist!.urlWhitelist
+    config.urlWhitelist ?? DEFAULT_REDEMPTION_ASSIST_PREFERENCES.urlWhitelist
 
   const {
     draft: patternsDraft,
@@ -68,6 +61,9 @@ export default function RedemptionAssistSettings() {
     savedValue: (whitelist.patterns ?? []).join("\n"),
     savedVersion: userPrefs.lastUpdated ?? 0,
   })
+  const patternsPending = saveActions.isPending(
+    REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
+  )
 
   const saveSettings = (
     action: RedemptionAssistSaveAction,
@@ -121,8 +117,12 @@ export default function RedemptionAssistSettings() {
     <SettingSection
       resetRequiresConfirmation
       resetDisabled={
-        matchesDefaultSettings(config, DEFAULT_PREFERENCES.redemptionAssist) &&
-        !patternsDirty
+        patternsPending ||
+        (matchesDefaultSettings(
+          config,
+          DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
+        ) &&
+          !patternsDirty)
       }
       id="redemption-assist"
       title={t("redemptionAssist:settings.title")}
@@ -131,9 +131,9 @@ export default function RedemptionAssistSettings() {
         const result = await resetRedemptionAssistConfig()
         if (result.ok) {
           acceptPatternsDraft(
-            (
-              DEFAULT_PREFERENCES.redemptionAssist!.urlWhitelist.patterns ?? []
-            ).join("\n"),
+            DEFAULT_REDEMPTION_ASSIST_PREFERENCES.urlWhitelist.patterns.join(
+              "\n",
+            ),
           )
         }
         return result
@@ -299,54 +299,13 @@ export default function RedemptionAssistSettings() {
           />
         </CardList>
 
-        <CardContent
-          id="redemption-assist-url-whitelist-patterns"
-          className="border-border border-t"
-          spacing="sm"
-        >
-          <div className="space-y-density-2">
-            <div className="text-sm font-medium">
-              {t("redemptionAssist:settings.urlWhitelist.patterns")}
-            </div>
-            <div className="text-muted-foreground text-xs">
-              {t("redemptionAssist:settings.urlWhitelist.patternsDesc")}
-            </div>
-            <Textarea
-              value={patternsDraft}
-              onChange={(event) => setPatternsDraft(event.target.value)}
-              placeholder={t(
-                "redemptionAssist:settings.urlWhitelist.patternsPlaceholder",
-              )}
-              rows={6}
-              disabled={saveActions.isPending(
-                REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
-              )}
-            />
-
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={
-                  !patternsDirty ||
-                  saveActions.isPending(
-                    REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
-                  )
-                }
-                loading={saveActions.isPending(
-                  REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
-                )}
-                onClick={() => void handleSaveUrlPatterns()}
-              >
-                {saveActions.isPending(
-                  REDEMPTION_ASSIST_SAVE_ACTIONS.URL_PATTERNS,
-                )
-                  ? t("common:status.saving")
-                  : t("common:actions.save")}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
+        <RedemptionAssistPatternEditor
+          draft={patternsDraft}
+          setDraft={setPatternsDraft}
+          dirty={patternsDirty}
+          pending={patternsPending}
+          onSave={() => void handleSaveUrlPatterns()}
+        />
       </Card>
     </SettingSection>
   )

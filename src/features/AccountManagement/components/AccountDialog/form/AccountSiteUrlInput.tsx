@@ -5,6 +5,7 @@ import { AccountSiteIcon } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
 import { InputGroupButton } from "~/components/ui/input-group"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { BROWSER_TAB_SITE_URL_MODES } from "~/utils/browser/recentTabSites"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 /** Site URL field with a shortcut to fill the active tab's origin. */
@@ -66,7 +67,7 @@ export function AccountSiteUrlInput({
       onUrlChange={onUrlChange}
       enableRecentTabs={enableRecentTabs}
       recentTabsLabel={t("siteInfo.recentTabSites")}
-      urlMode="origin"
+      urlMode={BROWSER_TAB_SITE_URL_MODES.ORIGIN}
       clearAction={{ label: t("common:actions.clear"), onClear: onClearUrl }}
       endActions={useCurrentTabButton}
     />
