@@ -117,6 +117,7 @@ export function NewApiAccessTokenForm({
     [FEEDBACK.UNAVAILABLE]: t("tokenCreation.unavailable"),
     [FEEDBACK.VALIDATION_FAILED]: t("tokenCreation.validationFailed"),
     [FEEDBACK.UNCERTAIN]: t("tokenCreation.uncertain"),
+    [FEEDBACK.BUSY]: t("tokenCreation.busy"),
     [FEEDBACK.FAILED]: t("tokenCreation.failed"),
     [FEEDBACK.LOCKED]: t("tokenCreation.locked"),
     [FEEDBACK.LIMIT]: t("tokenCreation.limit"),
@@ -227,23 +228,19 @@ export function NewApiAccessTokenForm({
         />
       )}
       {uncertain && (
-        <div className="space-y-2">
-          <label className="flex gap-2">
-            <input
-              type="checkbox"
-              checked={reviewed}
-              onChange={(event) => recovery.setReviewed(event.target.checked)}
-            />
-            {t("tokenCreation.reviewed")}
-          </label>
-          <Button
-            type="button"
-            disabled={!reviewed || pending}
-            onClick={() => void recovery.acknowledgeUncertain()}
-          >
-            {t("tokenCreation.allowNewAttempt")}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          disabled={
+            !reviewed ||
+            pending ||
+            recovering ||
+            reconnecting ||
+            recovery.recoveryPending
+          }
+          onClick={() => void recovery.acknowledgeUncertain()}
+        >
+          {t("tokenCreation.allowNewAttempt")}
+        </Button>
       )}
       {footer ? createPortal(actions, footer) : actions}
     </section>

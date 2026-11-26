@@ -74,6 +74,7 @@ export function useNewApiTokenCreation({
   useEffect(() => {
     let active = true
     setError("")
+    setReviewed(false)
     void flow
       .load()
       .then((value) => {
@@ -218,13 +219,19 @@ export function useNewApiTokenCreation({
     if (!uncertain) setError("")
   }
   const acknowledgeUncertain = async () => {
+    if (busy.current || !reviewed) return
+    busy.current = true
+    setRecoveryPending(true)
     try {
       await flow.acknowledgeUncertain()
       setUncertain(false)
       setError("")
-      setReviewed(false)
     } catch {
       setError(FEEDBACK.UNCERTAIN)
+    } finally {
+      setReviewed(false)
+      setRecoveryPending(false)
+      busy.current = false
     }
   }
 
@@ -261,9 +268,11 @@ export function useNewApiTokenCreation({
     recovery: {
       uncertain,
       reviewed,
-      setReviewed,
       recovering,
-      startReview: () => setRecovering(true),
+      startReview: () => {
+        setReviewed(false)
+        setRecovering(true)
+      },
       finishReview,
       setRecoveryPending,
       recoveryPending,

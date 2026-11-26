@@ -11,6 +11,7 @@ export const TOKEN_CREATION_FEEDBACK = {
   UNAVAILABLE: "unavailable",
   VALIDATION_FAILED: "validationFailed",
   UNCERTAIN: "uncertain",
+  BUSY: "busy",
   FAILED: "failed",
   LOCKED: "locked",
   LIMIT: "limit",
@@ -92,6 +93,8 @@ export function classifyVerificationError(
         return TOKEN_CREATION_FEEDBACK.INVALID_CODE
     }
   } else if (error instanceof Error) {
+    if (error.message === CREATION_ERRORS.BUSY)
+      return TOKEN_CREATION_FEEDBACK.BUSY
     if (
       error.message === VERIFICATION_ERRORS.PASSKEY_CANCELLED ||
       error.message === VERIFICATION_ERRORS.OAUTH_CANCELLED

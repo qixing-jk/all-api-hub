@@ -219,9 +219,7 @@ it("requires explicit review before retrying an uncertain issuance and waits for
   const revocation = createDeferred<boolean>()
   vi.mocked(flow.revokeToken).mockReturnValueOnce(revocation.promise)
   vi.mocked(flow.reviewRecovery).mockResolvedValueOnce(false)
-  vi.mocked(flow.acknowledgeUncertain)
-    .mockRejectedValueOnce(new Error("Another attempt is pending"))
-    .mockResolvedValueOnce(undefined)
+  vi.mocked(flow.acknowledgeUncertain).mockResolvedValueOnce(undefined)
 
   await user.type(
     await screen.findByLabelText("tokenCreation.password"),
@@ -261,7 +259,6 @@ it("requires explicit review before retrying an uncertain issuance and waits for
     recovery.getByRole("button", { name: "tokenCreation.reviewComplete" }),
   )
   expect(allow).toBeEnabled()
-  await user.click(allow)
   expect(submitButton()).toBeDisabled()
   await user.click(allow)
   expect(submitButton()).toBeEnabled()

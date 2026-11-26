@@ -13,7 +13,7 @@ import { AuthTypeEnum } from "~/types"
 
 import type {
   TokenIssuanceJournal,
-  TokenIssuanceReview,
+  TokenIssuanceMarker,
 } from "./issuanceJournal"
 import {
   NEW_API_TOKEN_ACCESS_SCOPES as ACCESS_SCOPES,
@@ -27,7 +27,6 @@ import {
 import { tokenSessionRequest } from "./sessionRequest"
 
 const MIN_TOKEN_EXPIRY_SECONDS = 60 * 60
-const ISSUANCE_TIMEOUT_MS = 30_000
 
 /** Canonicalizes grant scopes for proof binding and returned-grant comparison. */
 function normalizeGrantScopes(scopes: string[]) {
@@ -160,7 +159,7 @@ export class NewApiTokenCreationUncertainError extends Error {
 export class NewApiAccessTokenCreation {
   private inFlight = false
   private uncertain = false
-  private issuanceReview?: TokenIssuanceReview
+  private issuanceReview?: TokenIssuanceMarker
   private created: NewApiCreatedToken | undefined
   private createdScopes: string[] = []
   private grantMatches = false
@@ -198,8 +197,8 @@ export class NewApiAccessTokenCreation {
   }
 
   /** Uses the provider transport without credential recovery or ambient Cookie fallback. */
-  private read<T>(endpoint: string): Promise<T> {
-    return tokenSessionRequest<T>(this.request, { endpoint })
+  private read<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    return tokenSessionRequest<T>(this.request, { endpoint, options })
   }
 
   /** Confirm the remote identity before exposing account-specific grant choices. */
@@ -367,7 +366,7 @@ export class NewApiAccessTokenCreation {
       throw new Error(API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH)
     const data = z
       .object({ items: z.array(z.object({ id: z.number().int().positive() })) })
-      .parse(await this.read(ENDPOINTS.ACCESS_TOKENS))
+      .parse(await this.read(ENDPOINTS.ACCESS_TOKENS, { cache: "no-store" }))
     if (data.items.some((item) => item.id === created.id)) return false
     this.created = undefined
     return true
@@ -384,7 +383,6 @@ export class NewApiAccessTokenCreation {
     )
     if (verification.scope !== OPERATION_SCOPES.REVOKE)
       throw new Error(CREATION_ERRORS.INVALID_PROOF)
-    const reviewStartedAt = Date.now()
     const data = z
       .object({
         items: z.array(
@@ -398,9 +396,8 @@ export class NewApiAccessTokenCreation {
           }),
         ),
       })
-      .parse(await this.read(ENDPOINTS.ACCESS_TOKENS))
-    if (reviewing)
-      this.issuanceReview = { marker: reviewing, startedAt: reviewStartedAt }
+      .parse(await this.read(ENDPOINTS.ACCESS_TOKENS, { cache: "no-store" }))
+    if (!this.inFlight) this.issuanceReview = reviewing
     return { ...data, verification }
   }
 
@@ -497,7 +494,7 @@ export class NewApiAccessTokenCreation {
     operationRequest: ApiServiceRequest,
   ) {
     operationRequest.abortSignal?.throwIfAborted()
-    if (this.journal && !(await this.journal.begin(proof.expires_at * 1000))) {
+    if (this.journal && !(await this.journal.begin())) {
       await this.observeUncertainIssuance()
       throw new NewApiTokenCreationUncertainError()
     }
@@ -507,18 +504,15 @@ export class NewApiAccessTokenCreation {
     }
     let issued: unknown
     try {
-      issued = await tokenSessionRequest(
-        { ...operationRequest, requestTimeoutMs: ISSUANCE_TIMEOUT_MS },
-        {
-          endpoint: ENDPOINTS.ACCESS_TOKENS,
-          operationSemantics: API_OPERATION_SEMANTICS.Mutation,
-          options: {
-            method: "POST",
-            headers: { "X-Security-Proof": proof.proof_token },
-            body: JSON.stringify(draft),
-          },
+      issued = await tokenSessionRequest(operationRequest, {
+        endpoint: ENDPOINTS.ACCESS_TOKENS,
+        operationSemantics: API_OPERATION_SEMANTICS.Mutation,
+        options: {
+          method: "POST",
+          headers: { "X-Security-Proof": proof.proof_token },
+          body: JSON.stringify(draft),
         },
-      )
+      })
     } catch (error) {
       // Only an explicit server rejection establishes that creation did not succeed.
       if (

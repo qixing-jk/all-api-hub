@@ -483,7 +483,14 @@ it("leaves a newer issuance blocked when acknowledging an older review fails", a
     .fn()
     .mockRejectedValueOnce(new Error("Another attempt started"))
     .mockResolvedValueOnce(undefined)
-  Object.assign(session, { acknowledgeUncertain: acknowledge })
+  Object.assign(session, {
+    acknowledgeUncertain: acknowledge,
+    loadRecovery: vi.fn().mockResolvedValue({
+      items: [],
+      verification: { methods: [], oauth_providers: [] },
+    }),
+    reviewRecovery: vi.fn().mockResolvedValue(false),
+  })
   const user = userEvent.setup()
   renderCreator()
   const password = await screen.findByLabelText("tokenCreation.password")
@@ -493,13 +500,25 @@ it("leaves a newer issuance blocked when acknowledging an older review fails", a
     name: "tokenCreation.allowNewAttempt",
   })
   expect(retry).toBeDisabled()
-  await user.click(
-    screen.getByRole("checkbox", { name: "tokenCreation.reviewed" }),
-  )
+  await user.click(retry)
+  expect(acknowledge).not.toHaveBeenCalled()
+  const reviewList = async () => {
+    await user.click(
+      screen.getByRole("button", { name: "tokenCreation.reviewTokens" }),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "tokenCreation.reviewComplete",
+      }),
+    )
+  }
+  await reviewList()
   await user.click(retry)
   expect(acknowledge).toHaveBeenCalledOnce()
   expect(screen.getByRole("alert")).toHaveTextContent("tokenCreation.uncertain")
   expect(session.create).toHaveBeenCalledOnce()
+  expect(retry).toBeDisabled()
+  await reviewList()
   await user.click(retry)
   await waitFor(() => expect(retry).not.toBeInTheDocument())
   expect(screen.getByLabelText("tokenCreation.password")).toBeEnabled()

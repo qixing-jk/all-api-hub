@@ -832,10 +832,10 @@ describe("New API management token creation", () => {
     vi.stubGlobal("navigator", {
       locks: {
         request: async (
-          _name: string,
+          name: string,
           _options: unknown,
-          work: () => Promise<unknown>,
-        ) => work(),
+          work: (lock: object) => Promise<unknown>,
+        ) => work({ name }),
       },
     })
     let attempts = 0
@@ -874,10 +874,10 @@ describe("New API management token creation", () => {
     vi.stubGlobal("navigator", {
       locks: {
         request: async (
-          _name: string,
+          name: string,
           _options: LockOptions,
-          work: () => Promise<unknown>,
-        ) => work(),
+          work: (lock: object) => Promise<unknown>,
+        ) => work({ name }),
       },
     })
     const remove = vi
@@ -935,10 +935,10 @@ describe("New API management token creation", () => {
     vi.stubGlobal("navigator", {
       locks: {
         request: async (
-          _name: string,
+          name: string,
           _options: LockOptions,
-          work: () => Promise<unknown>,
-        ) => work(),
+          work: (lock: object) => Promise<unknown>,
+        ) => work({ name }),
       },
     })
     const started = createDeferred<void>()
@@ -993,56 +993,76 @@ describe("New API management token creation", () => {
     }
   })
 
-  it.each([undefined, 360_000])(
-    "keeps uncertain issuance blocked until a new post-wait review (proof lifetime %s)",
-    async (proofLifetime) => {
-      vi.stubGlobal("navigator", {
-        locks: {
-          request: async (
-            name: string,
-            _options: LockOptions,
-            work: (lock: object) => Promise<unknown>,
-          ) => work({ name }),
-        },
-      })
-      const start = Date.now()
-      const clock = vi.spyOn(Date, "now").mockReturnValue(start)
-      const owner = createTokenIssuanceJournal(origin, "uncertain-review")
-      const other = createTokenIssuanceJournal(origin, "uncertain-review")
-      try {
-        expect(
-          await owner.begin(
-            proofLifetime === undefined ? undefined : start + proofLifetime,
-          ),
-        ).toBe(true)
-        clock.mockReturnValue(start + 30_000)
-        await owner.uncertain()
-        const marker = (await other.pending())!
-        const earlyReview = { marker, startedAt: Date.now() }
-        await expect(other.acknowledge(earlyReview)).rejects.toThrow(
-          "ACCESS_TOKEN_CREATION_BUSY",
-        )
-        expect(await other.begin()).toBe(false)
-        clock.mockReturnValue(start + 330_001)
-        await expect(other.acknowledge(earlyReview)).rejects.toThrow(
-          "ACCESS_TOKEN_CREATION_BUSY",
-        )
-        if (proofLifetime !== undefined) {
-          await expect(
-            other.acknowledge({ marker, startedAt: Date.now() }),
-          ).rejects.toThrow("ACCESS_TOKEN_CREATION_BUSY")
-          clock.mockReturnValue(start + proofLifetime + 1)
-        }
-        await expect(
-          other.acknowledge({ marker, startedAt: Date.now() }),
-        ).resolves.toBeUndefined()
-        expect(await other.pending()).toBeUndefined()
-      } finally {
-        clock.mockRestore()
-        await owner.resolved()
-      }
-    },
-  )
+  it("keeps waiting for a valid issuance response after 30 seconds", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    const started = createDeferred<void>()
+    const release = createDeferred<void>()
+    server.use(
+      http.post(`${origin}/api/verify`, () =>
+        HttpResponse.json({ success: true, data: proof }),
+      ),
+      http.post(`${origin}/api/user/access_tokens`, async () => {
+        started.resolve()
+        await release.promise
+        return HttpResponse.json({
+          success: true,
+          data: { token: "nap_delayed", item: { id: 8, ...draft } },
+        })
+      }),
+    )
+    const flow = new NewApiAccessTokenCreation(request, "42")
+    const result = flow.create(draft, {
+      method: "password",
+      password: "secret",
+    })
+    let settled = false
+    const observed = result.then(
+      () => {
+        settled = true
+      },
+      () => {
+        settled = true
+      },
+    )
+    try {
+      await started.promise
+      await vi.advanceTimersByTimeAsync(30_001)
+      expect(settled).toBe(false)
+      release.resolve()
+      await expect(result).resolves.toMatchObject({ verified: true, id: 8 })
+    } finally {
+      release.resolve()
+      await observed
+      vi.useRealTimers()
+    }
+  })
+
+  it("allows a reviewed uncertain issuance to be acknowledged without waiting", async () => {
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          name: string,
+          _options: LockOptions,
+          work: (lock: object) => Promise<unknown>,
+        ) => work({ name }),
+      },
+    })
+    const owner = createTokenIssuanceJournal(origin, "uncertain-review")
+    const other = createTokenIssuanceJournal(origin, "uncertain-review")
+    try {
+      expect(await owner.begin()).toBe(true)
+      await owner.uncertain()
+      const marker = (await other.pending())!
+      await expect(other.acknowledge(undefined)).rejects.toThrow(
+        "ACCESS_TOKEN_CREATION_BUSY",
+      )
+      expect(await other.begin()).toBe(false)
+      await expect(other.acknowledge(marker)).resolves.toBeUndefined()
+      expect(await other.pending()).toBeUndefined()
+    } finally {
+      await owner.resolved()
+    }
+  })
 
   it("does not let a stale review acknowledge a later uncertain issuance", async () => {
     vi.stubGlobal("navigator", {
@@ -1080,9 +1100,10 @@ describe("New API management token creation", () => {
           },
         }),
       ),
-      http.get(`${origin}/api/user/access_tokens`, () =>
-        HttpResponse.json({ success: true, data: { items: [] } }),
-      ),
+      http.get(`${origin}/api/user/access_tokens`, ({ request }) => {
+        expect(request.cache).toBe("no-store")
+        return HttpResponse.json({ success: true, data: { items: [] } })
+      }),
     )
     const start = Date.now()
     const clock = vi.spyOn(Date, "now").mockReturnValue(start)
@@ -1111,7 +1132,7 @@ describe("New API management token creation", () => {
     }
   })
 
-  it("rejects acknowledgment of an aged marker while its owner is still issuing", async () => {
+  it("rejects a second issuance and acknowledgment while the first is active", async () => {
     const locked = new Set<string>()
     vi.stubGlobal("navigator", {
       locks: {
@@ -1135,8 +1156,6 @@ describe("New API management token creation", () => {
     const other = journal()
     const started = createDeferred<void>()
     const finish = createDeferred<void>()
-    const atStart = Date.now()
-    const clock = vi.spyOn(Date, "now").mockReturnValue(atStart)
     const issuance = owner.whileIssuing(async () => {
       expect(await owner.begin()).toBe(true)
       started.resolve()
@@ -1145,26 +1164,30 @@ describe("New API management token creation", () => {
     })
     try {
       await started.promise
-      clock.mockReturnValue(atStart + 301_000)
-      const observed = {
-        marker: (await other.pending())!,
-        startedAt: Date.now(),
+      const observed = (await other.pending())!
+      const compete = vi.fn()
+      const second = other.whileIssuing(compete)
+      try {
+        await expect(
+          Promise.race([
+            second,
+            new Promise((resolve) => setTimeout(() => resolve("queued"), 50)),
+          ]),
+        ).rejects.toThrow("ACCESS_TOKEN_CREATION_BUSY")
+      } finally {
+        void second.catch(() => undefined)
       }
+      expect(compete).not.toHaveBeenCalled()
       await expect(other.acknowledge(observed)).rejects.toThrow()
-      expect(await other.pending()).toEqual(observed.marker)
+      expect(await other.pending()).toEqual(observed)
       finish.resolve()
       await issuance
       await expect(other.acknowledge(observed)).rejects.toThrow()
-      clock.mockReturnValue(atStart + 601_001)
-      await other.acknowledge({
-        marker: (await other.pending())!,
-        startedAt: Date.now(),
-      })
+      await other.acknowledge(await other.pending())
       expect(await other.pending()).toBeUndefined()
     } finally {
       finish.resolve()
       await issuance
-      clock.mockRestore()
     }
   })
   it("offers the backend's verification methods and linked providers without creating a token", async () => {

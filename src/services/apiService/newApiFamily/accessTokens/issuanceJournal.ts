@@ -2,7 +2,10 @@ import {
   NEW_API_TOKEN_ISSUANCE_KEY_PREFIX,
   STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
-import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import {
+  CrossContextStorageLockUnavailableError,
+  withExtensionStorageWriteLock,
+} from "~/services/core/storageWriteLock"
 import {
   getLocalStorageValues,
   removeLocalStorage,
@@ -11,19 +14,10 @@ import {
 
 import { NEW_API_TOKEN_CREATION_ERRORS as CREATION_ERRORS } from "./protocol"
 
-const ISSUANCE_REVIEW_DELAY_MS = 300_000
-
 export interface TokenIssuanceMarker {
   attempt: string
   started: number
   uncertain: boolean
-  uncertainAt?: number
-  proofExpiresAt?: number
-}
-
-export interface TokenIssuanceReview {
-  marker: TokenIssuanceMarker
-  startedAt: number
 }
 
 /** Store no credentials, proofs, passwords, or returned token plaintext. */
@@ -37,14 +31,19 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
     })
   const read = async () =>
     (await getLocalStorageValues(key))[key] as TokenIssuanceMarker | undefined
+  const withOperationLock = async <T>(work: () => Promise<T>): Promise<T> => {
+    const locks = globalThis.navigator?.locks
+    if (typeof locks?.request !== "function")
+      throw new CrossContextStorageLockUnavailableError()
+    return locks.request(operationLock, { ifAvailable: true }, async (lock) => {
+      if (!lock) throw new Error(CREATION_ERRORS.BUSY)
+      return await work()
+    })
+  }
   return {
     pending: read,
-    whileIssuing<T>(work: () => Promise<T>) {
-      return withExtensionStorageWriteLock(operationLock, work, {
-        requireCrossContext: true,
-      })
-    },
-    async begin(proofExpiresAt?: number) {
+    whileIssuing: withOperationLock,
+    async begin() {
       return locked(async () => {
         if (await read()) return false
         attempt = crypto.randomUUID()
@@ -53,7 +52,6 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
             attempt,
             started: Date.now(),
             uncertain: false,
-            ...(proofExpiresAt === undefined ? {} : { proofExpiresAt }),
           },
         })
         return true
@@ -64,7 +62,7 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
         const marker = await read()
         if (marker && marker.attempt === attempt)
           await setLocalStorage({
-            [key]: { ...marker, uncertain: true, uncertainAt: Date.now() },
+            [key]: { ...marker, uncertain: true },
           })
       })
     },
@@ -74,33 +72,19 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
           await removeLocalStorage(key)
       })
     },
-    async acknowledge(review: TokenIssuanceReview | undefined) {
-      await navigator.locks.request(
-        operationLock,
-        { ifAvailable: true },
-        async (lock) => {
-          if (!lock) throw new Error(CREATION_ERRORS.BUSY)
-          await locked(async () => {
-            const marker = await read()
-            if (!marker) return
-            // A timed-out request can still commit on the server. Review a fresh
-            // list after the waiting window and while no local issuer holds the lock.
-            const readyAt = Math.max(
-              (marker.uncertainAt ?? marker.started) + ISSUANCE_REVIEW_DELAY_MS,
-              marker.proofExpiresAt ?? 0,
-            )
-            if (
-              !review ||
-              marker.attempt !== review.marker.attempt ||
-              marker.uncertain !== review.marker.uncertain ||
-              marker.uncertainAt !== review.marker.uncertainAt ||
-              review.startedAt < readyAt ||
-              review.startedAt > Date.now()
-            )
-              throw new Error(CREATION_ERRORS.BUSY)
-            await removeLocalStorage(key)
-          })
-        },
+    async acknowledge(review: TokenIssuanceMarker | undefined) {
+      await withOperationLock(() =>
+        locked(async () => {
+          const marker = await read()
+          if (!marker) return
+          if (
+            !review ||
+            marker.attempt !== review.attempt ||
+            marker.uncertain !== review.uncertain
+          )
+            throw new Error(CREATION_ERRORS.BUSY)
+          await removeLocalStorage(key)
+        }),
       )
     },
   }
