@@ -6,10 +6,7 @@ import {
   type CheckInStatusObservation,
 } from "~/services/checkin/statusObservation"
 
-import {
-  PASSIVE_CHECK_IN_AUTH,
-  type CheckInBrowserBinding,
-} from "./statusAuthentication"
+import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
 
 export type Sub2ApiCheckInRecoveryObservation = CheckInStatusObservation<{
   enabled: boolean
@@ -39,7 +36,6 @@ export class Sub2ApiCheckInRecoveryBlockedError extends Error {
 export interface Sub2ApiCheckInRecoveryOptions {
   beforeRecoveredMutation?: () => Promise<boolean>
   allowAuthenticationRecovery?: boolean
-  onAuthenticatedTransport?: (binding: CheckInBrowserBinding) => void
 }
 
 /** Obtain fresh, day-stable admission for a request whose earlier status may no longer apply. */
@@ -92,13 +88,6 @@ export function executeSub2ApiCheckInWithRecovery<T>(
     request,
     endpoint,
     async (authenticatedRequest) => {
-      const { fetchContext, forceTempWindow, currentTabFallback } =
-        authenticatedRequest
-      options.onAuthenticatedTransport?.({
-        fetchContext,
-        forceTempWindow,
-        currentTabFallback,
-      })
       // Authentication may await refresh or browser recovery before either POST.
       if (
         options.beforeRecoveredMutation &&

@@ -9,13 +9,24 @@ import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfil
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
 import * as browserAuth from "~/services/apiService/sub2api/auth/browserAuth"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
+import { AUTO_CHECKIN_METHOD_DEFINITIONS } from "~/services/checkin/autoCheckin/providers/registry"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
+import type { CheckInMethodId } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server as interception } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+
+type HttpCheckInProtocol = {
+  name: string
+  methodId: CheckInMethodId
+  statusPath: string
+  status: (checked: boolean) => unknown
+  claimPath?: string
+  receipt?: () => unknown
+}
 
 const protocols = [
   {
@@ -79,6 +90,89 @@ const protocols = [
   },
 ]
 
+const statusProtocols: HttpCheckInProtocol[] = [
+  ...protocols,
+  {
+    name: "Genius Programmer",
+    methodId: AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
+    statusPath: "/api/v1/user/checkin/status",
+    status: (checked) => ({ enabled: true, today_checked_in: checked }),
+  },
+  {
+    name: "Toolcode",
+    methodId: AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn,
+    statusPath: "/api/v1/engagement/checkin/status",
+    status: (checked) => ({
+      checkin_enabled: true,
+      checked_in_today: checked,
+      can_checkin: !checked,
+    }),
+  },
+  {
+    name: "Hiyo",
+    methodId: AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
+    statusPath: "/api/v1/checkin",
+    status: (checked) => ({
+      enabled: true,
+      daily_available: true,
+      daily_claimed: checked,
+      can_claim: true,
+      tokens_met: true,
+    }),
+  },
+  {
+    name: "Sidrune",
+    methodId: AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
+    statusPath: "/api/v1/welfare/profile",
+    status: (checked) => ({
+      enabled: true,
+      eligible: true,
+      checked_in_today: checked,
+    }),
+  },
+  {
+    name: "DaiGua",
+    methodId: AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
+    statusPath: "/api/v1/checkin/status",
+    status: (checked) => ({
+      enabled: true,
+      can_checkin: !checked,
+      luck_enabled: false,
+    }),
+  },
+  {
+    name: "NexaVlinks",
+    methodId: AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
+    statusPath: "/api/v1/check-in",
+    status: (checked) => ({ eligible: true, checked_in_today: checked }),
+  },
+  {
+    name: "Denxio",
+    methodId: AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
+    statusPath: "/api/v1/tbe-sponsor-checkin/status",
+    status: (checked) => ({
+      config: { normal_checkin_enabled: true },
+      normal_done: checked,
+    }),
+  },
+  {
+    name: "小白Code",
+    methodId: AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
+    statusPath: "/checkin/api/status",
+    status: (checked) => ({ config: { enabled: true }, signedToday: checked }),
+  },
+  {
+    name: "AI-ROUTER",
+    methodId: AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn,
+    statusPath: "/api/v1/user/daily-checkin",
+    status: (checked) => ({
+      enabled: true,
+      checked_today: checked,
+      reward_amount: 0.1,
+    }),
+  },
+]
+
 type Scenario =
   | "renew"
   | "postUnauthorized"
@@ -86,19 +180,21 @@ type Scenario =
   | "forbidden"
   | "rateLimited"
   | "wrongIdentity"
+  | "persistenceFailure"
   | "rejectedAfterRotation"
   | "healthy"
   | "expiresAtClaim"
+  | "alreadyChecked"
 const refresh = "POST /api/v1/auth/refresh"
 const identity = "GET /api/v1/auth/me"
 
 async function withHttpSite<T>(
-  protocol: (typeof protocols)[number],
+  protocol: HttpCheckInProtocol,
   scenario: Scenario,
   run: (account: SiteAccount) => Promise<T>,
 ) {
   const trace: string[] = []
-  let checked = false
+  let checked = scenario === "alreadyChecked"
   const server = createServer((req, res) => {
     const path = new URL(req.url!, "http://localhost").pathname
     trace.push(`${req.method} ${path}`)
@@ -133,9 +229,19 @@ async function withHttpSite<T>(
         username: "test",
         balance: 1,
       })
+    if (
+      req.method === "GET" &&
+      path === protocol.statusPath &&
+      protocol.methodId === AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn
+    )
+      return void reply(200, { ok: true, data: protocol.status(checked) })
     if (req.method === "GET" && path === protocol.statusPath)
       return void ok(protocol.status(checked))
-    if (req.method === "POST" && path === protocol.claimPath) {
+    if (
+      req.method === "POST" &&
+      path === protocol.claimPath &&
+      protocol.receipt
+    ) {
       if (scenario === "postUnauthorized") return void unauthorized()
       checked = true
       if (scenario === "postMalformedAfterGrant") return void reply(401, {})
@@ -148,8 +254,27 @@ async function withHttpSite<T>(
     await once(server, "listening")
     const addr = server.address()
     if (!addr || typeof addr === "string") throw new Error("No HTTP listener")
-    const origin = `http://127.0.0.1:${addr.port}`
-    interception.use(http.all(`${origin}/*`, () => passthrough()))
+    const localOrigin = `http://127.0.0.1:${addr.port}`
+    const splitOrigin =
+      protocol.methodId === AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn
+    const origin = splitOrigin ? "https://ai-router.dev" : localOrigin
+    interception.use(http.all(`${localOrigin}/*`, () => passthrough()))
+    // This adapter is registered only on its console origin. Route both test hosts to loopback.
+    if (splitOrigin) {
+      for (const host of [origin, "https://api.ai-router.dev"]) {
+        interception.use(
+          http.all(`${host}/*`, async ({ request }) => {
+            const url = new URL(request.url)
+            return fetch(localOrigin + url.pathname + url.search, {
+              method: request.method,
+              headers: request.headers,
+              body:
+                request.method === "POST" ? await request.text() : undefined,
+            })
+          }),
+        )
+      }
+    }
     const { methodId } = protocol
     const account = buildSiteAccount({
       id: `fixture-${addr.port}`,
@@ -186,6 +311,8 @@ async function withHttpSite<T>(
     )
     vi.spyOn(accountSub2ApiAuthSession, "persistAuthUpdate").mockImplementation(
       async (_id, update) => {
+        if (scenario === "persistenceFailure")
+          return { status: SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED }
         accessToken = update.accessToken
         refreshToken = update.refreshToken ?? ""
         tokenExpiresAt = update.tokenExpiresAt
@@ -206,11 +333,13 @@ async function withHttpSite<T>(
 }
 
 function executeHttpScenario(
-  protocol: (typeof protocols)[number],
+  protocol: HttpCheckInProtocol,
   scenario: Scenario,
+  needsConfirmation = false,
 ) {
-  return withHttpSite(protocol, scenario, (account) =>
-    executeSelectedCheckIn({
+  return withHttpSite(protocol, scenario, (account) => {
+    if (needsConfirmation) account.checkIn.methodKnowledge.methods = {}
+    return executeSelectedCheckIn({
       account,
       globalAutomaticExecutionEnabled: true,
       context: {
@@ -219,15 +348,25 @@ function executeHttpScenario(
           PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
         ),
       },
-    }),
-  )
+    })
+  })
 }
 
 afterEach(() => vi.restoreAllMocks())
 
-describe.each(protocols)("$name check-in over HTTP", (protocol) => {
+it("exercises first-request authentication for every registered Sub2API method", () => {
+  const registered = Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS)
+    .filter((definition) =>
+      definition.siteTypes.some((type) => type === SITE_TYPES.SUB2API),
+    )
+    .map((definition) => definition.id)
+  expect(statusProtocols.map(({ methodId }) => methodId).sort()).toEqual(
+    registered.sort(),
+  )
+})
+
+describe.each(statusProtocols)("$name status over HTTP", (protocol) => {
   const get = `GET ${protocol.statusPath}`
-  const post = `POST ${protocol.claimPath}`
   it.each([true, false])(
     "renews only for an explicit status verification (explicit=%s)",
     async (explicit) => {
@@ -252,6 +391,55 @@ describe.each(protocols)("$name check-in over HTTP", (protocol) => {
       expect(
         result.methodKnowledge.methods[protocol.methodId]?.status?.outcome,
       ).toBe(explicit ? "known" : "unknown")
+    },
+  )
+  it("shares first-request renewal with confirmation of an imported selection", async () => {
+    const { trace, result } = await executeHttpScenario(
+      protocol,
+      "alreadyChecked",
+      true,
+    )
+    expect(trace).toEqual([get, refresh, identity, get, get])
+    expect(result).toMatchObject({ kind: "skipped", reason: "already_checked" })
+  })
+  it("renews for the first check-in request and skips an already completed day", async () => {
+    const { trace, result } = await executeHttpScenario(
+      protocol,
+      "alreadyChecked",
+    )
+    expect(trace).toEqual([get, refresh, identity, get])
+    expect(result).toMatchObject({ kind: "skipped", reason: "already_checked" })
+  })
+})
+
+describe.each(protocols)("$name check-in over HTTP", (protocol) => {
+  const get = `GET ${protocol.statusPath}`
+  const post = `POST ${protocol.claimPath}`
+  it("reports authentication when a renewed imported selection is still rejected", async () => {
+    const { trace, result } = await executeHttpScenario(
+      protocol,
+      "rejectedAfterRotation",
+      true,
+    )
+    expect(trace).toEqual([refresh, identity, get])
+    expect(result).toMatchObject({
+      kind: "skipped",
+      reason: "authentication_required",
+    })
+  })
+  it.each([
+    ["wrongIdentity", "skipped", "authentication_required"],
+    ["persistenceFailure", "blocked", "account_unavailable"],
+  ] as const)(
+    "preserves the %s failure during imported method confirmation",
+    async (scenario, kind, reason) => {
+      const { trace, result } = await executeHttpScenario(
+        protocol,
+        scenario,
+        true,
+      )
+      expect(trace).toEqual([get, refresh, identity])
+      expect(result).toMatchObject({ kind, reason })
     },
   )
   it("recovers the first status read and sends the claim once", async () => {
@@ -293,24 +481,16 @@ describe.each(protocols)("$name check-in over HTTP", (protocol) => {
       result: { status: "success" },
     })
   })
-  it("honors the protocol's retry contract when the first 401 comes from the claim", async () => {
+  it("does not start credential recovery on the claim after successful admission", async () => {
     const { trace, result } = await executeHttpScenario(
       protocol,
       "expiresAtClaim",
     )
-    if (protocol.methodId === AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn) {
-      expect(trace).toEqual([get, post, get])
-      expect(result).toMatchObject({
-        kind: "executed",
-        result: { status: "failed", reasonCode: "authentication_required" },
-      })
-    } else {
-      expect(trace).toEqual([get, post, refresh, identity, get, post])
-      expect(result).toMatchObject({
-        kind: "executed",
-        result: { status: "success" },
-      })
-    }
+    expect(trace).toEqual([get, post, get])
+    expect(result).toMatchObject({
+      kind: "executed",
+      result: { status: "failed", reasonCode: "authentication_required" },
+    })
   })
   it("uses status to confirm an applied claim with a malformed 401 reply", async () => {
     const { trace, result } = await executeHttpScenario(

@@ -9,8 +9,6 @@ import {
 } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
 import { FREE_API_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/freeApiCheckInProtocol"
 import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
-import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
 import {
@@ -19,7 +17,10 @@ import {
 } from "~/types/autoCheckin"
 
 import type { AutoCheckinProviderReadContext } from "./contracts"
-import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
+import {
+  createSub2ApiStatusDetector,
+  withSub2ApiCheckInExecution,
+} from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -47,14 +48,7 @@ export const freeApiProvider = withSub2ApiCheckInExecution({
 
   getReadiness: getSub2ApiCheckInReadiness,
 
-  detect(context) {
-    return detectWithStatusReadback(
-      context,
-      readStatus,
-      getCheckInMethodUnknownReason,
-      isForeignCheckInContract,
-    )
-  },
+  detect: createSub2ApiStatusDetector(readStatus, isForeignCheckInContract),
 
   getStatus: readStatus,
 

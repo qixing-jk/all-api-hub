@@ -12,7 +12,6 @@ import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/che
 import { ApiError } from "~/services/apiTransport/errors"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   isAlreadyCheckedMessage,
@@ -27,7 +26,10 @@ import type {
   AutoCheckinProviderContext,
   AutoCheckinProviderReadContext,
 } from "./contracts"
-import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
+import {
+  createSub2ApiStatusDetector,
+  withSub2ApiCheckInExecution,
+} from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -74,7 +76,7 @@ export const baiApiProvider = withSub2ApiCheckInExecution({
   // A deployment without the daily rewards module answers the host's Go
   // default 404 instead of a status DTO; the shared detector maps that to
   // unsupported so one site's method cannot block another's discovery.
-  detect: (context) => detectWithStatusReadback(context, fetchStatus),
+  detect: createSub2ApiStatusDetector(fetchStatus),
 
   getStatus: readStatus,
 

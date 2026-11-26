@@ -7,7 +7,7 @@ import {
   performHiyoDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckIn"
 import { HIYO_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
 import {
@@ -15,10 +15,8 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderReadContext,
-} from "./contracts"
+import type { AutoCheckinProviderReadContext } from "./contracts"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -29,18 +27,23 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) =>
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) =>
   toSub2ApiCheckInStatus(
-    await fetchHiyoDailyCheckInStatus(createSub2ApiCheckInReadRequest(context)),
+    await fetchHiyoDailyCheckInStatus(
+      createSub2ApiCheckInReadRequest(context),
+      auth,
+    ),
     context.observedAt,
   )
 
-export const hiyoProvider: AutoCheckinProvider = {
+export const hiyoProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
   getReadiness: getSub2ApiCheckInReadiness,
-  detect: (context) => detectWithStatusReadback(context, readStatus),
   getStatus: readStatus,
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     if (
       context.statusProof?.availability !==
         CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -50,8 +53,12 @@ export const hiyoProvider: AutoCheckinProvider = {
     }
     try {
       const data = await performHiyoDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
@@ -71,4 +78,4 @@ export const hiyoProvider: AutoCheckinProvider = {
       )
     }
   },
-}
+})

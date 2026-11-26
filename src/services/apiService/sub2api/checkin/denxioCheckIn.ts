@@ -1,5 +1,4 @@
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
@@ -8,6 +7,7 @@ import {
   type Sub2ApiCheckInRecoveryOptions,
   type Sub2ApiCheckInRecoveryReason,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import { readSub2ApiSessionBindingMismatch } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   fetchApiResponse,
@@ -18,7 +18,10 @@ import type {
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
 
-import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 export const DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT =
   "/api/v1/tbe-sponsor-checkin/status"
@@ -112,7 +115,8 @@ const parseEnvelopeData = (
 
   if (
     (typeof envelope.code !== "string" && typeof envelope.code !== "number") ||
-    typeof envelope.message !== "string"
+    (typeof envelope.message !== "string" &&
+      !(response.status === 401 && readSub2ApiSessionBindingMismatch(envelope)))
   ) {
     throw createInvalidResponseError(endpoint)
   }
@@ -233,14 +237,15 @@ const fetchStatusWithRequest = async (
 /** Reads status without turning a passive probe into browser-auth recovery. */
 export async function fetchDenxioDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ): Promise<DenxioDailyCheckInStatus> {
   const timezone = resolveTimezone()
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT,
     (authenticatedRequest) =>
       fetchStatusWithRequest(authenticatedRequest, timezone),
-    PASSIVE_CHECK_IN_AUTH,
+    auth,
   )
 }
 

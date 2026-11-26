@@ -7,6 +7,7 @@ import {
   AWARD_FULFILLMENT,
   AWARD_TARGETS,
 } from "~/services/amounts/financialConstants"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import {
   fetchToolcodeDailyCheckInStatus,
   performToolcodeDailyCheckIn,
@@ -14,7 +15,6 @@ import {
 } from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
 import { TOOLCODE_DAILY_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/toolcodeCheckInProtocol"
 import { accountAward } from "~/services/checkin/autoCheckin/awards"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
 import {
@@ -22,10 +22,8 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderReadContext,
-} from "./contracts"
+import type { AutoCheckinProviderReadContext } from "./contracts"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -35,25 +33,25 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) => {
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) => {
   const status = await fetchToolcodeDailyCheckInStatus(
     createSub2ApiCheckInReadRequest(context),
+    auth,
   )
   return toSub2ApiCheckInStatus(status, context.observedAt)
 }
 
-export const toolcodeProvider: AutoCheckinProvider = {
+export const toolcodeProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
 
-  detect(context) {
-    return detectWithStatusReadback(context, readStatus)
-  },
-
   getStatus: readStatus,
 
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -64,8 +62,12 @@ export const toolcodeProvider: AutoCheckinProvider = {
 
     try {
       const result = await performToolcodeDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       switch (result.kind) {
         case TOOLCODE_DAILY_CHECK_IN_RESULT_KINDS.Applied:
@@ -120,4 +122,4 @@ export const toolcodeProvider: AutoCheckinProvider = {
       )
     }
   },
-}
+})

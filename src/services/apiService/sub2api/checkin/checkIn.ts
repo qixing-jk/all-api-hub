@@ -1,4 +1,5 @@
 import type { Sub2ApiCheckInRecoveryObservation } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import { readSub2ApiSessionBindingMismatch } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 
@@ -85,6 +86,7 @@ const createHttpError = (
       : response.status === 403
         ? API_ERROR_CODES.HTTP_403
         : API_ERROR_CODES.HTTP_OTHER,
+    readSub2ApiSessionBindingMismatch(response.body),
   )
 }
 

@@ -1,4 +1,3 @@
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   TOOLCODE_DAILY_CHECK_IN_ENDPOINT as CHECK_IN_ENDPOINT,
@@ -10,11 +9,15 @@ import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import { readSub2ApiSessionBindingMismatch } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
-import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 // https://toolcode.top/engagement, observed 2026-10-04: Bearer-authenticated
 // growth-center status is distinct from the other Sub2API check-in protocols.
@@ -54,6 +57,7 @@ function parseData(
           : response.status === 429
             ? API_ERROR_CODES.HTTP_429
             : API_ERROR_CODES.HTTP_OTHER,
+      readSub2ApiSessionBindingMismatch(response.body),
     )
   }
   const envelope = toRecord(response.body)
@@ -78,8 +82,9 @@ function parseData(
 /** Read-only discovery never refreshes or rotates the saved credentials. */
 export async function fetchToolcodeDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     STATUS_ENDPOINT,
     async (authenticatedRequest) => {
@@ -103,7 +108,7 @@ export async function fetchToolcodeDailyCheckInStatus(
         checkedInToday: data.checked_in_today,
       }
     },
-    PASSIVE_CHECK_IN_AUTH,
+    auth,
   )
 }
 

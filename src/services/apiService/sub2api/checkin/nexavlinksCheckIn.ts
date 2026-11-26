@@ -1,4 +1,3 @@
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import {
   createNexaVlinksCheckInStatusEndpoint,
@@ -11,7 +10,10 @@ import type {
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
 
-import { PASSIVE_CHECK_IN_AUTH } from "./statusAuthentication"
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 const { parseEnvelopeData, invalidResponse } =
   createCheckInCodeEnvelopeParser("NexaVlinks")
@@ -67,11 +69,12 @@ export function parseNexaVlinksCheckInStatusResponse(
  */
 export async function fetchNexaVlinksDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
   const endpoint = createNexaVlinksCheckInStatusEndpoint(
     resolveNexaVlinksCheckInTimezone(),
   )
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     NEXAVLINKS_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -81,6 +84,6 @@ export async function fetchNexaVlinksDailyCheckInStatus(
       })
       return parseNexaVlinksCheckInStatusResponse(response)
     },
-    PASSIVE_CHECK_IN_AUTH,
+    auth,
   )
 }

@@ -13,8 +13,6 @@ import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/che
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { ApiError } from "~/services/apiTransport/errors"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
-import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
 import {
@@ -26,7 +24,10 @@ import type {
   AutoCheckinProviderContext,
   AutoCheckinProviderReadContext,
 } from "./contracts"
-import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
+import {
+  createSub2ApiStatusDetector,
+  withSub2ApiCheckInExecution,
+} from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -75,14 +76,7 @@ export const clawhudProvider = withSub2ApiCheckInExecution({
 
   getReadiness: getSub2ApiCheckInReadiness,
 
-  detect(context) {
-    return detectWithStatusReadback(
-      context,
-      readStatus,
-      getCheckInMethodUnknownReason,
-      isForeignCheckInContract,
-    )
-  },
+  detect: createSub2ApiStatusDetector(readStatus, isForeignCheckInContract),
 
   getStatus: readStatus,
 

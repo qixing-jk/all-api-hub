@@ -367,6 +367,38 @@ describe.each(cases)(
         },
       },
     })
+    it("does not start another credential recovery on a POST after successful admission", async () => {
+      const execution = context()
+      const operation = provider.forExecution!(execution)
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(reply(status(false)))
+        .mockResolvedValueOnce(reply(null, 401))
+        .mockResolvedValueOnce(reply(status(false)))
+        .mockResolvedValueOnce(reply(award))
+
+      const proof = await operation.getAuthenticatedStatus({
+        account,
+        observedAt: Date.now(),
+      })
+      expect(proof).toMatchObject({
+        today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      })
+      const result = await operation.checkIn(account, {
+        ...execution,
+        statusProof:
+          proof?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+            ? proof
+            : undefined,
+      })
+      expect(result.status).toBe("failed")
+      expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+      expect(
+        vi
+          .mocked(fetchApiResponse)
+          .mock.calls.map(([, fetch]) => fetch.options?.method),
+      ).toEqual(["GET", "POST"])
+    })
+
     it("keeps the outcome uncertain without replaying an unrecognized HTTP 401 object", async () => {
       const lifecycle = {
         dispatched: false,

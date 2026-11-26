@@ -18,6 +18,18 @@ FreeAPI 的公开配置将站点命名为“露娜”。其 [已有协议记录]
 
 ## 验收入口
 
+相对 `633926dce7`，首请求认证恢复从 5 种扩展到全部 14 种 Sub2API 签到方式。已选方式的首次状态 GET 可使用保存的刷新令牌续期，并校验账号身份。导入的方式需要先确认协议时，这个确认请求使用同一次恢复机会。后续提交遇到 401 时停止提交，回读可以确认服务端是否已经发奖。显式核验状态也可恢复一次，自动发现候选方式、后台刷新状态和提交后的回读均使用现有凭据。
+
+| 本轮行为 | 可复查的证据 |
+| --- | --- |
+| 全部已注册方法的首读 401、导入选择、主动核验和被动查询，提交阶段才过期 | [本机 HTTP 服务与请求顺序断言](../../tests/services/apiService/sub2api/checkin/checkInHttpExecution.test.ts) |
+| 只有刷新令牌时续期，持久化凭据后提交一次；没有凭据时跳过 | [账户存储与执行入口](../../tests/services/autoCheckin/execution/sub2apiRefreshTokenOnly.test.ts) |
+| 浏览器绑定拒绝、Denxio 双阶段提交、DaiGua 和 NexaVlinks 的原生页与人工核验 | [绑定错误](../../tests/services/apiService/sub2api/checkin/statusSessionBinding.test.ts)、[两阶段请求](../../tests/services/autoCheckin/providers/sub2apiReadRequest.test.ts)、[DaiGua](../../tests/services/autoCheckin/providers/daigua.test.ts)、[NexaVlinks](../../tests/services/autoCheckin/providers/nexavlinks.test.ts) |
+
+本轮签到、Sub2API 和账户请求构造的 Vitest 共 111 个文件、3,144 项通过，其中本机 HTTP 测试 117 项。Chromium 使用受控站点运行了 25 个扩展场景，包含原生验证码页和临近零点的自动签到。结果见本地 `artifacts/first-request-unit.log`、`artifacts/first-request-account.log` 和 `artifacts/first-request-chromium.log`。本轮线上账号的续期和领取结果尚未验证。
+
+### 前一轮证据
+
 | 场景 | 可复查的证据 |
 | --- | --- |
 | Casa、Pro、FreeAPI、柏API、Clawhud 的主动核验、后台读取、首次 GET 或 POST 遇到 401、续期后仍无效、身份不符、403/429、异常回执与正常会话 | [真实本机 HTTP 测试](../../tests/services/apiService/sub2api/checkin/checkInHttpExecution.test.ts)。服务端记录 GET、续期、身份验证和签到 POST。原实现遇到无效令牌时，四种既有方法在首个 GET 停止。 |

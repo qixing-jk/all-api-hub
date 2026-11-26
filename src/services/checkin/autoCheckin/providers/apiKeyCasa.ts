@@ -9,7 +9,6 @@ import {
 import { API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE } from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckInProtocol"
 import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
@@ -52,9 +51,6 @@ export const apiKeyCasaProvider = withSub2ApiCheckInExecution(
     getStatus: readStatus,
     requiresAuthoritativeStatusBeforeMutation: true,
     getReadiness: getSub2ApiCheckInReadiness,
-    detect(context) {
-      return detectWithStatusReadback(context, readStatus)
-    },
     async checkIn(account, context, attempt) {
       const status = context.statusProof
       if (
