@@ -81,7 +81,7 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
         data-invalid={invalid || undefined}
         data-orientation={orientation}
         className={cn(
-          "group/field grid gap-y-density-2",
+          "group/field grid content-start gap-y-density-2",
           orientation === "horizontal" &&
             "grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-x-4",
           orientation === "responsive" &&
@@ -108,7 +108,10 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
             {labelAction}
           </div>
         )}
-        <div data-slot="field-content" className="min-w-0 space-y-density-2">
+        <div
+          data-slot="field-content"
+          className="grid min-w-0 grid-cols-1 gap-y-density-2"
+        >
           {typeof children === "function" ? children(control) : children}
           {description && (
             <p

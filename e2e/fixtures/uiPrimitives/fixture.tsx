@@ -29,6 +29,13 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { FormField } from "~/components/ui/FormField"
 import { Input } from "~/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select"
 import { Switch } from "~/components/ui/Switch"
 import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
@@ -117,6 +124,42 @@ function Fixtures() {
           <TabsContent value="two">Account readiness</TabsContent>
         </Tabs>
       </section>
+      <form aria-label="Parallel fields" className="grid grid-cols-2 gap-4">
+        <FormField
+          label="Method"
+          htmlFor="fixture-field-method"
+          description="Choose the login method."
+        >
+          {(control) => (
+            <Select defaultValue="password">
+              <SelectTrigger {...control}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="password">Password</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </FormField>
+        <FormField
+          label="Account"
+          description="Use the name shown on your account page. If the site has more than one account, choose the name that identifies this account and the login method above."
+        >
+          {(control) => <Input {...control} defaultValue="fixture-account" />}
+        </FormField>
+        <FormField label="Site" className="col-span-full">
+          {(control) => (
+            <Select defaultValue="site">
+              <SelectTrigger {...control}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="site">Example Site</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </FormField>
+      </form>
       <section aria-label="Iconless notice">
         <Alert
           compact

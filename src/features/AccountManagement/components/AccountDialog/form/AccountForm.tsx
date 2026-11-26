@@ -644,7 +644,9 @@ export default function AccountForm({
         continuous={continuous}
         id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["site-info"]}
         contentClassName={
-          continuous ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4" : undefined
+          continuous
+            ? "grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            : undefined
         }
         title={t("sections.siteInfo.title")}
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["site-info"]}
@@ -1167,7 +1169,9 @@ export default function AccountForm({
       <AccountFormSection
         continuous={continuous}
         id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["balance"]}
-        contentClassName={continuous ? "grid gap-4 sm:grid-cols-2" : undefined}
+        contentClassName={
+          continuous ? "grid items-start gap-4 sm:grid-cols-2" : undefined
+        }
         title={t("sections.balanceAndStats.title")}
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN.balance}
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionBalance}
