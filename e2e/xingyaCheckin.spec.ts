@@ -122,7 +122,7 @@ for (const hostname of ["xingya.site", "xingya.space"] as const) {
     await openEditor()
     const dialog = page.getByRole("dialog")
     await dialog
-      .getByRole("button", { name: "Detect check-in method", exact: true })
+      .getByRole("button", { name: "Detect method", exact: true })
       .click()
     await expect(dialog.locator("#account-check-in-method")).toContainText(
       "Automatic selection: Xingya daily check-in",

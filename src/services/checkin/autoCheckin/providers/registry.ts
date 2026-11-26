@@ -98,9 +98,14 @@ type FeedbackStatusRoutes = readonly [
 ]
 
 type CheckInMethodLabelKey =
-  "methods.generic.name" | "methods.daily.name" | "methods.login.name"
+  | "methods.generic.name"
+  | "methods.daily.name"
+  | "methods.login.name"
+  | "methods.bizDecipherFreeGift.name"
 type CheckInMethodDisclosureKey =
-  "methods.daily.description" | "methods.login.description"
+  | "methods.daily.description"
+  | "methods.login.description"
+  | "methods.bizDecipherFreeGift.description"
 type CheckInMethodSourceNameKey = `methods.sources.${
   | "geniusProgrammer"
   | "denxio"
@@ -129,7 +134,7 @@ export type CheckInMethodPresentationMetadata = {
 
 interface AutoCheckinMethodDefinitionBase {
   readonly presentation?: Partial<
-    Pick<CheckInMethodPresentationMetadata, "kind" | "sourceNameKey">
+    Omit<CheckInMethodPresentationMetadata, "sourceName">
   >
   readonly discoveryPriority?: number
   /** Public-domain hints for the last tie-break; never an origin authorization. */
@@ -498,13 +503,17 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn]: {
-    presentation: { sourceNameKey: "methods.sources.bizDecipher" },
+    presentation: {
+      labelKey: "methods.bizDecipherFreeGift.name",
+      disclosureKey: "methods.bizDecipherFreeGift.description",
+      sourceNameKey: "methods.sources.bizDecipher",
+    },
     discoveryOrigins: ["https://bizdecipher.com"],
     id: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
-      sourceName: "BizDecipher (free)",
+      sourceName: "BizDecipher",
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: (): FeedbackStatusRoutes => [

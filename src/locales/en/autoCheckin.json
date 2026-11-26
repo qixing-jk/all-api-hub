@@ -170,6 +170,10 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "Only claims the daily free gift. Draws that cost points or balance are available on the site.",
+      "name": "{{source}} daily free gift"
+    },
     "daily": {
       "description": "This method uses the third-party {{source}} check-in protocol and only works on deployments that support it.",
       "name": "{{source}} daily check-in"
@@ -185,7 +189,7 @@
       "agentRouter": "Agent Router",
       "aiRouter": "AI-ROUTER",
       "baiApi": "Bai API",
-      "bizDecipher": "BizDecipher (free)",
+      "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",
       "daigua": "DaiGua",
       "denxio": "Denxio",
