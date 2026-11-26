@@ -20,9 +20,9 @@ function getClearableFieldValue(value: ClearableFieldValue) {
   return ""
 }
 
-interface ClearableFieldButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ClearableFieldButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   label: string
+  showNativeTooltip?: boolean
 }
 
 /**
@@ -31,6 +31,7 @@ interface ClearableFieldButtonProps
 function ClearableFieldButton({
   className,
   label,
+  showNativeTooltip = true,
   ...props
 }: ClearableFieldButtonProps) {
   return (
@@ -38,11 +39,11 @@ function ClearableFieldButton({
       {...props}
       type="button"
       className={cn(
-        "text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground flex size-(--density-control-xs) shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+        "flex size-(--density-control-xs) shrink-0 items-center justify-center rounded-full text-faint-foreground transition-colors hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none dark:hover:text-secondary-foreground",
         className,
       )}
       aria-label={label}
-      title={label}
+      title={showNativeTooltip ? label : undefined}
     >
       <XIcon className="size-4" />
     </button>

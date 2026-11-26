@@ -557,7 +557,7 @@ describe("AccountDialog", () => {
     })
     expect(settled).toHaveBeenCalledOnce()
   })
-  it("detects the entered site instead of saving an incomplete account on Enter", async () => {
+  it("detects the entered site when the site form is submitted", async () => {
     const user = userEvent.setup()
     const onError = vi.fn()
     mockState.isFormValid = false
@@ -575,8 +575,9 @@ describe("AccountDialog", () => {
       />,
     )
 
-    await user.click(screen.getByRole("textbox", { name: /siteInfo.siteUrl/ }))
-    await user.keyboard("{Enter}")
+    const autoDetect = screen.getByRole("button", { name: /mode.autoDetect/ })
+    expect(autoDetect).toHaveAttribute("type", "submit")
+    await user.click(autoDetect)
 
     expect(onError).not.toHaveBeenCalled()
     expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()
@@ -590,8 +591,7 @@ describe("AccountDialog", () => {
       url: "https://example.com",
       isDetecting: true,
     },
-  ])("ignores Enter with $scenario", async ({ url, isDetecting }) => {
-    const user = userEvent.setup()
+  ])("ignores site form submission with $scenario", ({ url, isDetecting }) => {
     mockState.url = url
     mockState.isDetecting = isDetecting
     mockState.isFormValid = false
@@ -606,8 +606,9 @@ describe("AccountDialog", () => {
       />,
     )
 
-    await user.click(screen.getByRole("textbox", { name: /siteInfo.siteUrl/ }))
-    await user.keyboard("{Enter}")
+    fireEvent.submit(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountForm),
+    )
 
     expect(mockHandlers.handleAutoDetect).not.toHaveBeenCalled()
     expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()

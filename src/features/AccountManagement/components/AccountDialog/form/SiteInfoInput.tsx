@@ -89,6 +89,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
   const canUseSub2ApiRefreshToken =
     props.sitePolicy.allowSub2ApiRefreshTokenState
   const isSiteUrlLocked = isDetected || props.sitePolicy.lockSiteUrl
+  const enableRecentTabs = !isSiteUrlLocked && !!onUseCurrentTab
   const shouldShowCookiePermissionRecommendation =
     !isDetected &&
     canUseCookieAuth &&
@@ -165,9 +166,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 onUrlChange={onUrlChange}
                 onClearUrl={onClearUrl}
                 disabled={isSiteUrlLocked}
-                enableRecentTabs={
-                  !isSiteUrlLocked && !!onUseCurrentTab && !currentTabUrl
-                }
+                enableRecentTabs={enableRecentTabs}
                 currentTabUrl={currentTabUrl}
                 onUseCurrentTab={onUseCurrentTab}
               />
@@ -188,9 +187,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               onUrlChange={onUrlChange}
               onClearUrl={onClearUrl}
               disabled={isSiteUrlLocked}
-              enableRecentTabs={
-                !isSiteUrlLocked && !!onUseCurrentTab && !currentTabUrl
-              }
+              enableRecentTabs={enableRecentTabs}
               currentTabUrl={currentTabUrl}
               onUseCurrentTab={onUseCurrentTab}
             />

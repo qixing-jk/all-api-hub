@@ -124,12 +124,15 @@ export default function ActionButtons({
     ? (autoDetectPresentation?.pendingLabel ??
       t("accountDialog:mode.detecting"))
     : (autoDetectPresentation?.idleLabel ?? t("accountDialog:mode.autoDetect"))
+  const submitSiteDetection =
+    phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT && !!formId
 
   const detectionActions = (
     <>
       <Button
-        type="button"
-        onClick={onAutoDetect}
+        type={submitSiteDetection ? "submit" : "button"}
+        form={submitSiteDetection ? formId : undefined}
+        onClick={submitSiteDetection ? undefined : onAutoDetect}
         disabled={!url.trim()}
         loading={isDetecting}
         className={
