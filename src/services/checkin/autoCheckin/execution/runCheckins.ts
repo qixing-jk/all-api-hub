@@ -4,7 +4,10 @@ import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/discovery/automaticDiscovery"
 import { isAutomaticExecutionEnabled } from "~/services/checkin/autoCheckin/execution/accountExecution"
 import { isRetryableCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
-import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import {
+  accountCheckinRunWorkflow,
+  getAccountsEligibleForPostCheckinRefresh,
+} from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import {
   notifyScheduledRunResult,
   notifyUiRunCompleted,
@@ -176,7 +179,7 @@ export async function runCheckins(options: {
               eligibleIds.has(accountId),
             ),
           ),
-      mergeHistory ? base?.summary ?? summary : summary,
+      mergeHistory ? (base?.summary ?? summary) : summary,
     )
   }
 
@@ -445,13 +448,8 @@ export async function runCheckins(options: {
       ).length,
     )
 
-    const accountIdsToRefresh = checkinOutcomes
-      .filter(
-        (outcome) =>
-          !outcome.reused &&
-          outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
-      )
-      .map((outcome) => outcome.result.accountId)
+    const accountIdsToRefresh =
+      getAccountsEligibleForPostCheckinRefresh(checkinOutcomes)
 
     const analyticsSnapshots = buildAnalyticsSnapshots(
       allAccounts,
@@ -582,7 +580,7 @@ export async function runCheckins(options: {
         patch: {
           lastRunAt: new Date().toISOString(),
           lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
-          perAccount: mergeHistory ? current?.perAccount ?? {} : {},
+          perAccount: mergeHistory ? (current?.perAccount ?? {}) : {},
           pendingRetry: false,
           retryState: isDailyRun ? undefined : current?.retryState,
           ...(isDailyRun

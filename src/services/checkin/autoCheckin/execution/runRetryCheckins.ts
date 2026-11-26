@@ -1,7 +1,11 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
-import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import type { AccountCheckinExecutionOutcome } from "~/services/checkin/autoCheckin/execution/accountExecution"
+import {
+  accountCheckinRunWorkflow,
+  getAccountsEligibleForPostCheckinRefresh,
+} from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import type { AutoCheckinRetryScheduling } from "~/services/checkin/autoCheckin/execution/runContracts"
 import {
   notifyScheduledRunResult,
@@ -100,7 +104,7 @@ export async function runRetryCheckins(
 
   const updates: Record<string, CheckinAccountResult> = {}
   const attemptedAccountIds: string[] = []
-  const accountIdsToRefresh: string[] = []
+  const outcomesToRefresh: AccountCheckinExecutionOutcome[] = []
   let successfulAttemptCount = 0
   const loginProviderOwners =
     await accountCheckinRunWorkflow.resolveLoginProviderOwners(allAccounts)
@@ -118,7 +122,7 @@ export async function runRetryCheckins(
       updates[accountId] = {
         accountId,
         accountName: account
-          ? accountDisplayNameById.get(account.id) ?? account.id
+          ? (accountDisplayNameById.get(account.id) ?? account.id)
           : accountId,
         status: CHECKIN_RESULT_STATUS.SKIPPED,
         messageKey: getAutoCheckinSkipReasonTranslationKey(
@@ -167,7 +171,7 @@ export async function runRetryCheckins(
       !outcome.reused &&
       outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS
     ) {
-      accountIdsToRefresh.push(outcome.result.accountId)
+      outcomesToRefresh.push(outcome)
     }
   }
 
@@ -236,12 +240,16 @@ export async function runRetryCheckins(
     .filter((result) => isSuccessfulCheckinStatus(result.status))
     .map((result) => result.accountId)
 
-  await accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
-    accountIds: accountIdsToRefresh,
-    force: true,
-    tempWindowRequestSource,
-    protectionBypassExecution,
-  })
+  const accountIdsToRefresh =
+    getAccountsEligibleForPostCheckinRefresh(outcomesToRefresh)
+  if (accountIdsToRefresh.length > 0) {
+    await accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
+      accountIds: accountIdsToRefresh,
+      force: true,
+      tempWindowRequestSource,
+      protectionBypassExecution,
+    })
+  }
 
   if (notifyUiOnCompletion) {
     await notifyUiRunCompleted({

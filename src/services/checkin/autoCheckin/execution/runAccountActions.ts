@@ -12,7 +12,10 @@ import {
   resolveSelectedCheckInMethod,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
-import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import {
+  accountCheckinRunWorkflow,
+  getAccountsEligibleForPostCheckinRefresh,
+} from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import type { AutoCheckinRetryScheduling } from "~/services/checkin/autoCheckin/execution/runContracts"
 import {
   isSuccessfulCheckinStatus,
@@ -148,9 +151,12 @@ export async function retryAccount(
   if (!outcome.reused && isSuccessfulCheckinStatus(result.status)) {
     await accountCheckinRunWorkflow.recordStarPromotionCheckinSuccesses(1)
   }
-  if (!outcome.reused && result.status === CHECKIN_RESULT_STATUS.SUCCESS) {
+  const accountIdsToRefresh = getAccountsEligibleForPostCheckinRefresh([
+    outcome,
+  ])
+  if (accountIdsToRefresh.length > 0) {
     await accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
-      accountIds: [account.id],
+      accountIds: accountIdsToRefresh,
       force: true,
       tempWindowRequestSource,
       protectionBypassExecution,
