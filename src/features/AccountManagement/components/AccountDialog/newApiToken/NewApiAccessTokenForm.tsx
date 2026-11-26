@@ -259,6 +259,7 @@ export function NewApiAccessTokenForm({
                   type="button"
                   size="sm"
                   variant="outline"
+                  disabled={pending || reconnecting}
                   onClick={() => onReviewingChange(true)}
                 >
                   {t("tokenCreation.reviewTokens")}

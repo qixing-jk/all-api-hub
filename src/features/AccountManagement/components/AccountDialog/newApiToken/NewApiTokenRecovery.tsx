@@ -301,7 +301,7 @@ export function NewApiTokenRecovery({
                   </summary>
                   <ul className="mt-2 grid gap-x-4 gap-y-1 ps-3 wrap-anywhere sm:grid-cols-2">
                     {item.scopes.map((scope) => (
-                      <li key={scope}>{scopeLabels[scope] ?? scope}</li>
+                      <li key={scope}>{scopeLabels.get(scope) ?? scope}</li>
                     ))}
                   </ul>
                 </details>

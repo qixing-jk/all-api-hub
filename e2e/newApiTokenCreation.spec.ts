@@ -885,6 +885,7 @@ for (const method of [
         : method
     const token = "nap_browser-fixture"
     const rejectedToken = "nap_rejected-before-creation"
+    const revocationProof = "bound-revocation-proof"
     const expectedScopes = [
       "profile:read",
       "profile:write",
@@ -931,7 +932,7 @@ for (const method of [
       if (route.request().method() === "DELETE") {
         expect(path).toBe("/api/user/access_tokens/7")
         expect(route.request().headers()["x-security-proof"]).toBe(
-          "bound-proof",
+          revocationProof,
         )
         revoked = true
         return route.fulfill({ json: { success: true, data: null } })
@@ -1093,7 +1094,11 @@ for (const method of [
         return route.fulfill({
           json: {
             ...proof(),
-            data: { ...proof().data, scope: "access_token.revoke" },
+            data: {
+              ...proof().data,
+              scope: "access_token.revoke",
+              proof_token: revocationProof,
+            },
           },
         })
       }
@@ -1876,12 +1881,12 @@ for (const method of [
             revoke.boundingBox(),
             clear.boundingBox(),
           ])
-          expect(revokeBox).not.toBeNull()
-          expect(clearBox).not.toBeNull()
-          expect(
-            Math.max(clearBox!.x, revokeBox!.x) +
-              Math.max(clearBox!.width, revokeBox!.width),
-          ).toBeLessThanOrEqual(340)
+          for (const box of [revokeBox, clearBox]) {
+            if (!box)
+              throw new Error("Expected the recovery button to be visible")
+            expect(box.x).toBeGreaterThanOrEqual(0)
+            expect(box.x + box.width).toBeLessThanOrEqual(340)
+          }
           await page.setViewportSize({ width: 1249, height: 900 })
           await captureRecovery("token-recovery-selected", revoke)
           await page.setViewportSize({ width: 340, height: 680 })

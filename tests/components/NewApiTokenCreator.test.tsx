@@ -533,6 +533,48 @@ it("keeps recovery available when the created token is still present and unverif
   ).toBeEnabled()
 })
 
+it("blocks opening token review while reconnecting from the creation form", async () => {
+  const session = mockSession()
+  session.create.mockResolvedValueOnce({
+    id: 7,
+    token: "nap_issued",
+    verified: false,
+  })
+  const reconnect =
+    createDeferred<Awaited<ReturnType<typeof openNewApiAccessTokenCreation>>>()
+  vi.mocked(openNewApiAccessTokenCreation).mockReturnValueOnce(
+    reconnect.promise,
+  )
+  const user = userEvent.setup()
+  renderCreator()
+  await user.type(
+    await screen.findByLabelText("tokenCreation.password"),
+    "secret",
+  )
+  await user.click(screen.getByRole("button", { name: "tokenCreation.create" }))
+  const review = screen.getByRole("button", {
+    name: "tokenCreation.reviewTokens",
+  })
+  expect(review).toBeEnabled()
+  await user.click(
+    screen.getByRole("button", { name: "tokenCreation.reconnect" }),
+  )
+  try {
+    expect(review).toBeDisabled()
+    await user.click(review)
+    expect(
+      screen.queryByRole("region", { name: "tokenCreation.reviewTokens" }),
+    ).not.toBeInTheDocument()
+  } finally {
+    await act(() =>
+      reconnect.resolve({
+        flow: session as unknown as NewApiAccessTokenCreation,
+        cancel: vi.fn(),
+      }),
+    )
+  }
+})
+
 it("keeps the token review visible when reconnecting the website session fails", async () => {
   const session = mockSession()
   session.create.mockRejectedValueOnce(new NewApiTokenCreationUncertainError())

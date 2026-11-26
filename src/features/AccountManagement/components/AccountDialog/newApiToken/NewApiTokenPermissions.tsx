@@ -84,7 +84,7 @@ export function NewApiTokenPermissions({
         />
         <span className="min-w-0">
           <span id={labelId} title={scope}>
-            {scopeLabels[scope] ?? label}
+            {scopeLabels.get(scope) ?? label}
             {scope === ACCESS_SCOPES.PROFILE_READ && (
               <>
                 {" "}

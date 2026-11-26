@@ -16,7 +16,7 @@ it("requires an explicit token selection and fresh verification before revoking"
     name: "Attempt to recover",
     created_at: 100,
     expires_at: 0,
-    scopes: ["profile:read"],
+    scopes: ["profile:read", "__proto__"],
   }
   let items = [item]
   const attempt = createDeferred<boolean>()
@@ -42,11 +42,12 @@ it("requires an explicit token selection and fresh verification before revoking"
   const user = userEvent.setup()
   render(<NewApiTokenRecovery flow={flow} onReviewed={reviewed} />)
   const token = await screen.findByRole("radio", { name: /Attempt to recover/ })
-  const permissions = screen.getByText("tokenCreation.permissions (1)")
+  const permissions = screen.getByText("tokenCreation.permissions (2)")
   const profile = screen.getByText("tokenCreation.profileRead")
   expect(profile).not.toBeVisible()
   await user.click(permissions)
   expect(profile).toBeVisible()
+  expect(screen.getByText("__proto__")).toBeVisible()
   expect(token).not.toBeChecked()
   expect(
     screen.queryByRole("button", { name: "tokenCreation.revokeSelected" }),
