@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountRefresh } from "~/services/apiAdapters/newApi/account/accountRefresh"
-import { LAOZHANG_TODAY_LOG_QUERY_CONFIG } from "~/services/apiService/newApiFamily/variants/laozhang"
+import { SHELL_LOG_QUERY_CONFIG } from "~/services/apiService/shellApiFamily/usageLogs"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { createCheckInConfig } from "~~/tests/services/apiAdapters/checkInFixtures"
@@ -235,7 +235,7 @@ describe("createNewApiAccountRefresh", () => {
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(supportRequest)
     expect(mockRefreshAccountData).toHaveBeenCalledWith(
       { ...refreshRequest, siteType: SITE_TYPES.LAOZHANG },
-      LAOZHANG_TODAY_LOG_QUERY_CONFIG,
+      SHELL_LOG_QUERY_CONFIG,
     )
   })
 })

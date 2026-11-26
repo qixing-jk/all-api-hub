@@ -2,32 +2,38 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   classifySiblingStatusDto,
+  isBizDecipherStatusDto,
   SIBLING_DTO_VERDICTS,
 } from "~/services/apiService/sub2api/checkin/siblingStatusContracts"
+import {
+  PASSIVE_CHECK_IN_AUTH,
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import {
   createUserCheckInStatusEndpoint,
   resolveUserCheckInTimezone,
   USER_CHECK_IN_STATUS_ENDPOINT,
 } from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
-import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
+import {
+  createUnixDayKeyFormatter,
+  getDayKeyFromUnixSeconds,
+} from "~/utils/core/dayKey"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
 export const BIZDECIPHER_FREE_CHECK_IN_ENDPOINT = "/api/v1/user/checkin/claim"
 const { parseEnvelopeData, invalidResponse } =
   createCheckInCodeEnvelopeParser("BizDecipher")
-const passiveAuth = {
-  proactiveRefresh: false,
-  recoverMissingAccessToken: false,
-  recoverUnauthorized: false,
-} as const
 const userHeaders = { "X-User-UI-Request": "1" }
 const finite = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value)
@@ -47,6 +53,21 @@ function matchesCurrentDay(value: unknown, day: ReturnType<typeof captureDay>) {
     value === day.day &&
     getDayKeyFromUnixSeconds(Date.now() / 1000, day.timezone) === day.day
   )
+}
+
+/** Bound the POST's queue and request lifetime to the admitted day. */
+function claimDeadlineAt(day: ReturnType<typeof captureDay>, now: number) {
+  const formatDay = createUnixDayKeyFormatter(day.timezone)
+  let lastCurrentSecond = Math.floor(now / 1000)
+  if (formatDay(lastCurrentSecond) !== day.day) return 0
+  // Search for the first later date instead of assuming a 24-hour local day.
+  let firstLaterSecond = lastCurrentSecond + 48 * 60 * 60
+  while (firstLaterSecond - lastCurrentSecond > 1) {
+    const middle = Math.floor((lastCurrentSecond + firstLaterSecond) / 2)
+    if (formatDay(middle) === day.day) lastCurrentSecond = middle
+    else firstLaterSecond = middle
+  }
+  return firstLaterSecond * 1000
 }
 
 /** A missing operation receipt is not proof that an in-flight claim was rejected. */
@@ -73,14 +94,7 @@ function parseStatus(
 ) {
   const data = parseEnvelopeData(response, USER_CHECK_IN_STATUS_ENDPOINT)
   if (Object.hasOwn(data, "free_claimed")) {
-    if (
-      typeof data.free_claimed !== "boolean" ||
-      !matchesCurrentDay(data.date, day) ||
-      !finite(data.balance) ||
-      !finite(data.credit_balance) ||
-      Object.hasOwn(data, "checked_in_today") ||
-      Object.hasOwn(data, "today_checked_in")
-    )
+    if (!isBizDecipherStatusDto(data) || !matchesCurrentDay(data.date, day))
       throw invalidResponse(USER_CHECK_IN_STATUS_ENDPOINT)
     return { enabled: true, checkedInToday: data.free_claimed }
   }
@@ -128,11 +142,11 @@ function parseReceipt(
 /** Passive by default; authorized execution admission may renew saved credentials. */
 export function fetchBizDecipherDailyCheckInStatus(
   request: ApiServiceRequest,
-  options: { allowAuthenticationRecovery?: boolean } = {},
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
   const day = captureDay()
   const endpoint = createUserCheckInStatusEndpoint(day.timezone)
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     endpoint,
     async (authenticated) =>
@@ -143,7 +157,7 @@ export function fetchBizDecipherDailyCheckInStatus(
         }),
         day,
       ),
-    options.allowAuthenticationRecovery ? {} : passiveAuth,
+    auth,
   )
 }
 
@@ -169,19 +183,29 @@ export async function performBizDecipherDailyCheckIn(
     BIZDECIPHER_FREE_CHECK_IN_ENDPOINT,
     async (authenticated) => {
       // Credential hydration or a caller guard must not carry yesterday's admission into a new day.
-      if (!matchesCurrentDay(day.day, day))
+      const now = Date.now()
+      const dispatchDeadlineAt = claimDeadlineAt(day, now)
+      const timeRemaining = dispatchDeadlineAt - now
+      if (timeRemaining <= 0)
         throw invalidResponse(USER_CHECK_IN_STATUS_ENDPOINT)
       try {
         return parseReceipt(
-          await fetchApiResponse(authenticated, {
-            endpoint: BIZDECIPHER_FREE_CHECK_IN_ENDPOINT,
-            options: {
-              method: "POST",
-              cache: "no-store",
-              headers: { ...userHeaders, "Idempotency-Key": operationId },
-              body: JSON.stringify({ type: "free", operation_id: operationId }),
-            },
-          }),
+          await runAbortableTask(
+            (signal) =>
+              postSub2ApiCheckIn(
+                { ...authenticated, abortSignal: signal },
+                BIZDECIPHER_FREE_CHECK_IN_ENDPOINT,
+                {
+                  headers: { ...userHeaders, "Idempotency-Key": operationId },
+                  body: JSON.stringify({
+                    type: "free",
+                    operation_id: operationId,
+                  }),
+                  dispatchDeadlineAt,
+                },
+              ),
+            { signals: [authenticated.abortSignal], timeoutMs: timeRemaining },
+          ),
           BIZDECIPHER_FREE_CHECK_IN_ENDPOINT,
           operationId,
           day,
@@ -221,6 +245,6 @@ export async function performBizDecipherDailyCheckIn(
         }
       }
     },
-    passiveAuth,
+    PASSIVE_CHECK_IN_AUTH,
   )
 }

@@ -66,9 +66,11 @@
       "includeAccountSiteUrlsDesc": "Alle Seiten unter dem Website-URL-Ursprung jedes Kontos zulassen.",
       "includeCheckInAndRedeemUrls": "Check-in- und Einlöse-URLs einbeziehen",
       "includeCheckInAndRedeemUrlsDesc": "Erlauben Sie die Check-in- und Einlöseseiten (benutzerdefiniert oder standardmäßig) für jedes Konto.",
+      "noTabs": "Keine passenden Web-Tabs. Du kannst unten ein Muster eingeben.",
       "patterns": "Benutzerdefinierte Regex-Muster",
       "patternsDesc": "Ein JavaScript RegExp-Muster pro Zeile. Es wird eine Übereinstimmung ohne Berücksichtigung der Groß- und Kleinschreibung angewendet.",
-      "patternsPlaceholder": "^https://example\\.com/console/topup"
+      "patternsPlaceholder": "^https://example\\.com/console/topup",
+      "tabPicker": "Aus offenen Tabs wählen"
     }
   }
 }

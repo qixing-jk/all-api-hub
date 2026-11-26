@@ -184,6 +184,7 @@
     "sources": {
       "agentRouter": "Agent Router",
       "aiRouter": "AI-ROUTER",
+      "apiKeyCasa": "ApiKey Casa",
       "baiApi": "Bai API",
       "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",

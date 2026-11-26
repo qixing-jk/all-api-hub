@@ -3,46 +3,25 @@ import {
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/account/accountBootstrap"
-import { createNewApiAccountCompletion } from "~/services/apiAdapters/newApi/account/accountCompletion"
-import { createNewApiAccountData } from "~/services/apiAdapters/newApi/account/accountData"
+import { createCompatibleAccountCapabilities } from "~/services/apiAdapters/compatibleCapabilities"
 import { createNewApiAccountLogin } from "~/services/apiAdapters/newApi/account/accountLogin"
-import { createNewApiAccountRefresh } from "~/services/apiAdapters/newApi/account/accountRefresh"
-import { createNewApiInviteLink } from "~/services/apiAdapters/newApi/account/inviteLink"
-import { createNewApiRedemption } from "~/services/apiAdapters/newApi/account/redemption"
-import { createNewApiSiteNotice } from "~/services/apiAdapters/newApi/announcements/siteNotice"
-import { newApiSiteStructuredAnnouncements } from "~/services/apiAdapters/newApi/announcements/siteStructuredAnnouncements"
-import { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/keys/accountKeyResource"
-import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
-import { newApiSiteEndpointMetadata } from "./siteEndpointMetadata"
-import { getNewApiVariantRegistration } from "./variantRegistration"
 
-export const createNewApiCapabilities = (
+/** Adds New API family identity and login to the shared compatible operations. */
+export function createNewApiCapabilities(
   siteType: AccountSiteType = SITE_TYPES.NEW_API,
-): SiteTypeCapabilities => ({
-  siteType,
-  family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
-  site: {
-    endpointMetadata: newApiSiteEndpointMetadata,
-    announcements: newApiSiteStructuredAnnouncements,
-    notice: createNewApiSiteNotice(siteType),
-  },
-  account: {
-    ...(getNewApiVariantRegistration(siteType).announcements
-      ? { announcements: getNewApiVariantRegistration(siteType).announcements }
-      : {}),
-    login: createNewApiAccountLogin(siteType),
-    data: createNewApiAccountData(siteType),
-    bootstrap: createNewApiAccountBootstrap(siteType),
-    completion: createNewApiAccountCompletion(siteType),
-    inviteLink: createNewApiInviteLink(siteType),
-    keyResourceManagement: createNewApiAccountKeyResources(siteType),
-    refresh: createNewApiAccountRefresh(siteType),
-    modelPricing: createNewApiModelPricing(siteType),
-    redemption: createNewApiRedemption(),
-  },
-})
+): SiteTypeCapabilities {
+  const compatible = createCompatibleAccountCapabilities(siteType)
+  return {
+    siteType,
+    family: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    ...compatible,
+    account: {
+      ...compatible.account,
+      login: createNewApiAccountLogin(siteType),
+    },
+  }
+}
 
 export { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/keys/accountKeyResource"

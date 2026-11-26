@@ -7,6 +7,7 @@ import type { CheckInMethodId } from "~/types/checkIn"
 
 import { aiRouterProvider } from "./aiRouter"
 import { anyrouterProvider } from "./anyrouter"
+import { apiKeyCasaProvider } from "./apiKeyCasa"
 import { baiApiProvider } from "./baiApi"
 import { bizDecipherProvider } from "./bizdecipher"
 import { clawhudProvider } from "./clawhud"
@@ -60,6 +61,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn]: dayaProvider,
   [AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn]: pmApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: baiApiProvider,
+  [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: apiKeyCasaProvider,
   [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: xingyaProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 

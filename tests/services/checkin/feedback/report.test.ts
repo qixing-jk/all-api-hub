@@ -32,23 +32,47 @@ describe("check-in feedback report", () => {
     )
     expect(url.searchParams.get("browser-info")).toBe("Firefox 132.0.2")
   })
-  it("prefills the form once per section and uses the user's summary in its title", () => {
-    const issue = buildCheckInFeedbackIssue(
-      "## What happened\n\nWebsite works\n\n## Site\n\nhttps://example.com\n\nDetails",
-      "[Check-in]",
-      {
-        origin: "https://example.com",
-        version: "4.10.1",
-        notes: "Website works",
-        feedbackBody: "Details",
-      },
-    )
-    const url = new URL(issue.url)
-    expect(url.searchParams.get("title")).toBe("[Check-in] Website works")
-    expect(url.searchParams.get("site-url")).toBe("https://example.com")
-    expect(url.searchParams.get("summary")).toBe("Website works")
-    expect(url.searchParams.get("feedback")).toBe("Details")
-    expect(issue.needsCopy).toBe(false)
+  it.each([
+    ["https://api.abc.top", "api.abc.top"],
+    ["https://api.abc.co.uk", "api.abc.co.uk"],
+  ])(
+    "uses the full shared hostname and first line of the summary for %s",
+    (origin, hostname) => {
+      const notes = "Website works\nAutomatic check-in is unavailable"
+      const issue = buildCheckInFeedbackIssue(
+        `## What happened\n\n${notes}\n\n## Site\n\n${origin}\n\nDetails`,
+        "[Check-in]",
+        {
+          origin,
+          version: "4.10.1",
+          notes,
+          titleSummary: "Last check-in (Timed out)",
+          feedbackBody: "Details",
+        },
+      )
+      const url = new URL(issue.url)
+      expect(url.searchParams.get("title")).toBe(
+        `[Check-in] ${hostname} · Website works`,
+      )
+      expect(url.searchParams.get("site-url")).toBe(origin)
+      expect(url.searchParams.get("summary")).toBe(notes)
+      expect(url.searchParams.get("feedback")).toBe("Details")
+      expect(issue.needsCopy).toBe(false)
+    },
+  )
+
+  it("keeps the preview identical to the encoded, length-limited title", () => {
+    const prefix = "[Check-in]"
+    const notes = "x".repeat(200 - prefix.length - 2) + "🚀"
+    const issue = buildCheckInFeedbackIssue("Details", prefix, {
+      origin: null,
+      version: "4.11.0",
+      notes,
+    })
+
+    expect(issue.title).toHaveLength(200)
+    expect(issue.title).toMatch(/�$/)
+    expect(new URL(issue.url).searchParams.get("title")).toBe(issue.title)
   })
 
   it("keeps the description in the required feedback field when diagnostics were removed", () => {
@@ -388,6 +412,7 @@ describe("check-in feedback report", () => {
     expect(origin).toBe("https://example.com:8443")
     expect(getFeedbackOrigin("javascript:alert(1)")).toBeNull()
     expect(getFeedbackOrigin("not a URL")).toBeNull()
+    expect(getFeedbackOrigin("\u00a0https://example.com\u00a0")).toBeNull()
     const body = composeCheckInFeedback({
       labels,
       origin,

@@ -35,23 +35,30 @@ function getAccountSecrets(account: SiteAccount): string[] {
     .sort((a, b) => b.length - a.length)
 }
 
-/** Redacts saved execution messages without replacing editor authentication. */
-function sanitizeExecution(
-  execution: CheckInFeedbackSnapshot["execution"],
+/** Redacts public execution messages without replacing editor authentication. */
+function sanitizeExecutionEvidence(
+  evidence: FeedbackExecutionEvidence,
   account: SiteAccount | null,
-) {
-  if (!execution) return execution
+): FeedbackExecutionEvidence {
+  const { execution } = evidence
+  if (!execution) return { ...evidence, execution }
   if (!account)
-    return { ...execution, rawMessage: undefined, message: undefined }
+    return {
+      ...evidence,
+      execution: { ...execution, rawMessage: undefined, message: undefined },
+    }
   const secrets = getAccountSecrets(account)
   return {
-    ...execution,
-    message: execution.message
-      ? toSanitizedErrorSummary(execution.message, secrets)
-      : execution.message,
-    rawMessage: execution.rawMessage
-      ? toSanitizedErrorSummary(execution.rawMessage, secrets)
-      : execution.rawMessage,
+    ...evidence,
+    execution: {
+      ...execution,
+      message: execution.message
+        ? toSanitizedErrorSummary(execution.message, secrets)
+        : execution.message,
+      rawMessage: execution.rawMessage
+        ? toSanitizedErrorSummary(execution.rawMessage, secrets)
+        : execution.rawMessage,
+    },
   }
 }
 
@@ -129,7 +136,7 @@ export default function CheckInFeedbackDialog({
               })
               return
             }
-            const execution = await readFeedbackExecution(
+            const evidence = await readFeedbackExecution(
               accountId,
               source.snapshot.execution,
             )
@@ -141,11 +148,11 @@ export default function CheckInFeedbackDialog({
                   : undefined,
                 snapshot: {
                   ...source.snapshot,
-                  ...execution,
+                  siteName: source.snapshot.siteName ?? account?.site_name,
                   refresh: account
                     ? getRefreshSnapshot(account)
                     : source.snapshot.refresh,
-                  execution: sanitizeExecution(execution.execution, account),
+                  ...sanitizeExecutionEvidence(evidence, account),
                 },
               })
           })
@@ -161,7 +168,7 @@ export default function CheckInFeedbackDialog({
             setUnavailable(true)
             return
           }
-          const execution = await readFeedbackExecution(
+          const evidence = await readFeedbackExecution(
             source.accountId,
             source.execution,
           )
@@ -170,11 +177,11 @@ export default function CheckInFeedbackDialog({
             savedAccountIdentity: getAccountIdentity(account),
             snapshot: {
               baseUrl: account.site_url,
+              siteName: account.site_name,
               siteType: account.site_type,
               checkIn: account.checkIn,
               refresh: getRefreshSnapshot(account),
-              ...execution,
-              execution: sanitizeExecution(execution.execution, account),
+              ...sanitizeExecutionEvidence(evidence, account),
             },
             auth: {
               authType: account.authType,
@@ -213,10 +220,7 @@ export default function CheckInFeedbackDialog({
     )
       return notLinked
     const evidence = await readFeedbackExecution(accountId)
-    return {
-      ...evidence,
-      execution: sanitizeExecution(evidence.execution, account),
-    }
+    return sanitizeExecutionEvidence(evidence, account)
   }
   if (data)
     return (

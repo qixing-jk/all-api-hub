@@ -75,6 +75,32 @@ describe("BizDecipher free daily check-in protocol", () => {
     vi.useRealTimers()
   })
 
+  it("cancels a queued claim before it can dispatch after the requested timezone rolls over", async () => {
+    vi.useRealTimers()
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] })
+    vi.setSystemTime(new Date("2026-11-24T15:59:59Z"))
+    vi.spyOn(userCheckInProtocol, "resolveUserCheckInTimezone").mockReturnValue(
+      "Asia/Singapore",
+    )
+    const send = vi.fn()
+    vi.mocked(fetchApiResponse).mockImplementation(async (queued, input) => {
+      if (input.options?.method !== "POST")
+        throw new ApiError("Missing operation", 404)
+      await new Promise<void>((resolve) => setTimeout(resolve, 1500))
+      queued.abortSignal?.throwIfAborted()
+      send()
+      return response(
+        receipt(JSON.parse(String(input.options.body)).operation_id),
+      )
+    })
+    const claim = performBizDecipherDailyCheckIn(request).catch(
+      (error: unknown) => error,
+    )
+    await vi.advanceTimersByTimeAsync(1600)
+    expect(send).not.toHaveBeenCalled()
+    expect(await claim).toBeInstanceOf(Error)
+  })
+
   it.each([false, true])(
     "reads free completion without authentication recovery (%s)",
     async (checked) => {

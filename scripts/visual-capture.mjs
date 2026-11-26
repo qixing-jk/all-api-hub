@@ -46,6 +46,7 @@ try {
       grep: { type: "string" },
       fixture: { type: "string" },
       view: { type: "string", multiple: true },
+      "expect-checkpoint": { type: "string", multiple: true },
       variant: { type: "string" },
       baseline: { type: "string" },
       diff: { type: "boolean", default: false },
@@ -55,8 +56,10 @@ try {
     console.log(`Capture checkpoints from an existing asserted Playwright workflow:
   pnpm visual:capture --spec e2e/<flow>.spec.ts --grep '<test title>' --fixture <state-version>
     [--view light:380x700 --view dark:320x700] [--variant <build-variant>] [--baseline <prior-run>] [--diff]
+    [--expect-checkpoint <id> ...]
 Call captureVisualViews in the selected workflow.
 Without --view, the helper uses its workflow defaults or captures the current view.
+Repeat --expect-checkpoint to require each planned capture ID, including any view or .context suffix.
 Build variant defaults to AAH_E2E_BUILD_VARIANT (otherwise default); --variant overrides it.
 Supported variants: default, dnr-required, bookmarks-required. Baselines must match.
 Registered shortcuts: --list; --scenario <id> [--baseline <prior-run>] [--diff]
@@ -67,9 +70,15 @@ Output is JSON containing report and artifact paths. No images are opened automa
       ? await customWorkflow(values)
       : scenarios.find((entry) => entry.id === values.scenario)
     if (!scenario) throw new Error("Unknown capture scenario; use --list")
-    if (!values.spec && (values.grep || values.fixture || values.view))
+    if (
+      !values.spec &&
+      (values.grep ||
+        values.fixture ||
+        values.view ||
+        values["expect-checkpoint"])
+    )
       throw new Error(
-        "Custom --grep, --fixture and --view options require --spec",
+        "Custom --grep, --fixture, --view and --expect-checkpoint options require --spec",
       )
     loadLocalEnv({ cwd: root })
     scenario.buildVariant = readE2eBuildVariant({
@@ -156,6 +165,7 @@ async function capture(scenario, baseline, diff) {
         .filter((file) => file.endsWith(".json"))
         .map((file) => file.slice(0, -5))
         .sort()
+    assertExpectedCheckpoints(ids, directory, scenario.expectedCheckpoints)
     validateIds(ids, { allowContext: true })
     if (
       baseline &&
@@ -202,6 +212,7 @@ async function capture(scenario, baseline, diff) {
             spec: scenario.spec,
             grep: scenario.grep,
             views: scenario.views ?? null,
+            expectedCheckpoints: scenario.expectedCheckpoints ?? null,
           },
           checkout: root,
           capturedHead: execFileSync("git", ["rev-parse", "HEAD"], {
@@ -306,6 +317,7 @@ async function readBaseline(directory, scenario) {
   const ids =
     scenario.checkpoints ?? capture.checkpoints.map((state) => state.id)
   validateIds(ids, { allowContext: true })
+  assertExpectedCheckpoints(ids, directory, scenario.expectedCheckpoints)
   for (const id of ids) {
     const state = capture.checkpoints.find((entry) => entry.id === id)
     if (
@@ -336,6 +348,14 @@ function validateIds(ids, { allowContext = false } = {}) {
   )
     throw new Error(
       "Capture requires unique safe checkpoint IDs; call captureVisualViews in the selected workflow",
+    )
+}
+
+function assertExpectedCheckpoints(ids, directory, expected = []) {
+  const missing = expected.filter((id) => !ids.includes(id))
+  if (missing.length)
+    throw new Error(
+      `Missing expected checkpoints: ${missing.join(", ")}. Evidence directory: ${directory}`,
     )
 }
 
@@ -373,6 +393,9 @@ async function customWorkflow(values) {
     }
   })
   if (views) validateIds(views.map((view) => view.id))
+  const expectedCheckpoints = values["expect-checkpoint"]
+  if (expectedCheckpoints)
+    validateIds(expectedCheckpoints, { allowContext: true })
   return {
     id: `workflow-${createHash("sha256")
       .update(JSON.stringify([spec, values.grep]))
@@ -382,6 +405,7 @@ async function customWorkflow(values) {
     grep: values.grep,
     fixture: values.fixture,
     checkpoints: null,
+    expectedCheckpoints,
     views,
   }
 }

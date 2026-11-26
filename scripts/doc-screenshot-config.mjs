@@ -1,6 +1,10 @@
 export const DOC_SCREENSHOT_PAGES = {
   overview: ["options-overview.png"],
   account: ["account-manage.png"],
+  "add-account": [
+    "new-api-token-creation-entry.png",
+    "new-api-token-ready-to-save.png",
+  ],
   models: ["model-list.png"],
   keys: ["api-key-list.png"],
   profiles: ["api-credential-profile-list.png"],
@@ -18,6 +22,12 @@ export const DOC_SCREENSHOT_PAGES = {
     "web-ai-api-check-results.png",
   ],
 }
+
+/** Pages captured through the Playwright extension fixture. */
+export const DOC_SCREENSHOT_E2E_SPECS = new Map([
+  ["add-account", "e2e/docScreenshotsAddAccount.spec.ts"],
+  ["web-ai-api-check", "e2e/docScreenshotsWebAiApiCheck.spec.ts"],
+])
 
 /**
  * Screenshot batches to render. `ui` is the extension locale, `chrome` is the

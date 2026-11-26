@@ -4,6 +4,7 @@ import {
   EXTENSION_HEADER_NAME,
   EXTENSION_HEADER_VALUE,
 } from "~/utils/browser/cookieHelper"
+import { assertFetchDispatchDeadline } from "~/utils/browser/requestInitMessage"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
@@ -73,6 +74,7 @@ export function handlePerformTempWindowFetch(
         throw new Error("Temporary context origin changed before fetch")
       }
 
+      assertFetchDispatchDeadline(normalizedOptions)
       transportLifecycle.upstreamRequestDispatched = true
       if (typeof requestId === "string" && requestId.length > 0) {
         announceRemoteFetchDispatch(requestId)

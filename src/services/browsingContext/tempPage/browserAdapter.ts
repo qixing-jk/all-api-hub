@@ -324,12 +324,16 @@ export async function isTempContextContentReady(
 }
 
 /**
- * Wait for the temp-context tab to finish loading and clear any protection pages
- * (Cloudflare, CAP or Aliyun). Rejects on timeout or errors.
+ * Wait for the tab to finish loading and clear any protection
+ * pages (Cloudflare, CAP or Aliyun). Rejects on timeout or errors.
  */
 export function waitForTabComplete(
   tabId: number,
-  meta?: { requestId?: string; origin?: string; signal?: AbortSignal },
+  meta?: {
+    requestId?: string
+    origin?: string
+    signal?: AbortSignal
+  },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false

@@ -1,7 +1,9 @@
+import { Info } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { HelpHintIcon } from "~/components/icons/productIcons"
-import { Alert, Button } from "~/components/ui"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
+import { Button, Notice } from "~/components/ui"
+import { NOTICE_ACTION_LAYOUTS } from "~/components/ui/Notice"
 import { createTab } from "~/utils/browser/tabs"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
@@ -29,22 +31,34 @@ export default function AutoDetectSlowHintAlert({
   }
 
   return (
-    <Alert variant="default" className="mb-density-4 sm:items-center">
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-        <p className="min-w-0 text-xs leading-5 sm:flex-1">
-          {t("accountDialog:messages.autoDetectTakingTooLong")}
-        </p>
+    <Notice
+      tone="info"
+      size="sm"
+      role="status"
+      actionsLayout={NOTICE_ACTION_LAYOUTS.Inline}
+      className="mb-density-1"
+      icon={<Info className="size-4 text-info-indicator" />}
+      actions={
         <Button
           type="button"
-          onClick={handleHelpClick}
-          variant="secondary"
+          variant="outline"
           size="sm"
-          className="shrink-0 self-start sm:self-center"
-          leftIcon={<HelpHintIcon className="h-3 w-3" />}
+          onClick={handleHelpClick}
+          rightIcon={
+            <WorkflowTransitionIcon
+              aria-hidden="true"
+              className="size-3.5 shrink-0"
+            />
+          }
+          className="bg-popover/85 hover:bg-popover dark:bg-popover/50"
         >
           {t("accountDialog:actions.helpDocument")}
         </Button>
-      </div>
-    </Alert>
+      }
+    >
+      <p className="text-xs leading-relaxed text-info-soft-foreground sm:text-sm">
+        {t("accountDialog:messages.autoDetectTakingTooLong")}
+      </p>
+    </Notice>
   )
 }

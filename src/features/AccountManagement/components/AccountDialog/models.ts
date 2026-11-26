@@ -76,12 +76,21 @@ export interface AccountDialogDraft {
   aimlApiKey: string
 }
 
-/** Form state carried from a popup into manual New API token recovery. */
+export const ACCOUNT_DIALOG_RECOVERY_ACTIONS = {
+  Cookie: "cookie",
+  NewApiTokenCreate: "new-api-token-create",
+  NewApiTokenSite: "new-api-token-site",
+} as const
+
+export type AccountDialogRecoveryAction =
+  (typeof ACCOUNT_DIALOG_RECOVERY_ACTIONS)[keyof typeof ACCOUNT_DIALOG_RECOVERY_ACTIONS]
+
+/** Form state carried from a popup into a persistent account editor. */
 export interface AccountDialogRecoveryState {
   /** Local failure feedback retained independently of the recovery action. */
   detectionError?: Pick<AutoDetectError, "type" | "message">
-  /** Resume the user-requested Cookie login only after the draft reaches a persistent view. */
-  recoveryAction?: "cookie"
+  /** Resume the user-requested workflow only after the draft reaches a persistent view. */
+  recoveryAction?: AccountDialogRecoveryAction
   url: string
   draft: AccountDialogDraft
   accountId?: string

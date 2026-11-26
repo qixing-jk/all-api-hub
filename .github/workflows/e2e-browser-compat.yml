@@ -3,6 +3,14 @@ name: E2E Browser Compatibility
 on:
   workflow_dispatch:
     inputs:
+      chrome_versions:
+        description: Chrome versions (all or comma-separated, e.g. 114,stable)
+        default: all
+        type: string
+      shards:
+        description: Shard numbers (all or comma-separated from 1,2,3)
+        default: all
+        type: string
       workers:
         description: Workers per browser compatibility shard
         required: true
@@ -19,39 +27,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  browser-compat-matrix:
+    name: Prepare browser compatibility matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Select Chrome versions and shards
+        id: matrix
+        env:
+          CHROME_VERSIONS: ${{ inputs.chrome_versions || 'all' }}
+          SHARDS: ${{ inputs.shards || 'all' }}
+        run: node scripts/github-browser-compat-matrix.mjs "$CHROME_VERSIONS" "$SHARDS"
+
   e2e-build:
+    needs: browser-compat-matrix
     uses: ./.github/workflows/e2e-build.yml
 
   chrome-compat:
     name: Chrome ${{ matrix.chrome_version }} compatibility (${{ matrix.shard }}/3)
-    needs: e2e-build
+    needs: [browser-compat-matrix, e2e-build]
     runs-on: ubuntu-latest
     # Covers the 35-minute test budget plus setup, the failure report, and
     # artifact upload, so a timeout never truncates the evidence.
     timeout-minutes: 50
     strategy:
       fail-fast: false
-      matrix:
-        # All Chrome versions and shards reuse the same extension build.
-        shard: [1, 2, 3]
-        chrome_version:
-          # 114 is the current Chromium support floor for this build: the
-          # manifest declares sidePanel, and chrome.sidePanel starts at 114.
-          - "114"
-          # 116 adds sidePanel.open and major MV3 service worker lifetime fixes.
-          - "116"
-          # 120 aligns chrome.alarms with the 30s MV3 service worker lifecycle.
-          - "120"
-          # 122 is a broad promise-support checkpoint for asynchronous extension APIs.
-          - "122"
-          # 144 has known community reports around extension messaging behavior.
-          - "144"
-          # 147 is the last pre-148 checkpoint before native browser namespace rollout.
-          - "147"
-          # 148 introduces native browser namespace and Promise-returning onMessage support.
-          - "148"
-          # stable catches the browser version users are most likely to auto-update to.
-          - "stable"
+      matrix: ${{ fromJSON(needs.browser-compat-matrix.outputs.matrix) }}
 
     steps:
       - name: Checkout code

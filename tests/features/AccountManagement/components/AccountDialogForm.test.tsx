@@ -1958,6 +1958,33 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
   })
 
+  it.each([
+    ["username", ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput],
+    ["userId", ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput],
+  ] as const)(
+    "opens the mobile authentication section to focus %s",
+    async (field, id) => {
+      mediaQueryState.isSmallScreen = true
+      const props = createProps()
+      const ref = createRef<AccountFormHandle>()
+      const user = userEvent.setup()
+      render(<AccountForm {...withSitePolicy(props)} ref={ref} />)
+      const auth = within(
+        await screen.findByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionAuth,
+        ),
+      )
+      await user.click(
+        auth.getByRole("button", {
+          name: "accountDialog:sections.accountAuth.title",
+        }),
+      )
+      expect(screen.queryByTestId(id)).not.toBeInTheDocument()
+      act(() => ref.current?.focusIssue(field))
+      expect(await screen.findByTestId(id)).toHaveFocus()
+    },
+  )
+
   it.each([false, true])(
     "propagates core field edits, exposes access-token controls, and surfaces validation states (continuous: %s)",
     async (continuous) => {
@@ -2137,11 +2164,13 @@ describe("AccountDialog AccountForm", () => {
 
       const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
-      expect(
-        await screen.findByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
-        ),
-      ).toBeInTheDocument()
+      const recommendation = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
+      )
+      expect(recommendation).toHaveRole("note")
+      expect(recommendation).toHaveTextContent(
+        "accountDialog:form.cookiePermissionNeeded",
+      )
       expect(
         screen.getByText(
           "accountDialog:form.cookiePermissionRecommendationDesc",
@@ -2151,11 +2180,13 @@ describe("AccountDialog AccountForm", () => {
         screen.queryByText("accountDialog:form.cookiePermissionManualFallback"),
       ).not.toBeInTheDocument()
 
-      await user.click(
-        screen.getByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
-        ),
+      const grantButton = screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
       )
+      expect(grantButton).toHaveTextContent(
+        "accountDialog:form.cookiePermissionEnableShort",
+      )
+      await user.click(grantButton)
 
       expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
 
@@ -3442,7 +3473,7 @@ describe("AccountDialog AccountForm", () => {
     }
   })
 
-  it("does not show built-in auto check-in controls for AIHubMix accounts", async () => {
+  it("offers support without a detector when an unsupported account retains a previous method", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.AIHUBMIX
     props.draft.checkIn = createCheckIn({
@@ -3450,6 +3481,10 @@ describe("AccountDialog AccountForm", () => {
       supported: false,
       automaticExecutionEnabled: true,
     })
+    props.draft.checkIn.selection = {
+      mode: "manual",
+      methodId: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    }
 
     render(<AccountForm {...withSitePolicy(props)} />)
 
@@ -3458,6 +3493,16 @@ describe("AccountDialog AccountForm", () => {
         exact: false,
       }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:checkInFeedback.request",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:form.detectCheckInMethod",
+      }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("accountDialog:form.checkInStatusDesc"),
     ).not.toBeInTheDocument()

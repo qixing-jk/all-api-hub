@@ -74,11 +74,9 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
-        // BaiApi is declared after Emrank in the real registry, but this
-        // fixture only covers Sub2API candidates; order still maps to
-        // detectors by index, so it stays last.
         AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],

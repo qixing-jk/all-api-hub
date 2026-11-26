@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
 import { collectCheckInFeedbackClues } from "~/services/checkin/feedback/scan"
 import { AuthTypeEnum } from "~/types"
 
@@ -51,15 +52,14 @@ describe("split-origin feedback status queries", () => {
         }),
       }),
     )
-    expect(clues.statusQueries.map((q) => q.path)).toContain(
-      "/api/v1/user/daily-checkin",
+    const registered = getCheckInFeedbackStatusRoutes(
+      SITE_TYPES.SUB2API,
+      "https://ai-router.dev",
     )
-    expect(clues.statusQueries).toHaveLength(12)
-    expect(clues.statusQueries.map((q) => q.path)).toContain(
-      "/api/v1/welfare/profile",
-    )
-    expect(clues.statusQueries.map((q) => q.path)).toContain(
-      "/api/v1/user/checkin",
+    expect(clues.statusQueries.map(({ path }) => path)).toEqual(
+      registered.map(
+        ({ path }) => new URL(path, "https://api.ai-router.dev").pathname,
+      ),
     )
     expect(fetch).toHaveBeenCalledWith(
       "https://api.ai-router.dev/api/v1/welfare/profile",

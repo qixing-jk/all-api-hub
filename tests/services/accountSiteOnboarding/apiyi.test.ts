@@ -37,7 +37,7 @@ describe("APIyi onboarding", () => {
     })
   })
 
-  it("detects the canonical dashboard as an account-only New API-family site", async () => {
+  it("detects the canonical dashboard as an account-only Shell API site", async () => {
     server.use(
       http.get("https://api.apiyi.com/", () =>
         HttpResponse.html("<title>new-api</title>"),
@@ -57,7 +57,7 @@ describe("APIyi onboarding", () => {
     expect(siteType).toBe("apiyi")
     expect(getAccountSiteDefinition(siteType)).toMatchObject({
       scopes: ["account"],
-      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily,
     })
     expect(isManagedSiteType(siteType)).toBe(false)
   })

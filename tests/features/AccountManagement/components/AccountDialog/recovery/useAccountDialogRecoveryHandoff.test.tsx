@@ -268,6 +268,70 @@ describe("account dialog recovery continuation", () => {
     },
   )
 
+  it("forwards a chosen New API token recovery action when opening the persistent editor", async () => {
+    const user = userEvent.setup()
+    const opening = createDeferred<"sidepanel">()
+    vi.mocked(openAccountDialogRecovery).mockReturnValueOnce(opening.promise)
+
+    const state = snapshot()
+    function ActionGuide({ draft }: { draft: AccountDialogRecoveryState }) {
+      const continuation = useAccountDialogRecoveryHandoff({
+        enabled: true,
+        state: draft,
+      })
+      return (
+        <div>
+          <button
+            type="button"
+            disabled={continuation?.disabled}
+            data-pending-action={continuation?.pendingAction ?? ""}
+            onClick={() => continuation?.onContinue("new-api-token-create")}
+          >
+            Create token
+          </button>
+          <button
+            type="button"
+            disabled={continuation?.disabled}
+            onClick={() => continuation?.onContinue("new-api-token-site")}
+          >
+            Open site
+          </button>
+        </div>
+      )
+    }
+
+    const view = render(<ActionGuide draft={state} />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const createButton = await screen.findByRole("button", {
+      name: "Create token",
+    })
+    await waitFor(() => expect(createButton).toBeEnabled())
+
+    await user.click(createButton)
+    expect(openAccountDialogRecovery).toHaveBeenCalledExactlyOnceWith(
+      prepared,
+      { recoveryAction: "new-api-token-create" },
+    )
+    expect(createButton).toHaveAttribute(
+      "data-pending-action",
+      "new-api-token-create",
+    )
+
+    view.rerender(
+      <ActionGuide
+        draft={{ ...state, draft: { ...state.draft, notes: "Later edit" } }}
+      />,
+    )
+    await act(async () => {})
+    expect(prepareAccountDialogRecovery).toHaveBeenCalledOnce()
+
+    await act(async () => opening.resolve("sidepanel"))
+    expect(closeIfPopup).toHaveBeenCalledTimes(1)
+  })
+
   it.each(["successful", "failed"])(
     "attempts %s cleanup when preparation finishes after the dialog closes",
     async (cleanup) => {

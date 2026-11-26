@@ -120,55 +120,6 @@ describe("check-in methods compatibility activation", () => {
     ),
   })
 
-  it("allows authentication recovery only for authorized execution admission", async () => {
-    const registration = getNewApiExecutionRegistration()
-    const account = createNewApiExecutionAccount()
-    const context = createExecutionContext()
-    const read = vi
-      .spyOn(registration.provider, "getStatus")
-      .mockImplementation(async () => ({
-        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-        availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
-        today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-        evidence: {
-          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-          observedAt: Date.now(),
-        },
-      }))
-    vi.spyOn(registration.provider, "checkIn").mockResolvedValue({
-      status: "uncertain",
-      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
-    })
-
-    await executeSelectedCheckIn({
-      account,
-      globalAutomaticExecutionEnabled: true,
-      context,
-    })
-    expect(read).toHaveBeenCalledTimes(2)
-    expect(read.mock.calls[0]?.[0]).toMatchObject({
-      authenticationRecovery: context,
-    })
-    expect(read.mock.calls[1]?.[0]).not.toHaveProperty("authenticationRecovery")
-
-    read.mockClear()
-    await refreshSelectedStatus({
-      config: account.checkIn,
-      siteType: account.site_type,
-      account,
-    })
-    expect(read).toHaveBeenCalledOnce()
-    expect(read.mock.calls[0]?.[0]).not.toHaveProperty("authenticationRecovery")
-
-    read.mockClear()
-    await executeSelectedCheckIn({
-      account,
-      globalAutomaticExecutionEnabled: false,
-      context,
-    })
-    expect(read).not.toHaveBeenCalled()
-  })
-
   it.each([
     {
       name: "uses the new day's unchecked admission after yesterday's checked response",
@@ -1681,6 +1632,42 @@ describe("check-in methods compatibility activation", () => {
     expect(checkInRequest).not.toHaveBeenCalled()
     expect(revalidateAccount).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ["identity", "account_unavailable"],
+    ["selection", "no_selected_method"],
+    ["disabled account", "account_disabled"],
+  ] as const)(
+    "honors the changed %s returned while saving a selected method probe",
+    async (change, reason) => {
+      const registration = getNewApiExecutionRegistration()
+      const account = createUnrecordedMethodAccount()
+      vi.spyOn(registration.provider, "detect").mockResolvedValue({
+        outcome: "matched",
+        evidence: { source: "probe", observedAt: 400 },
+      })
+      const read = vi
+        .spyOn(registration.provider, "getStatus")
+        .mockResolvedValue(undefined)
+      const claim = vi.spyOn(registration.provider, "checkIn")
+      const persisted = { ...account, checkIn: { ...account.checkIn } }
+      if (change === "identity")
+        persisted.site_url = "https://different.example"
+      if (change === "selection")
+        persisted.checkIn.selection = { mode: "automatic" }
+      if (change === "disabled account") persisted.disabled = true
+      await expect(
+        executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          revalidateAccount: async () => persisted,
+        }),
+      ).resolves.toMatchObject({ kind: "skipped", reason })
+      expect(read).not.toHaveBeenCalled()
+      expect(claim).not.toHaveBeenCalled()
+    },
+  )
 
   it("records an unsupported manual method and does not switch away from it", async () => {
     const registration = getNewApiExecutionRegistration()

@@ -45,6 +45,23 @@ export interface SiblingStatusDtoDiscriminator {
   readonly siblingDtoSample: Record<string, unknown>
 }
 
+/** Identifies the free-gift status without assuming this is the current day. */
+export function isBizDecipherStatusDto(
+  data: Record<string, unknown>,
+): data is Record<string, unknown> & { date: string; free_claimed: boolean } {
+  return (
+    typeof data.free_claimed === "boolean" &&
+    typeof data.date === "string" &&
+    Boolean(parseDayKey(data.date)) &&
+    typeof data.balance === "number" &&
+    Number.isFinite(data.balance) &&
+    typeof data.credit_balance === "number" &&
+    Number.isFinite(data.credit_balance) &&
+    !Object.hasOwn(data, "checked_in_today") &&
+    !Object.hasOwn(data, "today_checked_in")
+  )
+}
+
 /**
  * Several deployments serve the `/api/v1/user/checkin(/status)` family with
  * distinct DTOs: FreeAPI and Clawhud read `checked_in_today`, the Genius
@@ -59,16 +76,7 @@ export const SIBLING_STATUS_DTO_DISCRIMINATORS = [
   {
     methodId: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
     endpoint: USER_CHECK_IN_STATUS_ENDPOINT,
-    ownDtoMatches: (data) =>
-      typeof data.free_claimed === "boolean" &&
-      typeof data.date === "string" &&
-      Boolean(parseDayKey(data.date)) &&
-      typeof data.balance === "number" &&
-      Number.isFinite(data.balance) &&
-      typeof data.credit_balance === "number" &&
-      Number.isFinite(data.credit_balance) &&
-      !Object.hasOwn(data, "checked_in_today") &&
-      !Object.hasOwn(data, "today_checked_in"),
+    ownDtoMatches: isBizDecipherStatusDto,
     siblingDtoSample: { enabled: true, checked_in_today: false },
   },
   {

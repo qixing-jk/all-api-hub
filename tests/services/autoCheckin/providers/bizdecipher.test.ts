@@ -1,11 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import * as browserAuth from "~/services/apiService/sub2api/auth/browserAuth"
 import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import * as userCheckInProtocol from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
-import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import {
+  API_DIRECT_REQUEST_REASONS,
+  API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
+  API_TRANSPORT_FETCH_CONTEXT_KINDS,
+} from "~/services/apiTransport/type"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -124,8 +132,11 @@ describe("registered BizDecipher free daily check-in", () => {
         tokenExpiresAt: Date.now() + 3_600_000,
       })
       vi.mocked(fetchApiResponse).mockResolvedValue(response(statusData()))
+      const read = authorized
+        ? bizDecipherProvider.forExecution!(context()).getAuthenticatedStatus
+        : bizDecipherProvider.getStatus!
       await expect(
-        bizDecipherProvider.getStatus!({
+        read({
           request: {
             baseUrl: "https://biz.example",
             directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
@@ -138,7 +149,6 @@ describe("registered BizDecipher free daily check-in", () => {
             },
           },
           observedAt: Date.now(),
-          ...(authorized ? { authenticationRecovery: context() } : {}),
         }),
       ).resolves.toMatchObject({ outcome: "known", today: "not_checked" })
       expect(refreshSub2ApiTokens).toHaveBeenCalledTimes(authorized ? 1 : 0)
@@ -154,6 +164,71 @@ describe("registered BizDecipher free daily check-in", () => {
       )
     },
   )
+
+  it("keeps the recovered browser binding through the free POST and operation readback", async () => {
+    const saved = account()
+    saved.id = await accountMutations.addAccount(saved)
+    const fetchContext = {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+      tabId: 12,
+      origin: saved.site_url,
+    } as const
+    const recover = vi
+      .spyOn(browserAuth, "recoverSub2ApiBrowserAuth")
+      .mockResolvedValue({
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        userId: "42",
+        accessToken: "renewed-browser-token",
+        fetchContext,
+      })
+    let operationId = ""
+    const fetch = vi
+      .mocked(fetchApiResponse)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: {},
+        body: { code: "SESSION_BINDING_MISMATCH" },
+      })
+      .mockResolvedValueOnce(response(statusData()))
+      .mockImplementationOnce(async (_, { options }) => {
+        operationId = JSON.parse(String(options?.body)).operation_id
+        throw new TypeError("Response connection lost")
+      })
+      .mockImplementationOnce(async () => response(receipt(operationId)))
+    try {
+      await expect(
+        executeSelectedCheckIn({
+          account: saved,
+          globalAutomaticExecutionEnabled: true,
+          context: context(),
+        }),
+      ).resolves.toMatchObject({
+        result: { status: "success" },
+      })
+      expect(recover).toHaveBeenCalledOnce()
+      expect(
+        fetch.mock.calls.map(([, options]) => options.options?.method),
+      ).toEqual(["GET", "GET", "POST", "GET"])
+      for (const [pending] of fetch.mock.calls.slice(1)) {
+        expect(pending).toMatchObject({
+          auth: { accessToken: "renewed-browser-token" },
+          fetchContext,
+          currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
+        })
+      }
+      expect(
+        (await accountQueries.getAccountById(saved.id))?.account_info
+          .access_token,
+      ).toBe("renewed-browser-token")
+      expect(fetch.mock.calls[2]?.[1].options?.redirect).toBe("error")
+      expect(fetch.mock.calls[3]?.[1].endpoint).toContain(
+        `/operations/${operationId}?`,
+      )
+    } finally {
+      await accountMutations.deleteAccount(saved.id)
+    }
+  })
 
   it("discovers the free contract without a hostname restriction or mutating a sibling", async () => {
     vi.mocked(fetchApiResponse).mockImplementation(async (_, input) => {

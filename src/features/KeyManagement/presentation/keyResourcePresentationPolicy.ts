@@ -87,12 +87,15 @@ const native = {
   scope: KEY_RESOURCE_SCOPE_KINDS.Account,
 } as const
 
+const compatibleEditorPolicy = {
+  ...native,
+  editor: KEY_RESOURCE_EDITOR_KINDS.NewApi,
+}
+
 /** Frontend policies share one complete family registration; services own native facts. */
 const policies = {
-  [families.NewApiFamily]: {
-    ...native,
-    editor: KEY_RESOURCE_EDITOR_KINDS.NewApi,
-  },
+  [families.NewApiFamily]: compatibleEditorPolicy,
+  [families.ShellApiFamily]: compatibleEditorPolicy,
   [families.Sub2Api]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Sub2Api },
   [families.VoApiV2]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.VoApiV2 },
   [families.Aihubmix]: {

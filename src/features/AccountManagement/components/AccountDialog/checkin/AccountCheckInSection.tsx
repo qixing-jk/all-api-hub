@@ -47,6 +47,7 @@ import { AccountFormSection } from "~/features/AccountManagement/components/Acco
 import {
   ACCOUNT_FORM_MOBILE_DEFAULT_OPEN,
   ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+  ACCOUNT_FORM_SECTIONS,
 } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
@@ -72,7 +73,7 @@ const CHECK_IN_ACTION_SIZE =
   "min-h-(--density-control-sm) sm:min-h-(--density-control-xs)"
 
 const ACCOUNT_CHECK_IN_TARGET_IDS = {
-  section: ACCOUNT_FORM_SECTION_ELEMENT_IDS["check-in"],
+  section: ACCOUNT_FORM_SECTION_ELEMENT_IDS[ACCOUNT_FORM_SECTIONS.CHECK_IN],
   feedback: "account-check-in-feedback",
   method: "account-check-in-method",
   automaticExecution: "account-check-in-automatic-execution",
@@ -143,10 +144,6 @@ export function AccountCheckInSection({
             explanation: t("login.checkInExplanation"),
           }
   const hasCandidates = candidateMethodIds.length > 0
-  const shouldOfferRedetect =
-    hasCandidates ||
-    inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale ||
-    inspection.decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown
   const {
     selectedMethodId,
     triggerLabel,
@@ -218,7 +215,7 @@ export function AccountCheckInSection({
       }),
     )
   }
-  const detectButton = shouldOfferRedetect && (
+  const detectButton = (
     <Button
       type="button"
       variant="outline"
@@ -263,7 +260,9 @@ export function AccountCheckInSection({
       continuous={continuous}
       title={t("sections.checkInConfig.title")}
       headerAction={requestSupport ? undefined : feedbackButton}
-      defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
+      defaultOpen={
+        ACCOUNT_FORM_MOBILE_DEFAULT_OPEN[ACCOUNT_FORM_SECTIONS.CHECK_IN]
+      }
       testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
       id={ACCOUNT_CHECK_IN_TARGET_IDS.section}
     >
@@ -277,11 +276,8 @@ export function AccountCheckInSection({
               {t("form.checkInStatusUnsupported")}
             </p>
           </div>
-          {(requestSupport || (!hasCandidates && shouldOfferRedetect)) && (
-            <div className="flex flex-wrap gap-density-2">
-              {!hasCandidates && detectButton}
-              {requestSupport && feedbackButton}
-            </div>
+          {requestSupport && (
+            <div className="justify-self-start">{feedbackButton}</div>
           )}
         </div>
       )}

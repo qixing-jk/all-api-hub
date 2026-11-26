@@ -1,5 +1,9 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { ApiError, type ApiErrorCode } from "~/services/apiTransport/errors"
+import {
+  API_ERROR_CODES,
+  ApiError,
+  type ApiErrorCode,
+} from "~/services/apiTransport/errors"
 import {
   isReplaySafeRemoteFetch,
   observeRemoteFetchLifecycle,
@@ -24,6 +28,8 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
+import { tryParseOrigin } from "~/utils/core/urlParsing"
+import { t } from "~/utils/i18n/core"
 
 type AcquiredTransportResponse<T> = ApiTransportResponse<T>
 type TransportResponseMapper<T, TResult> = (
@@ -66,40 +72,49 @@ function getSafeTransportErrorMessage(
   return message.split(requestAccessToken).join("[REDACTED]")
 }
 
-/**
- * Checks whether a request can safely prefer the matched current tab transport.
- */
-function isCurrentTabContentFetchEligible(params: {
+type CurrentTabContext = Extract<
+  ApiTransportFetchContext,
+  { kind: typeof API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB }
+>
+
+/** Resolve the tab before any route can dispatch using a recovered browser credential. */
+export function resolveCurrentTabFetchContext(params: {
   request: ApiTransportRequest
   url: string
   options: FetchApiOptions
-}): boolean {
-  if (params.options.currentTabTransport === "disabled") return false
-  const responseType = params.options.responseType ?? "json"
-  if (responseType !== "json" && responseType !== "text") return false
-
+}): CurrentTabContext | undefined {
   const fetchContext = params.request.fetchContext
   if (fetchContext?.kind !== API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB)
-    return false
-  if (typeof fetchContext.tabId !== "number") return false
-
-  try {
-    const requestOrigin = new URL(params.url).origin
-    const contextOrigin = new URL(fetchContext.origin).origin
-    return requestOrigin === contextOrigin
-  } catch {
-    return false
-  }
+    return
+  const responseType = params.options.responseType ?? "json"
+  const tabOrigin = tryParseOrigin(fetchContext.origin)
+  if (
+    params.options.currentTabTransport !== "disabled" &&
+    !params.request.cookieSession &&
+    !Object.keys(params.request.requestHeaders ?? {}).length &&
+    (responseType === "json" || responseType === "text") &&
+    typeof fetchContext.tabId === "number" &&
+    tabOrigin &&
+    tabOrigin === tryParseOrigin(params.url)
+  )
+    return fetchContext
+  if (
+    params.request.currentTabFallback ===
+    API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid
+  )
+    throw new ApiError(
+      t("messages:background.tempWindowPolicyContextInvalid"),
+      undefined,
+      params.options.endpoint,
+      API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    )
 }
 
 /**
  * Sends the prepared request through the matched tab's content script.
  */
 async function fetchViaCurrentTabContent<T>(context: {
-  fetchContext: Extract<
-    ApiTransportFetchContext,
-    { kind: typeof API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB }
-  >
+  fetchContext: CurrentTabContext
   url: string
   endpoint: string
   fetchOptions: RequestInit
@@ -109,6 +124,7 @@ async function fetchViaCurrentTabContent<T>(context: {
   onResponse: () => void
   onResponseInspectionError: () => void
 }): Promise<AcquiredTransportResponse<T>> {
+  context.fetchOptions.signal?.throwIfAborted()
   const requestId = safeRandomUUID("current-tab-fetch")
   const lifecycle = observeRemoteFetchLifecycle(requestId, {
     onDispatch: context.onDispatch,
@@ -132,16 +148,29 @@ async function fetchViaCurrentTabContent<T>(context: {
   try {
     let response: unknown
     try {
-      response = await sendTabMessageWithRetry(context.fetchContext.tabId, {
-        action: RuntimeActionIds.ContentPerformTempWindowFetch,
-        requestId,
-        expectedOrigin: new URL(context.fetchContext.origin).origin,
-        fetchUrl: context.url,
-        fetchOptions: normalizeRequestInitForMessage(context.fetchOptions),
-        responseType: context.responseType,
-      })
+      response = await sendTabMessageWithRetry(
+        context.fetchContext.tabId,
+        {
+          action: RuntimeActionIds.ContentPerformTempWindowFetch,
+          requestId,
+          expectedOrigin: new URL(context.fetchContext.origin).origin,
+          fetchUrl: context.url,
+          fetchOptions: normalizeRequestInitForMessage(context.fetchOptions),
+          responseType: context.responseType,
+        },
+        {
+          retrySignal: abortSignal ?? undefined,
+          onReceiverRetryWait: (waiting) => {
+            hasAffirmativePreDispatchEvidence = waiting
+          },
+        },
+      )
     } catch (error) {
-      if (!replaySafe && !isMessageReceiverUnavailableError(error)) {
+      if (
+        !replaySafe &&
+        !hasAffirmativePreDispatchEvidence &&
+        !isMessageReceiverUnavailableError(error)
+      ) {
         lifecycle.markPossiblyDispatched()
       }
       throw error
@@ -208,6 +237,7 @@ async function fetchViaCurrentTabContent<T>(context: {
 export async function executeWithCurrentTabContentPreference<T, TResult>(
   context: {
     request: ApiTransportRequest
+    fetchContext: CurrentTabContext | undefined
     url: string
     endpoint: string
     fetchOptions: RequestInit
@@ -219,20 +249,8 @@ export async function executeWithCurrentTabContentPreference<T, TResult>(
   mapResponse: TransportResponseMapper<T, TResult>,
   fallback: () => Promise<TResult>,
 ): Promise<TResult> {
-  if (
-    !isCurrentTabContentFetchEligible({
-      request: context.request,
-      url: context.url,
-      options: context.options,
-    })
-  ) {
-    return await fallback()
-  }
-
-  const fetchContext = context.request.fetchContext as Extract<
-    ApiTransportFetchContext,
-    { kind: typeof API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB }
-  >
+  const fetchContext = context.fetchContext
+  if (!fetchContext) return await fallback()
 
   let response: AcquiredTransportResponse<T>
   let responseInspectionFailed = false
@@ -262,6 +280,7 @@ export async function executeWithCurrentTabContentPreference<T, TResult>(
     const mustNotFallback =
       context.request.currentTabFallback ===
         API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid ||
+      context.fetchOptions.signal?.aborted ||
       responseInspectionFailed ||
       (dispatched && !replaySafe)
     logger.debug(

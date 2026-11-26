@@ -1,11 +1,13 @@
+import { randomUUID } from "node:crypto"
 import { readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import type { Page } from "@playwright/test"
+import { request, type Page } from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { registerBalanceDefaultDisplayTests } from "~~/e2e/scenarios/balanceDefaultDisplay"
+import { saveAutoDetectedAccountFromApp } from "~~/e2e/utils/accountLifecycle"
 import {
   forceExtensionLanguage,
   seedUserPreferences,
@@ -15,6 +17,7 @@ import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import {
   autoDetectAccountFromAddDialog,
   openAccountManagementPage,
+  waitForSavedAccount,
 } from "~~/e2e/utils/realSite/accountAdd"
 import { registerRealSiteAccountDetectionTests } from "~~/e2e/utils/realSite/accountDetection"
 import {
@@ -41,6 +44,210 @@ import {
   throwScenarioError,
 } from "~~/e2e/utils/scenarioErrors"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+
+const tokenChannelTest = test.extend({
+  screenshot: "off",
+  trace: "off",
+  video: "off",
+})
+
+for (const channel of ["extension", "official"] as const) {
+  tokenChannelTest(
+    `real-site New API token channel: ${channel} UI creates, saves and refreshes`,
+    async ({ context, page, extensionId, extensionDir }, testInfo) => {
+      test.setTimeout(240_000)
+      context.setDefaultTimeout(15_000)
+      page.setDefaultTimeout(15_000)
+      const resolution = resolveNewApiRealSiteConfig()
+      test.skip(
+        !resolution.config,
+        getNewApiRealSiteSkipReason(resolution.missingEnvKeys),
+      )
+      const config = resolution.config!
+      const origin = new URL(config.baseUrl).origin
+      const tokenName = `All API Hub e2e ${channel} ${randomUUID()}`
+      const worker = await getServiceWorker(context)
+      await forceExtensionLanguage(page, "en")
+      await stubLlmMetadataIndex(context)
+      await seedUserPreferences(worker, {
+        autoFillCurrentSiteUrlOnAccountAdd: false,
+        autoProvisionKeyOnAccountAdd: false,
+        openChangelogOnUpdate: false,
+      })
+      const site = await context.newPage()
+      let cleanupSession: (() => Promise<void>) | undefined
+      let issued = false
+      let creationAttempted = false
+      let cleanupToken: (() => Promise<void>) | undefined
+      let primaryError: unknown
+      let identity = ""
+      const onRequest = (request: import("@playwright/test").Request) => {
+        if (
+          request.url() !== `${origin}/api/user/access_tokens` ||
+          request.method() !== "POST"
+        )
+          return
+        try {
+          creationAttempted ||= request.postDataJSON()?.name === tokenName
+        } catch {
+          // A request with an unreadable payload does not establish ownership.
+        }
+      }
+      context.on("request", onRequest)
+      try {
+        const login = await loginToRealNewApiSite(site, config, tokenName)
+        cleanupSession = login.cleanupOwnedSession
+        identity = String(login.user.id)
+        test.skip(
+          !login.ownedScopedToken || !(await login.probeScopedAccessTokens?.()),
+          "This channel requires scoped Access Token support",
+        )
+        const { find: lookupOwnedToken, revoke } = login.ownedScopedToken!
+        expect(await lookupOwnedToken()).toBeUndefined()
+        cleanupToken = revoke
+        const recovery = createNewApiAccountRecovery({
+          page,
+          config,
+          tokenChannel: channel,
+          tokenName,
+          expectedIdentity: identity,
+          onCreatorReady: async (creator) => {
+            if (!process.env.AAH_VISUAL_CAPTURE_DIR) return
+            await creator
+              .getByLabel("Token name", { exact: true })
+              .scrollIntoViewIfNeeded()
+            await captureVisualViews({
+              page,
+              ready: creator,
+              id: "newapi-extension-creation-grant",
+              extensionDir,
+            })
+            await page
+              .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+              .getByRole("button", {
+                name: "Verify and create token",
+                exact: true,
+              })
+              .scrollIntoViewIfNeeded()
+            await captureVisualViews({
+              page,
+              ready: creator,
+              id: "newapi-extension-creation-verification",
+              extensionDir,
+            })
+          },
+        })
+        await saveAutoDetectedAccountFromApp({
+          page,
+          extensionId,
+          serviceWorker: worker,
+          baseUrl: config.baseUrl,
+          siteType: SITE_TYPES.NEW_API,
+          prepareDetectedDialog: async (dialog) => {
+            await recovery.prepareDetectedDialog(dialog)
+            expect(creationAttempted).toBe(true)
+            await expect.poll(lookupOwnedToken).toBeGreaterThan(0)
+            issued = true
+            await expect(dialog.userIdInput).toHaveValue(identity, {
+              timeout: 30_000,
+            })
+            await captureVisualViews({
+              page,
+              ready: dialog.accessTokenInput,
+              id: `newapi-token-${channel}-completed`,
+              extensionDir,
+            })
+          },
+        })
+        const saved = await waitForSavedAccount({
+          serviceWorker: worker,
+          baseUrl: config.baseUrl,
+          siteType: SITE_TYPES.NEW_API,
+        })
+        expect(String(saved.account_info.id)).toBe(identity)
+        expect(saved.account_info.access_token.startsWith("nap_")).toBe(true)
+        await site.close()
+        await context.clearCookies()
+        const isolated = await request.newContext()
+        try {
+          const response = await isolated.get(`${origin}/api/user/self`, {
+            headers: {
+              Authorization: `Bearer ${saved.account_info.access_token}`,
+              "New-Api-User": identity,
+            },
+            maxRedirects: 0,
+          })
+          expect(response.ok()).toBe(true)
+          const data = await response.json()
+          expect(String(data.data?.id)).toBe(identity)
+        } finally {
+          await isolated.dispose()
+        }
+        await page.reload()
+        await openAccountManagementPage({ page, extensionId })
+        const refreshed = context.waitForEvent("response", {
+          predicate: async (response) =>
+            response.url() === `${origin}/api/user/self` &&
+            response.ok() &&
+            (await response.request().headerValue("authorization")) ===
+              `Bearer ${saved.account_info.access_token}` &&
+            !(await response.request().headerValue("cookie")),
+        })
+        await page.getByRole("button", { name: "Refresh", exact: true }).click()
+        expect(String((await (await refreshed).json()).data?.id)).toBe(identity)
+        const refreshedAccount = await waitForSavedAccount({
+          serviceWorker: worker,
+          baseUrl: config.baseUrl,
+          siteType: SITE_TYPES.NEW_API,
+          predicate: (account) =>
+            account.id === saved.id &&
+            account.last_sync_time > saved.last_sync_time,
+        })
+        expect(String(refreshedAccount.account_info.id)).toBe(identity)
+        expect(
+          refreshedAccount.account_info.access_token ===
+            saved.account_info.access_token,
+        ).toBe(true)
+      } catch (error) {
+        primaryError = error
+      }
+      const cleanupError = await collectCleanupError(
+        [
+          async () => {
+            await cleanupToken?.()
+          },
+          async () => {
+            await cleanupSession?.()
+          },
+          async () => {
+            if (!site.isClosed()) await site.close()
+          },
+        ],
+        "Token channel cleanup failed",
+      )
+      context.off("request", onRequest)
+      await writeFile(
+        testInfo.outputPath(`token-channel-${channel}.json`),
+        JSON.stringify(
+          {
+            channel,
+            issued,
+            identityVerified: !primaryError,
+            savedAndRefreshed: !primaryError,
+            cleanupPassed: !cleanupError,
+          },
+          null,
+          2,
+        ),
+      )
+      throwScenarioError({
+        primaryError,
+        cleanupError,
+        message: `New API ${channel} token channel failed`,
+      })
+    },
+  )
+}
 
 registerBalanceDefaultDisplayTests("NEW_API")
 
@@ -135,6 +342,17 @@ guidanceTest.describe("real-site New API credential guidance", () => {
           page,
           config.baseUrl,
         )
+        await expect(
+          dialog.dialog.getByRole("button", {
+            name: "Create token in extension",
+            exact: true,
+          }),
+        ).toBeVisible({ timeout: 30_000 })
+        const openFullForm = dialog.dialog.getByRole("button", {
+          name: "Open full form",
+          exact: true,
+        })
+        if (await openFullForm.isVisible()) await openFullForm.click()
         await expect(dialog.userIdInput).toHaveValue(String(login.user.id), {
           timeout: 30_000,
         })
@@ -142,21 +360,16 @@ guidanceTest.describe("real-site New API credential guidance", () => {
           "data-site-type",
           SITE_TYPES.NEW_API,
         )
-        await expect(
-          dialog.dialog.getByText("Enter an Access Token manually", {
-            exact: true,
-          }),
-        ).toBeVisible()
-        const error = dialog.dialog.getByTestId(
+        const guidance = dialog.dialog.getByTestId(
           ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
         )
-        await expect(error).toHaveText(
-          "The extension could not obtain an Access Token automatically. Your detected information has been kept. Copy or create an account management token on the site, then return here to enter it.",
+        await expect(guidance).toHaveText(
+          "Create a scoped token in the extension, or copy an existing token from the site.",
         )
         await expect(dialog.accessTokenInput).toBeEmpty()
-        await expect(dialog.confirmAddButton).toHaveCount(0)
+        await expect(dialog.confirmAddButton).toBeEnabled()
         expect(tokenRequests).toEqual([])
-        evidence.guidance = await error.innerText()
+        evidence.guidance = await guidance.innerText()
 
         await dialog.siteNameInput.fill("Keep my real-site draft")
         const notes = dialog.dialog.getByPlaceholder("Optional, enter notes")
@@ -165,7 +378,7 @@ guidanceTest.describe("real-site New API credential guidance", () => {
         expect(expectedUsername.length).toBeGreaterThan(0)
         await captureVisualViews({
           page,
-          ready: error,
+          ready: guidance,
           id: "real-newapi-credential-guidance",
           extensionDir,
         })
@@ -179,7 +392,7 @@ guidanceTest.describe("real-site New API credential guidance", () => {
             sourceTab.windowId,
           ),
           dialog.dialog
-            .getByRole("button", { name: "Open token page", exact: true })
+            .getByRole("button", { name: "Get from site", exact: true })
             .click(),
         ])
         credentialPage = openedPage
@@ -202,7 +415,7 @@ guidanceTest.describe("real-site New API credential guidance", () => {
         await expect(dialog.userIdInput).toHaveValue(String(login.user.id))
         await expect(dialog.accessTokenInput).toBeEmpty()
         await expect(dialog.accessTokenInput).toBeFocused()
-        await expect(dialog.confirmAddButton).toHaveCount(0)
+        await expect(dialog.confirmAddButton).toBeEnabled()
         expect(tokenRequests).toEqual([])
         evidence.nativeTokenPage = "ready; no token creation requested"
         evidence.draftPreserved = true
@@ -273,6 +486,7 @@ test.describe("real-site E2E: New API account add flow", () => {
       extensionId,
       page,
     }, testInfo) => {
+      test.setTimeout(240_000)
       const realSite = resolveNewApiRealSiteConfig()
       test.skip(
         !realSite.config,

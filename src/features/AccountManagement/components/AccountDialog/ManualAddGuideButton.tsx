@@ -9,6 +9,7 @@ import { getDocsManualAddGuideUrl } from "~/utils/navigation/docsLinks"
 
 interface ManualAddGuideButtonProps {
   anchor: AccountSiteManualAddGuideAnchor
+  label?: string
   variant?: ComponentProps<typeof Button>["variant"]
   className?: string
 }
@@ -16,6 +17,7 @@ interface ManualAddGuideButtonProps {
 /** Opens the localized manual-add instructions for one documented site type. */
 export function ManualAddGuideButton({
   anchor,
+  label,
   variant = "link",
   className,
 }: ManualAddGuideButtonProps) {
@@ -34,7 +36,7 @@ export function ManualAddGuideButton({
       className={className}
       leftIcon={<BookOpen className="h-3.5 w-3.5" />}
     >
-      {t("actions.openManualAddGuide")}
+      {label ?? t("actions.openManualAddGuide")}
     </Button>
   )
 }

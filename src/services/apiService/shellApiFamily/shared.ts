@@ -1,7 +1,5 @@
-import {
-  fetchSiteStatus,
-  fetchUserInfo,
-} from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import { CURRENCIES } from "~/constants/money"
+import { fetchSiteStatus } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
@@ -9,15 +7,7 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { UserGroupInfo } from "~/services/models/userGroup"
 import { isRecord } from "~/utils/core/object"
 
-/** Reads an existing management token, leaving an empty token for manual recovery. */
-export async function getAccessToken(request: ApiServiceRequest) {
-  // https://api.apiyi.com/account/profile (v29.8.9): System token requires
-  // POST /api/user/access_token/ with a password. Never use GET /api/user/token
-  // or collect that password in the extension; verification stays on the site.
-  return fetchUserInfo(request)
-}
-
-/** Reads the model IDs available for APIyi token restrictions. */
+/** Reads the model IDs used by both hosted Shell key editors. */
 export async function fetchAccountAvailableModels(
   request: ApiServiceRequest,
 ): Promise<string[]> {
@@ -41,7 +31,7 @@ export async function fetchUserGroups(
         endpoint: `/api/groupPro/selectable?p=${page}&pageSize=${pageSize}`,
       })
       if (!Array.isArray(data)) {
-        throw new TypeError("Invalid APIyi selectable groups response")
+        throw new TypeError("Invalid Shell API selectable groups response")
       }
       const items = data.map((group): [string, UserGroupInfo] => {
         if (
@@ -52,7 +42,7 @@ export async function fetchUserGroups(
           !Number.isFinite(group.convert_ratio) ||
           group.convert_ratio < 0
         ) {
-          throw new TypeError("Invalid APIyi selectable group")
+          throw new TypeError("Invalid Shell API selectable group")
         }
         return [
           group.name,
@@ -73,7 +63,7 @@ export async function fetchUserGroups(
   return Object.fromEntries(groups)
 }
 
-/** Preserves APIyi's model rows and their sibling pricing/group metadata. */
+/** Preserves hosted Shell model rows and their sibling pricing/group metadata. */
 export async function fetchModelPricing(request: ApiServiceRequest) {
   // https://api.apiyi.com/api/pricing (v29.8.9) includes success/message/data
   // alongside group_ratio, usable_group and vendors. Payload mode would unwrap
@@ -84,7 +74,7 @@ export async function fetchModelPricing(request: ApiServiceRequest) {
   })
   if (response?.success === false) {
     throw new ApiError(
-      "APIyi model pricing request failed",
+      "Shell API model pricing request failed",
       undefined,
       endpoint,
       API_ERROR_CODES.BUSINESS_ERROR,
@@ -98,7 +88,7 @@ export async function fetchModelPricing(request: ApiServiceRequest) {
     Object.values(conditionalPricing).some(
       (config) =>
         isRecord(config) &&
-        config.Currency === "CNY" &&
+        config.Currency === CURRENCIES.CNY &&
         Array.isArray(config.Conditions) &&
         config.Conditions.length > 0,
     )

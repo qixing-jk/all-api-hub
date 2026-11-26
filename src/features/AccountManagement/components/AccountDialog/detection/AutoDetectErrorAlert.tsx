@@ -1,14 +1,13 @@
 import { BookOpen } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Alert, Button } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import {
-  AccessTokenVerificationGuide,
-  type AccessTokenContinuationAction,
-} from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
+import { AccessTokenVerificationGuide } from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
 import { ManualAddGuideButton } from "~/features/AccountManagement/components/AccountDialog/ManualAddGuideButton"
+import type { AccountRecoveryContinuation } from "~/features/AccountManagement/components/AccountDialog/recovery/useAccountDialogRecoveryHandoff"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
   AutoDetectErrorType,
@@ -35,8 +34,9 @@ import { openSiteSupportRequestPage } from "~/utils/navigation/feedbackPages"
 
 interface AutoDetectErrorAlertProps extends AutoDetectErrorProps {
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
-  accessTokenContinuation?: AccessTokenContinuationAction
+  accessTokenContinuation?: AccountRecoveryContinuation
   onPrepareAccessTokenInput?: () => void
+  onRetryAutoDetect?: () => void | Promise<void>
 }
 
 const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
@@ -58,6 +58,7 @@ const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
  * @param props.manualAddGuideAnchor Optional site-specific manual completion guide.
  * @param props.accessTokenContinuation Optional popup-to-persistent-view action.
  * @param props.onPrepareAccessTokenInput Reveals and focuses the token field before site navigation.
+ * @param props.onRetryAutoDetect Runs detection after the site's reload completes.
  */
 export default function AutoDetectErrorAlert({
   error,
@@ -69,8 +70,21 @@ export default function AutoDetectErrorAlert({
   manualAddGuideAnchor,
   accessTokenContinuation,
   onPrepareAccessTokenInput,
+  onRetryAutoDetect,
 }: AutoDetectErrorAlertProps) {
   const { t } = useTranslation("accountDialog")
+  const [isReloadingTab, setIsReloadingTab] = useState(false)
+  const mounted = useRef(false)
+  const reloading = useRef(false)
+  const requiresReload =
+    error.type === AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   const handleActionClick = async () => {
     if (onActionClick) {
@@ -78,8 +92,18 @@ export default function AutoDetectErrorAlert({
     } else if (error.type === AutoDetectErrorType.UNAUTHORIZED && siteUrl) {
       // 默认行为：打开登录页面
       await openLoginTab(siteUrl, siteType)
-    } else if (error.type === AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED) {
-      await reloadCurrentTab()
+    } else if (requiresReload && !reloading.current) {
+      reloading.current = true
+      setIsReloadingTab(true)
+      try {
+        await reloadCurrentTab(siteUrl)
+        if (mounted.current) await onRetryAutoDetect?.()
+      } catch {
+        // Keep the recovery action available when the site cannot be refreshed.
+      } finally {
+        reloading.current = false
+        if (mounted.current) setIsReloadingTab(false)
+      }
     }
   }
 
@@ -124,7 +148,11 @@ export default function AutoDetectErrorAlert({
     void openApiCredentialProfilesPage()
   }
 
-  const hasRecoveryAction = Boolean(error.actionText || error.helpDocUrl)
+  const actionText =
+    requiresReload && onRetryAutoDetect && !onActionClick
+      ? t("tokenCreation.connection.reloadAndRetry")
+      : error.actionText
+  const hasRecoveryAction = Boolean(actionText || error.helpDocUrl)
   const canRecoverWithApiCredentialProfile =
     apiCredentialRecoveryErrorTypes.has(error.type)
   const canShowApiCredentialFallback =
@@ -160,7 +188,7 @@ export default function AutoDetectErrorAlert({
             : "destructive"
         }
       >
-        <div className="gap-y-density-3 flex min-w-0 flex-col items-start gap-x-3 sm:flex-row sm:flex-wrap">
+        <div className="flex min-w-0 flex-col items-start gap-x-3 gap-y-density-3 sm:flex-row sm:flex-wrap">
           <p
             className="min-w-0 flex-1 text-sm leading-relaxed"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage}
@@ -170,16 +198,17 @@ export default function AutoDetectErrorAlert({
 
           {/* 操作按钮区域 */}
           {hasRecoveryAction && (
-            <div className="gap-y-density-2 flex max-w-full shrink-0 flex-wrap gap-x-2">
+            <div className="flex max-w-full shrink-0 flex-wrap gap-x-2 gap-y-density-2">
               {/* 主要操作按钮 */}
-              {error.actionText && (
+              {actionText && (
                 <Button
                   type="button"
                   onClick={handleActionClick}
                   variant="default"
                   size="sm"
+                  loading={isReloadingTab}
                 >
-                  {error.actionText}
+                  {actionText}
                 </Button>
               )}
 
@@ -217,7 +246,7 @@ export default function AutoDetectErrorAlert({
         <Alert variant="default" compact>
           <div className="space-y-density-2 text-sm leading-relaxed">
             <p className="font-semibold">{t("apiCredentialFallback.title")}</p>
-            <ol className="space-y-density-2 list-decimal pl-4">
+            <ol className="list-decimal space-y-density-2 pl-4">
               <li className="pl-1">
                 <p>{t("apiCredentialFallback.siteSupport.description")}</p>
                 <Button
