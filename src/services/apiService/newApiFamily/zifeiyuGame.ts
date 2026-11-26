@@ -112,7 +112,9 @@ function parseZifeiyuGameRun(value: unknown): ZifeiyuGameRun {
     typeof run.day !== "string" ||
     !isFiniteNumber(run.started_at) ||
     !isFiniteNumber(run.server_time) ||
-    !isFiniteNumber(run.quota_awarded)
+    !isFiniteNumber(run.quota_awarded) ||
+    !Number.isSafeInteger(run.quota_awarded) ||
+    run.quota_awarded < 0
   ) {
     throw new Error("Invalid ZIFEIYU game run")
   }
@@ -167,6 +169,34 @@ export async function assertZifeiyuBrowserSessionIdentity(
   if (String(id ?? "") !== String(account.account_info.id)) {
     throw new Error("ZIFEIYU browser session belongs to another account")
   }
+}
+
+/** Reads the account's credited New API quota without advancing a game run. */
+export async function readZifeiyuAccountQuota(
+  account: SiteAccount,
+  signal?: AbortSignal,
+): Promise<number> {
+  const request = createZifeiyuBrowserSessionRequest(account, signal)
+  const self = asRecord(
+    await newApiFamilyRequests.data<unknown>(request, {
+      endpoint: "/api/user/self",
+      options: { method: "GET", cache: "no-store" },
+    }),
+  )
+  if (!self || String(self.id ?? "") !== String(account.account_info.id)) {
+    throw new Error("ZIFEIYU browser session belongs to another account")
+  }
+
+  const quota =
+    typeof self.quota === "number"
+      ? self.quota
+      : typeof self.quota === "string" && /^\d+$/.test(self.quota)
+        ? Number(self.quota)
+        : Number.NaN
+  if (!Number.isSafeInteger(quota) || quota < 0) {
+    throw new Error("ZIFEIYU account quota is unavailable for reward readback")
+  }
+  return quota
 }
 
 /** Validates the account's current server-authoritative game state. */

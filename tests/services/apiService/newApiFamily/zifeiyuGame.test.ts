@@ -5,6 +5,7 @@ import {
   assertZifeiyuBrowserSessionIdentity,
   createZifeiyuBrowserSessionRequest,
   parseZifeiyuGameStatus,
+  readZifeiyuAccountQuota,
   readZifeiyuGameStatus,
   sendZifeiyuGameInputs,
   startZifeiyuGame,
@@ -121,6 +122,30 @@ describe("ZIFEIYU browser-session game protocol", () => {
       "ZIFEIYU browser session belongs to another account",
     )
     expect(data).toHaveBeenCalledTimes(1)
+  })
+
+  it("reads credited quota from the matching account self endpoint", async () => {
+    data.mockResolvedValueOnce({ id: 17, quota: 42_000 })
+
+    await expect(readZifeiyuAccountQuota(account)).resolves.toBe(42_000)
+
+    expect(data).toHaveBeenCalledWith(expect.any(Object), {
+      endpoint: "/api/user/self",
+      options: { method: "GET", cache: "no-store" },
+    })
+  })
+
+  it("rejects an unavailable or mismatched account quota readback", async () => {
+    data.mockResolvedValueOnce({ id: 99, quota: 42_000 })
+    await expect(readZifeiyuAccountQuota(account)).rejects.toThrow(
+      "ZIFEIYU browser session belongs to another account",
+    )
+
+    data.mockReset()
+    data.mockResolvedValueOnce({ id: 17, quota: "not-a-quota" })
+    await expect(readZifeiyuAccountQuota(account)).rejects.toThrow(
+      "ZIFEIYU account quota is unavailable for reward readback",
+    )
   })
 
   it("rejects incomplete or malformed status data", () => {

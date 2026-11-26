@@ -45,7 +45,7 @@ const completedStatus = {
     finished_at: status.server_time,
     status: "survived",
     score: 500,
-    quota_awarded: 0,
+    quota_awarded: 100,
     reward_version: 2,
     first_token_quota: 100,
     subsequent_token_quota: 10,
@@ -158,11 +158,80 @@ describe("ZIFEIYU game check-in provider", () => {
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
       data: { id: "completed-run" },
     })
+    expect(result.awards ?? []).toEqual([])
     expect(data).toHaveBeenCalledTimes(2)
     expect(data.mock.calls.map(([, options]) => options.endpoint)).toEqual([
       "/api/user/self",
       "/api/user/game",
     ])
+  })
+
+  it("reports a fresh reward only after account quota readback matches the final run", async () => {
+    const eligibleStatus = {
+      ...status,
+      budgets: { ...status.budgets, can_start: true, daily_remaining: 1 },
+    }
+    const finishedRun = {
+      ...completedStatus.run,
+      id: "fresh-run",
+      quota_awarded: 100,
+    }
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce(eligibleStatus)
+      .mockResolvedValueOnce({ id: 17, quota: 1_000 })
+      .mockResolvedValueOnce(finishedRun)
+      .mockResolvedValueOnce({ id: 17, quota: 1_100 })
+
+    const result = await zifeiyuGameProvider.checkIn(account, context)
+
+    expect(result).toMatchObject({
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+      awards: [
+        expect.objectContaining({
+          amount: expect.objectContaining({
+            value: "100",
+            source: expect.objectContaining({
+              operation: "/api/user/self:quota",
+              inputs: ["quota"],
+            }),
+          }),
+        }),
+      ],
+    })
+    expect(data.mock.calls.map(([, options]) => options.endpoint)).toEqual([
+      "/api/user/self",
+      "/api/user/game",
+      "/api/user/self",
+      "/api/user/game/start",
+      "/api/user/self",
+    ])
+  })
+
+  it("does not report a game reward when account quota readback disagrees", async () => {
+    const eligibleStatus = {
+      ...status,
+      budgets: { ...status.budgets, can_start: true, daily_remaining: 1 },
+    }
+    const finishedRun = {
+      ...completedStatus.run,
+      id: "uncertain-run",
+      quota_awarded: 100,
+    }
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce(eligibleStatus)
+      .mockResolvedValueOnce({ id: 17, quota: 1_000 })
+      .mockResolvedValueOnce(finishedRun)
+      .mockResolvedValueOnce({ id: 17, quota: 1_090 })
+
+    const result = await zifeiyuGameProvider.checkIn(account, context)
+
+    expect(result).toMatchObject({
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+    })
+    expect(result.awards ?? []).toEqual([])
   })
 
   it("returns an explicit login blocker without falling back to the saved API token", async () => {

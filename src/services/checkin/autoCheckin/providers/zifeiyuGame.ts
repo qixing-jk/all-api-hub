@@ -12,6 +12,7 @@ import {
 } from "~/services/amounts/financialConstants"
 import {
   createZifeiyuBrowserSessionRequest,
+  readZifeiyuAccountQuota,
   readZifeiyuGameRewards,
   readZifeiyuGameStatus,
   sendZifeiyuGameInputs,
@@ -131,16 +132,55 @@ function isFinal(run: ZifeiyuGameRun): boolean {
   return run.status !== "running"
 }
 
-/** Reports only the quota amount confirmed by a completed server run. */
-function resultForFinishedRun(account: SiteAccount, run: ZifeiyuGameRun) {
+/** Keeps a previously completed game's historical reward out of fresh results. */
+function resultForPreviouslyFinishedRun(run: ZifeiyuGameRun) {
+  return {
+    status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    rawMessage:
+      "ZIFEIYU reports that today's game was already completed; no fresh grant is attributed.",
+    data: run,
+  }
+}
+
+/** Reports a fresh grant only after the account quota readback matches the run. */
+async function resultForFinishedRun(
+  account: SiteAccount,
+  run: ZifeiyuGameRun,
+  quotaBefore: number,
+) {
   const quota = run.quota_awarded
+  if (quota <= 0) return resultForPreviouslyFinishedRun(run)
+
+  let quotaAfter: number
+  try {
+    quotaAfter = await readZifeiyuAccountQuota(account)
+  } catch {
+    return {
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      rawMessage:
+        "ZIFEIYU ended the game, but the credited account quota could not be read back.",
+      data: run,
+    } as const
+  }
+  const quotaDelta = quotaAfter - quotaBefore
+  if (quotaDelta !== quota) {
+    return {
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+      rawMessage:
+        "ZIFEIYU ended the game, but account quota did not confirm the reported reward.",
+      data: run,
+    } as const
+  }
+
   const awards =
-    Number.isFinite(quota) && quota > 0
+    quotaDelta > 0
       ? [
           accountAward(account, {
             id: `game:${run.id}:quota`,
-            operation: "/api/user/game/input",
-            field: "quota_awarded",
+            operation: "/api/user/self:quota",
+            field: "quota",
             asset: {
               kind: ASSET_KINDS.Quota,
               id: `${new URL(account.site_url).origin}:zifeiyu-game-quota`,
@@ -148,7 +188,7 @@ function resultForFinishedRun(account: SiteAccount, run: ZifeiyuGameRun) {
               displayScale: 1,
               displayLabel: "game quota",
             },
-            value: quota,
+            value: quotaDelta,
             target: AWARD_TARGETS.Wallet,
             fulfillment: AWARD_FULFILLMENT.Credited,
             event: { namespace: "zifeiyu-game-run", id: run.id },
@@ -158,12 +198,9 @@ function resultForFinishedRun(account: SiteAccount, run: ZifeiyuGameRun) {
         ]
       : []
   return {
-    status: awards.length
-      ? CHECKIN_RESULT_STATUS.SUCCESS
-      : CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-    rawMessage: awards.length
-      ? "ZIFEIYU daily game completed and the server confirmed its quota reward."
-      : "ZIFEIYU daily game attempt is complete; the server reported no quota reward.",
+    status: CHECKIN_RESULT_STATUS.SUCCESS,
+    rawMessage:
+      "ZIFEIYU daily game completed and the account quota readback confirmed its reward.",
     awards,
     data: run,
   } as const
@@ -207,6 +244,7 @@ async function reconcileUncertainMutation(
 async function playRun(
   account: SiteAccount,
   initialRun: ZifeiyuGameRun,
+  quotaBefore: number,
   context: AutoCheckinProviderContext,
 ) {
   const startedAt = Date.now()
@@ -285,7 +323,7 @@ async function playRun(
     else nextSyncAt = Date.now()
   }
 
-  return resultForFinishedRun(account, run)
+  return resultForFinishedRun(account, run, quotaBefore)
 }
 
 export const zifeiyuGameProvider: AutoCheckinProvider = {
@@ -326,10 +364,11 @@ export const zifeiyuGameProvider: AutoCheckinProvider = {
         }
       }
       if (status.run?.day === status.day && isFinal(status.run)) {
-        return resultForFinishedRun(siteAccount, status.run)
+        return resultForPreviouslyFinishedRun(status.run)
       }
       if (status.run?.status === "running") {
-        return await playRun(siteAccount, status.run, context)
+        const quotaBefore = await readZifeiyuAccountQuota(siteAccount)
+        return await playRun(siteAccount, status.run, quotaBefore, context)
       }
       if (!status.budgets.can_start || status.budgets.daily_remaining <= 0) {
         return {
@@ -339,6 +378,7 @@ export const zifeiyuGameProvider: AutoCheckinProvider = {
         }
       }
 
+      const quotaBefore = await readZifeiyuAccountQuota(siteAccount)
       const observer = createMutationObserver(context.mutationLifecycle)
       let run: ZifeiyuGameRun
       try {
@@ -362,7 +402,7 @@ export const zifeiyuGameProvider: AutoCheckinProvider = {
         }
         run = recovered
       }
-      return await playRun(siteAccount, run, context)
+      return await playRun(siteAccount, run, quotaBefore, context)
     } catch (error) {
       return failure(error)
     }
