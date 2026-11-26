@@ -46,14 +46,20 @@ await captureVisualViews({
 
 Without capture output configured, the helper does nothing during ordinary tests. It handles visible-state/font/render waiting, screenshots, image hashes and build/environment metadata. With no view configuration it captures the current view; pass `views` in the workflow for defaults, or override them from the CLI:
 
-For branch reviews, set `AAH_VISUAL_CAPTURE_CONTEXT=1` to capture an uncropped viewport image and metadata named `<checkpoint>-context` alongside each focused `captureTarget` image. Include both images in the [acceptance report](../agents/task-acceptance.md#maintain-one-reviewer-entry-point). Add checkpoints for relevant content reached by scrolling.
+For branch reviews, set `AAH_VISUAL_CAPTURE_CONTEXT=1` to capture an uncropped viewport image and metadata named `<checkpoint>.context` alongside each focused `captureTarget` image. Include both images in the [acceptance report](../agents/task-acceptance.md#maintain-one-reviewer-entry-point). Add checkpoints for relevant content reached by scrolling.
 
 ```bash
-pnpm visual:capture --spec e2e/appearanceSettings.spec.ts --grep "changing text size keeps the appearance drawer bottom aligned at 390px$" --fixture appearance-drawer-default-text-v1 --view dark:390x900 --view light:1280x900
+pnpm visual:capture --spec e2e/appearanceSettings.spec.ts \
+  --grep "changing text size keeps the appearance drawer bottom aligned at 390px$" \
+  --fixture appearance-drawer-default-text-v1 --view dark:390x900 --view light:1280x900 \
+  --expect-checkpoint appearance-drawer-dark-390x900 \
+  --expect-checkpoint appearance-drawer-light-1280x900
 # Repeat the same command after editing; add --baseline <printed-before-directory> --diff when needed.
 ```
 
 Use an actual spec and a narrow test title from the current task. `--fixture` identifies seeded state; change it when the setup semantics change. Repeated `--view` options control All API Hub's root dark class and viewport. Build variants follow `AAH_E2E_BUILD_VARIANT` (otherwise `default`); `--variant default|dnr-required|bookmarks-required` overrides it, and baselines must use the same variant. The matrix helper restores the prior dark class and an explicitly configured viewport after capture. Checkpoint IDs are discovered from emitted metadata, must be unique across selected tests, and cannot overwrite another checkpoint. Baseline pairing requires the same spec/grep identity, fixture, checkpoint IDs and environment metadata. A workflow that emits no checkpoints fails with an actionable error. The runner records spec/grep/view settings in `capture.json`. Page navigation, fixtures and meaningful assertions stay in the existing test: generic capture cannot establish that arbitrary UI has reached the right state.
+
+For acceptance, declare the expected checkpoint IDs from the planned UI states and viewports before capture. Repeat `--expect-checkpoint` for each exact ID, including its view suffix and `.context` when the viewport image is required. The command exits with all missing IDs if the run or supplied baseline omits any. A successful run records the declared IDs in `capture.json` and retains other emitted checkpoints for review.
 
 For a maintained hotspot shortcut, use `pnpm visual:capture --list` and then:
 
