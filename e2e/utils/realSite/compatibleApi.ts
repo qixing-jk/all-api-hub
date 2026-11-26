@@ -81,11 +81,10 @@ export interface CompatibleApiRealSiteLoginResult {
   cleanupOwnedSession?: () => Promise<void>
   /** Read-only proof that detection cannot fall back to rotating a legacy PAT. */
   probeScopedAccessTokens?: () => Promise<boolean>
-  listScopedAccessTokens?: () => Promise<{ id: number; name: string }[]>
-  revokeScopedAccessToken?: (
-    name: string,
-    credentials: Pick<CompatibleApiRealSiteConfig, "password" | "totpSecret">,
-  ) => Promise<void>
+  ownedScopedToken?: {
+    find: () => Promise<number | undefined>
+    revoke: () => Promise<void>
+  }
 }
 
 type CompatibleApiLoginApiPayload = {
@@ -102,6 +101,7 @@ type CompatibleApiLoginOptions = {
   authBundle?: boolean
   logSessionDiagnostics?: boolean
   pruneStaleSessions?: boolean
+  ownedScopedTokenName?: string
 }
 
 type CompatibleAuthBundle = {
@@ -662,13 +662,16 @@ async function probeCompatibleAuthBundle(
   return { kind: "legacyFallback" }
 }
 
-async function createAuthBundleLoginResult(
+/** Bind access and cleanup to this run's token name without exposing session credentials. */
+function createOwnedScopedTokenAccess(
   page: Page,
-  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
-  options: CompatibleApiLoginOptions,
+  config: Pick<
+    CompatibleApiRealSiteConfig,
+    "baseUrl" | "password" | "totpSecret"
+  >,
   authBundle: CompatibleAuthBundle,
-  reusedSession: boolean,
-): Promise<CompatibleApiRealSiteLoginResult> {
+  name: string,
+) {
   const headers = {
     Authorization: `Bearer ${authBundle.accessToken}`,
     "X-Auth-Session": authBundle.sessionId,
@@ -704,24 +707,19 @@ async function createAuthBundleLoginResult(
       return { id: row.id, name: row.name }
     })
   }
-  const result = {
-    reusedSession,
-    user: authBundle.user,
-    listScopedAccessTokens,
-    revokeScopedAccessToken: async (
-      name: string,
-      credentials: Pick<CompatibleApiRealSiteConfig, "password" | "totpSecret">,
-    ) => {
-      const owned = () =>
-        listScopedAccessTokens().then((rows) =>
-          rows.filter((row) => row.name === name),
-        )
-      const [token, duplicate] = await owned()
-      if (duplicate)
-        throw new Error(
-          "New API cleanup requires a unique run-owned token name",
-        )
-      if (!token) return
+  const find = async () => {
+    const [token, duplicate] = (await listScopedAccessTokens()).filter(
+      (row) => row.name === name,
+    )
+    if (duplicate)
+      throw new Error("New API cleanup requires a unique run-owned token name")
+    return token?.id
+  }
+  return {
+    find,
+    revoke: async () => {
+      const tokenId = await find()
+      if (tokenId === undefined) return
       const get = async (path: string) => {
         const response = await page.request.get(
           resolveRealSiteUrl(config.baseUrl, path),
@@ -754,19 +752,19 @@ async function createAuthBundleLoginResult(
             candidate.available === true,
         )
       const grant =
-        credentials.totpSecret && available("2fa")
+        config.totpSecret && available("2fa")
           ? {
               method: "2fa",
-              code: generateNewApiTotpCode(credentials.totpSecret),
+              code: generateNewApiTotpCode(config.totpSecret),
             }
           : available("password")
             ? {
                 method: "password",
                 ...(methods.password_encryption_enabled
-                  ? await encryptNewApiPassword(credentials.password, () =>
+                  ? await encryptNewApiPassword(config.password, () =>
                       get("/api/user/login/encryption-key"),
                     )
-                  : { password: credentials.password }),
+                  : { password: config.password }),
               }
             : undefined
       if (!grant)
@@ -781,7 +779,7 @@ async function createAuthBundleLoginResult(
           data: {
             ...grant,
             scope: revokeScope,
-            context: { token_id: token.id },
+            context: { token_id: tokenId },
           },
         },
       )
@@ -796,19 +794,56 @@ async function createAuthBundleLoginResult(
         throw new Error("New API token cleanup could not verify revocation")
       }
       const removed = await page.request.delete(
-        resolveRealSiteUrl(config.baseUrl, `${tokenPath}/${token.id}`),
+        resolveRealSiteUrl(config.baseUrl, `${tokenPath}/${tokenId}`),
         {
           headers: { ...headers, "X-Security-Proof": proof.proof_token },
           timeout: 10_000,
         },
       )
-      if (!removed.ok() || (await owned()).length > 0)
+      if (!removed.ok() || (await find()) !== undefined)
         throw new Error("New API token cleanup could not confirm revocation")
     },
+  }
+}
+
+async function createAuthBundleLoginResult(
+  page: Page,
+  config: CompatibleApiRealSiteConfig,
+  options: CompatibleApiLoginOptions,
+  authBundle: CompatibleAuthBundle,
+  reusedSession: boolean,
+): Promise<CompatibleApiRealSiteLoginResult> {
+  const result = {
+    reusedSession,
+    user: authBundle.user,
+    ...(options.ownedScopedTokenName && {
+      ownedScopedToken: createOwnedScopedTokenAccess(
+        page,
+        config,
+        authBundle,
+        options.ownedScopedTokenName,
+      ),
+    }),
     probeScopedAccessTokens: async () => {
       try {
-        await listScopedAccessTokens()
-        return true
+        const response = await page.request.get(
+          resolveRealSiteUrl(config.baseUrl, "/api/user/access_tokens"),
+          {
+            timeout: 10_000,
+            headers: {
+              Authorization: `Bearer ${authBundle.accessToken}`,
+              Accept: "application/json",
+            },
+          },
+        )
+        if (!response.ok()) return false
+        const body = safeParseJson(await response.text())
+        return (
+          isRecord(body) &&
+          body.success === true &&
+          isRecord(body.data) &&
+          Array.isArray(body.data.items)
+        )
       } catch {
         return false
       }

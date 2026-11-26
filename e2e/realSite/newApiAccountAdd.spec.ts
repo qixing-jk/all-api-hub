@@ -95,30 +95,16 @@ for (const channel of ["extension", "official"] as const) {
       }
       context.on("request", onRequest)
       try {
-        const login = await loginToRealNewApiSite(site, config)
+        const login = await loginToRealNewApiSite(site, config, tokenName)
         cleanupSession = login.cleanupOwnedSession
         identity = String(login.user.id)
         test.skip(
-          !login.listScopedAccessTokens ||
-            !(await login.probeScopedAccessTokens?.()),
+          !login.ownedScopedToken || !(await login.probeScopedAccessTokens?.()),
           "This channel requires scoped Access Token support",
         )
-        const listTokens = login.listScopedAccessTokens!
-        const revokeScopedAccessToken = login.revokeScopedAccessToken
-        if (!revokeScopedAccessToken)
-          throw new Error("New API token cleanup is unavailable")
-        const lookupOwnedToken = async () => {
-          const matches = (await listTokens()).filter(
-            ({ name }) => name === tokenName,
-          )
-          expect(
-            matches.length,
-            "unique run-owned token name",
-          ).toBeLessThanOrEqual(1)
-          return matches[0]?.id
-        }
+        const { find: lookupOwnedToken, revoke } = login.ownedScopedToken!
         expect(await lookupOwnedToken()).toBeUndefined()
-        cleanupToken = () => revokeScopedAccessToken(tokenName, config)
+        cleanupToken = revoke
         const recovery = createNewApiAccountRecovery({
           page,
           config,

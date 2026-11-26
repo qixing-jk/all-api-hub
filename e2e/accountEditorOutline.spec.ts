@@ -29,16 +29,32 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import sponsorCatalog from "~~/public/sponsor-catalog.v5.json" with { type: "json" }
 
+function accountSectionMenuTrigger(navigation: Locator, name?: string) {
+  return navigation
+    .getByRole("button", {
+      name: name
+        ? `${name}, Account settings sections`
+        : "Account settings sections",
+    })
+    .and(navigation.locator('button[aria-haspopup="menu"]'))
+}
+
+function accountSectionButton(navigation: Locator, name: string) {
+  return navigation
+    .getByRole("button", { name })
+    .and(navigation.locator('button:not([aria-haspopup="menu"])'))
+}
+
 async function chooseAccountSection(
   page: Page,
   navigation: Locator,
   name: string,
 ) {
   if (page.viewportSize()!.width < 640) {
-    await navigation.getByRole("button").click()
+    await accountSectionMenuTrigger(navigation).click()
     await page.getByRole("menuitem", { name }).click()
   } else {
-    await navigation.getByRole("button", { name }).click()
+    await accountSectionButton(navigation, name).click()
   }
 }
 
@@ -48,13 +64,11 @@ async function expectAccountSection(
   name: string,
 ) {
   if (page.viewportSize()!.width < 640) {
-    await expect(
-      navigation.getByRole("button", {
-        name: `${name}, Account settings sections`,
-      }),
-    ).toContainText(name)
+    await expect(accountSectionMenuTrigger(navigation, name)).toContainText(
+      name,
+    )
   } else {
-    await expect(navigation.getByRole("button", { name })).toHaveAttribute(
+    await expect(accountSectionButton(navigation, name)).toHaveAttribute(
       "aria-current",
       "location",
     )
