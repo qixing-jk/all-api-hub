@@ -66,13 +66,6 @@ export interface UltraRouterGameSnapshot {
   resets_at?: string | number
 }
 
-interface UltraRouterGameMutationBatch {
-  id: string
-  from: number
-  inputs: number[]
-  quit: false
-}
-
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value)
 
