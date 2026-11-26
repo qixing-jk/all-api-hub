@@ -5,6 +5,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import RedemptionAssistSettings from "~/features/BasicSettings/components/tabs/CheckinRedeem/RedemptionAssistSettings"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import type { RedemptionAssistPreferences } from "~/services/preferences/preferencesSchema"
 import { getAllTabs } from "~/utils/browser/tabs"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
@@ -50,21 +51,79 @@ vi.mock("~/lib/notify", () => ({
 describe("RedemptionAssistSettings", () => {
   const updateRedemptionAssist = vi.fn()
   const resetRedemptionAssistConfig = vi.fn()
+  let preferences: typeof DEFAULT_PREFERENCES
 
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getAllTabs).mockReset().mockResolvedValue([])
     updateRedemptionAssist.mockResolvedValue({ ok: true })
     resetRedemptionAssistConfig.mockResolvedValue({ ok: true })
+    preferences = structuredClone(DEFAULT_PREFERENCES)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
-      preferences: {
-        redemptionAssist: structuredClone(
-          DEFAULT_PREFERENCES.redemptionAssist!,
-        ),
-      },
+      preferences,
       updateRedemptionAssist,
       resetRedemptionAssistConfig,
     } as any)
+  })
+
+  it("shows default controls and patterns when Redemption Assist preferences are absent", () => {
+    delete preferences.redemptionAssist
+
+    render(<RedemptionAssistSettings />, { withUserPreferencesProvider: false })
+
+    expect(
+      screen.getByRole("switch", { name: "redemptionAssist:settings.enable" }),
+    ).toBeChecked()
+    expect(screen.getByRole("textbox")).toHaveValue("cdk.linux.do")
+    expect(
+      screen.getByRole("button", { name: "common:actions.reset" }),
+    ).toBeDisabled()
+  })
+
+  it("fills missing context-menu and whitelist controls for older preferences", () => {
+    preferences.redemptionAssist = {
+      enabled: false,
+      relaxedCodeValidation: true,
+    } as RedemptionAssistPreferences
+
+    render(<RedemptionAssistSettings />, { withUserPreferencesProvider: false })
+
+    expect(
+      screen.getByRole("switch", { name: "redemptionAssist:settings.enable" }),
+    ).not.toBeChecked()
+    expect(
+      screen.getByRole("switch", {
+        name: "redemptionAssist:settings.contextMenu.enable",
+      }),
+    ).toBeChecked()
+    expect(
+      screen.getByRole("switch", {
+        name: "redemptionAssist:settings.urlWhitelist.enable",
+      }),
+    ).toBeChecked()
+    expect(screen.getByRole("textbox")).toHaveValue("cdk.linux.do")
+    expect(updateRedemptionAssist).not.toHaveBeenCalled()
+  })
+
+  it("saves one origin rule when the whitelist starts empty", async () => {
+    preferences.redemptionAssist!.urlWhitelist.patterns = []
+    vi.mocked(getAllTabs).mockResolvedValue([
+      { url: "https://docs.example/guide", title: "Docs" },
+    ] as browser.tabs.Tab[])
+    const user = userEvent.setup()
+    render(<RedemptionAssistSettings />, { withUserPreferencesProvider: false })
+
+    await user.type(screen.getByRole("combobox"), "Docs")
+    await user.click(await screen.findByRole("option", { name: /Docs/ }))
+
+    const pattern = "^https://docs\\.example(?:[/?#].*)?$"
+    expect(screen.getByRole("textbox")).toHaveValue(pattern)
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.save" }),
+    )
+    expect(updateRedemptionAssist).toHaveBeenCalledWith({
+      urlWhitelist: { patterns: [pattern] },
+    })
   })
 
   it("round-trips tab selections through the regex draft while preserving custom and closed-site patterns", async () => {
