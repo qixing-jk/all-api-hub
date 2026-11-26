@@ -367,6 +367,39 @@ describe("registered BizDecipher free daily check-in", () => {
     expect(fetchApiResponse).toHaveBeenCalledTimes(1)
   })
 
+  it.each([false, true])(
+    "only sends the authorized free claim after checking recovered account state (allowed=%s)",
+    async (allowed) => {
+      const beforeRecoveredMutation = vi.fn().mockResolvedValue(allowed)
+      vi.mocked(fetchApiResponse).mockResolvedValue({
+        ok: false,
+        status: 401,
+        headers: {},
+        body: { code: "UNAUTHORIZED", message: "Denied" },
+      })
+
+      await expect(
+        bizDecipherProvider.checkIn(account(), {
+          ...context(),
+          beforeRecoveredMutation,
+          statusProof: {
+            outcome: "known",
+            availability: "enabled",
+            today: "not_checked",
+            evidence: { source: "probe", observedAt: Date.now() },
+          },
+        }),
+      ).resolves.toMatchObject({
+        status: "failed",
+        reasonCode: allowed ? "authentication_required" : "account_unavailable",
+      })
+
+      expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
+      expect(fetchApiResponse).toHaveBeenCalledTimes(allowed ? 1 : 0)
+      expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+    },
+  )
+
   it.each([
     undefined,
     { outcome: "known", availability: "disabled", today: "not_checked" },

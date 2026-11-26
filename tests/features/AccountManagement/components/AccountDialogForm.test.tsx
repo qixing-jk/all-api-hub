@@ -2854,6 +2854,47 @@ describe("AccountDialog AccountForm", () => {
     ).toBeVisible()
   })
 
+  it("keeps the manually selected method when detection of another method failed", async () => {
+    const props = createProps()
+    const selectedMethod = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    props.draft.siteType = SITE_TYPES.NEW_API
+    const checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn = {
+      ...checkIn,
+      selection: { mode: "manual", methodId: selectedMethod },
+      methodKnowledge: {
+        methods: {
+          ...checkIn.methodKnowledge.methods,
+          [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
+            detection: {
+              outcome: "unknown",
+              reason: "timeout",
+              attemptedAt: 200,
+            },
+          },
+        },
+      },
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const selection = await screen.findByRole("combobox", {
+      name: "accountDialog:form.checkInMethod",
+    })
+    expect(selection).toHaveAccessibleDescription(
+      expect.stringContaining("accountDialog:form.checkInStatusUnknown"),
+    )
+    expect(selection).toHaveAccessibleDescription(
+      expect.stringContaining("accountDialog:form.checkInSelectionManual"),
+    )
+    expect(
+      screen.queryByText("accountDialog:form.checkInSelectionUnconfirmed"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows retained detection failures consistently and recovers after a confirmed probe", async () => {
     const props = createProps()
     const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn

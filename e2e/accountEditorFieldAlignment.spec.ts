@@ -1,4 +1,4 @@
-import type { Locator } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
@@ -20,6 +20,13 @@ import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const fieldLabel = '[data-slot="label"]'
 const methodId = AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn
+
+async function openAccountEditor(page: Page, accountId: string) {
+  const row = page.getByTestId(getAccountManagementListItemTestId(accountId))
+  await row.hover()
+  await row.getByTestId(accountIds.rowEditButton).click()
+  return page.getByRole("dialog")
+}
 
 async function bounds(locator: Locator) {
   const box = await locator.boundingBox()
@@ -105,13 +112,8 @@ test(
     tag: "@zh-CN",
   },
   async ({ page, extensionDir }) => {
-    await page
-      .getByTestId(getAccountManagementListItemTestId("pending-layout-account"))
-      .getByTestId(accountIds.rowEditButton)
-      .click()
-    const checkIn = page
-      .getByRole("dialog")
-      .getByTestId(accountIds.accountFormSectionCheckIn)
+    const dialog = await openAccountEditor(page, "pending-layout-account")
+    const checkIn = dialog.getByTestId(accountIds.accountFormSectionCheckIn)
     const method = checkIn.getByRole("combobox", {
       name: "签到方式",
       exact: true,
@@ -151,11 +153,7 @@ test("aligns account fields and centers the support request beside the unsupport
   page,
   extensionDir,
 }) => {
-  await page
-    .getByTestId(getAccountManagementListItemTestId("alignment-account"))
-    .getByTestId(accountIds.rowEditButton)
-    .click()
-  const dialog = page.getByRole("dialog")
+  const dialog = await openAccountEditor(page, "alignment-account")
   const site = dialog.getByTestId(accountIds.accountFormSectionSiteInfo)
   const siteName = site.getByTestId(accountIds.siteNameInput)
   const balance = dialog.getByTestId(accountIds.accountFormSectionBalance)
@@ -250,15 +248,8 @@ test("groups detection with the method and offers feedback in the section headin
   page,
   extensionDir,
 }) => {
-  await page
-    .getByTestId(
-      getAccountManagementListItemTestId("bizdecipher-layout-account"),
-    )
-    .getByTestId(accountIds.rowEditButton)
-    .click()
-  const checkIn = page
-    .getByRole("dialog")
-    .getByTestId(accountIds.accountFormSectionCheckIn)
+  const dialog = await openAccountEditor(page, "bizdecipher-layout-account")
+  const checkIn = dialog.getByTestId(accountIds.accountFormSectionCheckIn)
   const statusDescription = checkIn.getByText(
     "Refreshing the account only checks today's check-in status. It does not perform check-in.",
     { exact: true },

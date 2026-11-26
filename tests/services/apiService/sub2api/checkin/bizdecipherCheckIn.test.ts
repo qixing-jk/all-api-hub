@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/auth/authSession"
 import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/auth/browserAuth"
 import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import {
@@ -233,6 +234,25 @@ describe("BizDecipher free daily check-in protocol", () => {
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
   })
 
+  it("keeps a dispatched claim uncertain when the caller cancels before the receipt", async () => {
+    const controller = new AbortController()
+    let operationId = ""
+    vi.mocked(fetchApiResponse).mockImplementation(async (_, input) => {
+      operationId = JSON.parse(String(input.options?.body)).operation_id
+      controller.abort()
+      throw controller.signal.reason
+    })
+
+    const result = await performBizDecipherDailyCheckIn({
+      ...request,
+      abortSignal: controller.signal,
+    }).catch((error: unknown) => error)
+
+    expect(result).toBeInstanceOf(BizDecipherCheckInUnconfirmedError)
+    expect(result).toHaveProperty("operationId", operationId)
+    expect(fetchApiResponse).toHaveBeenCalledTimes(1)
+  })
+
   it("checks the native GET timezone day rather than the UTC date", async () => {
     vi.mocked(userCheckInProtocol.resolveUserCheckInTimezone).mockReturnValue(
       "Asia/Shanghai",
@@ -295,6 +315,29 @@ describe("BizDecipher free daily check-in protocol", () => {
       performBizDecipherDailyCheckIn(request, observedAt),
     ).rejects.toBeInstanceOf(ApiError)
     expect(fetchApiResponse).not.toHaveBeenCalled()
+  })
+
+  it("discards the admission proof if saved credentials load after midnight", async () => {
+    vi.setSystemTime(new Date("2026-11-24T23:59:59Z"))
+    const savedRequest: Sub2ApiAuthSessionRequest = {
+      ...request,
+      accountId: "saved-account",
+      sub2apiAuthSession: {
+        getLatestAuth: async () => {
+          vi.setSystemTime(new Date("2026-11-25T00:00:01Z"))
+          return { userId: "42", accessToken: "saved-token" }
+        },
+        persistAuthUpdate: vi.fn(),
+      },
+    }
+
+    await expect(
+      performBizDecipherDailyCheckIn(savedRequest),
+    ).rejects.toBeInstanceOf(ApiError)
+    expect(fetchApiResponse).not.toHaveBeenCalled()
+    expect(
+      savedRequest.sub2apiAuthSession?.persistAuthUpdate,
+    ).not.toHaveBeenCalled()
   })
 
   it.each([401, 403])(
