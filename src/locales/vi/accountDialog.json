@@ -597,7 +597,7 @@
     "timeout": "Đã hết thời gian xác minh danh tính. Hãy thử lại và hoàn tất xác minh trên trang web.",
     "title": "Tạo token trong tiện ích",
     "unavailable": "Không đọc được tùy chọn tạo. Kiểm tra đăng nhập và khả năng hỗ trợ Access Token có phạm vi của trang web.",
-    "uncertain": "Lần tạo trước có thể đã thành công. Kiểm tra token trước khi cho phép thử lại. Yêu cầu đang xử lý có thể mất năm phút.",
+    "uncertain": "Lần thử trước có thể đã tạo token. Hãy đợi năm phút, sau đó tải lại và kiểm tra danh sách token trước khi cho phép thử lại.",
     "usageRead": "Xem lịch sử sử dụng",
     "validationFailed": "Đã tạo token nhưng kiểm tra thất bại. Thử kiểm tra lại chính token này tại đây.",
     "verification": "Xác minh danh tính",

@@ -897,6 +897,17 @@ for (const scenario of [
           `[data-testid="${id}"]`,
         )
         if (!input) throw new Error("Manual Access Token field unavailable")
+        const clipboardData = new view.DataTransfer()
+        clipboardData.setData("text/plain", token)
+        const useDefault = input.dispatchEvent(
+          new view.ClipboardEvent("paste", {
+            clipboardData,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+        if (!useDefault) return
+        // Synthetic clipboard events cannot apply the browser's default paste.
         const valueSetter = Object.getOwnPropertyDescriptor(
           view.HTMLInputElement.prototype,
           "value",

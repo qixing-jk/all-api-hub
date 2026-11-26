@@ -599,7 +599,7 @@
     "timeout": "Die Zeit für die Identitätsprüfung ist abgelaufen. Starte sie erneut und schließe sie auf der Website ab.",
     "title": "Token in der Erweiterung erstellen",
     "unavailable": "Erstellungsoptionen konnten nicht geladen werden. Prüfen Sie die Anmeldung und die Unterstützung für Access Tokens mit Berechtigungsumfang.",
-    "uncertain": "Die Erstellung könnte erfolgreich gewesen sein. Vor einem neuen Versuch Tokens prüfen. Aktive Anfragen können bis zu fünf Minuten dauern.",
+    "uncertain": "Der vorherige Versuch könnte ein Token erstellt haben. Warte fünf Minuten, aktualisiere und prüfe dann die Tokenliste, bevor du einen neuen Versuch erlaubst.",
     "usageRead": "Nutzungsverlauf ansehen",
     "validationFailed": "Das Token wurde erstellt, die Prüfung schlug jedoch fehl. Wiederholen Sie die Prüfung desselben Tokens.",
     "verification": "Identität bestätigen",

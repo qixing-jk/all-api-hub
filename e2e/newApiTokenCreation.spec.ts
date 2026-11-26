@@ -592,7 +592,7 @@ for (const trigger of ["paste", "pause", "blur", "Enter"] as const) {
           await expect(heading).toBeVisible()
           await page.clock.runFor(1)
         } else if (trigger === "blur") {
-          await dialog.accessTokenInput.press("Tab")
+          await dialog.accessTokenInput.blur()
         } else {
           await dialog.accessTokenInput.press("Enter")
         }

@@ -599,7 +599,7 @@
     "timeout": "Verification timed out. Try again and complete verification on the site.",
     "title": "Create token in extension",
     "unavailable": "Could not read token creation options. Check that this deployment supports scoped Access Tokens and that you are logged in.",
-    "uncertain": "An earlier creation may have succeeded. Review existing tokens before allowing another attempt. An active request may take up to five minutes to settle.",
+    "uncertain": "An earlier attempt may have created a token. Wait five minutes, then refresh and review the token list before allowing another attempt.",
     "usageRead": "View usage history",
     "validationFailed": "The token was created, but validation failed. Retry validation here to keep the same token.",
     "verification": "Verify your identity",

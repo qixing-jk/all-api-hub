@@ -572,11 +572,11 @@ describe("New API management token creation", () => {
       await expect(flow.create(draft, password)).rejects.toThrow(busy)
       flow.cancelVerification()
       await expect.poll(() => signal.aborted, { timeout: 1000 }).toBe(true)
+      await expect(creation).resolves.toMatchObject({ verified: false })
     } finally {
       release.resolve()
       await creation
     }
-    await expect(creation).resolves.toMatchObject({ verified: false })
     await expect(flow.verifyCreated()).resolves.toMatchObject({
       verified: true,
     })
@@ -587,6 +587,7 @@ describe("New API management token creation", () => {
     "confirmed",
     "still-listed",
     "already-absent",
+    "wrong-capability-scope",
     "wrong-proof-scope",
   ] as const)(
     "reconciles revocation of a selected token when it is %s",
@@ -619,7 +620,7 @@ describe("New API management token creation", () => {
             success: true,
             data: {
               scope:
-                outcome === "wrong-proof-scope"
+                outcome === "wrong-capability-scope"
                   ? "access_token.generate"
                   : new URL(request.url).searchParams.get("scope"),
               methods: [{ method: "password", available: true }],
@@ -636,7 +637,13 @@ describe("New API management token creation", () => {
           })
           return HttpResponse.json({
             success: true,
-            data: { ...proof, scope: "access_token.revoke" },
+            data: {
+              ...proof,
+              scope:
+                outcome === "wrong-proof-scope"
+                  ? "access_token.generate"
+                  : "access_token.revoke",
+            },
           })
         }),
         http.delete(`${origin}/api/user/access_tokens/7`, ({ request }) => {
@@ -653,13 +660,18 @@ describe("New API management token creation", () => {
         method: "password",
         password: "secret",
       })
-      if (outcome === "wrong-proof-scope")
+      if (
+        outcome === "wrong-proof-scope" ||
+        outcome === "wrong-capability-scope"
+      )
         await expect(result).rejects.toThrow("SECURITY_PROOF_INVALID")
       else if (outcome === "still-listed")
         await expect(result).rejects.toThrow("ACCESS_TOKEN_REVOKE_UNCONFIRMED")
       else await expect(result).resolves.toBe(false)
       const expectsWrite = outcome === "confirmed" || outcome === "still-listed"
-      expect(verify).toHaveBeenCalledTimes(expectsWrite ? 1 : 0)
+      expect(verify).toHaveBeenCalledTimes(
+        expectsWrite || outcome === "wrong-proof-scope" ? 1 : 0,
+      )
       expect(deletion).toHaveBeenCalledTimes(expectsWrite ? 1 : 0)
       if (outcome === "confirmed")
         expect((await flow.loadRecovery()).items).toEqual([])
@@ -858,6 +870,118 @@ describe("New API management token creation", () => {
     expect(attempts).toBe(1)
   })
 
+  it("retains the issued credential when removing its journal marker fails", async () => {
+    vi.stubGlobal("navigator", {
+      locks: {
+        request: async (
+          _name: string,
+          _options: LockOptions,
+          work: () => Promise<unknown>,
+        ) => work(),
+      },
+    })
+    const remove = vi
+      .spyOn(browser.storage.local, "remove")
+      .mockRejectedValue(new Error("Storage unavailable"))
+    const journal = createTokenIssuanceJournal(
+      origin,
+      "retained-on-cleanup-failure",
+    )
+    let ready = false
+    const issue = vi.fn(() =>
+      HttpResponse.json({
+        success: true,
+        data: { token: "nap_retained", item: { id: 8, ...draft } },
+      }),
+    )
+    server.use(
+      http.post(`${origin}/api/verify`, () =>
+        HttpResponse.json({ success: true, data: proof }),
+      ),
+      http.post(`${origin}/api/user/access_tokens`, issue),
+      http.get(`${origin}/api/user/self`, ({ request }) =>
+        request.headers.get("Authorization") === "Bearer nap_retained" && !ready
+          ? HttpResponse.error()
+          : HttpResponse.json({ success: true, data: { id: 42 } }),
+      ),
+    )
+    const flow = new NewApiAccessTokenCreation(
+      request,
+      "42",
+      undefined,
+      journal,
+    )
+    const password = { method: "password", password: "secret" } as const
+    try {
+      await expect(flow.create(draft, password)).resolves.toMatchObject({
+        id: 8,
+        verified: false,
+      })
+      expect(await journal.pending()).toBeDefined()
+      ready = true
+      await expect(flow.verifyCreated()).resolves.toEqual({
+        token: "nap_retained",
+        id: 8,
+        verified: true,
+      })
+      expect(issue).toHaveBeenCalledOnce()
+    } finally {
+      remove.mockRestore()
+      await journal.resolved()
+    }
+  })
+
+  it.each([undefined, 360_000])(
+    "keeps uncertain issuance blocked until a new post-wait review (proof lifetime %s)",
+    async (proofLifetime) => {
+      vi.stubGlobal("navigator", {
+        locks: {
+          request: async (
+            name: string,
+            _options: LockOptions,
+            work: (lock: object) => Promise<unknown>,
+          ) => work({ name }),
+        },
+      })
+      const start = Date.now()
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start)
+      const owner = createTokenIssuanceJournal(origin, "uncertain-review")
+      const other = createTokenIssuanceJournal(origin, "uncertain-review")
+      try {
+        expect(
+          await owner.begin(
+            proofLifetime === undefined ? undefined : start + proofLifetime,
+          ),
+        ).toBe(true)
+        clock.mockReturnValue(start + 30_000)
+        await owner.uncertain()
+        const marker = (await other.pending())!
+        const earlyReview = { marker, startedAt: Date.now() }
+        await expect(other.acknowledge(earlyReview)).rejects.toThrow(
+          "ACCESS_TOKEN_CREATION_BUSY",
+        )
+        expect(await other.begin()).toBe(false)
+        clock.mockReturnValue(start + 330_001)
+        await expect(other.acknowledge(earlyReview)).rejects.toThrow(
+          "ACCESS_TOKEN_CREATION_BUSY",
+        )
+        if (proofLifetime !== undefined) {
+          await expect(
+            other.acknowledge({ marker, startedAt: Date.now() }),
+          ).rejects.toThrow("ACCESS_TOKEN_CREATION_BUSY")
+          clock.mockReturnValue(start + proofLifetime + 1)
+        }
+        await expect(
+          other.acknowledge({ marker, startedAt: Date.now() }),
+        ).resolves.toBeUndefined()
+        expect(await other.pending()).toBeUndefined()
+      } finally {
+        clock.mockRestore()
+        await owner.resolved()
+      }
+    },
+  )
+
   it("does not let a stale review acknowledge a later uncertain issuance", async () => {
     vi.stubGlobal("navigator", {
       locks: {
@@ -882,17 +1006,47 @@ describe("New API management token creation", () => {
       undefined,
       journal(),
     )
-    expect(await first.begin()).toBe(true)
-    await first.uncertain()
-    expect((await staleView.load()).creationUncertain).toBe(true)
-    expect((await freshView.load()).creationUncertain).toBe(true)
-    await freshView.acknowledgeUncertain()
-    const newer = journal()
-    expect(await newer.begin()).toBe(true)
-    await newer.uncertain()
-
-    await expect(staleView.acknowledgeUncertain()).rejects.toThrow()
-    expect(await journal().pending()).toBeTruthy()
+    server.use(
+      http.get(`${origin}/api/verify/methods`, ({ request }) =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            scope: new URL(request.url).searchParams.get("scope"),
+            methods: [],
+            oauth_providers: [],
+            password_encryption_enabled: false,
+          },
+        }),
+      ),
+      http.get(`${origin}/api/user/access_tokens`, () =>
+        HttpResponse.json({ success: true, data: { items: [] } }),
+      ),
+    )
+    const start = Date.now()
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start)
+    try {
+      expect(await first.begin()).toBe(true)
+      await first.uncertain()
+      clock.mockReturnValue(start + 300_001)
+      expect((await staleView.load()).creationUncertain).toBe(true)
+      await expect(staleView.acknowledgeUncertain()).rejects.toThrow(
+        "ACCESS_TOKEN_CREATION_BUSY",
+      )
+      await staleView.loadRecovery()
+      await freshView.loadRecovery()
+      await freshView.acknowledgeUncertain()
+      const newer = journal()
+      expect(await newer.begin()).toBe(true)
+      await newer.uncertain()
+      clock.mockReturnValue(start + 600_002)
+      await expect(staleView.acknowledgeUncertain()).rejects.toThrow(
+        "ACCESS_TOKEN_CREATION_BUSY",
+      )
+      expect(await journal().pending()).toBeTruthy()
+      await newer.resolved()
+    } finally {
+      clock.mockRestore()
+    }
   })
 
   it("rejects acknowledgment of an aged marker while its owner is still issuing", async () => {
@@ -930,13 +1084,20 @@ describe("New API management token creation", () => {
     try {
       await started.promise
       clock.mockReturnValue(atStart + 301_000)
-      const observed = await other.pending()
+      const observed = {
+        marker: (await other.pending())!,
+        startedAt: Date.now(),
+      }
       await expect(other.acknowledge(observed)).rejects.toThrow()
-      expect(await other.pending()).toEqual(observed)
+      expect(await other.pending()).toEqual(observed.marker)
       finish.resolve()
       await issuance
       await expect(other.acknowledge(observed)).rejects.toThrow()
-      await other.acknowledge(await other.pending())
+      clock.mockReturnValue(atStart + 601_001)
+      await other.acknowledge({
+        marker: (await other.pending())!,
+        startedAt: Date.now(),
+      })
       expect(await other.pending()).toBeUndefined()
     } finally {
       finish.resolve()

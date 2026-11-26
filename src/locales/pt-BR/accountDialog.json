@@ -601,7 +601,7 @@
     "timeout": "O tempo para verificar sua identidade acabou. Tente novamente e conclua a verificação no site.",
     "title": "Criar token na extensão",
     "unavailable": "Não foi possível ler as opções. Confira se você está conectado e se o site aceita Access Tokens com escopos.",
-    "uncertain": "A criação anterior pode ter funcionado. Revise os tokens antes de permitir outra tentativa. Uma solicitação ativa pode levar cinco minutos.",
+    "uncertain": "A tentativa anterior pode ter criado um token. Aguarde cinco minutos, depois atualize e confira a lista de tokens antes de permitir outra tentativa.",
     "usageRead": "Ver histórico de uso",
     "validationFailed": "O token foi criado, mas a validação falhou. Repita aqui a validação do mesmo token.",
     "verification": "Verificar identidade",

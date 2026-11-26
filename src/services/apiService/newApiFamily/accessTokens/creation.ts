@@ -13,7 +13,7 @@ import { AuthTypeEnum } from "~/types"
 
 import type {
   TokenIssuanceJournal,
-  TokenIssuanceMarker,
+  TokenIssuanceReview,
 } from "./issuanceJournal"
 import {
   NEW_API_TOKEN_ACCESS_SCOPES as ACCESS_SCOPES,
@@ -160,7 +160,7 @@ export class NewApiTokenCreationUncertainError extends Error {
 export class NewApiAccessTokenCreation {
   private inFlight = false
   private uncertain = false
-  private observedIssuance?: TokenIssuanceMarker
+  private issuanceReview?: TokenIssuanceReview
   private created: NewApiCreatedToken | undefined
   private createdScopes: string[] = []
   private grantMatches = false
@@ -192,8 +192,8 @@ export class NewApiAccessTokenCreation {
   /** User confirms review/revocation of a previous uncertain issuance before a new attempt. */
   async acknowledgeUncertain() {
     if (this.inFlight) throw new Error(CREATION_ERRORS.BUSY)
-    await this.journal?.acknowledge(this.observedIssuance)
-    this.observedIssuance = undefined
+    await this.journal?.acknowledge(this.issuanceReview)
+    this.issuanceReview = undefined
     this.uncertain = false
   }
 
@@ -384,6 +384,7 @@ export class NewApiAccessTokenCreation {
     )
     if (verification.scope !== OPERATION_SCOPES.REVOKE)
       throw new Error(CREATION_ERRORS.INVALID_PROOF)
+    const reviewStartedAt = Date.now()
     const data = z
       .object({
         items: z.array(
@@ -398,7 +399,8 @@ export class NewApiAccessTokenCreation {
         ),
       })
       .parse(await this.read(ENDPOINTS.ACCESS_TOKENS))
-    if (reviewing) this.observedIssuance = reviewing
+    if (reviewing)
+      this.issuanceReview = { marker: reviewing, startedAt: reviewStartedAt }
     return { ...data, verification }
   }
 
@@ -478,27 +480,13 @@ export class NewApiAccessTokenCreation {
         operationRequest,
       )
       const issue = () => this.issueWithProof(draft, proof, operationRequest)
-      const parsed = await (this.journal
+      const created = await (this.journal
         ? this.journal.whileIssuing(issue)
         : issue())
-      this.created = {
-        token: parsed.token,
-        id: parsed.item.id,
-        verified: false,
-      }
-      this.createdScopes = draft.scopes
-      const grant = draftSchema.safeParse(parsed.item)
-      this.grantMatches =
-        parsed.token.startsWith("nap_") &&
-        grant.success &&
-        grant.data.expires_at === draft.expires_at &&
-        grant.data.name === draft.name &&
-        JSON.stringify(normalizeGrantScopes(grant.data.scopes)) ===
-          JSON.stringify(draft.scopes)
       try {
         return await this.checkCreatedToken(signal)
       } catch {
-        return { ...this.created }
+        return { ...created }
       }
     })
   }
@@ -509,7 +497,7 @@ export class NewApiAccessTokenCreation {
     operationRequest: ApiServiceRequest,
   ) {
     operationRequest.abortSignal?.throwIfAborted()
-    if (this.journal && !(await this.journal.begin())) {
+    if (this.journal && !(await this.journal.begin(proof.expires_at * 1000))) {
       await this.observeUncertainIssuance()
       throw new NewApiTokenCreationUncertainError()
     }
@@ -548,16 +536,27 @@ export class NewApiAccessTokenCreation {
     if (!parsed.success) {
       return await this.recordUncertainIssuance()
     }
-    await this.journal?.resolved()
-    return parsed.data
+    const created = (this.created = {
+      token: parsed.data.token,
+      id: parsed.data.item.id,
+      verified: false,
+    })
+    this.createdScopes = draft.scopes
+    const grant = draftSchema.safeParse(parsed.data.item)
+    this.grantMatches =
+      created.token.startsWith("nap_") &&
+      grant.success &&
+      grant.data.expires_at === draft.expires_at &&
+      grant.data.name === draft.name &&
+      JSON.stringify(normalizeGrantScopes(grant.data.scopes)) ===
+        JSON.stringify(draft.scopes)
+    // If local storage fails, keep the marker but allow validation of this token.
+    await this.journal?.resolved().catch(() => undefined)
+    return created
   }
 
   private async observeUncertainIssuance() {
-    const attempt = await this.journal?.pending()
-    if (attempt) {
-      this.observedIssuance ??= attempt
-      this.uncertain = true
-    }
+    if (await this.journal?.pending()) this.uncertain = true
   }
 
   /** Preserve the journal marker when the server may have accepted issuance. */

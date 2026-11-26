@@ -11,12 +11,19 @@ import {
 
 import { NEW_API_TOKEN_CREATION_ERRORS as CREATION_ERRORS } from "./protocol"
 
-const ACTIVE_ISSUANCE_AGE_MS = 300_000
+const ISSUANCE_REVIEW_DELAY_MS = 300_000
 
 export interface TokenIssuanceMarker {
   attempt: string
   started: number
   uncertain: boolean
+  uncertainAt?: number
+  proofExpiresAt?: number
+}
+
+export interface TokenIssuanceReview {
+  marker: TokenIssuanceMarker
+  startedAt: number
 }
 
 /** Store no credentials, proofs, passwords, or returned token plaintext. */
@@ -37,12 +44,17 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
         requireCrossContext: true,
       })
     },
-    async begin() {
+    async begin(proofExpiresAt?: number) {
       return locked(async () => {
         if (await read()) return false
         attempt = crypto.randomUUID()
         await setLocalStorage({
-          [key]: { attempt, started: Date.now(), uncertain: false },
+          [key]: {
+            attempt,
+            started: Date.now(),
+            uncertain: false,
+            ...(proofExpiresAt === undefined ? {} : { proofExpiresAt }),
+          },
         })
         return true
       })
@@ -52,7 +64,7 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
         const marker = await read()
         if (marker && marker.attempt === attempt)
           await setLocalStorage({
-            [key]: { ...marker, uncertain: true },
+            [key]: { ...marker, uncertain: true, uncertainAt: Date.now() },
           })
       })
     },
@@ -62,7 +74,7 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
           await removeLocalStorage(key)
       })
     },
-    async acknowledge(reviewed: TokenIssuanceMarker | undefined) {
+    async acknowledge(review: TokenIssuanceReview | undefined) {
       await navigator.locks.request(
         operationLock,
         { ifAvailable: true },
@@ -71,11 +83,19 @@ export function createTokenIssuanceJournal(origin: string, userId: string) {
           await locked(async () => {
             const marker = await read()
             if (!marker) return
+            // A timed-out request can still commit on the server. Review a fresh
+            // list after the waiting window and while no local issuer holds the lock.
+            const readyAt = Math.max(
+              (marker.uncertainAt ?? marker.started) + ISSUANCE_REVIEW_DELAY_MS,
+              marker.proofExpiresAt ?? 0,
+            )
             if (
-              marker.attempt !== reviewed?.attempt ||
-              marker.uncertain !== reviewed.uncertain ||
-              (!marker.uncertain &&
-                Date.now() - marker.started < ACTIVE_ISSUANCE_AGE_MS)
+              !review ||
+              marker.attempt !== review.marker.attempt ||
+              marker.uncertain !== review.marker.uncertain ||
+              marker.uncertainAt !== review.marker.uncertainAt ||
+              review.startedAt < readyAt ||
+              review.startedAt > Date.now()
             )
               throw new Error(CREATION_ERRORS.BUSY)
             await removeLocalStorage(key)
