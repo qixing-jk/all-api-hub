@@ -15,6 +15,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import type { SiteAccount } from "~/types"
 import type { CheckInMethodId } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { server as interception } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -92,6 +93,17 @@ const protocols = [
 
 const statusProtocols: HttpCheckInProtocol[] = [
   ...protocols,
+  {
+    name: "BizDecipher",
+    methodId: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    statusPath: "/api/v1/user/checkin/status",
+    status: (checked) => ({
+      date: formatLocalDayKey(),
+      free_claimed: checked,
+      balance: 2,
+      credit_balance: 3,
+    }),
+  },
   {
     name: "Genius Programmer",
     methodId: AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,

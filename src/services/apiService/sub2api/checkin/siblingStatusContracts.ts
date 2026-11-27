@@ -2,6 +2,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { FREE_API_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/freeApiCheckInProtocol"
 import { USER_CHECK_IN_STATUS_ENDPOINT } from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
 import type { CheckInMethodId } from "~/types/checkIn"
+import { parseDayKey } from "~/utils/core/dayKey"
 
 /**
  * Shared verdicts for a structurally valid success DTO read on a status path.
@@ -44,16 +45,40 @@ export interface SiblingStatusDtoDiscriminator {
   readonly siblingDtoSample: Record<string, unknown>
 }
 
+/** Identifies the free-gift status without assuming this is the current day. */
+export function isBizDecipherStatusDto(
+  data: Record<string, unknown>,
+): data is Record<string, unknown> & { date: string; free_claimed: boolean } {
+  return (
+    typeof data.free_claimed === "boolean" &&
+    typeof data.date === "string" &&
+    Boolean(parseDayKey(data.date)) &&
+    typeof data.balance === "number" &&
+    Number.isFinite(data.balance) &&
+    typeof data.credit_balance === "number" &&
+    Number.isFinite(data.credit_balance) &&
+    !Object.hasOwn(data, "checked_in_today") &&
+    !Object.hasOwn(data, "today_checked_in")
+  )
+}
+
 /**
- * Three deployments serve the `/api/v1/user/checkin(/status)` family with
+ * Several deployments serve the `/api/v1/user/checkin(/status)` family with
  * distinct DTOs: FreeAPI and Clawhud read `checked_in_today`, the Genius
  * Programmer fork reads `today_checked_in`. FreeAPI's reward window
  * (`min_amount`) and Clawhud's totals (`total_count`) separate the two
  * `checked_in_today` shapes; a payload that carries only
  * `{enabled, checked_in_today}` matches neither fingerprint and stays
  * `unknown` rather than claiming either contract.
+ * BizDecipher distinguishes its free gift with `free_claimed` and separate wallets.
  */
 export const SIBLING_STATUS_DTO_DISCRIMINATORS = [
+  {
+    methodId: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    endpoint: USER_CHECK_IN_STATUS_ENDPOINT,
+    ownDtoMatches: isBizDecipherStatusDto,
+    siblingDtoSample: { enabled: true, checked_in_today: false },
+  },
   {
     methodId: AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     endpoint: FREE_API_CHECK_IN_ENDPOINT,

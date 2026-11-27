@@ -71,7 +71,9 @@ export function AccountBalanceSection({
     <AccountFormSection
       continuous={continuous}
       id={ACCOUNT_FORM_SECTION_ELEMENT_IDS[ACCOUNT_FORM_SECTIONS.BALANCE]}
-      contentClassName={continuous ? "grid gap-4 sm:grid-cols-2" : undefined}
+      contentClassName={
+        continuous ? "grid items-start gap-4 sm:grid-cols-2" : undefined
+      }
       title={t("sections.balanceAndStats.title")}
       defaultOpen={
         ACCOUNT_FORM_MOBILE_DEFAULT_OPEN[ACCOUNT_FORM_SECTIONS.BALANCE]

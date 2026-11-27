@@ -36,6 +36,34 @@ describe("handlePerformTempWindowFetch", () => {
     vi.stubGlobal("location", { origin: "https://example.com" })
   })
 
+  it("rejects an expired request before dispatch in the browser context", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"))
+    vi.stubGlobal("fetch", fetchMock)
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
+    const sendResponse = vi.fn()
+    handlePerformTempWindowFetch(
+      {
+        expectedOrigin: "https://example.com",
+        fetchUrl: "https://example.com/api/data",
+        fetchOptions: { method: "POST", dispatchDeadlineAt: Date.now() - 1 },
+        requestId: "expired-request",
+      },
+      sendResponse,
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        transportLifecycle: {
+          upstreamRequestDispatched: false,
+          upstreamResponseReceived: false,
+        },
+      }),
+    )
+  })
+
   it("adds the extension header, defaults credentials to include, and relays json responses", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
@@ -48,9 +76,8 @@ describe("handlePerformTempWindowFetch", () => {
     )
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     const shouldKeepChannelOpen = handlePerformTempWindowFetch(
@@ -132,9 +159,8 @@ describe("handlePerformTempWindowFetch", () => {
     )
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
@@ -187,9 +213,8 @@ describe("handlePerformTempWindowFetch", () => {
     )
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
@@ -229,9 +254,8 @@ describe("handlePerformTempWindowFetch", () => {
     )
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
@@ -275,9 +299,8 @@ describe("handlePerformTempWindowFetch", () => {
     const fetchMock = vi.fn().mockResolvedValue(response)
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
@@ -324,9 +347,8 @@ describe("handlePerformTempWindowFetch", () => {
     const fetchMock = vi.fn().mockResolvedValue(response)
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
@@ -365,9 +387,8 @@ describe("handlePerformTempWindowFetch", () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch({}, sendResponse)
@@ -393,9 +414,8 @@ describe("handlePerformTempWindowFetch", () => {
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
     vi.stubGlobal("location", { origin: "https://navigated.example.com" })
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
@@ -427,9 +447,8 @@ describe("handlePerformTempWindowFetch", () => {
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
     vi.stubGlobal("location", { origin: "https://example.com" })
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(
@@ -460,9 +479,8 @@ describe("handlePerformTempWindowFetch", () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("network down"))
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch)
 
-    const { handlePerformTempWindowFetch } = await import(
-      "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
-    )
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
 
     const sendResponse = vi.fn()
     handlePerformTempWindowFetch(

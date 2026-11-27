@@ -5,6 +5,7 @@ import {
 } from "~/services/apiTransport/safariNativeCookie"
 import { isChromium } from "~/utils/browser"
 import { getChromiumRequestHeaderApi } from "~/utils/browser/requestHeaderApi"
+import { assertFetchDispatchDeadline } from "~/utils/browser/requestInitMessage"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
@@ -250,6 +251,7 @@ export async function fetchWithHeaderOverrides(
     )
   }
   const dispatch = () => {
+    assertFetchDispatchDeadline(options)
     execution?.onDispatch?.()
     return fetch(input, options)
   }
