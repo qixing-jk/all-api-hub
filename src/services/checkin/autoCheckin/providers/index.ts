@@ -18,6 +18,7 @@ import { emRankProvider } from "./emrank"
 import { freeApiProvider } from "./freeApi"
 import { geniusProgrammerProvider } from "./geniusProgrammer"
 import { hiyoProvider } from "./hiyo"
+import { hogCoinCaptureGameProvider } from "./hogCoinCaptureGame"
 import { nexavlinksProvider } from "./nexavlinks"
 import { pmApiProvider } from "./pmapi"
 import {
@@ -61,6 +62,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: baiApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: apiKeyCasaProvider,
   [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: xingyaProvider,
+  [AUTO_CHECKIN_METHOD_IDS.HogCoinCaptureDailyGame]: hogCoinCaptureGameProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(
