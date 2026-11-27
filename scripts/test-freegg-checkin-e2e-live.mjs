@@ -255,64 +255,69 @@ async function onboardingAndCheckin() {
           }),
           "Onboarding or refresh must have credited today's native allowance",
         )
-        const start = requests.length
-        const clickedAt = Date.now()
-        await checkin.getByTestId("auto-checkin-run-now-button").click()
         let result
-        await expect
-          .poll(
-            async () => {
-              result = await dev.serviceWorker.evaluate(async (id) => {
-                const raw = (
-                  await chrome.storage.local.get("autoCheckin_status")
-                ).autoCheckin_status
-                const status = typeof raw === "string" ? JSON.parse(raw) : raw
-                return status?.perAccount?.[id]
-              }, account.id)
-              return currentResultStatus(result, clickedAt)
-            },
-            { timeout: 90_000 },
+        // The reset run reserves its only explicit action for after midnight.
+        // Ordinary acceptance checks the already-claimed path independently.
+        if (resetAt === undefined) {
+          const start = requests.length
+          const clickedAt = Date.now()
+          await checkin.getByTestId("auto-checkin-run-now-button").click()
+          await expect
+            .poll(
+              async () => {
+                result = await dev.serviceWorker.evaluate(async (id) => {
+                  const raw = (
+                    await chrome.storage.local.get("autoCheckin_status")
+                  ).autoCheckin_status
+                  const status = typeof raw === "string" ? JSON.parse(raw) : raw
+                  return status?.perAccount?.[id]
+                }, account.id)
+                return currentResultStatus(result, clickedAt)
+              },
+              { timeout: 90_000 },
+            )
+            .toMatch(/^(already_checked|skipped)$/)
+          assert(
+            result.status === "already_checked" ||
+              result.reasonCode === "already_checked_today",
+            "Today's grant must be confirmed, not skipped for ineligibility",
           )
-          .toMatch(/^(already_checked|skipped)$/)
-        assert(
-          result.status === "already_checked" ||
-            result.reasonCode === "already_checked_today",
-          "Today's grant must be confirmed, not skipped for ineligibility",
-        )
-        await expect(
-          checkin.getByTestId("auto-checkin-run-now-button"),
-        ).toBeEnabled({ timeout: 60_000 })
-        assert.equal(
-          requests.slice(start).filter((item) => item.path === "/api/user/self")
-            .length,
-          0,
-          "Already claimed execution must not mutate or refresh self",
-        )
-        const after = await ledger()
-        assert.equal(
-          after.total,
-          before.total,
-          "Already claimed run must not create income",
-        )
-        await checkin.screenshot({
-          path: path.join(evidenceDir, "execution-result.png"),
-          fullPage: true,
-        })
-        await fs.writeFile(
-          path.join(evidenceDir, "result.json"),
-          JSON.stringify(
-            {
-              extensionId: dev.extensionId,
-              extensionPath,
-              result,
-              beforeTotal: before.total,
-              afterTotal: after.total,
-              requests,
-            },
-            null,
-            2,
-          ),
-        )
+          await expect(
+            checkin.getByTestId("auto-checkin-run-now-button"),
+          ).toBeEnabled({ timeout: 60_000 })
+          assert.equal(
+            requests
+              .slice(start)
+              .filter((item) => item.path === "/api/user/self").length,
+            0,
+            "Already claimed execution must not mutate or refresh self",
+          )
+          const after = await ledger()
+          assert.equal(
+            after.total,
+            before.total,
+            "Already claimed run must not create income",
+          )
+          await checkin.screenshot({
+            path: path.join(evidenceDir, "execution-result.png"),
+            fullPage: true,
+          })
+          await fs.writeFile(
+            path.join(evidenceDir, "result.json"),
+            JSON.stringify(
+              {
+                extensionId: dev.extensionId,
+                extensionPath,
+                result,
+                beforeTotal: before.total,
+                afterTotal: after.total,
+                requests,
+              },
+              null,
+              2,
+            ),
+          )
+        }
         // Optional actual mutation coverage: prepare the account before midnight,
         // then leave the site idle until the real deployment day changes.
         if (resetAt !== undefined) {
@@ -321,7 +326,7 @@ async function onboardingAndCheckin() {
             if (nativePage.url().startsWith(origin)) await nativePage.close()
           }
           console.log(
-            "Existing-token workflow passed; prepared account is idle until the actual UTC+8 reset.",
+            "Account preparation passed; no pre-reset Run now is dispatched. Waiting for the pinned UTC+8 reset.",
           )
           while (Date.now() < resetAt + 3000)
             await new Promise((resolve) =>
@@ -494,8 +499,9 @@ await runLiveSuites({
         "save-reopen-refresh",
         "method-discovery",
         "automatic-intent",
-        "already-claimed-no-mutation",
-        "result-history",
+        ...(process.argv.includes("--await-reset")
+          ? ["fresh-claim-after-reset", "result-history"]
+          : ["already-claimed-no-mutation", "result-history"]),
         "owned-account-cleanup",
       ],
       prerequisite: () =>
