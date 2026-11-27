@@ -1,10 +1,19 @@
 import { act, renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountAutoDetection } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountAutoDetection"
 import type { OpenRouterOnboardingStart } from "~/features/AccountManagement/components/AccountDialog/form/useOpenRouterAccountOnboarding"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+
+const { autoDetectAccount } = vi.hoisted(() => ({
+  autoDetectAccount: vi.fn(),
+}))
+vi.mock("~/services/accounts/accountAutoDetection", () => ({
+  autoDetectAccount,
+}))
 
 const { onboardRequestyAccount } = vi.hoisted(() => ({
   onboardRequestyAccount: vi.fn(),
@@ -140,6 +149,135 @@ describe("account detection onboarding outcomes", () => {
     expect(form.applyRecovery).toHaveBeenLastCalledWith(recoveryData, undefined)
     expect(form.enterManual).toHaveBeenCalledOnce()
     expect(result.current.state.detectionError).toEqual(detailedError)
+  })
+
+  it("reports expected token verification as action required while preserving manual recovery", async () => {
+    const recoveryData = { userId: "123", username: "local-only-name" }
+    const detailedError = {
+      type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+      message: "local-only-verification-instructions",
+    }
+    autoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      autoDetectFailureReason:
+        AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+      autoDetectContext: { siteType: "new-api" },
+      recoveryData,
+      detailedError,
+    })
+    const { run, form, result } = setup(vi.fn())
+
+    await act(() => run("https://example.com"))
+
+    expect(complete).toHaveBeenCalledExactlyOnceWith(
+      "action_required",
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          accountAutoDetectFailureReason: "access_token_verification_required",
+          accountAutoDetectIdentityDetected: true,
+        }),
+      }),
+    )
+    expect(complete.mock.lastCall?.[1]).not.toHaveProperty("diagnostics")
+    expect(JSON.stringify(complete.mock.calls)).not.toContain("local-only")
+    expect(form.applyRecovery).toHaveBeenCalledWith(recoveryData, "new-api")
+    expect(form.enterManual).toHaveBeenCalledOnce()
+    expect(form.applyDetected).not.toHaveBeenCalled()
+    expect(result.current.state.detectionError).toEqual(detailedError)
+    expect(result.current.state.isDetecting).toBe(false)
+  })
+
+  it.each([
+    AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+    AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+    AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
+    AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
+    undefined,
+  ])(
+    "keeps %s as a failure instead of assuming verification",
+    async (reason) => {
+      autoDetectAccount.mockResolvedValueOnce({
+        success: false,
+        autoDetectFailureReason: reason,
+        detailedError: {
+          type: AutoDetectErrorType.UNKNOWN,
+          message: "local-only-error",
+        },
+      })
+      const { run, form } = setup(vi.fn())
+      await act(() => run("https://example.com"))
+
+      expect(complete).toHaveBeenCalledExactlyOnceWith(
+        "failure",
+        expect.objectContaining({
+          diagnostics: {
+            failure: expect.objectContaining({ stage: "detection" }),
+          },
+          insights: expect.objectContaining(
+            reason ? { accountAutoDetectFailureReason: reason } : {},
+          ),
+        }),
+      )
+      expect(form.enterManual).toHaveBeenCalledOnce()
+      expect(JSON.stringify(complete.mock.calls)).not.toContain(
+        "local-only-error",
+      )
+    },
+  )
+
+  it("keeps an invalidated verification attempt cancelled without applying recovery", async () => {
+    let finish!: (value: unknown) => void
+    autoDetectAccount.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    const { run, form, result } = setup(vi.fn())
+    let pending!: Promise<void>
+    await act(async () => {
+      pending = run("https://example.com")
+    })
+    act(() => result.current.invalidate())
+    await act(async () => {
+      finish({
+        success: false,
+        autoDetectFailureReason:
+          AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+        recoveryData: { userId: "123" },
+      })
+      await pending
+    })
+    expect(complete).toHaveBeenCalledExactlyOnceWith(
+      "cancelled",
+      expect.any(Object),
+    )
+    expect(form.applyRecovery).not.toHaveBeenCalled()
+    expect(form.enterManual).not.toHaveBeenCalled()
+  })
+
+  it("records a successful retry after verification as success", async () => {
+    autoDetectAccount
+      .mockResolvedValueOnce({
+        success: false,
+        autoDetectFailureReason:
+          AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          siteType: "new-api",
+          checkIn: createEmptyAccountDialogDraft().checkIn,
+        },
+      })
+    const { run, form } = setup(vi.fn())
+    await act(() => run("https://example.com"))
+    await act(() => run("https://example.com"))
+    expect(complete.mock.calls.map(([outcome]) => outcome)).toEqual([
+      "action_required",
+      "success",
+    ])
+    expect(form.applyDetected).toHaveBeenCalledOnce()
   })
 
   it("admits only one Requesty create and discards results after a URL change", async () => {

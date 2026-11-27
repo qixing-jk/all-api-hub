@@ -30,25 +30,27 @@ import {
   type ProductAnalyticsRuntimeResponse,
   type ProductAnalyticsTrackRequest,
 } from "~/services/productAnalytics/runtime/messaging"
+import { SnapshotCadence } from "~/services/productAnalytics/runtime/snapshotCadence"
 import { productAnalyticsState } from "~/services/productAnalytics/runtime/state"
-import {
-  getSessionStorageValues,
-  hasStorageChangedListener,
-  onStorageChanged,
-  setSessionStorageValues,
-} from "~/utils/browser/storage"
+import { createStorageSnapshotListener } from "~/services/productAnalytics/runtime/storageSnapshotListener"
 import { isDevBuild } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ProductAnalyticsRuntime")
-const ACCOUNT_CHANGE_SNAPSHOT_DEBOUNCE_MS = 2_000
-const PREFERENCES_CHANGE_SNAPSHOT_DEBOUNCE_MS = 2_000
-let cleanupAccountChangeListener: (() => void) | null = null
-let cleanupPreferencesChangeListener: (() => void) | null = null
 let productAnalyticsMessagingCleanup: (() => void)[] | null = null
-let autoCheckinConfigSnapshotInFlight = false
-let lastAutoCheckinConfigSnapshotFallbackAt: number | undefined
+const settingsCadence = new SnapshotCadence(
+  PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.SETTINGS_SNAPSHOT_AT,
+  shouldSendSettingsSnapshot,
+)
+const ecosystemCadence = new SnapshotCadence(
+  PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.SITE_ECOSYSTEM_SNAPSHOT_AT,
+  shouldSendSiteEcosystemSnapshot,
+)
+const checkinConfigCadence = new SnapshotCadence(
+  PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.AUTO_CHECKIN_CONFIG_SNAPSHOT_AT,
+  shouldSendSettingsSnapshot,
+)
 
 /**
  * Checks whether an incoming runtime event name is one of the fixed analytics enums.
@@ -82,120 +84,71 @@ function isKnownEntrypoint(
 async function captureSiteEcosystemSnapshot(): Promise<boolean> {
   if (!(await productAnalyticsPreferences.isEnabled())) return false
 
-  const state = await productAnalyticsState.getState()
-  const now = Date.now()
-  if (
-    !shouldSendSiteEcosystemSnapshot(state.lastSiteEcosystemSnapshotAt, now)
-  ) {
-    return false
-  }
-
-  const accounts = await accountQueries.getAllAccounts()
-  const events = buildSiteEcosystemAnalyticsEvents(accounts)
-
-  for (const event of events) {
-    const captured = await productAnalyticsClient.capture(
-      event.eventName,
-      event.properties,
-    )
-    if (!captured) return false
-  }
-
-  await productAnalyticsState.setLastSiteEcosystemSnapshotAt(now)
-  return true
+  return ecosystemCadence.capture(
+    async () =>
+      (await productAnalyticsState.getState()).lastSiteEcosystemSnapshotAt,
+    async (now, markPartialCapture) => {
+      const accounts = await accountQueries.getAllAccounts()
+      for (const event of buildSiteEcosystemAnalyticsEvents(accounts)) {
+        if (
+          !(await productAnalyticsClient.capture(
+            event.eventName,
+            event.properties,
+          ))
+        )
+          return false
+        markPartialCapture()
+      }
+      await productAnalyticsState.setLastSiteEcosystemSnapshotAt(now)
+      return true
+    },
+  )
 }
 
-/**
- * Captures the coarse settings snapshots when analytics is enabled and cadence allows it.
- */
+/** Captures aggregate settings at the shared snapshot cadence. */
 async function captureSettingsSnapshot(): Promise<boolean> {
   if (!(await productAnalyticsPreferences.isEnabled())) return false
-
-  const state = await productAnalyticsState.getState()
-  const now = Date.now()
-  if (!shouldSendSettingsSnapshot(state.lastSettingsSnapshotAt, now)) {
-    return false
-  }
-
-  const preferences = await userPreferences.getPreferences()
-  const event = buildAggregateSettingsSnapshotEvent(
-    preferences,
-    PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+  return settingsCadence.capture(
+    async () => (await productAnalyticsState.getState()).lastSettingsSnapshotAt,
+    async (now) => {
+      const preferences = await userPreferences.getPreferences()
+      const captured = await productAnalyticsClient.capture(
+        PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+        buildAggregateSettingsSnapshotEvent(
+          preferences,
+          PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        ),
+      )
+      if (!captured) return false
+      await productAnalyticsState.setLastSettingsSnapshotAt(now)
+      return true
+    },
   )
-
-  const captured = await productAnalyticsClient.capture(
-    PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
-    event,
-  )
-  if (!captured) return false
-
-  await productAnalyticsState.setLastSettingsSnapshotAt(now)
-  return true
 }
 
-/**
- * Captures the Auto Check-in strategy snapshot when analytics is enabled and cadence allows it.
- */
+/** Captures the Auto Check-in strategy at the shared snapshot cadence. */
 async function captureAutoCheckinConfigSnapshot(
   entrypoint: unknown,
 ): Promise<boolean> {
   if (!(await productAnalyticsPreferences.isEnabled())) return false
   if (!isKnownEntrypoint(entrypoint)) return false
-
-  const state = await productAnalyticsState.getState()
-  const now = Date.now()
-  let sessionCapturedAt: number | undefined
-  try {
-    const values = await getSessionStorageValues(
-      PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.AUTO_CHECKIN_CONFIG_SNAPSHOT_AT,
-    )
-    const timestamp =
-      values[
-        PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.AUTO_CHECKIN_CONFIG_SNAPSHOT_AT
-      ]
-    if (typeof timestamp === "number" && Number.isFinite(timestamp)) {
-      sessionCapturedAt = timestamp
-    }
-  } catch {
-    // Persistent cadence and the current worker's fallback still apply.
-  }
-  if (
-    !shouldSendSettingsSnapshot(state.lastAutoCheckinConfigSnapshotAt, now) ||
-    !shouldSendSettingsSnapshot(sessionCapturedAt, now) ||
-    !shouldSendSettingsSnapshot(lastAutoCheckinConfigSnapshotFallbackAt, now)
-  ) {
-    return false
-  }
-
-  const preferences = await userPreferences.getPreferences()
-  const event = buildAutoCheckinConfigSnapshotProperties(
-    preferences.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!,
-    entrypoint,
-  )
-
-  const captured = await productAnalyticsClient.capture(
-    PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
-    event,
-  )
-  if (!captured) return false
-
-  const persisted =
-    await productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(now)
-  if (!persisted) {
-    lastAutoCheckinConfigSnapshotFallbackAt = now
-    // Capture already succeeded. Retain its cadence independently of local
-    // storage so a write outage does not turn every UI open into another event.
-    const savedToSession = await setSessionStorageValues({
-      [PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.AUTO_CHECKIN_CONFIG_SNAPSHOT_AT]:
-        now,
-    })
-    if (!savedToSession) {
-      logger.warn(
-        "Auto check-in snapshot cooldown could not be saved to session storage",
+  return checkinConfigCadence.capture(
+    async () =>
+      (await productAnalyticsState.getState()).lastAutoCheckinConfigSnapshotAt,
+    async (now) => {
+      const preferences = await userPreferences.getPreferences()
+      const captured = await productAnalyticsClient.capture(
+        PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+        buildAutoCheckinConfigSnapshotProperties(
+          preferences.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!,
+          entrypoint,
+        ),
       )
-    }
-  }
-  return true
+      if (!captured) return false
+      await productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(now)
+      return true
+    },
+  )
 }
 
 /**
@@ -214,38 +167,6 @@ async function handleTrackEventRequest(
 }
 
 /**
- * Captures a cadence-limited site ecosystem snapshot request.
- */
-async function handleSiteEcosystemSnapshotRequest() {
-  const success = await captureSiteEcosystemSnapshot()
-  return { success }
-}
-
-/**
- * Captures a cadence-limited settings snapshot request.
- */
-async function handleSettingsSnapshotRequest() {
-  const success = await captureSettingsSnapshot()
-  return { success }
-}
-
-/**
- * Captures a cadence-limited Auto Check-in config snapshot request.
- */
-async function handleAutoCheckinConfigSnapshotRequest(
-  request: Record<string, unknown>,
-) {
-  if (autoCheckinConfigSnapshotInFlight) return { success: false }
-  autoCheckinConfigSnapshotInFlight = true
-  try {
-    const success = await captureAutoCheckinConfigSnapshot(request?.entrypoint)
-    return { success }
-  } finally {
-    autoCheckinConfigSnapshotInFlight = false
-  }
-}
-
-/**
  * Routes typed product analytics runtime requests to their focused handlers.
  */
 async function resolveProductAnalyticsResponse(
@@ -259,13 +180,15 @@ async function resolveProductAnalyticsResponse(
         request.properties,
       )
     case ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot:
-      return await handleSiteEcosystemSnapshotRequest()
+      return { success: await captureSiteEcosystemSnapshot() }
     case ProductAnalyticsMessageTypes.TrackSettingsSnapshot:
-      return await handleSettingsSnapshotRequest()
+      return { success: await captureSettingsSnapshot() }
     case ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot:
-      return await handleAutoCheckinConfigSnapshotRequest(
-        request as Record<string, unknown>,
-      )
+      return {
+        success: await captureAutoCheckinConfigSnapshot(
+          (request as Record<string, unknown>)?.entrypoint,
+        ),
+      }
     default:
       return { success: false }
   }
@@ -337,185 +260,63 @@ export function setupProductAnalyticsMessagingListeners() {
   ]
 }
 
-/**
- * Starts snapshot capture without letting background lifecycle hooks fail on analytics errors.
- */
-function captureSiteEcosystemSnapshotBestEffort() {
-  void captureSiteEcosystemSnapshot().catch((error) => {
-    if (isDevBuild()) {
-      logger.debug("Product analytics snapshot failed", error)
-    }
+/** Keeps optional analytics work from rejecting background lifecycle hooks. */
+function runBestEffort(work: Promise<unknown>, message: string) {
+  void work.catch((error) => {
+    if (isDevBuild()) logger.debug(message, error)
   })
 }
 
-/**
- * Starts settings snapshot capture without letting background lifecycle hooks fail on analytics errors.
- */
-function captureSettingsSnapshotBestEffort() {
-  void captureSettingsSnapshot().catch((error) => {
-    if (isDevBuild()) {
-      logger.debug("Product analytics settings snapshot failed", error)
-    }
-  })
-}
-
-/**
- * Starts shield-bypass summary capture without failing background startup.
- */
-function flushShieldBypassDailySummaryBestEffort() {
-  void flushShieldBypassDailySummary(productAnalyticsClient.capture).catch(
-    (error) => {
-      if (isDevBuild()) {
-        logger.debug("Product analytics shield bypass summary failed", error)
-      }
-    },
+/** Watches account changes using an independent debounce and cleanup lifetime. */
+export const setupProductAnalyticsAccountChangeListener =
+  createStorageSnapshotListener(
+    ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+    triggerStartupSiteEcosystemSnapshot,
   )
-}
 
-/**
- * Starts sponsor recommendations summary capture without failing background startup.
- */
-function flushSponsorRecommendationsDailySummaryBestEffort() {
-  void flushSponsorRecommendationsDailySummary(
-    productAnalyticsClient.capture,
-  ).catch((error) => {
-    if (isDevBuild()) {
-      logger.debug(
-        "Product analytics sponsor recommendations summary failed",
-        error,
-      )
-    }
-  })
-}
-
-/**
- * Watches local account storage changes and debounces site ecosystem snapshot capture.
- */
-export function setupProductAnalyticsAccountChangeListener() {
-  if (cleanupAccountChangeListener) {
-    return cleanupAccountChangeListener
-  }
-
-  if (!hasStorageChangedListener()) {
-    return () => {}
-  }
-
-  let timer: ReturnType<typeof setTimeout> | null = null
-  let isListening = true
-
-  const schedule = () => {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => {
-      timer = null
-      captureSiteEcosystemSnapshotBestEffort()
-    }, ACCOUNT_CHANGE_SNAPSHOT_DEBOUNCE_MS)
-  }
-
-  const handleStorageChanged = (
-    changes: Record<string, browser.storage.StorageChange>,
-    areaName: string,
-  ) => {
-    if (!isListening) return
-    if (areaName !== "local") return
-    if (!(ACCOUNT_STORAGE_KEYS.ACCOUNTS in changes)) return
-    schedule()
-  }
-
-  const cleanupStorageChanged = onStorageChanged(handleStorageChanged)
-
-  cleanupAccountChangeListener = () => {
-    if (!cleanupAccountChangeListener) {
-      return
-    }
-
-    isListening = false
-    if (timer) {
-      clearTimeout(timer)
-      timer = null
-    }
-    cleanupStorageChanged()
-    cleanupAccountChangeListener = null
-  }
-
-  return cleanupAccountChangeListener
-}
-
-/**
- * Watches local preference storage changes and debounces settings snapshot capture.
- */
-export function setupProductAnalyticsPreferencesChangeListener() {
-  if (cleanupPreferencesChangeListener) {
-    return cleanupPreferencesChangeListener
-  }
-
-  if (!hasStorageChangedListener()) {
-    return () => {}
-  }
-
-  let timer: ReturnType<typeof setTimeout> | null = null
-  let isListening = true
-
-  const schedule = () => {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => {
-      timer = null
-      captureSettingsSnapshotBestEffort()
-    }, PREFERENCES_CHANGE_SNAPSHOT_DEBOUNCE_MS)
-  }
-
-  const handleStorageChanged = (
-    changes: Record<string, browser.storage.StorageChange>,
-    areaName: string,
-  ) => {
-    if (!isListening) return
-    if (areaName !== "local") return
-    if (!(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES in changes)) return
-    schedule()
-  }
-
-  const cleanupStorageChanged = onStorageChanged(handleStorageChanged)
-
-  cleanupPreferencesChangeListener = () => {
-    if (!cleanupPreferencesChangeListener) {
-      return
-    }
-
-    isListening = false
-    if (timer) {
-      clearTimeout(timer)
-      timer = null
-    }
-    cleanupStorageChanged()
-    cleanupPreferencesChangeListener = null
-  }
-
-  return cleanupPreferencesChangeListener
-}
+/** Watches preference changes using an independent debounce and cleanup lifetime. */
+export const setupProductAnalyticsPreferencesChangeListener =
+  createStorageSnapshotListener(
+    USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    triggerStartupSettingsSnapshot,
+  )
 
 /**
  * Triggers the startup site ecosystem snapshot in the background worker.
  */
 export function triggerStartupSiteEcosystemSnapshot() {
-  captureSiteEcosystemSnapshotBestEffort()
+  runBestEffort(
+    captureSiteEcosystemSnapshot(),
+    "Product analytics snapshot failed",
+  )
 }
 
 /**
  * Triggers the startup settings snapshot in the background worker.
  */
 export function triggerStartupSettingsSnapshot() {
-  captureSettingsSnapshotBestEffort()
+  runBestEffort(
+    captureSettingsSnapshot(),
+    "Product analytics settings snapshot failed",
+  )
 }
 
 /**
  * Triggers the startup shield-bypass summary flush in the background worker.
  */
 export function triggerStartupShieldBypassDailySummary() {
-  flushShieldBypassDailySummaryBestEffort()
+  runBestEffort(
+    flushShieldBypassDailySummary(productAnalyticsClient.capture),
+    "Product analytics shield bypass summary failed",
+  )
 }
 
 /**
  * Triggers the startup sponsor recommendations summary flush in the background worker.
  */
 export function triggerStartupSponsorRecommendationsDailySummary() {
-  flushSponsorRecommendationsDailySummaryBestEffort()
+  runBestEffort(
+    flushSponsorRecommendationsDailySummary(productAnalyticsClient.capture),
+    "Product analytics sponsor recommendations summary failed",
+  )
 }

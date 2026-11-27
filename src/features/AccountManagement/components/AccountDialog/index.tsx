@@ -61,6 +61,7 @@ import { AccountDialogEditor } from "./form/AccountDialogEditor"
 import { AccountDialogSiteStep } from "./form/AccountDialogSiteStep"
 import type { AccountFormHandle } from "./form/AccountForm"
 import {
+  ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES,
   ACCOUNT_DIALOG_PHASES,
   type AccountDialogRecoveryState,
 } from "./models"
@@ -70,6 +71,7 @@ import {
 } from "./newApiToken/AccountTokenSetupHeaders"
 import { useAccountTokenSetup } from "./newApiToken/useAccountTokenSetup"
 import { useResumeNewApiTokenRecovery } from "./newApiToken/useResumeNewApiTokenRecovery"
+import { useAccountDialogCloseAnalytics } from "./useAccountDialogCloseAnalytics"
 
 const ACCOUNT_FORM_ID = "account-form"
 
@@ -262,12 +264,15 @@ export default function AccountDialog({
       ? state.credentialVerification
       : undefined
   const hasInlineCredentialError =
-    credentialVerification?.status === "error" &&
+    credentialVerification?.status ===
+      ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Error &&
     state.novitaCredentialOperation !== "account" &&
     siteOnboarding?.accessTokenVerificationGuide?.copy ===
       ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Novita
   const needsAimlApiVerification =
-    isAimlApiSite && credentialVerification?.status !== "success"
+    isAimlApiSite &&
+    credentialVerification?.status !==
+      ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success
 
   const manualAddGuideAnchor = siteOnboarding?.manualAddGuideAnchor
   const isOpenRouterBootstrap = isCanonicalOpenRouterUrl(state.url)
@@ -409,11 +414,22 @@ export default function AccountDialog({
     ? recoveryContinuation
     : undefined
   const isCreatingToken = creation.isOpen
+  const observeClose = useAccountDialogCloseAnalytics({
+    isOpen,
+    mode,
+    state,
+    submissionBlocked: Boolean(
+      isAccountSubmissionBlocked || recoveryContinuation?.isOpening,
+    ),
+    needsAimlApiVerification,
+    validationIssueCount: validationIssues.length,
+  })
   const { handleClose: closeAccountDialog } = handlers
   const handleClose = useCallback(() => {
+    observeClose()
     cancelTokenVerification()
     return closeAccountDialog()
-  }, [cancelTokenVerification, closeAccountDialog])
+  }, [observeClose, cancelTokenVerification, closeAccountDialog])
   useImperativeHandle(ref, () => ({ close: handleClose }), [handleClose])
 
   const reviewIssues = () => {

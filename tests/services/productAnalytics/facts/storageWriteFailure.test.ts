@@ -35,9 +35,8 @@ describe("storage write failure analytics", () => {
   })
 
   it("reports a storage write failure with a normalized low-cardinality payload", async () => {
-    const { trackStorageWriteFailure: track } = await import(
-      "~/services/productAnalytics/facts/storageWriteFailure"
-    )
+    const { trackStorageWriteFailure: track } =
+      await import("~/services/productAnalytics/facts/storageWriteFailure")
 
     const dispatched = track({
       storageArea: PRODUCT_ANALYTICS_STORAGE_AREAS.Local,
@@ -59,9 +58,8 @@ describe("storage write failure analytics", () => {
   })
 
   it("falls back to a fixed error name for non-Error failures", async () => {
-    const { trackStorageWriteFailure: track } = await import(
-      "~/services/productAnalytics/facts/storageWriteFailure"
-    )
+    const { trackStorageWriteFailure: track } =
+      await import("~/services/productAnalytics/facts/storageWriteFailure")
 
     track({
       storageArea: PRODUCT_ANALYTICS_STORAGE_AREAS.Local,
@@ -84,9 +82,8 @@ describe("storage write failure analytics", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-10-11T00:00:00.000Z"))
     vi.resetModules()
-    const { trackStorageWriteFailure: track } = await import(
-      "~/services/productAnalytics/facts/storageWriteFailure"
-    )
+    const { trackStorageWriteFailure: track } =
+      await import("~/services/productAnalytics/facts/storageWriteFailure")
 
     const params = {
       storageArea: PRODUCT_ANALYTICS_STORAGE_AREAS.Local,
@@ -109,7 +106,7 @@ describe("storage write failure analytics", () => {
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(2)
 
     // The cooldown window elapses and the next failure reports again.
-    vi.setSystemTime(new Date("2026-10-11T00:11:00.000Z"))
+    vi.setSystemTime(new Date("2026-10-12T00:00:00.000Z"))
     expect(track(params)).toBe(true)
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(3)
   })

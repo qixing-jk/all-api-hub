@@ -6,6 +6,16 @@ import {
 } from "~/services/productAnalytics/contracts"
 
 export const EVENT_ALLOWED_KEYS = {
+  [PRODUCT_ANALYTICS_EVENTS.AccountDialogClosed]: [
+    "entrypoint",
+    "dialog_phase",
+    "form_valid",
+    "submission_blocked",
+    "verification_required",
+    "validation_issue_count",
+    "detection_pending",
+    "save_pending",
+  ],
   [PRODUCT_ANALYTICS_EVENTS.AppOpened]: ["entrypoint"],
   [PRODUCT_ANALYTICS_EVENTS.PageViewed]: ["page_id", "entrypoint"],
   [PRODUCT_ANALYTICS_EVENTS.FeatureActionStarted]: [

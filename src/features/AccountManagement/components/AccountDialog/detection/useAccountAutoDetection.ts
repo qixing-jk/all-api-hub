@@ -19,7 +19,11 @@ import {
   type OpenRouterOnboardingStart,
   type useOpenRouterAccountOnboarding,
 } from "~/features/AccountManagement/components/AccountDialog/form/useOpenRouterAccountOnboarding"
-import { type AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import {
+  ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES,
+  type AccountCredentialVerificationStatus,
+  type AccountDialogDraft,
+} from "~/features/AccountManagement/components/AccountDialog/models"
 import notify from "~/lib/notify"
 import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
@@ -27,7 +31,6 @@ import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
   isAccessTokenRecoveryError,
-  isIdentityKnownAutoDetectFailureReason,
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
 import {
@@ -41,20 +44,9 @@ import {
   requestyOnboardingDefaults,
 } from "~/services/apiAdapters/requesty/account/accountOnboarding"
 import { isNovitaConsoleCredential } from "~/services/apiService/novita/constants"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
-import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
-  resolveProductAnalyticsErrorCategoryFromError,
-  type ProductAnalyticsActionInsights,
-} from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SITE_TYPES,
-  type ProductAnalyticsErrorCategory,
-  type ProductAnalyticsSiteType,
 } from "~/services/productAnalytics/contracts"
 import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnostics/diagnosticsError"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
@@ -62,6 +54,13 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum } from "~/types"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { createLogger } from "~/utils/core/logger"
+
+import {
+  buildAutoDetectAnalyticsInsights,
+  buildAutoDetectFailureCompletion,
+  getAutoDetectAnalyticsErrorCategory,
+  type AccountDetectionAnalyticsResult,
+} from "./analytics"
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 const logger = createLogger("AccountDialogHook")
@@ -72,7 +71,7 @@ type DetectedAccount = NonNullable<
 /** Transient evidence for the exact credential and identity accepted by detection. */
 export type AccountCredentialVerification = {
   aimlApiKey?: string
-  status: "success" | "error"
+  status: AccountCredentialVerificationStatus
   accessToken: string
   siteType: AccountSiteType
   userId: string
@@ -237,93 +236,15 @@ export function useAccountAutoDetection({
       const requestedUrl = url.trim()
       const isCurrentAutoDetectRun = attempt.isCurrent
       const analyticsAction = attempt.beginDetection()
-      const checkInDiscoveryTrigger =
-        mode === DIALOG_MODES.EDIT || isDetected
-          ? "redetect"
-          : "initial_detection"
       const createAutoDetectAnalyticsInsights = (
-        result?:
-          | Awaited<ReturnType<typeof autoDetectAccount>>
-          | Awaited<ReturnType<OpenRouterOnboardingStart>>,
+        result?: AccountDetectionAnalyticsResult,
         fallbackUsed = false,
-      ): ProductAnalyticsActionInsights => {
-        const resultData = result && "data" in result ? result.data : undefined
-        const autoDetectContext =
-          result && "autoDetectContext" in result
-            ? result.autoDetectContext ?? resultData?.autoDetectContext
-            : resultData?.autoDetectContext
-        const candidateSiteType =
-          result && "siteType" in result
-            ? result.siteType
-            : resultData?.siteType ?? autoDetectContext?.siteType
-        const analyticsSiteType = isProductAnalyticsSiteType(candidateSiteType)
-          ? candidateSiteType
-          : undefined
-        const attemptOutcome =
-          result && "attemptOutcome" in result
-            ? result.attemptOutcome
-            : undefined
-        const checkInSiteType =
-          resultData && isAccountSiteType(candidateSiteType)
-            ? candidateSiteType
-            : undefined
-        const candidateMethodIds = checkInSiteType
-          ? getAutoCheckinCandidateMethodIds(checkInSiteType, url)
-          : []
-        const checkInInspection =
-          resultData && checkInSiteType
-            ? inspectAccountCheckIn({
-                config: resultData.checkIn,
-                siteType: checkInSiteType,
-                siteUrl: url,
-              })
-            : undefined
-
-        return {
-          requestedAuthMode: authType,
+      ) =>
+        buildAutoDetectAnalyticsInsights(
+          { mode, isDetected, authType, url },
+          result,
           fallbackUsed,
-          ...(result &&
-          "autoDetectFailureReason" in result &&
-          result.success === false
-            ? {
-                accountAutoDetectIdentityDetected:
-                  isIdentityKnownAutoDetectFailureReason(
-                    result.autoDetectFailureReason,
-                  ),
-              }
-            : {}),
-          ...(checkInInspection
-            ? {
-                checkInDiscoveryTrigger,
-                checkInDiscoveryDecision: checkInInspection.decision.outcome,
-                checkInCandidateCount: candidateMethodIds.length,
-                checkInSelectionSource: resultData?.checkIn.selection.methodId
-                  ? resultData.checkIn.selection.mode
-                  : ("none" as const),
-              }
-            : {}),
-          ...(attemptOutcome
-            ? { accountAutoDetectAttemptOutcome: attemptOutcome }
-            : {}),
-          ...(autoDetectContext?.strategy
-            ? { autoDetectStrategy: autoDetectContext.strategy }
-            : {}),
-          ...(autoDetectContext?.fetchContextKind
-            ? { fetchContextKind: autoDetectContext.fetchContextKind }
-            : {}),
-          ...(typeof autoDetectContext?.incognitoContextUsed === "boolean"
-            ? {
-                incognitoContextUsed: autoDetectContext.incognitoContextUsed,
-              }
-            : {}),
-          ...(typeof autoDetectContext?.currentTabMatched === "boolean"
-            ? {
-                currentTabMatched: autoDetectContext.currentTabMatched,
-              }
-            : {}),
-          ...(analyticsSiteType ? { siteType: analyticsSiteType } : {}),
-        }
-      }
+        )
 
       if (!requestedUrl) {
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
@@ -547,40 +468,17 @@ export function useAccountAutoDetection({
               setDetectionError(result.detailedError || null)
               if (accessToken.trim())
                 setCredentialVerification({
-                  status: "error",
+                  status: ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Error,
                   accessToken,
                   siteType,
                   userId,
                   message: result.detailedError?.message || result.message,
                 })
-              analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-                diagnostics: {
-                  failure: {
-                    ...buildActionFailureDiagnostics({
-                      errorCategory: getAutoDetectAnalyticsErrorCategory(
-                        result.detailedError?.type,
-                      ),
-                      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
-                      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-                    }),
-                    ...(result.autoDetectFailureReason
-                      ? {
-                          accountAutoDetectFailureReason:
-                            result.autoDetectFailureReason,
-                        }
-                      : {}),
-                  },
-                },
-                insights: {
-                  ...createAutoDetectAnalyticsInsights(result, true),
-                  ...(result.autoDetectFailureReason
-                    ? {
-                        accountAutoDetectFailureReason:
-                          result.autoDetectFailureReason,
-                      }
-                    : {}),
-                },
-              })
+              const completion = buildAutoDetectFailureCompletion(
+                result,
+                createAutoDetectAnalyticsInsights(result, true),
+              )
+              analyticsAction.complete(completion.result, completion.options)
               return
             }
 
@@ -610,7 +508,7 @@ export function useAccountAutoDetection({
                     : "api-key",
               )
               setCredentialVerification({
-                status: "success",
+                status: ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success,
                 aimlApiKey: resultData.aimlApiAuth?.apiKey ?? draft.aimlApiKey,
                 accessToken: resultData.accessToken,
                 siteType: isAccountSiteType(resultData.siteType)
@@ -648,7 +546,7 @@ export function useAccountAutoDetection({
             setDetectionError(detectionError)
             if (accessToken.trim())
               setCredentialVerification({
-                status: "error",
+                status: ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Error,
                 accessToken,
                 siteType,
                 userId,
@@ -734,50 +632,3 @@ export function useAccountAutoDetection({
     requireAccessTokenRecovery,
   }
 }
-/** Maps detection errors onto safe analytics categories. */
-function getAutoDetectAnalyticsErrorCategory(
-  errorType?: AutoDetectErrorType,
-  structuredError?: unknown,
-): ProductAnalyticsErrorCategory {
-  switch (errorType) {
-    case AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED:
-    case AutoDetectErrorType.COOKIE_SESSION_REJECTED:
-    case AutoDetectErrorType.UNAUTHORIZED:
-    case AutoDetectErrorType.FORBIDDEN:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
-    case AutoDetectErrorType.RATE_LIMITED:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit
-    case AutoDetectErrorType.TIMEOUT:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout
-    case AutoDetectErrorType.NETWORK_ERROR:
-    case AutoDetectErrorType.SERVER_ERROR:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
-    case AutoDetectErrorType.INVALID_RESPONSE:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
-    case AutoDetectErrorType.NOT_FOUND:
-    case AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
-    case AutoDetectErrorType.UNKNOWN:
-    default:
-      if (structuredError !== undefined) {
-        return resolveProductAnalyticsErrorCategoryFromError(structuredError)
-      }
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-  }
-}
-
-/**
- * Checks whether a detected site type is accepted by the analytics whitelist.
- */
-function isProductAnalyticsSiteType(
-  value: unknown,
-): value is ProductAnalyticsSiteType {
-  return (
-    typeof value === "string" &&
-    (PRODUCT_ANALYTICS_SITE_TYPES as readonly string[]).includes(value)
-  )
-}
-
-/**
- * Resolves the initial flow state for add and edit dialog modes.
- */

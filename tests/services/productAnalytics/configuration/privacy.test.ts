@@ -57,6 +57,72 @@ import {
 import { AuthTypeEnum } from "~/types"
 
 describe("product analytics privacy filtering", () => {
+  it("keeps only coarse add-dialog close observations", () => {
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.AccountDialogClosed,
+        {
+          entrypoint: "options",
+          dialog_phase: "account_form",
+          form_valid: false,
+          submission_blocked: true,
+          verification_required: true,
+          validation_issue_count: 3,
+          detection_pending: false,
+          save_pending: false,
+          url: "https://private.example",
+          user_id: "private",
+          access_token: "private",
+          field_value: "private",
+        },
+      ),
+    ).toEqual({
+      entrypoint: "options",
+      dialog_phase: "account_form",
+      form_valid: false,
+      submission_blocked: true,
+      verification_required: true,
+      validation_issue_count: 3,
+      detection_pending: false,
+      save_pending: false,
+    })
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.AccountDialogClosed,
+        {
+          dialog_phase: "private",
+          form_valid: 1,
+          verification_required: "private",
+          validation_issue_count: "private",
+        },
+      ),
+    ).toEqual({})
+  })
+
+  it("keeps action-required verification metadata without collecting recovery secrets", () => {
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+          result: "action_required",
+          account_auto_detect_failure_reason:
+            "access_token_verification_required",
+          account_auto_detect_identity_detected: true,
+          access_token: "private-token",
+          userId: "123",
+          recoveryData: { username: "private-name" },
+          error_message: "private-message",
+        },
+      ),
+    ).toEqual({
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+      result: "action_required",
+      account_auto_detect_failure_reason: "access_token_verification_required",
+      account_auto_detect_identity_detected: true,
+    })
+  })
+
   it("keeps only controlled product tour progress fields", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,

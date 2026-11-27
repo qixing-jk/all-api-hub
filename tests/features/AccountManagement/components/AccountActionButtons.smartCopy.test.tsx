@@ -4,7 +4,7 @@ import "./accountActionButtonsMocks"
 
 import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import {
@@ -77,6 +77,35 @@ describe("AccountActionButtons", () => {
           itemCount: 1,
         },
       },
+    )
+  })
+
+  it("distinguishes a clipboard rejection from loading keys and retains inventory recovery", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      buildNewApiToken({ key: "sk-single" }),
+    ])
+    const user = userEvent.setup()
+    const write = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"))
+    onTestFinished(() => write.mockRestore())
+    const onCopyKey = vi.fn()
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({ id: "clipboard-failed" })}
+        onCopyKey={onCopyKey}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:actions.copyKey" }),
+    )
+    await waitFor(() => expect(onCopyKey).toHaveBeenCalled())
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        insights: { failureStage: "execute", fallbackUsed: true },
+      }),
     )
   })
 
@@ -154,6 +183,7 @@ describe("AccountActionButtons", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: { failureStage: "request", fallbackUsed: true },
       },
     )
   })
@@ -190,9 +220,10 @@ describe("AccountActionButtons", () => {
     })
     expect(clipboardWriteTextMock).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      PRODUCT_ANALYTICS_RESULTS.ActionRequired,
       {
         insights: {
+          fallbackUsed: true,
           itemCount: 2,
         },
       },
@@ -238,7 +269,10 @@ describe("AccountActionButtons", () => {
     ).toHaveBeenCalledWith(tokenLoadError)
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth },
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+        insights: { failureStage: "request", fallbackUsed: true },
+      },
     )
   })
 

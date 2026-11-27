@@ -69,9 +69,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("tracks a controlled feature action start with fixed enum values", async () => {
-    const { trackProductAnalyticsActionStarted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionStarted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionStarted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -94,9 +93,8 @@ describe("product analytics action helpers", () => {
   it.each(Object.values(OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES))(
     "maps OpenRouter attempt outcome %s without secret fields",
     async (attemptOutcome) => {
-      const { trackProductAnalyticsActionCompleted } = await import(
-        "~/services/productAnalytics/actions"
-      )
+      const { trackProductAnalyticsActionCompleted } =
+        await import("~/services/productAnalytics/actions")
 
       await trackProductAnalyticsActionCompleted({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -128,9 +126,8 @@ describe("product analytics action helpers", () => {
   it.each([true, false])(
     "maps auto-detect identity detected %s into the completion payload",
     async (identityDetected) => {
-      const { trackProductAnalyticsActionCompleted } = await import(
-        "~/services/productAnalytics/actions"
-      )
+      const { trackProductAnalyticsActionCompleted } =
+        await import("~/services/productAnalytics/actions")
 
       await trackProductAnalyticsActionCompleted({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -152,9 +149,8 @@ describe("product analytics action helpers", () => {
   )
 
   it("omits auto-detect identity when the insight was not recorded", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -171,6 +167,41 @@ describe("product analytics action helpers", () => {
     expect(payload).not.toHaveProperty("account_auto_detect_identity_detected")
   })
 
+  it("emits action-required completion without synthesizing failure diagnostics", async () => {
+    const { startProductAnalyticsAction } =
+      await import("~/services/productAnalytics/actions")
+    const { sanitizeProductAnalyticsEvent } =
+      await import("~/services/productAnalytics/configuration/privacy")
+    const action = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    action.complete(PRODUCT_ANALYTICS_RESULTS.ActionRequired, {
+      durationMs: 100,
+      insights: {
+        accountAutoDetectFailureReason:
+          PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired,
+        accountAutoDetectIdentityDetected: true,
+      },
+    })
+
+    const [eventName, payload] = trackMock.mock.lastCall!
+    expect(eventName).toBe(PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted)
+    expect(sanitizeProductAnalyticsEvent(eventName, payload)).toEqual({
+      feature_id: "account_management",
+      action_id: "run_account_auto_detect",
+      entrypoint: "options",
+      duration_ms: 100,
+      result: "action_required",
+      account_auto_detect_failure_reason: "access_token_verification_required",
+      account_auto_detect_identity_detected: true,
+    })
+    expect(payload).not.toHaveProperty("error_category")
+    expect(payload).not.toHaveProperty("failure_reason")
+    expect(payload).not.toHaveProperty("failure_stage")
+  })
+
   it("does not expose an OpenRouter cleanup analytics action", () => {
     expect(PRODUCT_ANALYTICS_ACTION_IDS).not.toHaveProperty(
       "OpenRouterBootstrapCleanup",
@@ -179,9 +210,8 @@ describe("product analytics action helpers", () => {
 
   it("swallows analytics send failures so feature code can continue", async () => {
     trackMock.mockRejectedValue(new Error("network unavailable"))
-    const { trackProductAnalyticsActionStarted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionStarted } =
+      await import("~/services/productAnalytics/actions")
 
     await expect(
       trackProductAnalyticsActionStarted({
@@ -194,9 +224,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("resolves a scoped action id string using the provided scope", async () => {
-    const { resolveProductAnalyticsActionContext } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { resolveProductAnalyticsActionContext } =
+      await import("~/services/productAnalytics/actions")
 
     expect(
       resolveProductAnalyticsActionContext(
@@ -216,9 +245,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("lets scoped action object fields override the provided scope", async () => {
-    const { resolveProductAnalyticsActionContext } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { resolveProductAnalyticsActionContext } =
+      await import("~/services/productAnalytics/actions")
 
     expect(
       resolveProductAnalyticsActionContext(
@@ -243,9 +271,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("returns undefined when required scoped action fields are missing", async () => {
-    const { resolveProductAnalyticsActionContext } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { resolveProductAnalyticsActionContext } =
+      await import("~/services/productAnalytics/actions")
 
     expect(
       resolveProductAnalyticsActionContext(
@@ -269,9 +296,8 @@ describe("product analytics action helpers", () => {
   it("logs incomplete scoped actions in custom development build modes", async () => {
     vi.stubEnv("MODE", "staging")
     vi.stubEnv("DEV", true)
-    const { resolveProductAnalyticsActionContext } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { resolveProductAnalyticsActionContext } =
+      await import("~/services/productAnalytics/actions")
 
     expect(
       resolveProductAnalyticsActionContext(
@@ -287,9 +313,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("resolves a scoped action without a surface id", async () => {
-    const { resolveProductAnalyticsActionContext } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { resolveProductAnalyticsActionContext } =
+      await import("~/services/productAnalytics/actions")
 
     expect(
       resolveProductAnalyticsActionContext(
@@ -307,9 +332,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("returns undefined when no analytics action is provided", async () => {
-    const { resolveProductAnalyticsActionContext } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { resolveProductAnalyticsActionContext } =
+      await import("~/services/productAnalytics/actions")
 
     expect(
       resolveProductAnalyticsActionContext(undefined, {
@@ -320,9 +344,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("tracks completion with exact duration and error categories but no raw error text", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
@@ -351,9 +374,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("maps controlled check-in discovery insights to the event payload", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -382,9 +404,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("defaults failed completions without an explicit failure stage to execute", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
@@ -408,9 +429,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("defaults failed completions without an explicit error category to unknown", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
@@ -433,9 +453,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("does not add failure diagnostics to non-failure completions by default", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
@@ -456,9 +475,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("maps structured errors to safe analytics categories without raw messages", async () => {
-    const { resolveProductAnalyticsErrorCategoryFromError } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { resolveProductAnalyticsErrorCategoryFromError } =
+      await import("~/services/productAnalytics/actions")
 
     expect(
       resolveProductAnalyticsErrorCategoryFromError({ statusCode: 401 }),
@@ -509,9 +527,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("keeps unstructured analytics errors in the unknown bucket", async () => {
-    const { resolveProductAnalyticsErrorCategoryFromError } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { resolveProductAnalyticsErrorCategoryFromError } =
+      await import("~/services/productAnalytics/actions")
 
     expect(resolveProductAnalyticsErrorCategoryFromError("private text")).toBe(
       PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -532,9 +549,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("tracks completion with controlled action insight properties", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
@@ -664,9 +680,8 @@ describe("product analytics action helpers", () => {
   it.each(Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES))(
     "maps managed-site batch import source %s without widening the action contract",
     async (source) => {
-      const { trackProductAnalyticsActionCompleted } = await import(
-        "~/services/productAnalytics/actions"
-      )
+      const { trackProductAnalyticsActionCompleted } =
+        await import("~/services/productAnalytics/actions")
 
       await trackProductAnalyticsActionCompleted({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
@@ -688,9 +703,8 @@ describe("product analytics action helpers", () => {
   )
 
   it("flattens structured action diagnostics to outbound completion fields", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
@@ -815,9 +829,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("keeps an explicit error category when diagnostics report a different category", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
@@ -846,9 +859,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("maps content-script detection insights to sanitized action completion fields", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
@@ -883,9 +895,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("omits absent optional completion metadata fields", async () => {
-    const { trackProductAnalyticsActionCompleted } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { trackProductAnalyticsActionCompleted } =
+      await import("~/services/productAnalytics/actions")
 
     await trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
@@ -908,9 +919,8 @@ describe("product analytics action helpers", () => {
 
   it("creates a manual action tracker that reports elapsed duration on completion", async () => {
     vi.spyOn(Date, "now").mockReturnValueOnce(1_000).mockReturnValueOnce(2_250)
-    const { startProductAnalyticsAction } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { startProductAnalyticsAction } =
+      await import("~/services/productAnalytics/actions")
 
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
@@ -949,9 +959,8 @@ describe("product analytics action helpers", () => {
   })
 
   it("serializes the controlled Kilo export target and item count on completion", async () => {
-    const { startProductAnalyticsAction } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { startProductAnalyticsAction } =
+      await import("~/services/productAnalytics/actions")
 
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
@@ -983,9 +992,8 @@ describe("product analytics action helpers", () => {
     trackMock
       .mockResolvedValueOnce({ success: true })
       .mockRejectedValueOnce(new Error("network unavailable"))
-    const { startProductAnalyticsAction } = await import(
-      "~/services/productAnalytics/actions"
-    )
+    const { startProductAnalyticsAction } =
+      await import("~/services/productAnalytics/actions")
 
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
