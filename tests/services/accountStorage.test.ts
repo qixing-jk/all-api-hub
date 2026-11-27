@@ -1648,6 +1648,39 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
+  it.each(["config", "tags"])(
+    "keeps readable accounts visible when %s migration cannot be persisted",
+    async (kind) => {
+      const account = createAccount({
+        id: "readable-legacy",
+        ...(kind === "config" ? { configVersion: 5 } : { tags: ["Work"] }),
+      })
+      seedStorage([account])
+      const original = structuredClone(
+        storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS),
+      )
+      storageHooks.beforeSet = async () => {
+        throw new Error("write unavailable")
+      }
+      try {
+        const accounts = await accountStorage.getAllAccounts()
+        expect(accounts).toEqual([
+          expect.objectContaining({ id: account.id, configVersion: 9 }),
+        ])
+        expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)).toEqual(original)
+        expect(await accountStorage.getEnabledAccounts()).toHaveLength(1)
+      } finally {
+        storageHooks.beforeSet = async () => {}
+      }
+      // A later successful read retries the migration without discarding accounts.
+      expect(await accountStorage.getAllAccounts()).toHaveLength(1)
+      expect(
+        storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS).accounts[0]
+          .configVersion,
+      ).toBe(9)
+    },
+  )
+
   it("canonicalizes legacy accounts before unrelated storage mutations", async () => {
     const legacyAccount = createAccount({
       id: "legacy-account",
