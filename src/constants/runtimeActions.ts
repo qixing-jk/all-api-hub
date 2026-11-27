@@ -203,6 +203,7 @@ export const RuntimeActionIds = {
   ContentGetUserFromLocalStorage: "getUserFromLocalStorage",
   // Content-side protection guard checks used by temp-window fallback readiness gating.
   ContentCheckCapGuard: "checkCapGuard",
+  ContentGetDocumentState: "getDocumentState",
   ContentCheckCloudflareGuard: "checkCloudflareGuard",
   ContentCheckAliyunGuard: "checkAliyunGuard",
   ContentWaitForTurnstileToken: "waitForTurnstileToken",

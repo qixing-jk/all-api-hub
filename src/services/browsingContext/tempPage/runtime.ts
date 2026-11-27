@@ -50,6 +50,7 @@ import {
   TEMP_CONTEXT_TYPES,
   type AuthorizeTempContextAtAcquire,
   type TempContext,
+  type TempContextAcquireOptions,
   type TempContextReleaseOptions,
 } from "./contracts"
 import { logger, logTempWindow, normalizeOrigin } from "./diagnostics"
@@ -267,12 +268,12 @@ async function acquireTempContext(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
-  options: ApiTransportBrowserFetchContext & {
-    signal?: AbortSignal
-  } = {},
+  options: TempContextAcquireOptions = {},
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
-  const origin = buildTempContextPoolKey(normalizeOrigin(url), options)
+  const poolKey = buildTempContextPoolKey(normalizeOrigin(url), options)
+  // Full-load callers must not reuse a tab admitted early by another operation.
+  const origin = options.allowInteractive ? `interactive:${poolKey}` : poolKey
   let finalDecision: ProtectionBypassPolicyDecision | undefined
   let reused = false
 
@@ -457,9 +458,7 @@ export const tempWindowBackgroundRuntime = {
     url: string,
     requestId: string,
     suppressMinimize?: boolean,
-    options: ApiTransportBrowserFetchContext & {
-      signal?: AbortSignal
-    } = {},
+    options: TempContextAcquireOptions = {},
     authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
   ) {
     const context = await acquireTempContext(
@@ -475,7 +474,11 @@ export const tempWindowBackgroundRuntime = {
       navigate: (
         targetUrl: string,
         meta: { requestId: string; origin: string; signal?: AbortSignal },
-      ) => navigateTempContextToPage(context, targetUrl, meta),
+      ) =>
+        navigateTempContextToPage(context, targetUrl, {
+          ...meta,
+          allowInteractive: options.allowInteractive,
+        }),
       inspect: () => getTempContextTabSnapshot(context.tabId),
       release: (releaseOptions: TempContextReleaseOptions = {}) =>
         releaseTempContext(requestId, releaseOptions),

@@ -980,6 +980,44 @@ describe("native check-in verification", () => {
     )
   })
 
+  it("waits for the default response field revealed by a new Turnstile dialog", async () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<form><input type="hidden" name="cf-turnstile-response" value="previous-response"></form><dialog hidden><div id="widget-host"></div><input type="hidden" name="cf-turnstile-response"></dialog>',
+    )
+    const dialog = document.querySelector("dialog")!
+    dialog
+      .querySelector("#widget-host")!
+      .attachShadow({ mode: "closed" }).innerHTML =
+      '<iframe src="https://challenges.cloudflare.com/widget"></iframe>'
+    document.querySelector("button")!.addEventListener("click", () => {
+      dialog.hidden = false
+      dialog.setAttribute("open", "")
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "native-turnstile-dialog",
+        trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(response).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<dialog open><input type="hidden" name="cf-turnstile-response"></dialog>',
+    )
+    dialog.querySelector("input")!.value = "completed-native-response"
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "turnstile" },
+      }),
+    )
+  })
+
   it.each([
     [
       "recaptcha",

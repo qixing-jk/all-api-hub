@@ -135,7 +135,7 @@ export async function executeTempWindowCheckinPageAction(
       pageUrl,
       tempRequestId,
       suppressMinimize,
-      {},
+      { allowInteractive: true },
       authorizeAtAcquire,
     )
     const { tabId } = context

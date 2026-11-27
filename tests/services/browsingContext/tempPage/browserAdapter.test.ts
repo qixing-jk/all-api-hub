@@ -229,6 +229,54 @@ describe("browserAdapter", () => {
   })
 
   describe("navigateTempContextToPage", () => {
+    it.each([true, false])(
+      "uses interactive readiness only when requested (%s)",
+      async (allowInteractive) => {
+        vi.useFakeTimers()
+        const url = "https://example.com/checkin"
+        const getTab = vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
+          url,
+          status: "loading",
+          active: false,
+          highlighted: false,
+          incognito: false,
+          index: 0,
+          pinned: false,
+        })
+        const receiver = vi
+          .spyOn(browserApi_runtimeMessages, "sendTabMessageWithRetry")
+          .mockResolvedValue({
+            url,
+            readyState: "interactive",
+            timeOrigin: 1,
+          })
+        const ready = vi.fn()
+        const waiting = navigateTempContextToPage(
+          { tabId: 2, currentUrl: url } as Parameters<
+            typeof navigateTempContextToPage
+          >[0],
+          url,
+          {
+            requestId: "check-in",
+            origin: "https://example.com",
+            allowInteractive,
+          },
+        ).then(ready)
+        await vi.advanceTimersByTimeAsync(1_000)
+        expect(ready).not.toHaveBeenCalled()
+        expect(receiver).not.toHaveBeenCalled()
+        if (allowInteractive) {
+          await vi.advanceTimersByTimeAsync(20_000)
+        } else {
+          const tab = await getTab.mock.results[0]!.value
+          getTab.mockResolvedValue({ ...tab, status: "complete" })
+          await vi.advanceTimersByTimeAsync(1_000)
+        }
+        await waiting
+        expect(ready).toHaveBeenCalledOnce()
+      },
+    )
+
     it("returns immediately if current tab already at destination and complete", async () => {
       vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
         id: 10,

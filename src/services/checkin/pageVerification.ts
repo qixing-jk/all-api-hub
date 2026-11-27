@@ -162,11 +162,33 @@ function shownVendorWidgets(selector: string): Element[] {
   )
 }
 
+const VERIFICATION_DIALOG_SELECTOR = 'dialog, [role="dialog"]'
+
+/** Hidden response fields in visible dialogs can identify widgets outside the light DOM. */
+function shownTurnstileDialogFields(
+  root: ParentNode = document,
+): HTMLInputElement[] {
+  return Array.from(
+    root.querySelectorAll<HTMLInputElement>(
+      `input[type="hidden"]${TURNSTILE_RESPONSE_FIELD_SELECTOR}`,
+    ),
+  ).filter((field) => {
+    const dialog = field.closest(VERIFICATION_DIALOG_SELECTOR)
+    return (
+      dialog &&
+      field.parentElement &&
+      isCheckInElementShown(field.parentElement) &&
+      !field.closest('[data-size="invisible"]')
+    )
+  })
+}
+
 /** Remember visible vendor UI so unrelated, unchanged widgets are not attributed to a click. */
 export function capturePageVerificationWidgets(): ReadonlySet<Element> {
   return new Set([
     ...WIDGETS.flatMap((widget) => shownVendorWidgets(widget.widget)),
     ...shownVendorWidgets("altcha-widget"),
+    ...shownTurnstileDialogFields(),
   ])
 }
 
@@ -310,7 +332,27 @@ function observeVerification(
           !!(images().length || inputs().length),
       }
   }
-  return observeGenericVerification()
+  const generic = observeGenericVerification()
+  if (generic || !existingWidgets) return generic
+
+  const newFields = shownTurnstileDialogFields().filter(
+    (field) => !existingWidgets.has(field),
+  )
+  const dialog =
+    newFields.length === 1 &&
+    newFields[0]?.closest(VERIFICATION_DIALOG_SELECTOR)
+  if (!dialog) return undefined
+  return {
+    provider: PAGE_VERIFICATION_PROVIDERS.Turnstile,
+    // The site owns submission. A response or closed dialog only ends this wait.
+    isPending: () =>
+      shownTurnstileDialogFields(dialog).some(
+        (field) =>
+          field.closest(VERIFICATION_DIALOG_SELECTOR) === dialog &&
+          !existingWidgets.has(field) &&
+          !field.value.trim(),
+      ),
+  }
 }
 
 /** Whether the current native page exposes verification that must not be bypassed. */
