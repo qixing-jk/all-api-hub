@@ -256,6 +256,35 @@ describe("account detection onboarding outcomes", () => {
     expect(form.enterManual).not.toHaveBeenCalled()
   })
 
+  it("reports a detection timeout without including the upstream message", async () => {
+    autoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      autoDetectContext: undefined,
+      detailedError: {
+        type: AutoDetectErrorType.TIMEOUT,
+        message: "local-only-timeout",
+      },
+    })
+    const { run } = setup(vi.fn())
+
+    await act(() => run("https://example.com"))
+
+    expect(complete).toHaveBeenCalledExactlyOnceWith(
+      "failure",
+      expect.objectContaining({
+        diagnostics: {
+          failure: expect.objectContaining({
+            category: "timeout",
+            stage: "detection",
+          }),
+        },
+      }),
+    )
+    expect(JSON.stringify(complete.mock.calls)).not.toContain(
+      "local-only-timeout",
+    )
+  })
+
   it("records a successful retry after verification as success", async () => {
     autoDetectAccount
       .mockResolvedValueOnce({

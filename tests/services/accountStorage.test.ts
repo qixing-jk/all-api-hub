@@ -47,6 +47,7 @@ import * as dailyBalanceCapture from "~/services/history/dailyBalanceHistory/cap
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { tagStorage } from "~/services/tags/tagStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -1673,11 +1674,20 @@ describe("accountStorage core behaviors", () => {
         storageHooks.beforeSet = async () => {}
       }
       // A later successful read retries the migration without discarding accounts.
-      expect(await accountStorage.getAllAccounts()).toHaveLength(1)
-      expect(
-        storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS).accounts[0]
-          .configVersion,
-      ).toBe(9)
+      const recoveredAccounts = await accountStorage.getAllAccounts()
+      expect(recoveredAccounts).toHaveLength(1)
+      const persistedConfig = storageData.get(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ) as AccountStorageConfig
+      const persistedAccount = atIndex(persistedConfig.accounts, 0)
+      expect(persistedAccount.configVersion).toBe(9)
+      if (kind === "tags") {
+        const tags = await tagStorage.listTags()
+        expect(tags.map(({ name }) => name)).toEqual(["Work"])
+        const workTag = atIndex(tags, 0)
+        expect(atIndex(recoveredAccounts, 0).tagIds).toEqual([workTag.id])
+        expect(persistedAccount.tagIds).toEqual([workTag.id])
+      }
     },
   )
 

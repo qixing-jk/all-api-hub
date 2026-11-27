@@ -795,6 +795,11 @@ describe("product analytics runtime", () => {
     cleanupAccount()
     const cleanupRestartedAccount = setupProductAnalyticsAccountChangeListener()
     const restartedHandler = atIndex(addListener.mock.calls, 2)[0]
+    cleanupAccount()
+    expect(setupProductAnalyticsAccountChangeListener()).toBe(
+      cleanupRestartedAccount,
+    )
+    expect(addListener).toHaveBeenCalledTimes(3)
     oldAccountHandler({ site_accounts: {} }, "local")
     await vi.advanceTimersByTimeAsync(2_000)
     expect(captureMock).toHaveBeenCalledTimes(1)
@@ -811,6 +816,23 @@ describe("product analytics runtime", () => {
     )
     cleanupPreferences()
     cleanupRestartedAccount()
+  })
+
+  it("can start observing accounts after the storage event API becomes available", () => {
+    const addListener = vi.spyOn(fakeBrowser.storage.onChanged, "addListener")
+    ;(globalThis as any).browser = { storage: {} }
+    const cleanupUnavailable = setupProductAnalyticsAccountChangeListener()
+    expect(addListener).not.toHaveBeenCalled()
+
+    ;(globalThis as any).browser = originalBrowser
+    const cleanup = setupProductAnalyticsAccountChangeListener()
+    try {
+      cleanupUnavailable()
+      expect(addListener).toHaveBeenCalledOnce()
+      expect(setupProductAnalyticsAccountChangeListener()).toBe(cleanup)
+    } finally {
+      cleanup()
+    }
   })
 
   it("debounces local account storage changes and cleanup removes the listener", async () => {

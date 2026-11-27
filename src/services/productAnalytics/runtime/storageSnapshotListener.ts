@@ -29,7 +29,7 @@ export function createStorageSnapshotListener(
     })
 
     cleanup = () => {
-      if (!cleanup) return
+      if (!isListening) return
       isListening = false
       if (timer) {
         clearTimeout(timer)

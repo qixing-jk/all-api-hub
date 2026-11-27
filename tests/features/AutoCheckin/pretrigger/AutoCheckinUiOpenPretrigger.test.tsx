@@ -340,6 +340,9 @@ describe("AutoCheckinUiOpenPretrigger", () => {
 
   it("pushes the auto-checkin page into history when view details is clicked from options", async () => {
     window.history.replaceState(null, "", "/options.html")
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Options,
+    )
 
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...DEFAULT_PREFERENCES,
@@ -400,6 +403,10 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       "#autoCheckin",
     )
     expect(vi.mocked(openAutoCheckinPage)).not.toHaveBeenCalled()
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      "productAnalytics:trackAutoCheckinConfigSnapshot",
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
+    )
   })
 
   it("tracks failed pretrigger attempts without raw error details", async () => {
@@ -434,7 +441,10 @@ describe("AutoCheckinUiOpenPretrigger", () => {
     }
   })
 
-  it("maps failed run results to failed analytics", async () => {
+  it("reports a failed side panel run through the side panel analytics entrypoint", async () => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Sidepanel,
+    )
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       autoCheckin: {
@@ -466,9 +476,14 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
         expect.objectContaining({
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel,
         }),
       )
     })
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      "productAnalytics:trackAutoCheckinConfigSnapshot",
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel },
+    )
   })
 
   it("maps all-skipped run results to skipped analytics", async () => {
