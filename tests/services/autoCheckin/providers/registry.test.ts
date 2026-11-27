@@ -20,8 +20,10 @@ import {
   decodePersistedCheckInMethodId,
   getAutoCheckinCandidateMethodIds,
   getAutoCheckinMethodSource,
+  getCheckInMethodPresentationMetadata,
   getLegacyAutoCheckinMethodIds,
   getNewAccountCompatibilityMethodIds,
+  NON_REPEAT_SAFE_CHECKIN_METHOD_IDS,
   supportsCheckInStatusReadback,
 } from "~/services/checkin/autoCheckin/providers/registry"
 import type {
@@ -114,6 +116,14 @@ describe("autoCheckinMethodRegistry", () => {
         .map(({ id }) => id),
     ).not.toContain(methodId)
     expect(supportsCheckInStatusReadback(methodId)).toBe(true)
+    expect(getCheckInMethodPresentationMetadata(methodId)).toMatchObject({
+      kind: "daily",
+    })
+    expect(getAutoCheckinMethodSource(methodId)).toEqual(OFFICIAL_METHOD_SOURCE)
+    expect(NON_REPEAT_SAFE_CHECKIN_METHOD_IDS.has(methodId)).toBe(true)
+    expect(
+      getNewAccountCompatibilityMethodIds(SITE_TYPES.NEW_API),
+    ).not.toContain(methodId)
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.NEW_API)).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     ])

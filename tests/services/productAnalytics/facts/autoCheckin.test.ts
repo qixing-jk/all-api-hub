@@ -463,6 +463,7 @@ describe("auto-checkin product analytics", () => {
     AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.UltraRouterDailyGame,
   ])(
     "reports only an allow-listed category for strict method %s",
     (methodId) => {
