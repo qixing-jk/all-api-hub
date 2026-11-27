@@ -86,7 +86,7 @@ describe("checkSiteTypeMismatch", () => {
     ).resolves.toEqual({ outcome: "agrees" })
   })
 
-  it("recognizes FreeGG without probing its side-effectful identity endpoint", async () => {
+  it("recognizes the verified deployment's account family from static metadata", async () => {
     let selfRequested = false
     server.use(
       http.get("https://freegg.app/api/user/self", () => {

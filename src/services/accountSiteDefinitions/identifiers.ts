@@ -75,7 +75,10 @@ export const AGENT_ROUTER_ORIGIN = "https://agentrouter.org"
 
 export const MODELFLARE_HOSTNAME = "modelflare.dev"
 
-/** FreeGG runs a New API-family account API at its canonical console origin. */
+/**
+ * Verified New API account deployment. Its family is a maintained deployment
+ * fact, independent of whether today's allowance has been claimed.
+ */
 export const FREEGG_HOSTNAMES = ["freegg.app"] as const
 
 /**

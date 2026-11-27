@@ -44,6 +44,24 @@ refresh. Same-second, concurrent, and rollover completion remain controlled-test
 evidence; no new live grant was obtained during this iteration. Existing native
 evidence and screenshots retain their original build/scenario limits.
 
+## Maintained deployment recognition (2026-11-28)
+
+Keep the known deployment's New API account-family declaration and the static
+daily-allowance origin list. The account API and allowance behavior were verified
+independently; recognizing this known deployment does not require probing again
+or inferring its family from today's check-in result. The hostname declaration
+remains justified by that verified account contract, independently of the earlier
+goal of avoiding incidental self requests.
+
+The allowance implementation can serve further deployments after verifying the
+same trigger and ledger contract. Do not broaden discovery to all New API sites:
+public `system_name` is branding, and `checkin_enabled` describes a separate native
+check-in feature. Allowance logs prove a grant but do not independently prove its
+self-request trigger; new accounts may have no logs. A distinctive read-only
+capability marker could support generic discovery if verified in the future.
+For now, maintain the known origins and reuse the existing provider. No additional
+discovery requests, site types, or generic detection framework are introduced.
+
 ## Historical repair scope and evidence
 
 Take over the published PR without rewriting its history. Preserve one method
