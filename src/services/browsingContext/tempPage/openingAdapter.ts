@@ -52,7 +52,10 @@ async function openPlainTabTempContext(
     throw new Error(t("messages:background.cannotCreateWindowOrTab"))
   }
 
-  if (options.cookieStoreId && tab.cookieStoreId !== options.cookieStoreId) {
+  if (
+    tab.incognito === true ||
+    (options.cookieStoreId && tab.cookieStoreId !== options.cookieStoreId)
+  ) {
     try {
       await removeTab(tab.id)
     } catch (error) {
@@ -135,8 +138,9 @@ async function openPopupWindowTempContext(
     }
 
     if (
-      params.cookieStoreId &&
-      tabs[0]?.cookieStoreId !== params.cookieStoreId
+      (typeof tabs[0]?.incognito === "boolean" &&
+        tabs[0].incognito !== Boolean(params.incognito)) ||
+      (params.cookieStoreId && tabs[0]?.cookieStoreId !== params.cookieStoreId)
     ) {
       throw createCookieStoreContextError()
     }

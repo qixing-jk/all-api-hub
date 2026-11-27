@@ -13,6 +13,9 @@ export const LINKED_CHANNEL_CLEANUP_STORAGE_KEY = "linkedChannelCleanupTasks"
 export const AIMLAPI_ONBOARDING_STORAGE_KEY = "aimlapiConnectionCredentials_v1"
 /** Non-secret issuance markers prevent duplicate PAT creation after response loss. */
 export const NEW_API_TOKEN_ISSUANCE_KEY_PREFIX = "newApiTokenIssuance:"
+/** Extension-owned non-exportable Sub2API panel keys, scoped by target origin. */
+export const SUB2API_PANEL_PROOF_DATABASE_NAME =
+  "all-api-hub-sub2api-panel-proof-v2"
 /**
  * Browser session that currently owns the extension's temporary pages.
  *

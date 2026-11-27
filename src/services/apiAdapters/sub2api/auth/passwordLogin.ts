@@ -12,6 +12,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountLogin"
 import { normalizeSub2ApiLoginIdentity } from "~/services/apiService/sub2api/oauth/protocol"
 
+import { loginSub2ApiBackgroundPassword } from "./backgroundPasswordLogin"
 import { captureSub2ApiLoginCredential } from "./loginCredential"
 
 /** Keeps native password and OAuth logins on the same Sub2API session queue. */
@@ -29,6 +30,13 @@ export async function loginSub2ApiWithPassword(
   )
   if (!credentials || !expectedIdentity || !request.requestId.trim())
     return { status: BROWSER_LOGIN_STATUS.Failed }
+  if (request.captureCredential === true && !request.onAuthenticated) {
+    const background = await loginSub2ApiBackgroundPassword(
+      request,
+      credentials,
+    )
+    if (background) return background
+  }
   return createBrowserPasswordContext({
     id: "sub2api-password",
     concurrencyKey: BROWSER_LOGIN_SESSION_KEYS.Sub2Api,

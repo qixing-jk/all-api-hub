@@ -1,4 +1,4 @@
-import { Info, Pencil, TriangleAlert } from "lucide-react"
+import { Pencil, TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { HelpHintIcon } from "~/components/icons/productIcons"
@@ -20,7 +20,6 @@ type SiteInfoInputPresentationSitePolicy = Pick<
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
   | "usesBrowserCookieSession"
-  | "allowSub2ApiRefreshTokenState"
   | "lockSiteUrl"
 >
 
@@ -56,7 +55,7 @@ type SiteInfoInputProps =
 
 /**
  * Site information section displaying the URL input with contextual helpers
- * such as already-added warnings and the sub2api hint. The current-tab reuse
+ * such as already-added warnings. The current-tab reuse
  * action lives inside the URL field itself.
  * @param props Component props defining field values, detection state, and callbacks.
  * @param props.url Current site URL value.
@@ -86,8 +85,6 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
   const { t } = useTranslation(["accountDialog", "common"])
   const isAuthTypeLocked = props.sitePolicy.forceAccessTokenAuth
   const canUseCookieAuth = props.sitePolicy.allowCookieAuthSession
-  const canUseSub2ApiRefreshToken =
-    props.sitePolicy.allowSub2ApiRefreshTokenState
   const isSiteUrlLocked = isDetected || props.sitePolicy.lockSiteUrl
   const enableRecentTabs = !isSiteUrlLocked && !!onUseCurrentTab
   const shouldShowCookiePermissionRecommendation =
@@ -205,12 +202,6 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               props.onRequestCookieAuthPermissions
             }
           />
-        )}
-        {canUseSub2ApiRefreshToken && (
-          <div className="flex w-full items-start gap-x-2 gap-y-density-2 rounded-md bg-primary-soft px-2 py-density-2 text-xs text-primary-soft-foreground">
-            <Info className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{t("siteInfo.sub2apiHint")}</span>
-          </div>
         )}
         {isCurrentSiteAdded && (
           <div className="flex w-full items-center justify-between rounded-md bg-warning-soft px-2 py-density-2 text-xs text-warning-soft-foreground">

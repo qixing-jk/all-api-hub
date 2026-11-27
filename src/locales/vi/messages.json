@@ -105,6 +105,11 @@
   },
   "errors": {
     "api": {
+      "browserBackgroundVerificationFailed": "Không thể hoàn tất xác minh trang trong nền. Hãy thử lại; nếu vẫn thất bại, hãy báo cáo vấn đề tương thích của trang này.",
+      "browserLoginCleanupUnconfirmed": "Không thể xác nhận đã xóa phiên đăng nhập mới. Hãy kiểm tra các phiên đang hoạt động trên trang trước khi thử lại.",
+      "browserProofLoginRequired": "Thông tin xác thực này thuộc phiên đăng nhập trên trang web. Hãy đăng nhập cùng tài khoản trên trang web rồi thử lại. Bạn cũng có thể cấu hình đăng nhập tài khoản để lấy một phiên độc lập.",
+      "browserProofRejected": "Trang web đã từ chối chữ ký của yêu cầu. Hãy thử lại; nếu vẫn thất bại, hãy báo cáo vấn đề tương thích với trang web này.",
+      "browserProofSecondFactorRequired": "Tài khoản này cần bước xác minh thứ hai mà tiện ích chưa hỗ trợ cho trang này.",
       "invalidResponseFormat": "Định dạng dữ liệu phản hồi không hợp lệ",
       "missingRecoveryPolicy": "Tiện ích không thể chuẩn bị yêu cầu này. Hãy cập nhật tiện ích hoặc báo cáo sự cố.",
       "nonJsonContent": "trả về {{contentType}} thay vì JSON (HTTP {{status}})",
@@ -214,8 +219,9 @@
   "sub2api": {
     "authPersistenceFailed": "Không thể lưu thông tin đăng nhập Sub2API đã làm mới vào tài khoản này một cách an toàn. Hãy làm mới hoặc nhập lại tài khoản rồi thử lại.",
     "configMissing": "Hãy cấu hình URL gốc và Admin API Key của Sub2API trong phần Cài đặt cơ bản trước.",
-    "loginRequired": "Vui lòng đăng nhập vào bảng điều khiển Sub2API (tiện ích sẽ đọc auth_token/auth_user để nhập phiên) rồi thử lại.",
-    "refreshTokenInvalid": "refresh_token của Sub2API đã hết hạn/bị xoay vòng. Vui lòng nhập lại phiên từ bảng điều khiển (khuyến nghị dùng cửa sổ ẩn danh/riêng tư) hoặc dán refresh_token mới rồi thử lại."
+    "independentSessionRequired": "Không có khóa ký của phiên Sub2API độc lập này. Hãy chọn “Đăng nhập lại” hoặc “Lấy phiên” trong trình chỉnh sửa tài khoản để thay thế phiên.",
+    "loginRequired": "Hãy đăng nhập trên trang web Sub2API rồi thử lại, hoặc thiết lập đăng nhập tài khoản để lấy phiên độc lập.",
+    "refreshTokenInvalid": "Mã làm mới Sub2API này không còn gia hạn được phiên. Hãy dùng “Đăng nhập lại” hoặc “Lấy phiên”, hoặc nhập lại hay dán mã mới nếu trang web cho phép."
   },
   "toast": {
     "error": {

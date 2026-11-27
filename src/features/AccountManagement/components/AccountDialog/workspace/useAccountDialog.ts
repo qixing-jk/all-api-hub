@@ -22,6 +22,7 @@ import { useAccountAutoDetection } from "~/features/AccountManagement/components
 import { useAccountCurrentTab } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountCurrentTab"
 import { useAccountDialogDetection } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountDialogDetection"
 import { createAccountCredentialEvidence } from "~/features/AccountManagement/components/AccountDialog/form/accountCredentialEvidence"
+import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
 import { useAccountCookieSession } from "~/features/AccountManagement/components/AccountDialog/form/useAccountCookieSession"
 import { useAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/form/useAccountDialogDraft"
 import { useAccountDialogIdentityChanges } from "~/features/AccountManagement/components/AccountDialog/form/useAccountDialogIdentityChanges"
@@ -44,6 +45,7 @@ import { useAccountDialogSaveWorkflow } from "~/features/AccountManagement/compo
 import { useAccountDuplicateConfirmation } from "~/features/AccountManagement/components/AccountDialog/saving/useAccountDuplicateConfirmation"
 import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
 import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
+import { isAccountLoginConfigured } from "~/services/accountLogin/configCodec"
 import { getAccountFormIssues } from "~/services/accounts/editing/accountFormValidation"
 import { isAccessTokenRecoveryError } from "~/services/accounts/utils/autoDetectUtils"
 import { supportsNewApiTokenSetup } from "~/services/apiService/newApiFamily/accessTokens/validation"
@@ -339,7 +341,9 @@ export function useAccountDialog({
   })
   const {
     isImportingSub2apiSession,
+    isAcquiringSub2apiSession,
     handleImportSub2apiSession,
+    handleAcquireSub2apiSession,
     handleSub2apiUseRefreshTokenChange,
     setSub2apiUseRefreshToken,
     setSub2apiRefreshToken,
@@ -722,6 +726,7 @@ export function useAccountDialog({
 
   const cookieRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
     if (
+      !isHttpUrl(url) ||
       !supportsAccountCookieRecovery({
         site_type: draft.siteType,
         site_url: url,
@@ -744,6 +749,35 @@ export function useAccountDialog({
   }, [account, draft, mode, url])
 
   const continuedRecovery = useRef<AccountDialogRecoveryState | null>(null)
+  const sub2apiLoginRecoveryState =
+    useMemo<AccountDialogRecoveryState | null>(() => {
+      if (
+        !isHttpUrl(url) ||
+        !getAccountDialogSitePolicy(draft.siteType)
+          .allowSub2ApiRefreshTokenState ||
+        !draft.sub2apiUseRefreshToken ||
+        !draft.userId.trim() ||
+        !isAccountLoginConfigured(
+          draft.login,
+          getAccountLoginMethods({
+            site_type: draft.siteType,
+            site_url: url,
+            account_info: { id: draft.userId },
+          }),
+        )
+      )
+        return null
+      return {
+        recoveryAction: ACCOUNT_DIALOG_RECOVERY_ACTIONS.Sub2ApiLogin,
+        url,
+        draft,
+        ...(mode === DIALOG_MODES.EDIT && account
+          ? { accountId: account.id }
+          : {}),
+        checkInSelectionChanged: checkInSelectionChangedRef.current,
+        checkInDiscoveryBaseSelection: checkInDiscoveryBaseSelectionRef.current,
+      }
+    }, [account, draft, mode, url])
   useEffect(() => {
     if (!isOpen) {
       continuedRecovery.current = null
@@ -751,8 +785,10 @@ export function useAccountDialog({
     }
     if (
       isExtensionPopup() ||
-      recoveryState?.recoveryAction !==
-        ACCOUNT_DIALOG_RECOVERY_ACTIONS.Cookie ||
+      (recoveryState?.recoveryAction !==
+        ACCOUNT_DIALOG_RECOVERY_ACTIONS.Cookie &&
+        recoveryState?.recoveryAction !==
+          ACCOUNT_DIALOG_RECOVERY_ACTIONS.Sub2ApiLogin) ||
       continuedRecovery.current === recoveryState ||
       url !== recoveryState.url ||
       draft.siteType !== recoveryState.draft.siteType ||
@@ -761,8 +797,13 @@ export function useAccountDialog({
     )
       return
     continuedRecovery.current = recoveryState
-    void cookieSession.recoverManually()
-  }, [cookieSession, draft, isOpen, recoveryState, url])
+    if (
+      recoveryState.recoveryAction ===
+      ACCOUNT_DIALOG_RECOVERY_ACTIONS.Sub2ApiLogin
+    )
+      void sub2ApiSession.handleAcquireSub2apiSession()
+    else void cookieSession.recoverManually()
+  }, [cookieSession, sub2ApiSession, draft, isOpen, recoveryState, url])
 
   const tokenRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
     const canHandOffNewApiTokenSetup =
@@ -803,6 +844,7 @@ export function useAccountDialog({
       formSource,
       draft,
       cookieRecoveryState,
+      sub2apiLoginRecoveryState,
       tokenRecoveryState,
       isDetecting,
       isDetectingSlow,
@@ -845,7 +887,9 @@ export function useAccountDialog({
       showCookiePermissionWarning,
       cookieAuthPermissionsGranted: cookieAuthPermissionState.granted,
       isRequestingCookieAuthPermissions: cookieAuthPermissionState.pending,
+      isWebsiteSessionBound: sub2ApiSession.isWebsiteSessionBound,
       isImportingSub2apiSession,
+      isAcquiringSub2apiSession,
       accountPostSaveWorkflowStep,
       postSaveOneTimeSecret,
       isLoadingAccount,
@@ -924,6 +968,7 @@ export function useAccountDialog({
       handleOpenCookiePermissionSettings,
       handleRequestCookieAuthPermissions,
       handleImportSub2apiSession,
+      handleAcquireSub2apiSession,
       handleSub2apiUseRefreshTokenChange,
       handleDuplicateAccountWarningCancel,
       handleDuplicateAccountWarningContinue,

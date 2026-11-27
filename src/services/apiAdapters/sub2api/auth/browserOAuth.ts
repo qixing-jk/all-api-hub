@@ -46,18 +46,12 @@ export function createSub2ApiOAuthFlow(input: {
         response.reason ===
         BROWSER_OAUTH_CONTENT_FAILURE_REASONS.InteractionRequired
       ) {
-        return {
-          status: BROWSER_LOGIN_STATUS.InteractionRequired,
-          message: "Sub2API requires interactive verification before OAuth.",
-        }
+        return { status: BROWSER_LOGIN_STATUS.InteractionRequired }
       }
       if (response.reason === BROWSER_OAUTH_CONTENT_FAILURE_REASONS.Unsupported)
         return { status: BROWSER_LOGIN_STATUS.Unsupported }
       if (response.reason === BROWSER_OAUTH_REQUEST_FAILURE_REASONS.Uncertain) {
-        return {
-          status: BROWSER_LOGIN_STATUS.Uncertain,
-          message: "The Sub2API logout response could not be confirmed.",
-        }
+        return { status: BROWSER_LOGIN_STATUS.Uncertain }
       }
       return null
     },

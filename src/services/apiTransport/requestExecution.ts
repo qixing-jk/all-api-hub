@@ -1,8 +1,12 @@
+import { getRequestProtocol } from "~/services/apiAdapters/requestProtocol"
 import {
   composeAbortSignals,
   startAbortableTask,
 } from "~/services/apiTransport/abortableTask"
-import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
+import {
+  fetchWithHeaderOverrides,
+  normalizeHeaderOverrides,
+} from "~/services/apiTransport/headerOverrides"
 import { assertNotProtectionResponse } from "~/services/apiTransport/response"
 import {
   reportSiteRateLimit,
@@ -108,12 +112,31 @@ export async function executePreparedRequest<T>(
           return await run({
             options,
             dispatch: async () => {
-              const response = await fetchWithHeaderOverrides(
-                prepared.url,
-                options,
-                request.requestHeaders,
-                { cookieSession: request.cookieSession, onDispatch },
-              )
+              const overrides = normalizeHeaderOverrides(request.requestHeaders)
+              const send = (requestOptions: RequestInit) => {
+                // Custom headers were applied before protocol preparation. Keep
+                // its final values (or removals) when applying browser overrides.
+                const finalHeaders = new Headers(requestOptions.headers)
+                const finalOverrides = Object.fromEntries(
+                  Object.keys(overrides)
+                    .filter((name) => finalHeaders.has(name))
+                    .map((name) => [name, finalHeaders.get(name)!]),
+                )
+                return fetchWithHeaderOverrides(
+                  prepared.url,
+                  requestOptions,
+                  finalOverrides,
+                  { cookieSession: request.cookieSession, onDispatch },
+                )
+              }
+              const effectiveHeaders = new Headers(options.headers)
+              for (const [name, value] of Object.entries(overrides))
+                effectiveHeaders.set(name, value)
+              const protocol = await getRequestProtocol(request.siteType)
+              const effectiveOptions = { ...options, headers: effectiveHeaders }
+              const response = protocol
+                ? await protocol.fetch(prepared.url, effectiveOptions, send)
+                : await send(effectiveOptions)
               onResponse()
               if (response.status === 429)
                 onRateLimit(response.headers.get("retry-after") ?? undefined)

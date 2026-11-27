@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { runRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/accountSaveFlow"
@@ -49,20 +50,21 @@ export async function runSub2ApiRealSiteAccountSaveFlow(params: {
               { timeout: 30_000 },
             )
             .toBe(true)
-          await expect(dialog.sub2apiRefreshTokenSwitch).toHaveAttribute(
-            "aria-checked",
-            "false",
-          )
+          await expect(
+            dialog.sub2apiBrowserSessionOption.getByRole("radio"),
+          ).toBeChecked()
           await expect(dialog.sub2apiImportSessionButton).toHaveCount(0)
 
           if (!loginResult.authState.refreshToken) return
 
-          await dialog.sub2apiRefreshTokenSwitch.click()
-          await expect(dialog.sub2apiRefreshTokenSwitch).toHaveAttribute(
-            "aria-checked",
-            "true",
-          )
+          await dialog.sub2apiIndependentSessionOption.click()
+          await expect(
+            dialog.sub2apiIndependentSessionOption.getByRole("radio"),
+          ).toBeChecked()
 
+          await dialog.dialog
+            .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiManualDisclosure)
+            .click()
           await expect(dialog.sub2apiImportSessionButton).toBeVisible({
             timeout: 30_000,
           })

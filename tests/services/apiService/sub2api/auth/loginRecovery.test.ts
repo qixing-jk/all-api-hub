@@ -1,3 +1,4 @@
+import { createHash, webcrypto } from "node:crypto"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
@@ -14,6 +15,7 @@ import {
   SUB2API_TOKEN_REFRESH_FAILURE_REASONS,
   Sub2ApiTokenRefreshError,
 } from "~/services/apiService/sub2api/auth/tokenRefresh"
+import { SUB2API_PANEL_KEY_ERRORS } from "~/services/apiService/sub2api/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -29,6 +31,10 @@ const deps = vi.hoisted(() => ({
   browser: vi.fn(),
   refresh: vi.fn(),
   fetch: vi.fn(),
+  panelKey: vi.fn(),
+}))
+vi.mock("~/services/apiService/sub2api/auth/panelProofStore", () => ({
+  readSub2ApiPanelSigningKey: deps.panelKey,
 }))
 vi.mock("~/services/apiTransport/request", async (original) => ({
   ...(await original<typeof import("~/services/apiTransport/request")>()),
@@ -58,6 +64,181 @@ vi.mock(
 )
 
 describe("Sub2API configured login recovery", () => {
+  it.each([
+    ["uncertain_rotation", true],
+    ["invalid_refresh_token", false],
+  ] as const)(
+    "keeps the independent-session outcome after a 401 followed by %s",
+    async (reason, automaticRecovery) => {
+      account.account_info.access_token = `e30.${Buffer.from(JSON.stringify({ cnf: { jkt: "missing-key" } })).toString("base64url")}.signature`
+      account.sub2apiAuth = { refreshToken: "managed-refresh" }
+      account.login!.automaticRecovery = automaticRecovery
+      attachStoredSession()
+      deps.panelKey.mockResolvedValue({})
+      deps.refresh.mockRejectedValue(new Sub2ApiTokenRefreshError(reason))
+      const runner = vi
+        .fn()
+        .mockRejectedValueOnce(unauthorized())
+        .mockResolvedValue("done")
+      const pending = executeAuthenticatedSub2ApiRequest(
+        request,
+        "/api/v1/auth/me",
+        runner,
+        {
+          recoverInvalidRefreshTokenViaBrowser: true,
+        },
+      )
+      if (automaticRecovery) {
+        await expect(pending).resolves.toBe("done")
+        expect(deps.login).toHaveBeenCalledOnce()
+        expect(account.sub2apiAuth?.refreshToken).toBe("new-refresh")
+      } else {
+        await expect(pending).rejects.toMatchObject({
+          upstreamCode: "PANEL_PROOF_INDEPENDENT_SESSION_REQUIRED",
+        })
+        expect(deps.login).not.toHaveBeenCalled()
+        expect(account.sub2apiAuth?.refreshToken).toBe("managed-refresh")
+      }
+      expect(deps.browser).not.toHaveBeenCalled()
+    },
+  )
+
+  it("uses configured automatic login after a missing website key without resyncing a tab", async () => {
+    attachStoredSession()
+    const error = new ApiError(
+      "Website signing key missing",
+      401,
+      "/api/v1/auth/me",
+      API_ERROR_CODES.REQUEST_PROOF_INVALID,
+      "PANEL_PROOF_BROWSER_KEY_MISSING",
+    )
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(error)
+      .mockResolvedValue("done")
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner),
+    ).resolves.toBe("done")
+    expect(deps.browser).not.toHaveBeenCalled()
+    expect(deps.login).toHaveBeenCalledOnce()
+  })
+
+  it("stops after one recovery when the replacement is rejected for a signing-key mismatch", async () => {
+    account.sub2apiAuth = {
+      refreshToken: "saved-refresh",
+      tokenExpiresAt: Date.now() - 1,
+    }
+    attachStoredSession()
+    deps.refresh.mockResolvedValue({
+      accessToken: "renewed-access",
+      refreshToken: "renewed-refresh",
+      tokenExpiresAt: Date.now() + 3600000,
+    })
+    const rejected = new ApiError(
+      "Signing key mismatch",
+      401,
+      "/api/v1/auth/me",
+      API_ERROR_CODES.HTTP_401,
+      SUB2API_PANEL_KEY_ERRORS.Mismatch,
+    )
+    const runner = vi.fn().mockRejectedValueOnce(rejected)
+
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner, {
+        singleRecovery: true,
+      }),
+    ).rejects.toBe(rejected)
+    expect(deps.refresh).toHaveBeenCalledOnce()
+    expect(runner).toHaveBeenCalledOnce()
+    expect(deps.browser).not.toHaveBeenCalled()
+    expect(deps.login).not.toHaveBeenCalled()
+  })
+  it("preserves a confirmed proof failure when refreshing a missing access token with unavailable signing storage", async () => {
+    account.account_info.access_token = ""
+    account.sub2apiAuth = { refreshToken: "saved-refresh" }
+    attachStoredSession()
+    deps.panelKey.mockRejectedValue(new Error("Signing storage unavailable"))
+    const proofError = new ApiError(
+      "Proof rejected",
+      401,
+      "/api/v1/auth/refresh",
+      API_ERROR_CODES.REQUEST_PROOF_INVALID,
+    )
+    deps.refresh.mockRejectedValue(proofError)
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", vi.fn()),
+    ).rejects.toBe(proofError)
+    expect(deps.browser).not.toHaveBeenCalled()
+    expect(deps.login).not.toHaveBeenCalled()
+  })
+  it("keeps ordinary browser recovery usable when optional panel storage is unavailable", async () => {
+    deps.panelKey.mockRejectedValue(
+      new Error("Optional panel storage unavailable"),
+    )
+    attachStoredSession()
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(unauthorized())
+      .mockResolvedValue("done")
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner),
+    ).resolves.toBe("done")
+    expect(deps.browser).toHaveBeenCalled()
+    expect(deps.login).toHaveBeenCalledOnce()
+  })
+  it("uses configured login instead of a website session when a known proof origin has lost its access token", async () => {
+    deps.panelKey.mockResolvedValue({})
+    account.account_info.access_token = ""
+    attachStoredSession()
+    const runner = vi.fn().mockResolvedValue("done")
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner),
+    ).resolves.toBe("done")
+    expect(deps.browser).not.toHaveBeenCalled()
+    expect(deps.login).toHaveBeenCalledTimes(1)
+  })
+  it.each([false, true])(
+    "keeps ownership of a bound refresh family after signing-key loss (automatic login: %s)",
+    async (automaticRecovery) => {
+      account.account_info.access_token = `e30.${Buffer.from(JSON.stringify({ cnf: { jkt: "previous-key" } })).toString("base64url")}.signature`
+      account.sub2apiAuth = { refreshToken: "managed-refresh" }
+      account.login!.automaticRecovery = automaticRecovery
+      attachStoredSession()
+      deps.browser.mockResolvedValue({
+        accessToken: "website-access",
+        userId: "17",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      })
+      const signingError = new ApiError(
+        "Signing key changed",
+        401,
+        "/api/v1/auth/me",
+        API_ERROR_CODES.HTTP_401,
+        "PANEL_PROOF_KEY_MISMATCH",
+      )
+      const runner = vi
+        .fn()
+        .mockRejectedValueOnce(signingError)
+        .mockResolvedValue("done")
+      const result = executeAuthenticatedSub2ApiRequest(
+        request,
+        "/api/v1/auth/me",
+        runner,
+      )
+      if (automaticRecovery) {
+        await expect(result).resolves.toBe("done")
+        expect(account.sub2apiAuth?.refreshToken).toBe("new-refresh")
+        expect(deps.login).toHaveBeenCalledOnce()
+      } else {
+        await expect(result).rejects.toMatchObject({
+          message: "messages:sub2api.independentSessionRequired",
+        })
+        expect(account.sub2apiAuth?.refreshToken).toBe("managed-refresh")
+        expect(deps.login).not.toHaveBeenCalled()
+      }
+      expect(deps.browser).not.toHaveBeenCalled()
+    },
+  )
   let account: SiteAccount
   let request: Sub2ApiAuthSessionRequest
   const unauthorized = () =>
@@ -130,6 +311,101 @@ describe("Sub2API configured login recovery", () => {
         },
       },
     })
+  })
+
+  it("does not borrow website auth when an extension-bound refresh token is revoked", async () => {
+    vi.stubGlobal("crypto", webcrypto)
+    const pair = await crypto.subtle.generateKey(
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["sign", "verify"],
+    )
+    const jwk = await crypto.subtle.exportKey("jwk", pair.publicKey)
+    const binding = createHash("sha256")
+      .update(JSON.stringify({ crv: "P-256", kty: "EC", x: jwk.x, y: jwk.y }))
+      .digest("base64url")
+    deps.panelKey.mockResolvedValue(pair)
+    account.account_info.access_token = `e30.${Buffer.from(JSON.stringify({ cnf: { jkt: binding } })).toString("base64url")}.signature`
+    account.sub2apiAuth = {
+      refreshToken: "revoked",
+      tokenExpiresAt: Date.now() + 3600000,
+    }
+    attachStoredSession()
+    deps.refresh.mockRejectedValue(
+      new Sub2ApiTokenRefreshError(
+        SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN,
+      ),
+    )
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(unauthorized())
+      .mockResolvedValue("ok")
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner),
+    ).resolves.toBe("ok")
+    expect(deps.login).toHaveBeenCalledTimes(1)
+    expect(deps.browser).not.toHaveBeenCalled()
+  })
+
+  it("uses a matching website session without configured login after a foreign-key rejection", async () => {
+    account.login = undefined
+    request.allowAccountCredentialRecovery = false
+    deps.browser.mockResolvedValue({
+      accessToken: "website-access",
+      userId: "17",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      fetchContext: { kind: "current-tab", tabId: 8, origin: account.site_url },
+    })
+    const runner = vi.fn(async (next: ApiServiceRequest) => {
+      if (next.auth.accessToken !== "website-access")
+        throw new ApiError(
+          "Key mismatch",
+          401,
+          "/api/v1/auth/me",
+          API_ERROR_CODES.HTTP_401,
+          "PANEL_PROOF_KEY_MISMATCH",
+        )
+      expect(next.fetchContext).toMatchObject({ tabId: 8 })
+      return "ok"
+    })
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner),
+    ).resolves.toBe("ok")
+    expect(deps.browser).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedUserId: "17" }),
+    )
+    expect(deps.login).not.toHaveBeenCalled()
+    expect(deps.refresh).not.toHaveBeenCalled()
+  })
+
+  it("falls back to configured login when the browser-bound session is unavailable", async () => {
+    account.sub2apiAuth = {
+      refreshToken: "browser-bound-refresh",
+      tokenExpiresAt: Date.now() + 3600000,
+    }
+    attachStoredSession()
+    deps.refresh.mockResolvedValue({
+      accessToken: "new-access",
+      refreshToken: "rotated-browser-refresh",
+      tokenExpiresAt: Date.now() + 3600000,
+    })
+    const runner = vi.fn(async (next: ApiServiceRequest) => {
+      if (next.auth.accessToken !== "new-access")
+        throw new ApiError(
+          "Key mismatch",
+          401,
+          "/api/v1/auth/me",
+          API_ERROR_CODES.HTTP_401,
+          "PANEL_PROOF_KEY_MISMATCH",
+        )
+      return "ok"
+    })
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner),
+    ).resolves.toBe("ok")
+    expect(deps.refresh).not.toHaveBeenCalled()
+    expect(deps.browser).toHaveBeenCalledOnce()
+    expect(deps.login).toHaveBeenCalledTimes(1)
   })
 
   it("recovers login when the saved access token is absent and renewal is rejected before the operation starts", async () => {

@@ -80,6 +80,43 @@ const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
 })
 
 describe("account dialog recovery handoff", () => {
+  it("rejects an edited invalid URL before opening either recovery surface", async () => {
+    const state = recoveryState()
+    const prepared = await prepareAccountDialogRecovery(state)
+    await expect(
+      openAccountDialogRecovery(prepared, {
+        state: { ...state, url: "https://" },
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+    expect(openSidePanel).not.toHaveBeenCalled()
+    expect(createTab).not.toHaveBeenCalled()
+  })
+  it("retains configured Sub2API acquisition when a popup hands its draft to a persistent view", async () => {
+    const state = {
+      ...recoveryState(SITE_TYPES.SUB2API),
+      recoveryAction: "sub2api-login" as const,
+    }
+    state.draft.login = {
+      methodId: "password",
+      credentials: { username: "member@example.com", password: "secret" },
+    }
+    const prepared = await prepareAccountDialogRecovery(state)
+    await openAccountDialogRecovery(prepared)
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recoveryAction: "sub2api-login",
+        draft: expect.objectContaining({
+          login: state.draft.login,
+          accessToken: state.draft.accessToken,
+          userId: "42",
+        }),
+      }),
+    )
+  })
   it.each([
     null,
     { type: "invalid", message: "failure" },
@@ -440,10 +477,11 @@ describe("account dialog recovery handoff", () => {
       draft: { ...original.draft, notes: "Latest notes", userId: "99" },
       transientAuth: { token: "private-dashboard-auth" },
     }
-    const updated = await prepareAccountDialogRecovery(edited, prepared)
-    expect(updated.id).toBe(prepared.id)
+    const opening = openAccountDialogRecovery(prepared, { state: edited })
+    expect(openSidePanel).toHaveBeenCalledWith(activeTab)
+    await expect(opening).resolves.toBe("sidepanel")
     const accept = vi.fn(() => true)
-    await receiveAccountDialogRecovery(updated.id, accept)
+    await receiveAccountDialogRecovery(prepared.id, accept, activeTab.windowId)
     expect(accept).toHaveBeenCalledWith({
       ...original,
       draft: { ...original.draft, notes: "Latest notes", userId: "99" },

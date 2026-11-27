@@ -45,6 +45,27 @@ describe("openingAdapter", () => {
       })
     })
 
+    it("rejects a plain tab the browser opened in a private window", async () => {
+      vi.spyOn(browserApi_tabs, "createTab").mockResolvedValue({
+        id: 11,
+        incognito: true,
+      } as browser.tabs.Tab)
+      const removeTab = vi
+        .spyOn(browserApi_tabs, "removeTab")
+        .mockResolvedValue()
+      await expect(
+        openFallbackAwareTempContext({
+          url: "https://example.com",
+          origin: "https://example.com",
+          requestId: "regular-context",
+          requestedMode: TEMP_CONTEXT_MODES.Tab,
+          allowWindowRollback: false,
+          incognito: false,
+        }),
+      ).rejects.toMatchObject({ name: "CookieStoreContextUnavailableError" })
+      expect(removeTab).toHaveBeenCalledWith(11)
+    })
+
     it("preserves the browser error when an ordinary temporary tab cannot be created", async () => {
       const browserError = new Error("Browser tab creation failed")
       vi.spyOn(browserApi_tabs, "createTab").mockRejectedValueOnce(browserError)

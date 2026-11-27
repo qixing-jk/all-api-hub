@@ -50,6 +50,9 @@ export const sub2ApiAccountCompletion: AccountCompletionCapability = {
       checkIn: helpers.createInitialCheckInConfig({
         supported: false,
       }),
+      ...(detected.sub2apiWebsiteSessionBound === true
+        ? { sub2apiWebsiteSessionBound: true as const }
+        : {}),
       ...(detected.sub2apiAuth ? { sub2apiAuth: detected.sub2apiAuth } : {}),
     }
   },

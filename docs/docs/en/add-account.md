@@ -175,16 +175,16 @@ While the token is valid and has the required permissions, the extension can ref
 
    > This token is used to sign in to the site. It is not an API key from the API Keys page used to call models.
 
-   ::: warning Token expiry and extension-managed sessions
-   Sub2API Access Tokens expire. To let the extension renew the session independently in the background, import or enter a `refresh_token` as follows:
+   ::: tip Choosing a session
+   With the default **Browser session** mode, the extension uses your website sign-in. After you close the site, it can resync through a temporary window. If your sign-in expires, the website key is cleared, or you switch accounts, sign in to the matching account on the site again.
 
-   1. We recommend signing in to the target Sub2API site in an incognito or private window first.
-   2. Enable **"Extension-managed session (multiple accounts)"** in the account form.
-   3. Click **"Import from currently signed-in account"**. The extension reads `refresh_token` from the current session's Local Storage and also fills in any available Access Token, User ID, and username.
-   4. If automatic import fails, open **Application** → **Local Storage** → the site domain in developer tools, copy `refresh_token`, and paste it into the form's **"Refresh Token"** field.
-   5. Confirm that the Refresh Token is filled in, save the account, and close the incognito or private window used for import. This prevents the site console and extension from rotating the same Refresh Token in parallel.
+   To use multiple accounts on one site or renew an account independently of the website, select **Independent session** under **Session mode**.
 
-   You cannot save with managed sessions enabled and an empty Refresh Token. When managed sessions are disabled, the extension does not store a Refresh Token. It may only resynchronize through a temporary window while the corresponding account is still signed in to the browser; after that sign-in expires, you must sign in again or update the credentials.
+   1. Enter the **User ID**. If you have not configured Account Login, choose **Set up login** and enter your login details.
+   2. In Account Login, choose **Get session** and complete any verification. When **Independent session ready.** appears, save the account. If you need a new session, choose **Re-sign in** under **Session mode**. Turning on **Automatic login recovery** also lets the extension sign in again in the background if the session expires.
+   3. If you already have a Refresh Token, expand **Manual import or paste Refresh Token**. Choose **Import from site** on sites that support it, or paste the token. Import uses the website session. Using that session in multiple browsers or tools can interrupt renewal. When the site keeps its renewal credential in the browser, the extension directs you to the login option above.
+
+   With **Independent session** selected, you need a renewal credential before you can save. The credential is included in account backups and exports. Keep these files private.
    :::
 
 6. Enter a **Recharge Amount Ratio** (`CNY/USD`, greater than 0), then save the account.

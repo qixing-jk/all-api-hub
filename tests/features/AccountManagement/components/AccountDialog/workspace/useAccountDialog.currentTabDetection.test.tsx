@@ -324,6 +324,43 @@ describe("useAccountDialog current tab detection", () => {
     ).toHaveLength(0)
   })
 
+  it("clears website-bound evidence after a fresh unbound Sub2API detection", async () => {
+    const detected = {
+      username: "User",
+      accessToken: "access",
+      userId: "17",
+      exchangeRate: 7,
+      siteName: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: buildCheckInConfig(),
+    }
+    mockAutoDetectAccount
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: true,
+        data: { ...detected, sub2apiWebsiteSessionBound: true },
+      })
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: true,
+        data: detected,
+      })
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+    await act(async () =>
+      result.current.setters.setUrl("https://sub2api.example"),
+    )
+    await act(async () => result.current.handlers.handleAutoDetect())
+    expect(result.current.state.isWebsiteSessionBound).toBe(true)
+    await act(async () => result.current.handlers.handleAutoDetect())
+    expect(result.current.state.isWebsiteSessionBound).toBe(false)
+  })
+
   it("passes the detected Kimi refresh session to account creation", async () => {
     const auth = {
       refreshToken: "refresh",

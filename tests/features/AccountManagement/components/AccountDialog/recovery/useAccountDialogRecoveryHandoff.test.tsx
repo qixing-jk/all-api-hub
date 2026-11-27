@@ -150,6 +150,32 @@ describe("account dialog recovery continuation", () => {
     expect(closeIfPopup).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps the action ready after an edit and passes the current draft to navigation in the click turn", async () => {
+    const state = snapshot()
+    const { rerender } = renderGuide(state)
+    const findContinue = () =>
+      screen.getByRole("button", { name: message("continueInSidePanel") })
+    await waitFor(() => expect(findContinue()).toBeEnabled())
+    const edited = {
+      ...state,
+      draft: { ...state.draft, notes: "Latest notes" },
+    }
+    rerender(<HandoffGuide state={edited} />)
+    expect(findContinue()).toBeEnabled()
+    act(() => {
+      fireEvent.click(findContinue())
+      expect(openAccountDialogRecovery).toHaveBeenCalledExactlyOnceWith(
+        prepared,
+        { state: edited },
+      )
+    })
+    expect(prepareAccountDialogRecovery).toHaveBeenCalledExactlyOnceWith(
+      state,
+      null,
+    )
+    await waitFor(() => expect(closeIfPopup).toHaveBeenCalledOnce())
+  })
+
   it("keeps the form open after navigation fails and retries the same prepared draft", async () => {
     const user = userEvent.setup()
     vi.mocked(openAccountDialogRecovery).mockRejectedValueOnce(
@@ -359,4 +385,23 @@ describe("account dialog recovery continuation", () => {
       expect(closeIfPopup).not.toHaveBeenCalled()
     },
   )
+
+  it("does not prepare or offer handoff for an incomplete URL", async () => {
+    const state = snapshot()
+    const { rerender } = renderGuide({ ...state, url: "https://" })
+    await act(async () => {})
+    expect(prepareAccountDialogRecovery).not.toHaveBeenCalled()
+    expect(screen.queryByText(message("prepareFailed"))).not.toBeInTheDocument()
+    rerender(<HandoffGuide state={state} />)
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: message("continueInSidePanel") }),
+      ).toBeEnabled(),
+    )
+    rerender(<HandoffGuide state={{ ...state, url: "" }} />)
+    expect(
+      screen.queryByRole("button", { name: message("continueInSidePanel") }),
+    ).not.toBeInTheDocument()
+    expect(openAccountDialogRecovery).not.toHaveBeenCalled()
+  })
 })

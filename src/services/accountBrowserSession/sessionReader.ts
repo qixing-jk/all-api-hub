@@ -9,6 +9,7 @@ import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnbo
 import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/auth/authSession"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { normalizeKimiOpenPlatformAuth } from "~/services/kimiOpenPlatform/auth"
+import { isFirefox } from "~/utils/browser"
 import { getBrowserApiCapabilities } from "~/utils/browser/runtime"
 import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 import { getAllTabs } from "~/utils/browser/tabs"
@@ -108,6 +109,7 @@ const normalizeSessionData = (
     siteType?: unknown
     transientAuth?: unknown
     sub2apiAuth?: unknown
+    sub2apiWebsiteSessionBound?: unknown
     kimiOpenPlatformAuth?: unknown
     fetchContext?: unknown
   }
@@ -169,6 +171,9 @@ const normalizeSessionData = (
     ...(accessToken ? { accessToken } : {}),
     ...(transientAuth ? { transientAuth } : {}),
     ...(sub2apiAuth ? { sub2apiAuth } : {}),
+    ...(payload.sub2apiWebsiteSessionBound === true
+      ? { sub2apiWebsiteSessionBound: true }
+      : {}),
     ...(kimiOpenPlatformAuth ? { kimiOpenPlatformAuth } : {}),
     ...(fetchContext ? { fetchContext } : {}),
   }
@@ -308,6 +313,15 @@ const doesTabMatchBrowserContext = (
     tab.cookieStoreId !== browserContext.cookieStoreId
   ) {
     return false
+  }
+
+  if (!browserContext.cookieStoreId && browserContext.defaultCookieStoreOnly) {
+    // Firefox may omit store IDs when it cannot expose container metadata.
+    if (!tab.cookieStoreId) return !isFirefox()
+    const defaultStores = browserContext.incognito
+      ? ["1", "firefox-private"]
+      : ["0", "firefox-default"]
+    return defaultStores.includes(tab.cookieStoreId)
   }
 
   return true
@@ -533,6 +547,12 @@ export async function resolveAccountBrowserSession(
 ): Promise<AccountBrowserSession | null> {
   const diagnostics = options.diagnostics ?? createAccountDetectionDiagnostics()
   const isUsable = options.isUsableSession ?? (() => true)
+  const browserContext = options.currentTab
+    ? {
+        incognito: options.currentTab.incognito === true,
+        cookieStoreId: options.currentTab.cookieStoreId,
+      }
+    : options.browserContext
   const succeed = (session: AccountBrowserSession) => {
     diagnostics.finish("success", { source: session.source })
     return session
@@ -566,14 +586,7 @@ export async function resolveAccountBrowserSession(
     const session = await readAccountBrowserSessionFromExistingTabs({
       baseUrl: options.baseUrl,
       siteType: options.siteType,
-      browserContext: options.currentTab
-        ? {
-            incognito: options.currentTab.incognito === true,
-            ...(options.currentTab.cookieStoreId
-              ? { cookieStoreId: options.currentTab.cookieStoreId }
-              : {}),
-          }
-        : undefined,
+      browserContext,
       isUsableSession: isUsable,
       protectionBypassExecution: options.protectionBypassExecution,
       onError: options.onError,
@@ -591,7 +604,16 @@ export async function resolveAccountBrowserSession(
     const session = await readAccountBrowserSessionFromTempWindow({
       baseUrl: options.baseUrl,
       siteType: options.siteType,
-      browserContext: options.currentTab,
+      browserContext,
+      fetchContext:
+        options.browserContext ||
+        browserContext?.incognito ||
+        browserContext?.cookieStoreId
+          ? normalizeFetchContext({
+              kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+              ...browserContext,
+            })
+          : undefined,
       protectionBypassExecution: options.protectionBypassExecution,
       suppressMinimize: options.suppressMinimize,
       requestIdPrefix: options.requestIdPrefix,

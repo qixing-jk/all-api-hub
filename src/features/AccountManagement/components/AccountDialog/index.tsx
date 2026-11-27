@@ -394,13 +394,18 @@ export default function AccountDialog({
     enabled: isOpen && isExtensionPopup(),
     state:
       state.cookieRecoveryState ??
+      state.sub2apiLoginRecoveryState ??
       (needsTokenHandoff ? state.tokenRecoveryState : null) ??
       null,
   })
-  const accessTokenContinuation = state.cookieRecoveryState
-    ? undefined
-    : recoveryContinuation
+  const accessTokenContinuation =
+    state.cookieRecoveryState || state.sub2apiLoginRecoveryState
+      ? undefined
+      : recoveryContinuation
   const cookieRecoveryContinuation = state.cookieRecoveryState
+    ? recoveryContinuation
+    : undefined
+  const sub2apiSessionContinuation = state.sub2apiLoginRecoveryState
     ? recoveryContinuation
     : undefined
   const isCreatingToken = creation.isOpen
@@ -765,6 +770,7 @@ export default function AccountDialog({
                 accessTokenFeedbackVariant={tokenFeedbackVariant}
                 accessTokenContinuation={accessTokenContinuation}
                 cookieRecoveryContinuation={cookieRecoveryContinuation}
+                sub2apiSessionContinuation={sub2apiSessionContinuation}
                 credentialVerification={credentialVerification}
                 hasInlineCredentialError={hasInlineCredentialError}
                 manualAddGuideAnchor={manualAddGuideAnchor}

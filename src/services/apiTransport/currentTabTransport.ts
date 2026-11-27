@@ -1,9 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  API_ERROR_CODES,
-  ApiError,
-  type ApiErrorCode,
-} from "~/services/apiTransport/errors"
+import type { SiteType } from "~/constants/siteType"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   isReplaySafeRemoteFetch,
   observeRemoteFetchLifecycle,
@@ -19,7 +16,10 @@ import {
   API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
-import type { TempWindowResponseType } from "~/types/tempWindowFetch"
+import type {
+  TempWindowFetch,
+  TempWindowResponseType,
+} from "~/types/tempWindowFetch"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import {
   isMessageReceiverUnavailableError,
@@ -37,13 +37,16 @@ type TransportResponseMapper<T, TResult> = (
 ) => TResult | Promise<TResult>
 const logger = createLogger("ApiTransportRequest")
 
-interface ContentFetchResponse<T> {
-  success?: boolean
-  status?: number
-  headers?: Record<string, string>
+/** A reported local error belongs to the browser context that raised it. */
+class CurrentTabLocalError extends ApiError {}
+
+type ContentFetchResponse<T> = Partial<
+  Pick<
+    TempWindowFetch,
+    "success" | "status" | "headers" | "error" | "code" | "localError"
+  >
+> & {
   data?: T
-  error?: string
-  code?: ApiErrorCode
 }
 
 /** Copies the controlled message response fields before lifecycle disposal. */
@@ -59,6 +62,7 @@ function snapshotContentFetchResponse<T>(
     data: response.data,
     error: response.error,
     code: response.code,
+    localError: response.localError,
   }
 }
 
@@ -114,6 +118,7 @@ export function resolveCurrentTabFetchContext(params: {
  * Sends the prepared request through the matched tab's content script.
  */
 async function fetchViaCurrentTabContent<T>(context: {
+  siteType?: SiteType
   fetchContext: CurrentTabContext
   url: string
   endpoint: string
@@ -152,6 +157,7 @@ async function fetchViaCurrentTabContent<T>(context: {
         context.fetchContext.tabId,
         {
           action: RuntimeActionIds.ContentPerformTempWindowFetch,
+          ...(context.siteType ? { siteType: context.siteType } : {}),
           requestId,
           expectedOrigin: new URL(context.fetchContext.origin).origin,
           fetchUrl: context.url,
@@ -200,9 +206,20 @@ async function fetchViaCurrentTabContent<T>(context: {
     }
 
     const success = responseSnapshot.success
+    const failureMessage =
+      responseSnapshot.error || "Current-tab content fetch failed"
+    if (success === false && responseSnapshot.localError)
+      throw new CurrentTabLocalError(
+        failureMessage,
+        responseSnapshot.localError.statusCode,
+        context.endpoint,
+        responseSnapshot.code,
+        responseSnapshot.localError.upstreamCode,
+      )
+
     if (typeof success !== "boolean") {
       throw new ApiError(
-        responseSnapshot.error || "Current-tab content fetch failed",
+        failureMessage,
         responseSnapshot.status,
         context.endpoint,
         responseSnapshot.code,
@@ -212,7 +229,7 @@ async function fetchViaCurrentTabContent<T>(context: {
     const status = responseSnapshot.status ?? (success ? 200 : undefined)
     if (status === undefined) {
       throw new ApiError(
-        responseSnapshot.error || "Current-tab content fetch failed",
+        failureMessage,
         undefined,
         context.endpoint,
         responseSnapshot.code,
@@ -257,6 +274,7 @@ export async function executeWithCurrentTabContentPreference<T, TResult>(
   let dispatched = false
   try {
     response = await fetchViaCurrentTabContent<T>({
+      siteType: context.request.siteType,
       fetchContext,
       url: context.url,
       endpoint: context.endpoint,
@@ -281,6 +299,7 @@ export async function executeWithCurrentTabContentPreference<T, TResult>(
       context.request.currentTabFallback ===
         API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid ||
       context.fetchOptions.signal?.aborted ||
+      error instanceof CurrentTabLocalError ||
       responseInspectionFailed ||
       (dispatched && !replaySafe)
     logger.debug(

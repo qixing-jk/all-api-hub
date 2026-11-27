@@ -70,6 +70,7 @@ describe("Sub2API browser auth", () => {
       siteType: "sub2api",
       useExistingTabs: true,
       useTempWindow: true,
+      browserContext: { incognito: false, defaultCookieStoreOnly: true },
       requestIdPrefix: "sub2api-auth-recovery",
       isUsableSession: expect.any(Function),
     })

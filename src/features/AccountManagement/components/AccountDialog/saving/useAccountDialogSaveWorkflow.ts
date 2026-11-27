@@ -10,6 +10,7 @@ import {
   getAccountDialogSitePolicy,
   shouldDeferAccountSaveSuccessForAccountDialogSite,
 } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
+import type { DraftCredentialPersistenceLease } from "~/features/AccountManagement/components/AccountDialog/form/useDraftCredentialOwnership"
 import { type useOpenRouterAccountOnboarding } from "~/features/AccountManagement/components/AccountDialog/form/useOpenRouterAccountOnboarding"
 import { type useSub2ApiAccountSession } from "~/features/AccountManagement/components/AccountDialog/form/useSub2ApiAccountSession"
 import { type AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
@@ -104,7 +105,10 @@ type SaveWorkflowInput = {
   account?: DisplaySiteData | null
   url: string
   draft: AccountDialogDraft
-  sub2ApiSession: Pick<ReturnType<typeof useSub2ApiAccountSession>, "auth">
+  sub2ApiSession: Pick<
+    ReturnType<typeof useSub2ApiAccountSession>,
+    "auth" | "beginPersistence"
+  >
   autoProvisionKeyOnAccountAdd: boolean
   autoProvisionKeyOnAccountAddMode: AccountKeyAutoProvisionMode
   confirmDuplicateAccount: ReturnType<
@@ -201,6 +205,7 @@ export function useAccountDialogSaveWorkflow({
       return analyticsActionRef.current
     }
     let isAnalyticsActionCompleted = false
+    let persistenceLease: DraftCredentialPersistenceLease | undefined
 
     try {
       setIsSaving(true)
@@ -236,7 +241,7 @@ export function useAccountDialogSaveWorkflow({
         notes: notes.trim(),
         tagIds: tagIds,
         checkInConfig: checkIn,
-        loginChange: draft.loginChanged ? draft.login ?? null : undefined,
+        loginChange: draft.loginChanged ? (draft.login ?? null) : undefined,
         siteType: siteType,
         authType: authType,
         cookieAuthSessionCookie: cookieAuthSessionCookie.trim(),
@@ -287,7 +292,16 @@ export function useAccountDialogSaveWorkflow({
           : PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
         tempWindowRequestSource,
         async (protectionBypassExecution) => {
+          persistenceLease = sub2ApiSession.beginPersistence({
+            baseUrl: saveInput.url,
+            userId: normalizedUserId,
+            siteType: saveInput.siteType,
+            accessToken: normalizedAccessToken,
+            refreshToken: sub2apiAuth?.refreshToken,
+          })
           const saveResult = await saveAccount()
+          await persistenceLease?.settle(saveResult.success === true)
+          persistenceLease = undefined
           const savedAccountId =
             saveResult.success &&
             typeof saveResult.accountId === "string" &&
@@ -465,6 +479,7 @@ export function useAccountDialogSaveWorkflow({
       )
       throw error
     } finally {
+      await persistenceLease?.settle(false)
       setIsSaving(false)
     }
   }

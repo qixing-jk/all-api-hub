@@ -56,6 +56,7 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import {
+  ACCOUNT_AUTH_HEALTH_STATUS_CODES,
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
   AuthTypeEnum,
@@ -588,6 +589,90 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
     expect(mockPersistAuthUpdate).not.toHaveBeenCalled()
   })
+
+  it("keeps an independent refresh family when its bound signing key no longer matches", async () => {
+    const token = `e30.${Buffer.from(JSON.stringify({ cnf: { jkt: "old-key" } })).toString("base64url")}.signature`
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError(
+          "Signing key changed",
+          401,
+          "/api/v1/auth/me",
+          API_ERROR_CODES.HTTP_401,
+          "PANEL_PROOF_KEY_MISMATCH",
+        ),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        data: { id: 1, username: "alice", balance: 2 },
+      } as any)
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "website-jwt",
+      userId: "1",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+
+    const result = await refreshAccountData(
+      createRequest({
+        accountId: "account-1",
+        includeTodayCashflow: false,
+        sub2apiAuthSession: {
+          getLatestAuth: mockGetLatestAuth,
+          persistAuthUpdate: mockPersistAuthUpdate,
+        },
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "1",
+          accessToken: token,
+          refreshToken: "independent-refresh",
+        },
+      }),
+    )
+
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+    expect(mockPersistAuthUpdate).not.toHaveBeenCalled()
+    expect(result.success).toBe(false)
+    expect(result.healthStatus?.code).toBe(
+      ACCOUNT_AUTH_HEALTH_STATUS_CODES.AUTHENTICATION_REQUIRED,
+    )
+    expect(result.healthStatus?.message).toBe(
+      "messages:sub2api.independentSessionRequired",
+    )
+  })
+
+  it.each([
+    [API_ERROR_CODES.HTTP_401, "PANEL_PROOF_KEY_MISMATCH", 1],
+    [
+      API_ERROR_CODES.REQUEST_PROOF_INVALID,
+      "PANEL_PROOF_BROWSER_KEY_MISSING",
+      0,
+    ],
+  ] as const)(
+    "offers login configuration when website signing is unavailable (%s)",
+    async (code, upstreamCode, browserAttempts) => {
+      vi.mocked(fetchApi).mockRejectedValueOnce(
+        new ApiError(
+          "Website signing unavailable",
+          401,
+          "/api/v1/auth/me",
+          code,
+          upstreamCode,
+        ),
+      )
+      const result = await refreshAccountData(
+        createRequest({ includeTodayCashflow: false }),
+      )
+      expect(result).toMatchObject({
+        success: false,
+        healthStatus: {
+          code: ACCOUNT_AUTH_HEALTH_STATUS_CODES.AUTHENTICATION_REQUIRED,
+          message: "messages:errors.api.browserProofLoginRequired",
+        },
+      })
+      expect(resyncSub2ApiAuthToken).toHaveBeenCalledTimes(browserAttempts)
+      expect(fetchApi).toHaveBeenCalledOnce()
+    },
+  )
 
   it("returns success with today usage when /api/v1/auth/me and /api/v1/usage/stats succeed", async () => {
     vi.mocked(fetchApi)
