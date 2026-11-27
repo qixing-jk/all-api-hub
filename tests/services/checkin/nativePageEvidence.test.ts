@@ -72,14 +72,14 @@ describe("read-only native page evidence", () => {
     ])
   })
 
-  it("caps native candidates, merges corroborating sources and rejects unsafe paths", async () => {
+  it("caps native candidates and merges corroborating sources", async () => {
     const routes = Array.from(
       { length: 31 },
       (_, index) => `{path:"/daily/${index}"}`,
     )
     const fetch = serveAssets({
       "/": '<script src="/app.js"></script>',
-      "/app.js": `const routes=[${routes.join(",")}, {path:"//other.test/profile"}, {path:"/profile?tab=daily"}, {path:"profile"}]`,
+      "/app.js": `const routes=[${routes.join(",")}]`,
     })
     const result = await collectCheckInEvidence(
       nativeInput,
@@ -87,7 +87,7 @@ describe("read-only native page evidence", () => {
       {
         fetch: fetch as typeof globalThis.fetch,
         navigation: {
-          candidates: ["/daily/0", "/daily/0", "//other.test/daily"],
+          candidates: ["/daily/0", "/daily/0"],
           candidatesComplete: false,
         },
       },
@@ -101,6 +101,25 @@ describe("read-only native page evidence", () => {
       })),
     )
   })
+
+  it.each(["//other.test/profile", "/profile?tab=daily", "profile"])(
+    "rejects unsupported script route %s even with room for more candidates",
+    async (path) => {
+      const fetch = serveAssets({
+        "/": '<script src="/app.js"></script>',
+        "/app.js": `const routes=[{path:${JSON.stringify(path)}},{path:"/daily"}]`,
+      })
+      const result = await collectCheckInEvidence(
+        nativeInput,
+        new AbortController().signal,
+        { fetch: fetch as typeof globalThis.fetch },
+      )
+      expect(result.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
+      expect(result.pageCandidates).toEqual([
+        { path: "/daily", sources: ["script"] },
+      ])
+    },
+  )
 
   it("does not report completeness after reaching the resource request limit", async () => {
     const assets = Array.from({ length: 64 }, (_, index) => `/app-${index}.js`)
@@ -162,7 +181,12 @@ describe("read-only native page evidence", () => {
       navigation: { candidates: ["/profile?tab=checkin#/daily"] },
     }
     const signal = new AbortController().signal
-    const native = await collectCheckInEvidence(nativeInput, signal, options)
+    const native = await collectCheckInEvidence(nativeInput, signal, {
+      ...options,
+      navigation: {
+        candidates: ["//other.test/daily", ...options.navigation.candidates],
+      },
+    })
     expect(native.pageCandidates).toEqual([
       { path: "/profile?tab=checkin#/daily", sources: ["navigation"] },
     ])
