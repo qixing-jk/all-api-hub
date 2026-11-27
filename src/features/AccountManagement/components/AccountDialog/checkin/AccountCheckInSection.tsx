@@ -46,6 +46,7 @@ import { AccountFormSection } from "~/features/AccountManagement/components/Acco
 import {
   ACCOUNT_FORM_MOBILE_DEFAULT_OPEN,
   ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+  ACCOUNT_FORM_SECTIONS,
 } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
@@ -66,7 +67,7 @@ const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
 const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
 
 const ACCOUNT_CHECK_IN_TARGET_IDS = {
-  section: ACCOUNT_FORM_SECTION_ELEMENT_IDS["check-in"],
+  section: ACCOUNT_FORM_SECTION_ELEMENT_IDS[ACCOUNT_FORM_SECTIONS.CHECK_IN],
   feedback: "account-check-in-feedback",
   method: "account-check-in-method",
   automaticExecution: "account-check-in-automatic-execution",
@@ -190,7 +191,9 @@ export function AccountCheckInSection({
     <AccountFormSection
       continuous={continuous}
       title={t("sections.checkInConfig.title")}
-      defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
+      defaultOpen={
+        ACCOUNT_FORM_MOBILE_DEFAULT_OPEN[ACCOUNT_FORM_SECTIONS.CHECK_IN]
+      }
       testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
       id={ACCOUNT_CHECK_IN_TARGET_IDS.section}
     >

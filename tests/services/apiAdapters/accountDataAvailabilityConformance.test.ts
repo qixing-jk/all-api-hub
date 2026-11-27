@@ -115,6 +115,54 @@ const kimiConsoleOriginBySiteType: Partial<Record<AccountSiteType, string>> = {
   [SITE_TYPES.KIMI_GLOBAL]: "https://platform.kimi.ai",
 }
 
+const compatibleQuotaFixture = {
+  baseUrl: "https://new-api-family.example.invalid",
+  authType: AuthTypeEnum.AccessToken,
+  expectedAvailability: {
+    consumption: nativeOnly,
+    requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    income: nativeOnly,
+  },
+  handlers: [
+    http.get("https://new-api-family.example.invalid/api/user/self", () =>
+      HttpResponse.json({
+        success: true,
+        message: "",
+        data: { id: "user-1", quota: 100 },
+      }),
+    ),
+    http.get("https://new-api-family.example.invalid/api/log/self/stat", () => {
+      collectedRequests.newApiStat += 1
+      return HttpResponse.json({
+        success: true,
+        message: "",
+        data: { quota: 25 },
+      })
+    }),
+    http.get(
+      "https://new-api-family.example.invalid/api/log/self",
+      ({ request }) => {
+        collectedRequests.newApiIncome += 1
+        const isDoneHub = new URL(request.url).searchParams.has("log_type")
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: isDoneHub
+            ? { data: [], total_count: 0 }
+            : new URL(request.url).searchParams.has("pageSize")
+              ? []
+              : { items: [], total: 0 },
+        })
+      },
+    ),
+  ],
+  expectRequests: (snapshotCount: number) => {
+    expect(collectedRequests.newApiStat).toBe(snapshotCount)
+    expect(collectedRequests.newApiIncome).toBe(snapshotCount * 2)
+  },
+} satisfies ProducerFixture
+
 const producerFixturesByFamily = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen]: {
     baseUrl: "https://free.supxh.xin",
@@ -473,54 +521,8 @@ const producerFixturesByFamily = {
       expect(collectedRequests.freeModelAccount).toBe(snapshotCount)
     },
   },
-  [ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily]: {
-    baseUrl: "https://new-api-family.example.invalid",
-    authType: AuthTypeEnum.AccessToken,
-    expectedAvailability: {
-      consumption: nativeOnly,
-      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
-      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
-      income: nativeOnly,
-    },
-    handlers: [
-      http.get("https://new-api-family.example.invalid/api/user/self", () =>
-        HttpResponse.json({
-          success: true,
-          message: "",
-          data: { quota: 100 },
-        }),
-      ),
-      http.get(
-        "https://new-api-family.example.invalid/api/log/self/stat",
-        () => {
-          collectedRequests.newApiStat += 1
-          return HttpResponse.json({
-            success: true,
-            message: "",
-            data: { quota: 25 },
-          })
-        },
-      ),
-      http.get(
-        "https://new-api-family.example.invalid/api/log/self",
-        ({ request }) => {
-          collectedRequests.newApiIncome += 1
-          const isDoneHub = new URL(request.url).searchParams.has("log_type")
-          return HttpResponse.json({
-            success: true,
-            message: "",
-            data: isDoneHub
-              ? { data: [], total_count: 0 }
-              : { items: [], total: 0 },
-          })
-        },
-      ),
-    ],
-    expectRequests: (snapshotCount: number) => {
-      expect(collectedRequests.newApiStat).toBe(snapshotCount)
-      expect(collectedRequests.newApiIncome).toBe(snapshotCount * 2)
-    },
-  },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily]: compatibleQuotaFixture,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily]: compatibleQuotaFixture,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api]: {
     baseUrl: "https://sub2api.example.invalid",
     authType: AuthTypeEnum.AccessToken,

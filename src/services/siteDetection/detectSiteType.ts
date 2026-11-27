@@ -4,7 +4,7 @@ import {
   getAccountSiteDomainRules,
   getAccountSiteTitleRules,
 } from "~/services/accountSiteOnboarding/registry"
-import { fetchSiteStatus } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import { readPublicSiteStatus } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -30,6 +30,7 @@ const COMPAT_USER_ID_HEADER_MESSAGE_RULES =
     ),
   }))
 const VOAPI_V2_USER_INFO_ENDPOINT = "/api/user/info"
+const PUBLIC_STATUS_TIMEOUT_MS = 5_000
 
 /**
  * Fetch the raw HTML title from the site root.
@@ -301,11 +302,22 @@ const RIX_API_STATUS_SIGNATURE_FIELDS = [
   "rix_license_enabled",
 ] as const
 
+// Observed on the Shell demo, APIyi and LaoZhang. The boolean indicates a
+// feature setting. Its presence identifies the protocol even when disabled.
+const SHELL_API_STATUS_MARKER = "ShellApiLogOptimizerEnabled"
+const SHELL_API_STATUS_AUXILIARY_FIELDS = [
+  "CustomThemeConfig",
+  "CustomDarkThemeConfig",
+  "CustomAppList",
+] as const
+
 interface PublicSiteStatusSignals {
   /** Operator-configured brand, used by the shared title rules. */
   systemName?: string
   /** Whether the deployment reports the RixAPI licence signature. */
   identifiesRixApi: boolean
+  identifiesShellApi: boolean
+  shellAuxiliaryFields?: string[]
 }
 
 /**
@@ -321,14 +333,18 @@ async function fetchPublicSiteStatusSignals(
   url: string,
   protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<PublicSiteStatusSignals> {
-  const noSignals: PublicSiteStatusSignals = { identifiesRixApi: false }
+  const noSignals: PublicSiteStatusSignals = {
+    identifiesRixApi: false,
+    identifiesShellApi: false,
+  }
 
   const readSignals = async (attempt?: ProtectionBypassExecution) => {
-    const siteStatus = await fetchSiteStatus(
+    const siteStatus = await readPublicSiteStatus(
       bindApiTransportRequest(
         {
           baseUrl: new URL("/", url).toString(),
           auth: { authType: AuthTypeEnum.None },
+          requestTimeoutMs: PUBLIC_STATUS_TIMEOUT_MS,
           ...(attempt ? { protectionBypassExecution: attempt } : {}),
         },
         API_DIRECT_REQUEST_REASONS.CallerManaged,
@@ -336,18 +352,29 @@ async function fetchPublicSiteStatusSignals(
     )
     if (!siteStatus) return noSignals
 
-    const rawStatus = siteStatus as unknown as Record<string, unknown>
     const systemName =
       typeof siteStatus.system_name === "string" &&
       siteStatus.system_name.trim()
         ? siteStatus.system_name
         : undefined
 
+    const identifiesShellApi =
+      Object.hasOwn(siteStatus, SHELL_API_STATUS_MARKER) &&
+      typeof siteStatus[SHELL_API_STATUS_MARKER] === "boolean"
+
     return {
       ...(systemName ? { systemName } : {}),
       identifiesRixApi: RIX_API_STATUS_SIGNATURE_FIELDS.some((field) =>
-        Object.hasOwn(rawStatus, field),
+        Object.hasOwn(siteStatus, field),
       ),
+      identifiesShellApi,
+      ...(identifiesShellApi && {
+        shellAuxiliaryFields: SHELL_API_STATUS_AUXILIARY_FIELDS.filter(
+          (field) =>
+            Object.hasOwn(siteStatus, field) &&
+            typeof siteStatus[field] === "string",
+        ),
+      }),
     }
   }
 
@@ -358,6 +385,8 @@ async function fetchPublicSiteStatusSignals(
       url,
       systemName: signals.systemName,
       identifiesRixApi: signals.identifiesRixApi,
+      identifiesShellApi: signals.identifiesShellApi,
+      shellAuxiliaryFields: signals.shellAuxiliaryFields,
     })
     return signals
   }
@@ -410,33 +439,50 @@ export const getAccountSiteType = async (
     return domainSiteType
   }
 
+  const statusRead = fetchPublicSiteStatusSignals(
+    url,
+    protectionBypassExecution,
+  )
   const voApiV2SiteType = await detectVoApiV2FromProtectedEndpoint(url)
-  if (voApiV2SiteType !== SITE_TYPES.UNKNOWN) {
-    return voApiV2SiteType
+  const protectedSiteType =
+    voApiV2SiteType !== SITE_TYPES.UNKNOWN
+      ? voApiV2SiteType
+      : await detectSub2ApiFromAuthEndpoint(url)
+
+  if (protectedSiteType !== SITE_TYPES.UNKNOWN) {
+    return (await statusRead).identifiesShellApi
+      ? SITE_TYPES.UNKNOWN
+      : protectedSiteType
   }
 
-  const sub2ApiSiteType = await detectSub2ApiFromAuthEndpoint(url)
-  if (sub2ApiSiteType !== SITE_TYPES.UNKNOWN) {
-    return sub2ApiSiteType
-  }
-
-  // The public status name is operator-configured while a white-label shell keeps
-  // the stock title, so resolve both and let the name win over the title. The same
-  // response carries the RixAPI licence signature, which outranks both: a branded
-  // status name only helps when the operator kept the fork's own brand.
   const [title, publicSiteStatus] = await Promise.all([
-    fetchSiteOriginalTitle(url, protectionBypassExecution),
-    fetchPublicSiteStatusSignals(url, protectionBypassExecution),
+    fetchSiteOriginalTitle(url, protectionBypassExecution).then(
+      (value) => ({ value }),
+      (error: unknown) => ({ error }),
+    ),
+    statusRead,
   ])
 
+  // An unavailable title does not invalidate independent Shell status evidence.
+  if ("error" in title && !publicSiteStatus.identifiesShellApi)
+    throw title.error
+
   if (publicSiteStatus.identifiesRixApi) {
-    return SITE_TYPES.RIX_API
+    return publicSiteStatus.identifiesShellApi
+      ? SITE_TYPES.UNKNOWN
+      : SITE_TYPES.RIX_API
   }
 
   const identifyingTextSiteType = matchFirstIdentifyingText(
     publicSiteStatus.systemName,
-    title,
+    "value" in title ? title.value : undefined,
   )
+  if (publicSiteStatus.identifiesShellApi) {
+    return identifyingTextSiteType === SITE_TYPES.LAOZHANG
+      ? identifyingTextSiteType
+      : SITE_TYPES.SHELL_API
+  }
+
   if (identifyingTextSiteType !== SITE_TYPES.UNKNOWN) {
     return identifyingTextSiteType
   }

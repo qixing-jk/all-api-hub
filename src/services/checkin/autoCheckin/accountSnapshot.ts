@@ -10,9 +10,8 @@ import {
   resolveLoginProviderOwners,
 } from "~/services/accountLogin/providerClaims"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { isCheckInMethodStatusCurrent } from "~/services/checkin/autoCheckin/domain"
 import { inspectSelectedCheckInCompatibility } from "~/services/checkin/autoCheckin/methods"
-import { getCheckInMethodStatusPeriodKey } from "~/services/checkin/autoCheckin/providers/registry"
 import { toAutoCheckinSkipReason } from "~/services/checkin/autoCheckin/skipReasons"
 import type { SiteAccount } from "~/types"
 import {
@@ -40,11 +39,9 @@ export function buildAutoCheckinAccountSnapshot(
   const detectionEnabled =
     selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
   const autoCheckinEnabled = account.checkIn.automaticExecutionEnabled
-  const selectedStatus = getSelectedCheckInStatus({
-    config: account.checkIn,
-    siteType: account.site_type,
-    siteUrl: account.site_url,
-  })
+  const selectedStatus = detectionEnabled
+    ? account.checkIn.methodKnowledge.methods[selectionState.methodId]?.status
+    : undefined
 
   const executionEligibility = compatibility.state.executionEligibility
   let skipReason: AutoCheckinSkipReason | undefined =
@@ -60,28 +57,10 @@ export function buildAutoCheckinAccountSnapshot(
         : AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
   }
 
-  let isCheckedInToday =
-    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-      ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
-      : undefined
-  if (
+  const checkInStatusIsCurrent =
     selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected &&
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-    "observedAt" in selectedStatus.evidence
-  ) {
-    const period = getCheckInMethodStatusPeriodKey(
-      selectionState.methodId,
-      selectedStatus.evidence.observedAt,
-    )
-    if (
-      period !== undefined &&
-      period !==
-        getCheckInMethodStatusPeriodKey(selectionState.methodId, Date.now())
-    ) {
-      // A prior protocol period is unknown now, not evidence of an unchecked claim.
-      isCheckedInToday = undefined
-    }
-  }
+    isCheckInMethodStatusCurrent(selectionState.methodId, selectedStatus)
 
   return {
     accountId: account.id,
@@ -91,7 +70,10 @@ export function buildAutoCheckinAccountSnapshot(
     autoCheckinEnabled,
     providerAvailable,
     // Display-only field: DO NOT use this for eligibility decisions (provider outcomes are the source of truth).
-    isCheckedInToday,
+    isCheckedInToday:
+      checkInStatusIsCurrent && selectedStatus?.today !== undefined
+        ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
+        : undefined,
     lastCheckInDate:
       selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
       selectedStatus.evidence.source ===

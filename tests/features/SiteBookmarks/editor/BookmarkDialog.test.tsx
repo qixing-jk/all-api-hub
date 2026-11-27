@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import BookmarkDialog from "~/features/SiteBookmarks/editor/BookmarkDialog"
@@ -31,6 +32,7 @@ const createDeferred = <T,>() => {
 const {
   addBookmarkMock,
   getActiveTabMock,
+  getAllTabsMock,
   getSiteNameMock,
   updateBookmarkMock,
   toastSuccessMock,
@@ -41,6 +43,7 @@ const {
 } = vi.hoisted(() => ({
   addBookmarkMock: vi.fn().mockResolvedValue("bookmark-1"),
   getActiveTabMock: vi.fn(),
+  getAllTabsMock: vi.fn(),
   getSiteNameMock: vi.fn(),
   updateBookmarkMock: vi.fn().mockResolvedValue(true),
   toastSuccessMock: vi.fn(),
@@ -66,7 +69,11 @@ vi.mock("~/lib/notify", () => ({
 
 vi.mock("~/utils/browser/tabs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
-  return { ...actual, getActiveTab: getActiveTabMock }
+  return {
+    ...actual,
+    getActiveTab: getActiveTabMock,
+    getAllTabs: getAllTabsMock,
+  }
 })
 
 vi.mock("~/services/accounts/identity/siteName", () => ({
@@ -151,6 +158,7 @@ beforeEach(() => {
   vi.useRealTimers()
   addBookmarkMock.mockClear()
   getActiveTabMock.mockReset()
+  getAllTabsMock.mockReset().mockResolvedValue([])
   getActiveTabMock.mockResolvedValue({
     title: "Current Admin",
     url: "https://example.com/console",
@@ -193,6 +201,59 @@ const expectDialogClosedBeforeReload = (onClose: ReturnType<typeof vi.fn>) => {
 }
 
 describe("BookmarkDialog", () => {
+  it.each([
+    { title: "  Tab Guide  ", initialName: "  ", expectedName: "Tab Guide" },
+    { title: "  ", initialName: "", expectedName: "docs.example" },
+    { title: "Tab Guide", initialName: "My docs", expectedName: "My docs" },
+  ])(
+    "picks the full tab URL and saves it as $expectedName",
+    async ({ title, initialName, expectedName }) => {
+      const url = "https://docs.example:8443/guide?language=en#start"
+      getAllTabsMock.mockResolvedValue([
+        { url, title, favIconUrl: "https://docs.example/icon.png" },
+      ])
+      const user = userEvent.setup()
+      renderAddDialog()
+
+      const nameInput = await screen.findByPlaceholderText(
+        "bookmark:form.namePlaceholder",
+      )
+      const submit = screen.getByRole("button", {
+        name: "bookmark:actions.add",
+      })
+      await user.click(submit)
+      expect(screen.getByText("bookmark:validation.nameRequired")).toBeVisible()
+      expect(screen.getByText("bookmark:validation.urlRequired")).toBeVisible()
+      fireEvent.change(nameInput, { target: { value: initialName } })
+      await user.click(
+        await screen.findByRole("button", {
+          name: "bookmark:form.recentTabSites",
+        }),
+      )
+      const option = await screen.findByRole("option", {
+        name: /https:\/\/docs\.example:8443/,
+      })
+      expect(option.querySelector("img")).toHaveAttribute(
+        "src",
+        "https://docs.example/icon.png",
+      )
+      await user.click(option)
+
+      expect(nameInput).toHaveValue(expectedName)
+      expect(
+        screen.getByRole("combobox", { name: /bookmark:form.urlLabel/ }),
+      ).toHaveValue(url)
+      expect(screen.queryByText("bookmark:validation.nameRequired")).toBeNull()
+      expect(screen.queryByText("bookmark:validation.urlRequired")).toBeNull()
+      await user.click(submit)
+      await waitFor(() =>
+        expect(addBookmarkMock).toHaveBeenCalledWith(
+          expect.objectContaining({ name: expectedName, url }),
+        ),
+      )
+    },
+  )
+
   it("validates required fields before submitting", async () => {
     const onClose = vi.fn()
 
@@ -320,10 +381,46 @@ describe("BookmarkDialog", () => {
     expect(getSiteNameMock).toHaveBeenCalledTimes(1)
   })
 
+  it("lets bookmarks use the current page or choose another page on the same site", async () => {
+    const user = userEvent.setup()
+    const otherUrl = "https://example.com/guide?view=full#setup"
+    getAllTabsMock.mockResolvedValue([
+      {
+        title: "Current Admin",
+        url: "https://example.com/console",
+        lastAccessed: 2,
+      },
+      { title: "Guide", url: otherUrl, lastAccessed: 1 },
+    ])
+    renderAddDialog()
+
+    const chooser = await screen.findByRole("button", {
+      name: "bookmark:form.recentTabSites",
+    })
+    const currentPage = screen.getByRole("button", {
+      name: "bookmark:dialog.useCurrentPage",
+    })
+    await waitFor(() => expect(currentPage).toBeEnabled())
+    await user.click(currentPage)
+    const url = screen.getByRole("combobox", {
+      name: /^bookmark:form.urlLabel/,
+    })
+    expect(url).toHaveValue("https://example.com/console")
+
+    await user.click(chooser)
+    await user.click(
+      await screen.findByRole("option", { name: `Guide — ${otherUrl}` }),
+    )
+    expect(url).toHaveValue(otherUrl)
+    expect(screen.getByDisplayValue("Current Admin")).toBeInTheDocument()
+
+    await user.click(currentPage)
+    expect(url).toHaveValue("https://example.com/console")
+  })
+
   it("does not show unavailable text while current page data is still loading", async () => {
     let resolveTab:
-      | ((value: { title: string; url: string }) => void)
-      | undefined
+      ((value: { title: string; url: string }) => void) | undefined
 
     getActiveTabMock.mockReturnValue(
       new Promise((resolve) => {

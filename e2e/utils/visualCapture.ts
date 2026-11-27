@@ -13,6 +13,7 @@ async function captureVisualCheckpoint({
   extensionDir,
   animations = "disabled",
   isContext = false,
+  waitForAnimationFrames = true,
 }: {
   page: Page
   ready: Locator
@@ -22,17 +23,19 @@ async function captureVisualCheckpoint({
   extensionDir: string
   animations?: "disabled" | "allow"
   isContext?: boolean
+  waitForAnimationFrames?: boolean
 }) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u.test(id))
     throw new Error("Visual checkpoint ID must be a safe filename")
   await ready.waitFor({ state: "visible" })
   await ready.scrollIntoViewIfNeeded()
-  await page.evaluate(async () => {
+  await page.evaluate(async (waitForAnimationFrames) => {
     await document.fonts.ready
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    )
-  })
+    if (waitForAnimationFrames)
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      )
+  }, waitForAnimationFrames)
   const environment = await page.evaluate(() => ({
     viewport: { width: innerWidth, height: innerHeight },
     deviceScaleFactor: devicePixelRatio,
@@ -84,6 +87,7 @@ async function captureVisualCheckpoint({
       isContext: true,
       extensionDir,
       animations,
+      waitForAnimationFrames,
     })
   }
 }
@@ -106,6 +110,7 @@ export async function captureVisualViews({
   views,
   beforeCapture,
   animations = "disabled",
+  waitForAnimationFrames = true,
 }: {
   page: Page
   ready: Locator
@@ -117,6 +122,8 @@ export async function captureVisualViews({
   views?: VisualView[]
   beforeCapture?: () => Promise<void>
   animations?: "disabled" | "allow"
+  /** Skip the frame wait when the test is holding the page clock paused. */
+  waitForAnimationFrames?: boolean
 }) {
   if (!directory) return
   const configured = process.env.AAH_VISUAL_CAPTURE_VIEWS
@@ -137,6 +144,7 @@ export async function captureVisualViews({
       id,
       extensionDir,
       animations,
+      waitForAnimationFrames,
     })
     return
   }
@@ -172,6 +180,7 @@ export async function captureVisualViews({
         id: `${id}-${view.id}`,
         extensionDir,
         animations,
+        waitForAnimationFrames,
       })
     }
   } finally {

@@ -351,7 +351,7 @@ describe("Clawhud check-in protocol", () => {
     expect(fetchApiResponse).toHaveBeenCalledTimes(1)
     expect(fetchApiResponse).toHaveBeenCalledWith(expect.anything(), {
       endpoint: "/api/v1/user/checkin",
-      options: { method: "POST", cache: "no-store" },
+      options: { method: "POST", cache: "no-store", redirect: "error" },
     })
   })
 

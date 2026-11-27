@@ -16,6 +16,7 @@ import { type ProtectionBypassExecution } from "~/services/protectionBypass/cont
 import { starPromotionState } from "~/services/starPromotion/state"
 import { type SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { CheckInMethodId } from "~/types/checkIn"
 import { type TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -162,6 +163,7 @@ class AccountCheckinRunWorkflow {
     loginProviderOwners: ReadonlyMap<AccountLoginProvider, SiteAccount>
     allowAutomaticDiscovery?: boolean
     requireAutomaticExecution?: boolean
+    selectedConfirmations?: ReadonlyMap<string, CheckInMethodId>
   }): Promise<AccountCheckinExecutionOutcome[]> {
     return Promise.all(
       params.accounts.map(async (account) => {
@@ -176,6 +178,9 @@ class AccountCheckinRunWorkflow {
             {
               allowAutomaticDiscovery: params.allowAutomaticDiscovery,
               requireAutomaticExecution: params.requireAutomaticExecution,
+              confirmAfterDiscovery: params.selectedConfirmations?.get(
+                account.id,
+              ),
               loginProviderOwners: params.loginProviderOwners,
             },
           )

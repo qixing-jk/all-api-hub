@@ -41,7 +41,7 @@ The linked repositories, vendor documentation and consoles are starting points f
 
 ### One API lineage and New API-compatible account types
 
-These types currently use the `NewApiFamily` account adapter. The [variant registration](../../src/services/apiAdapters/newApi/variantRegistration.ts) selects local behavior; [protocol variants](../../src/services/apiService/newApiFamily/variants/) own wire differences. New API, Veloera and DoneHub also have managed-site integrations, whose contracts must be assessed separately.
+These types use either the `NewApiFamily` or `ShellApiFamily` account adapter. Shell API, APIYI and LaoZhang use the [Shell variant registration](../../src/services/apiAdapters/shellApi/variantRegistration.ts) and [Shell protocols](../../src/services/apiService/shellApiFamily/). The remaining types use the [New API variant registration](../../src/services/apiAdapters/newApi/variantRegistration.ts) and [New API protocol variants](../../src/services/apiService/newApiFamily/variants/). Both families reuse [compatible account capabilities](../../src/services/apiAdapters/compatibleCapabilities.ts), with family identity and login policy selected separately. New API, Veloera and DoneHub also have managed-site integrations, whose contracts must be assessed separately.
 
 The established lineage is One API → New API → Veloera, and One API → OneHub → DoneHub. Other rows distinguish documented derivation from compatibility classifications.
 
@@ -49,8 +49,9 @@ The established lineage is One API → New API → Veloera, and One API → OneH
 | --- | --- | --- | --- |
 | `one-api` | Account | Original One API upstream; sharing the account adapter with descendants does not add their managed-site features. | [Repository](https://github.com/songquanpeng/one-api) |
 | `new-api` | Account + managed | Downstream of One API. Credential generations differ by deployment; retain one type and select the verified protocol. | [Repository](https://github.com/QuantumNous/new-api) · [Documentation](https://docs.newapi.ai/) |
-| `apiyi` | Account | Hosted account service with New API-compatible behavior and its own console conventions. Compatibility does not establish a shared account service with other providers. | [Console](https://api.apiyi.com/) |
-| `laozhang` | Account | Independent hosted account service. Its four console aliases share accounts; APIyi-like pricing/group behavior does not make LaoZhang and APIyi accounts interchangeable. | [Console](https://api.laozhang.ai/) · [API manual and alternate domains](https://docs.laozhang.ai/api-manual) · [Registered aliases](../../src/services/accountSiteDefinitions/identifiers.ts) |
+| `shell-api` | Account | Shell API is a One API derivative. The generic type recognizes the public boolean Shell status marker and tries shared protocols for verified System Token or user-selected Cookie authentication, balances, usage and income, API keys, model pricing, invitations, and redemption. The extension assumes 500,000 quota per USD for compatibility. Deployments using a different quota scale can display incorrect USD amounts. Failed endpoints surface an error or unavailable state. | [Public repository](https://github.com/akl7777777/shell-api) |
+| `apiyi` | Account | Hosted Shell API-compatible relay with its own account and credential scope. Uses the Shell family with its compatible token pagination. | [Console](https://api.apiyi.com/) |
+| `laozhang` | Account | Independent hosted Shell API-compatible relay. Its four console aliases share accounts. Shell family overrides preserve its log paging, native key fields, check-in flag, referral URL and notice formats. | [Console](https://api.laozhang.ai/) · [API manual and alternate domains](https://docs.laozhang.ai/api-manual) · [Registered aliases](../../src/services/accountSiteDefinitions/identifiers.ts) |
 | `ModelFlare` | Account | Deployment compatibility type with its own cookie authentication and account-header requirements; ordinary New API token behavior is not assumed. | [Console](https://modelflare.dev/) |
 | `anyrouter` | Account | New API-compatible account integration with provider-specific authentication/check-in behavior; exact upstream lineage is not asserted. | [Documentation](https://docs.anyrouter.top/) |
 | `Veloera` | Account + managed | Downstream of New API, with account and managed-site overrides. | [Repository](https://github.com/Veloera/Veloera) |
@@ -63,7 +64,7 @@ The established lineage is One API → New API → Veloera, and One API → OneH
 | `neo-Api` | Account | New API-family compatibility classification; exact derivation and degree of modification are unverified. | No verified public upstream reference recorded; obtain the target deployment |
 | `wong-gongyi` | Account | New API-family compatibility type with provider-specific check-in handling; exact lineage is not asserted. | No stable verified public upstream reference recorded; obtain the target deployment |
 
-`unknown` is an account fallback classification using the same family, not a named upstream backend or evidence of compatibility.
+`unknown` is an account fallback classification using `NewApiFamily`, not a named upstream backend or evidence of compatibility.
 
 ### Types with dedicated account adapters
 
@@ -321,6 +322,16 @@ Source: upstream GitHub repository API `stargazers_count`, retrieved together on
 | [VoAPI/VoAPI](https://github.com/VoAPI/VoAPI) | 1,092 |
 | [deanxv/done-hub](https://github.com/deanxv/done-hub) | 809 |
 | [SuperAI-Api/Super-API](https://github.com/SuperAI-Api/Super-API) | 116 |
+
+### Shell API placement snapshot (2026-11-24)
+
+GitHub's repository API returned the following counts in the same retrieval batch. These are the adjacent entries compared for Shell API's catalog position.
+
+| Upstream repository | GitHub stars |
+| --- | ---: |
+| [deanxv/done-hub](https://github.com/deanxv/done-hub) | 816 |
+| [akl7777777/shell-api](https://github.com/akl7777777/shell-api) | 152 |
+| [SuperAI-Api/Super-API](https://github.com/SuperAI-Api/Super-API) | 117 |
 
 APIyi, ModelFlare and v-api have no comparable repository identified in the curated catalog. Cursor++ likewise has a curated website but no comparable repository identified there; it follows the ranked editor tools. These entries retain their existing relative order after ranked entries.
 

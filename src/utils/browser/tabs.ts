@@ -102,6 +102,11 @@ export async function getTab(tabId: number): Promise<browser.tabs.Tab> {
   return await browser.tabs.get(tabId)
 }
 
+/** Resolve the calling extension tab without substituting an unrelated active tab. */
+export async function getCurrentTab(): Promise<browser.tabs.Tab | undefined> {
+  return await browser.tabs.getCurrent()
+}
+
 /**
  * Reloads a tab by id.
  * @param tabId Target tab ID.

@@ -13,6 +13,7 @@ import {
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { fetchNexaVlinksDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/nexavlinksCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_TRANSPORT_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
@@ -145,6 +146,85 @@ const checkInWithStatusProof = () =>
   })
 
 describe("NexaVlinks check-in integration", () => {
+  it.each([
+    {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+      origin: CONSOLE_ORIGIN,
+      tabId: 7,
+    },
+    {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+      incognito: true,
+    },
+    {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+      cookieStoreId: "firefox-container-2",
+    },
+  ] as const)(
+    "leaves the claim to its signed-in page when the native action cannot open %j",
+    async (fetchContext) => {
+      const status = vi
+        .mocked(fetchNexaVlinksDailyCheckInStatus)
+        .mockImplementationOnce(async (_, auth) => {
+          expect(auth?.allowAuthenticationRecovery).toBe(true)
+          auth?.onAuthenticatedTransport?.({ fetchContext })
+          return notCheckedStatus
+        })
+      const outcome = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      })
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result: {
+          status: "failed",
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+          messageParams: { checkInUrl: CHECK_IN_URL },
+        },
+      })
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(status.mock.calls.at(-1)?.[0]).toMatchObject({ fetchContext })
+    },
+  )
+
+  it("verifies the expected user on a default temporary page and polls through the admitted transport", async () => {
+    const fetchContext = {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+    }
+    const status = vi
+      .mocked(fetchNexaVlinksDailyCheckInStatus)
+      .mockImplementationOnce(async (_, auth) => {
+        auth?.onAuthenticatedTransport?.({
+          forceTempWindow: true,
+          fetchContext,
+        })
+        return notCheckedStatus
+      })
+      .mockResolvedValueOnce({ enabled: true, checkedInToday: true })
+    await expect(
+      executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      }),
+    ).resolves.toMatchObject({
+      kind: "executed",
+      result: { status: "success" },
+    })
+    expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        expectedUserId: "6262",
+        pageUrl: CHECK_IN_URL,
+      }),
+    )
+    expect(status.mock.calls.at(-1)?.[0]).toMatchObject({
+      forceTempWindow: true,
+      fetchContext,
+      observer: undefined,
+    })
+  })
+
   it("keeps a native click unconfirmed when both final reads cross a day boundary", async () => {
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))

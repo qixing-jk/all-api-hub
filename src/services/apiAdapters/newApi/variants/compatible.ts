@@ -1,6 +1,6 @@
+import type { CompatibleAccountVariant } from "../../compatibleAccountVariantContract"
 import { compatibleTokenInventoryOverrides } from "../variantOperations/key"
-import type { NewApiVariantRegistration } from "../variantRegistration"
 
-export const compatibleVariant: NewApiVariantRegistration = {
+export const compatibleVariant: CompatibleAccountVariant = {
   key: { transport: compatibleTokenInventoryOverrides },
 }

@@ -84,6 +84,15 @@ export type AutoCheckinProviderReadiness =
 
 /** Executable compatibility contract for a registered check-in method. */
 export interface AutoCheckinProvider {
+  /** Share transient resources between admission, submission and readback for one attempt. */
+  forExecution?: (context: AutoCheckinProviderContext) => Required<
+    Pick<AutoCheckinProvider, "getStatus" | "checkIn">
+  > & {
+    /** User verification or execution admission may renew credentials on the first status read. */
+    getAuthenticatedStatus: NonNullable<AutoCheckinProvider["getStatus"]>
+    /** Reconfirm an imported selection within the same authenticated execution. */
+    detect?: AutoCheckinProvider["detect"]
+  }
   /** Maps provider-specific status errors for both discovery and execution. */
   classifyStatusError?: (error: unknown) => CheckInMethodUnknownReason
   /**

@@ -1,7 +1,6 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
@@ -9,6 +8,7 @@ import {
   FREE_API_CHECK_IN_ENDPOINT,
   resolveFreeApiCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/freeApiCheckInProtocol"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   classifySiblingStatusDto,
   SIBLING_DTO_VERDICTS,
@@ -22,6 +22,11 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 export const FREE_API_DAILY_CHECK_IN_RESULT_KINDS = {
   Applied: NATIVE_RESOURCE_MUTATION_CERTAINTIES.Applied,
@@ -98,11 +103,12 @@ export function parseFreeApiDailyCheckInMutationResponse(
 /** Reads deployment status with the same timezone query as its dashboard. */
 export async function fetchFreeApiDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
   const endpoint = createFreeApiDailyCheckInStatusEndpoint(
     resolveFreeApiCheckInTimezone(),
   )
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     FREE_API_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -112,11 +118,7 @@ export async function fetchFreeApiDailyCheckInStatus(
       })
       return parseFreeApiDailyCheckInStatusResponse(response)
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    auth,
   )
 }
 
@@ -133,10 +135,10 @@ export async function performFreeApiDailyCheckIn(
     request,
     FREE_API_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: FREE_API_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        FREE_API_CHECK_IN_ENDPOINT,
+      )
       return parseFreeApiDailyCheckInMutationResponse(response)
     },
     fetchFreeApiDailyCheckInStatus,

@@ -22,7 +22,9 @@ import {
   selectCurrentRunResults,
   updateSnapshotWithResult,
 } from "~/services/checkin/autoCheckin/execution/runResults"
+import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { mergeRunResults } from "~/services/checkin/autoCheckin/scheduling/retryQueue"
+import { canConfirmSelectedCheckInMethod } from "~/services/checkin/autoCheckin/skipReasons"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -43,6 +45,7 @@ import {
   type AutoCheckinStatus,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
+import type { CheckInMethodId } from "~/types/checkIn"
 import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
@@ -225,6 +228,7 @@ export async function runCheckins(options: {
         )
       : availableAccounts
     const preparationFailedIds = new Set<string>()
+    const selectedConfirmations = new Map<string, CheckInMethodId>()
     if (isDailyRun) {
       // Unselected automatic accounts must reach discovery before readiness
       // filtering. Probes retain the normal transport's per-site limits.
@@ -236,6 +240,11 @@ export async function runCheckins(options: {
             isAutomaticExecutionEnabled: () => isAutomaticExecutionEnabled(),
           })
           if (!prepared.account) preparationFailedIds.add(account.id)
+          if (prepared.confirmSelectedMethod)
+            selectedConfirmations.set(
+              account.id,
+              prepared.confirmSelectedMethod,
+            )
           return prepared.account ?? account
         }),
       )
@@ -275,6 +284,15 @@ export async function runCheckins(options: {
         snapshot.skipReason = AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
       } else if (preparationFailedIds.has(account.id)) {
         snapshot.skipReason = AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE
+      } else if (
+        (!isDailyRun || selectedConfirmations.has(account.id)) &&
+        canConfirmSelectedCheckInMethod(snapshot.skipReason)
+      ) {
+        const methodId = account.checkIn.selection.methodId
+        const provider =
+          methodId && autoCheckinMethodRegistry.resolveById(methodId)?.provider
+        if (provider?.forExecution && provider.getReadiness(account).ready)
+          delete snapshot.skipReason
       }
       accountSnapshots.push(snapshot)
       if (!snapshot.skipReason) {
@@ -424,6 +442,7 @@ export async function runCheckins(options: {
       loginProviderOwners,
       allowAutomaticDiscovery: isDailyRun,
       requireAutomaticExecution: options.scheduledAutomaticExecution === true,
+      selectedConfirmations,
     })
 
     for (const outcome of checkinOutcomes) {

@@ -1,19 +1,25 @@
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   createHiyoCheckInStatusEndpoint,
   HIYO_CHECK_IN_ENDPOINT,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import { readSub2ApiSessionBindingMismatch } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 const toRecord = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -42,6 +48,7 @@ function parseData(response: ApiTransportResponse<unknown>) {
           : response.status === 429
             ? API_ERROR_CODES.HTTP_429
             : API_ERROR_CODES.HTTP_OTHER,
+      readSub2ApiSessionBindingMismatch(response.body),
     )
   }
   const envelope = toRecord(response.body)
@@ -88,8 +95,11 @@ function parseStatus(data: Record<string, unknown>) {
 }
 
 /** Passive discovery never renews or recovers the account credentials. */
-export async function fetchHiyoDailyCheckInStatus(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export async function fetchHiyoDailyCheckInStatus(
+  request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
+) {
+  return readAuthenticatedCheckInStatus(
     request,
     HIYO_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
@@ -99,11 +109,7 @@ export async function fetchHiyoDailyCheckInStatus(request: ApiServiceRequest) {
       })
       return parseStatus(parseData(response))
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    auth,
   )
 }
 
@@ -121,10 +127,11 @@ export async function performHiyoDailyCheckIn(
     request,
     HIYO_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: HIYO_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store", body: "{}" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        HIYO_CHECK_IN_ENDPOINT,
+        { body: "{}" },
+      )
       const data = parseData(response)
       const status = toRecord(data.status)
       if (

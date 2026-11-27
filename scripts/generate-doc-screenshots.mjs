@@ -17,11 +17,8 @@
  * Balance History use 1185x1020; key management and price comparison use
  * 1185x1080 so their representative states fit in the frame.
  *
- * The Web AI API Check modal is not an options page: it is rendered by the
- * content script into a shadow root on the host page. Those images come from
- * `e2e/docScreenshotsWebAiApiCheck.spec.ts`, which needs the E2E build
- * (`.output/chrome-mv3-test`). Build it first with `pnpm build:e2e`; pass
- * `--pages=` without `web-ai-api-check` to skip that phase.
+ * Pages registered in DOC_SCREENSHOT_E2E_SPECS use the Playwright extension
+ * fixture and need the E2E build (`pnpm build:e2e`).
  */
 
 import { spawn } from "node:child_process"
@@ -32,6 +29,7 @@ import { fileURLToPath } from "node:url"
 import { chromium } from "@playwright/test"
 
 import {
+  DOC_SCREENSHOT_E2E_SPECS,
   DOC_SCREENSHOT_LANGUAGE_ALIASES,
   DOC_SCREENSHOT_PAGES,
   DOC_SCREENSHOT_LOCALES as LOCALES,
@@ -79,18 +77,8 @@ async function setServiceWorkerStorage(serviceWorker, key, value) {
 }
 
 /** Render selected localized pages from seeded extension data and required anchors. */
-async function renderBatch(localeKey = "zh", requestedPages = null) {
+async function renderOptionsBatch(localeKey, requestedPages) {
   const locale = LOCALES[localeKey]
-  if (!locale) {
-    throw new Error(`Unsupported locale: ${localeKey}`)
-  }
-  if (requestedPages?.size === 1 && requestedPages.has("web-ai-api-check")) {
-    await captureContentScriptScreenshots(
-      localeKey,
-      path.join(screenshotOutputRoot, locale.output),
-    )
-    return
-  }
   const t = createTranslator(localeKey)
 
   console.log(
@@ -252,7 +240,7 @@ async function renderBatch(localeKey = "zh", requestedPages = null) {
       filename,
       { beforeScreenshot, scrollToSelector, frameHeight, clipHeight } = {},
     ) => {
-      if (requestedPages && !requestedPages.has(key)) return
+      if (!requestedPages.has(key)) return
 
       console.log(`Rendering [${key}] #${hash} -> ${filename}...`)
       // Open fresh tab for each page to prevent Framer Motion exit animation race conditions
@@ -673,42 +661,25 @@ async function renderBatch(localeKey = "zh", requestedPages = null) {
     await context.close()
     await fs.rm(userDataDir, { recursive: true, force: true }).catch(() => {})
   }
-
-  // The Web AI API Check modal lives in a content-script shadow root, so it
-  // cannot be reached from the options page. Drive it through the E2E harness
-  // and collect the images it writes into the same locale directory.
-  if (!requestedPages || requestedPages.has("web-ai-api-check")) {
-    await captureContentScriptScreenshots(
-      localeKey,
-      path.resolve(screenshotOutputRoot, locale.output),
-    )
-  }
 }
 
-/**
- * Render the in-page Web AI API Check modal by running its doc-capture spec.
- *
- * The spec needs the E2E build (`.output/chrome-mv3-test`) and Playwright's
- * extension fixture; both are driven through `playwright test` rather than a
- * hand-rolled launch so the content-script injection path stays identical to
- * the one the E2E suite verifies.
- */
-async function captureContentScriptScreenshots(localeKey, outputBase) {
+/** Run a doc-capture spec and collect its registered images. */
+async function captureE2eScreenshots(pageName, spec, localeKey, outputBase) {
   const shotDir = await fs.mkdtemp(
     path.join(os.tmpdir(), `wxt-doc-shot-${localeKey}-`),
   )
 
-  console.log(
-    `\nRendering [web-ai-api-check] (${localeKey}) via E2E harness...`,
-  )
+  console.log(`\nRendering [${pageName}] (${localeKey}) via E2E harness...`)
 
   try {
     await runCommand(
-      "npx",
+      process.execPath,
       [
-        "playwright",
+        path.join(root, "node_modules/@playwright/test/cli.js"),
         "test",
-        "e2e/docScreenshotsWebAiApiCheck.spec.ts",
+        spec,
+        "--project=chromium",
+        "--no-deps",
         "--reporter=line",
       ],
       {
@@ -716,20 +687,18 @@ async function captureContentScriptScreenshots(localeKey, outputBase) {
           ...process.env,
           AAH_DOC_SHOT_DIR: shotDir,
           AAH_DOC_SHOT_LOCALE: localeKey,
-          AAH_SKIP_E2E_BUILD: "1",
         },
       },
     )
 
-    const produced = (await fs.readdir(shotDir)).filter((name) =>
-      name.endsWith(".png"),
-    )
-    if (produced.length === 0) {
-      throw new Error("Web AI API Check capture produced no images")
-    }
+    const names = DOC_SCREENSHOT_PAGES[pageName]
+    const produced = new Set(await fs.readdir(shotDir))
+    const missing = names.filter((name) => !produced.has(name))
+    if (missing.length)
+      throw new Error(`${pageName} capture is missing: ${missing.join(", ")}`)
 
     await fs.mkdir(outputBase, { recursive: true })
-    for (const name of produced) {
+    for (const name of names) {
       await fs.copyFile(path.join(shotDir, name), path.join(outputBase, name))
       console.log(`  wrote ${name}`)
     }
@@ -747,7 +716,6 @@ function runCommand(command, args, { env } = {}) {
       cwd: root,
       env,
       stdio: ["ignore", "pipe", "pipe"],
-      shell: process.platform === "win32",
     })
 
     let stdout = ""
@@ -814,6 +782,10 @@ async function main() {
           DOC_SCREENSHOT_LANGUAGE_ALIASES[langArg] ??
             (Object.hasOwn(LOCALES, langArg) ? langArg : undefined),
         ]
+  const pages = [...(pagesArg ?? Object.keys(DOC_SCREENSHOT_PAGES))]
+  const optionsPages = new Set(
+    pages.filter((page) => !DOC_SCREENSHOT_E2E_SPECS.has(page)),
+  )
 
   for (const localeKey of selected) {
     if (!localeKey) {
@@ -821,7 +793,15 @@ async function main() {
         `Unsupported --lang=${langArg}; expected one of all, zh, en, ja`,
       )
     }
-    await renderBatch(localeKey, pagesArg)
+    if (optionsPages.size) await renderOptionsBatch(localeKey, optionsPages)
+    const outputBase = path.join(
+      screenshotOutputRoot,
+      LOCALES[localeKey].output,
+    )
+    for (const page of pages) {
+      const spec = DOC_SCREENSHOT_E2E_SPECS.get(page)
+      if (spec) await captureE2eScreenshots(page, spec, localeKey, outputBase)
+    }
   }
 
   console.log("\n✅ All screenshots generated successfully.")

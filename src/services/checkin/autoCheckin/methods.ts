@@ -8,10 +8,6 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
-import {
-  getSub2ApiAuthPersistenceStatus,
-  SUB2API_AUTH_PERSISTENCE_STATUSES,
-} from "~/services/apiService/sub2api/auth/authSession"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
@@ -25,9 +21,8 @@ import {
   shouldAutomaticallyDiscoverAccountCheckIn,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
 import {
-  AUTO_CHECKIN_ERROR_CATEGORIES,
   CheckInExecutionError,
-  classifyAutoCheckinError,
+  getCheckInMethodUnknownReason,
 } from "~/services/checkin/autoCheckin/errors"
 import {
   hasSameCheckInAccountIdentity,
@@ -44,6 +39,7 @@ import {
 } from "~/services/checkin/autoCheckin/providers/contracts"
 import { readProviderDetectResult } from "~/services/checkin/autoCheckin/providers/detection"
 import {
+  getCheckInResetTimeZone,
   isCheckInMethodId,
   NON_REPEAT_SAFE_CHECKIN_METHOD_IDS,
   type AutoCheckinMethodRegistration,
@@ -52,6 +48,7 @@ import type {
   AutoCheckinProviderOutcome,
   AutoCheckinProviderResult,
 } from "~/services/checkin/autoCheckin/providers/types"
+import { canConfirmSelectedCheckInMethod } from "~/services/checkin/autoCheckin/skipReasons"
 import {
   isPersistableInitialCheckInDetection,
   replaceCheckInMethodDetection,
@@ -135,43 +132,17 @@ const resolveSelectedCheckInRegistration = (input: {
 
 const toStatusReadSkipReason = (
   error: unknown,
-  classifyStatusError?: AutoCheckinProvider["classifyStatusError"],
+  classifyStatusError: NonNullable<
+    AutoCheckinProvider["classifyStatusError"]
+  > = getCheckInMethodUnknownReason,
 ): CheckInExecutionSkipReason => {
-  const persistenceStatus = getSub2ApiAuthPersistenceStatus(error)
-  if (
-    persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH
-  ) {
-    return CHECK_IN_EXECUTION_SKIP_REASONS.AuthenticationRequired
-  }
-  if (
-    persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING ||
-    persistenceStatus === SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED
-  ) {
-    return CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable
-  }
   if (
     error instanceof ApiError &&
     (error.statusCode === 404 || error.statusCode === 405)
   ) {
     return CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported
   }
-  if (classifyStatusError) {
-    return toUnknownStatusSkipReason(classifyStatusError(error))
-  }
-  switch (classifyAutoCheckinError(error)) {
-    case AUTO_CHECKIN_ERROR_CATEGORIES.AuthenticationRequired:
-      return CHECK_IN_EXECUTION_SKIP_REASONS.AuthenticationRequired
-    case AUTO_CHECKIN_ERROR_CATEGORIES.Network:
-      return CHECK_IN_EXECUTION_SKIP_REASONS.NetworkError
-    case AUTO_CHECKIN_ERROR_CATEGORIES.PermissionDenied:
-      return CHECK_IN_EXECUTION_SKIP_REASONS.PermissionDenied
-    case AUTO_CHECKIN_ERROR_CATEGORIES.SourceUnavailable:
-      return CHECK_IN_EXECUTION_SKIP_REASONS.SourceUnavailable
-    case AUTO_CHECKIN_ERROR_CATEGORIES.Timeout:
-      return CHECK_IN_EXECUTION_SKIP_REASONS.Timeout
-    default:
-      return CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable
-  }
+  return toUnknownStatusSkipReason(classifyStatusError(error))
 }
 
 const canRetryStatusConfirmationFailure = (
@@ -194,6 +165,11 @@ const statusReadFailure = (
         retryable: canRetryStatusConfirmationFailure(reason),
         completedAt: Date.now(),
       }
+
+const isAccountAccessFailure = (reason: CheckInExecutionSkipReason) =>
+  reason === CHECK_IN_EXECUTION_SKIP_REASONS.AuthenticationRequired ||
+  reason === CHECK_IN_EXECUTION_SKIP_REASONS.PermissionDenied ||
+  reason === CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable
 
 const toUnknownStatusSkipReason = (
   reason: CheckInMethodUnknownReason,
@@ -325,6 +301,7 @@ const reconcileProviderResult = async (input: {
 }> => {
   const execution = await confirmCheckInAttempt({
     account: input.account,
+    timeZone: getCheckInResetTimeZone(input.methodId),
     result: input.providerResult,
     startedAt: input.startedAt,
     readStatus: input.getStatus
@@ -400,12 +377,26 @@ const recordConfirmedMethodProbe = (input: {
 const probeSelectedMethod = async (
   registration: AutoCheckinMethodRegistration,
   account: SiteAccount,
+  attempt?: ReturnType<NonNullable<AutoCheckinProvider["forExecution"]>>,
 ): Promise<
   | { detection: CheckInMethodDetection; status?: CheckInMethodStatus }
   | undefined
 > => {
   if (!registration.provider.detect) return undefined
   try {
+    const detect = attempt?.detect
+    if (detect) {
+      const stable = await readDayStableCheckInObservation(
+        () =>
+          detect({
+            account,
+            observedAt: Date.now(),
+            dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
+          }),
+        getCheckInResetTimeZone(registration.id),
+      )
+      return stable && readProviderDetectResult(stable.observation)
+    }
     return readProviderDetectResult(
       await registration.provider.detect({
         account,
@@ -430,6 +421,8 @@ const SELECTED_METHOD_CONFIRMATION_OUTCOMES = {
 
 const confirmSelectedCheckInMethod = async (input: {
   account: SiteAccount
+  confirmAfterDiscovery?: CheckInMethodId
+  context: AutoCheckinProviderContext
   globalAutomaticExecutionEnabled: boolean
   loginProviderClaimedByAnother?: boolean
   revalidateAccount?: RevalidateCheckInAccount
@@ -438,6 +431,7 @@ const confirmSelectedCheckInMethod = async (input: {
   | {
       outcome: typeof SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue
       account: SiteAccount
+      attempt?: ReturnType<NonNullable<AutoCheckinProvider["forExecution"]>>
     }
   | {
       outcome: typeof SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished
@@ -451,6 +445,7 @@ const confirmSelectedCheckInMethod = async (input: {
     input.account.checkIn.methodKnowledge.methods[methodId]?.detection
       ?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched ||
     (input.isAutomaticExecutionEnabled &&
+      input.confirmAfterDiscovery !== methodId &&
       (input.account.checkIn.methodKnowledge.methods[methodId]?.detection ||
         !shouldAutomaticallyDiscoverAccountCheckIn(input.account)))
   ) {
@@ -470,12 +465,7 @@ const confirmSelectedCheckInMethod = async (input: {
   })
   if (
     state.executionEligibility.eligible ||
-    (state.executionEligibility.skipReason !==
-      CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched &&
-      state.executionEligibility.skipReason !==
-        CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported &&
-      state.executionEligibility.skipReason !==
-        CHECK_IN_EXECUTION_SKIP_REASONS.Timeout)
+    !canConfirmSelectedCheckInMethod(state.executionEligibility.skipReason)
   ) {
     return {
       outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
@@ -490,11 +480,25 @@ const confirmSelectedCheckInMethod = async (input: {
       account: input.account,
     }
   }
-  const probed = await probeSelectedMethod(registration, input.account)
+  const attempt = registration.provider.forExecution?.(input.context)
+  const probed = await probeSelectedMethod(registration, input.account, attempt)
+  if (
+    attempt?.detect &&
+    probed?.detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown
+  ) {
+    const reason = toUnknownStatusSkipReason(probed.detection.reason)
+    if (isAccountAccessFailure(reason)) {
+      return {
+        outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished,
+        result: statusReadFailure(reason),
+      }
+    }
+  }
   if (!probed || !isPersistableInitialCheckInDetection(probed.detection)) {
     return {
       outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
       account: input.account,
+      attempt,
     }
   }
 
@@ -514,9 +518,26 @@ const confirmSelectedCheckInMethod = async (input: {
           result: accountStateWriteFailure(),
         }
       }
-      const persistedDetection =
-        persisted.checkIn.methodKnowledge.methods[methodId]?.detection
-      if (persistedDetection) account = persisted
+      if (!hasSameCheckInAccountIdentity(input.account, persisted)) {
+        return {
+          outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished,
+          result: {
+            kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
+            reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
+          },
+        }
+      }
+      if (
+        persisted.checkIn.selection.methodId !== methodId ||
+        persisted.checkIn.selection.mode !== selection.mode
+      ) {
+        // The reloaded selection owns its own admission and browser binding.
+        return {
+          outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
+          account: persisted,
+        }
+      }
+      account = persisted
     } catch {
       return {
         outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished,
@@ -535,11 +556,17 @@ const confirmSelectedCheckInMethod = async (input: {
       },
     }
   }
-  return { outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue, account }
+  return {
+    outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
+    account,
+    attempt,
+  }
 }
 
 type ExecuteSelectedCheckInInput = {
   account: SiteAccount
+  /** This daily run completed passive discovery and the selected protocol required authentication. */
+  confirmAfterDiscovery?: CheckInMethodId
   globalAutomaticExecutionEnabled: boolean
   context: AutoCheckinProviderContext
   revalidateAccount?: RevalidateCheckInAccount
@@ -817,29 +844,39 @@ async function executeSelectedCheckInOnce(
     registration.provider.ownsStatusAdmission?.(account) === true
   let refreshedConfig: CheckInConfig | undefined
   let statusProof: AutoCheckinProviderContext["statusProof"]
-  if (registration.provider.getStatus && !ownsStatusAdmission) {
+  const attempt =
+    prepared.attempt ?? registration.provider.forExecution?.(input.context)
+  const operations = attempt ?? registration.provider
+  const getAuthenticatedStatus =
+    attempt?.getAuthenticatedStatus ?? operations.getStatus
+  if (getAuthenticatedStatus && !ownsStatusAdmission) {
     try {
-      const stable = await readDayStableCheckInObservation(() =>
-        registration.provider.getStatus!({
-          account,
-          observedAt: Date.now(),
-          dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
-          authenticationRecovery: {
-            tempWindowRequestSource: input.context.tempWindowRequestSource,
-            protectionBypassExecution: input.context.protectionBypassExecution,
-          },
-        }),
+      const stable = await readDayStableCheckInObservation(
+        () =>
+          getAuthenticatedStatus({
+            account,
+            observedAt: Date.now(),
+            dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
+            // Standalone providers (including Chatflows) use this context
+            // directly. Sub2API execution attempts handle renewal themselves.
+            ...(!attempt
+              ? {
+                  authenticationRecovery: {
+                    tempWindowRequestSource:
+                      input.context.tempWindowRequestSource,
+                    protectionBypassExecution:
+                      input.context.protectionBypassExecution,
+                  },
+                }
+              : {}),
+          }),
+        getCheckInResetTimeZone(registration.id),
       )
       const status = stable?.observation
       if (status) {
         if (status.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown) {
           const reason = toUnknownStatusSkipReason(status.reason)
-          if (
-            requiresAuthoritativeStatus ||
-            reason === CHECK_IN_EXECUTION_SKIP_REASONS.AuthenticationRequired ||
-            reason === CHECK_IN_EXECUTION_SKIP_REASONS.PermissionDenied ||
-            reason === CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable
-          ) {
+          if (requiresAuthoritativeStatus || isAccountAccessFailure(reason)) {
             return statusReadFailure(reason)
           }
         }
@@ -927,7 +964,7 @@ async function executeSelectedCheckInOnce(
     isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
   })
   const startedAt = Date.now()
-  const providerResult = await registration.provider.checkIn(currentAccount, {
+  const providerResult = await operations.checkIn(currentAccount, {
     ...input.context,
     mutationLifecycle,
     ...(statusProof ? { statusProof } : {}),
@@ -952,7 +989,7 @@ async function executeSelectedCheckInOnce(
     methodId: registration.id,
     providerResult,
     startedAt,
-    getStatus: registration.provider.getStatus,
+    getStatus: operations.getStatus,
   })
   return {
     kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,

@@ -12,6 +12,7 @@ import {
 import * as rixApiTokens from "~/services/apiService/newApiFamily/variants/rixApiTokens"
 import { ApiError } from "~/services/apiTransport/errors"
 
+import type { CompatibleAccountVariant } from "../../compatibleAccountVariantContract"
 import {
   createSafeCredentialError,
   type CredentialFailure,
@@ -19,9 +20,8 @@ import {
 } from "../variantOperations/credentials"
 import { bindModelPricing } from "../variantOperations/pricing"
 import { resolveRixApiConsoleRoute } from "../variantOperations/routes"
-import type { NewApiVariantRegistration } from "../variantRegistration"
 
-export const rixApiVariant: NewApiVariantRegistration = {
+export const rixApiVariant: CompatibleAccountVariant = {
   key: {
     transport: {
       // The 6.x inventory normalizes `p=0` to its first page and reports string

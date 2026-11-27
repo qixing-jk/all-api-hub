@@ -333,6 +333,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
     577,
     {
       descriptionKey: "redemptionAssist:settings.urlWhitelist.patternsDesc",
+      keywordKeys: ["redemptionAssist:settings.urlWhitelist.tabPicker"],
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.checkinRedeem",

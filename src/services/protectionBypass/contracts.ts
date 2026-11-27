@@ -133,6 +133,7 @@ const PROTECTION_BYPASS_USER_COMMAND_CATALOG = {
   ManualCheckin: "manual_checkin",
   CheckinFeedback: "checkin_feedback",
   RetryCheckinAccount: "retry_checkin_account",
+  VerifyCheckinStatus: "verify_checkin_status",
   AddAccount: "add_account",
   DetectAccount: "detect_account",
   ReauthenticateAccount: "reauthenticate_account",
@@ -171,6 +172,8 @@ export const PROTECTION_BYPASS_USER_COMMAND_FEATURES = {
   [PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin]:
     PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount]:
+    PROTECTION_BYPASS_FEATURES.Checkin,
+  [PROTECTION_BYPASS_USER_COMMANDS.VerifyCheckinStatus]:
     PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.AddAccount]:
     PROTECTION_BYPASS_FEATURES.AccountOnboarding,
@@ -417,6 +420,15 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   OpenContext: "open_context",
 } as const
 
+export const CREDENTIAL_PAGE_STATES = {
+  Credential: "credential",
+  NotFound: "not_found",
+  Unknown: "unknown",
+} as const
+
+export type CredentialPageState =
+  (typeof CREDENTIAL_PAGE_STATES)[keyof typeof CREDENTIAL_PAGE_STATES]
+
 /**
  * Public task-kind contract shared by task dispatch and policy metadata.
  */
@@ -517,7 +529,7 @@ type TempContextTaskResultMap = {
   [TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction]: TempWindowRequestyManagementKeyActionResult
   [TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect]: {
     success: boolean
-    state?: "credential" | "not_found" | "unknown"
+    state?: CredentialPageState
   }
   [TEMP_CONTEXT_TASK_KINDS.RenderedTitle]: TempWindowRenderedTitleResponse
   [TEMP_CONTEXT_TASK_KINDS.SessionRead]: TempWindowFetch

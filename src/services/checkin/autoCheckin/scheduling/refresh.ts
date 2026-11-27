@@ -9,12 +9,18 @@ import type { AccountSiteType } from "~/constants/siteType"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
-import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
+import { CHECK_IN_STATUS_DAY_GUARD_OWNERS } from "~/services/checkin/autoCheckin/providers/contracts"
+import {
+  getCheckInResetTimeZone,
+  type AutoCheckinMethodRegistry,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import {
   mergeCompatibilityCheckInStatus,
   replaceCheckInMethodDetection,
   replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
+import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import type {
   CheckInConfig,
@@ -27,6 +33,7 @@ export async function refreshSelectedStatus(input: {
   config: CheckInConfig
   siteType: AccountSiteType
   account?: SiteAccount
+  verification?: Extract<ProtectionBypassExecution, { kind: "user_command" }>
   request?: ApiServiceRequest
   readStatus?: (methodId: CheckInMethodId) => Promise<boolean | undefined>
   registry?: AutoCheckinMethodRegistry
@@ -78,15 +85,35 @@ export async function refreshSelectedStatus(input: {
       return input.config
     }
     try {
+      const verify =
+        input.verification &&
+        registration.provider.forExecution?.({
+          tempWindowRequestSource: input.verification.surface,
+          protectionBypassExecution: input.verification,
+        }).getAuthenticatedStatus
+      const readStatus = registration.provider.getStatus
       const status = await runAbortableTask(
-        (signal) =>
-          registration.provider.getStatus!({
+        async (signal) => {
+          const context = {
             account: input.account,
+            signal,
             request: input.request
               ? { ...input.request, abortSignal: signal }
               : undefined,
             observedAt,
-          }),
+          }
+          if (!verify) return readStatus(context)
+          const stable = await readDayStableCheckInObservation(
+            () =>
+              verify({
+                ...context,
+                observedAt: Date.now(),
+                dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
+              }),
+            getCheckInResetTimeZone(methodId),
+          )
+          return stable?.observation
+        },
         { timeoutMs: input.timeoutMs, signals: [input.request?.abortSignal] },
       )
       input.onOutcome?.(

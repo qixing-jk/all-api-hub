@@ -2,7 +2,10 @@ import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { ACCOUNT_FORM_SECTION_IDS } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
+import {
+  ACCOUNT_FORM_SECTION_IDS,
+  ACCOUNT_FORM_SECTIONS,
+} from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import {
   supportsAccountCredentialRecovery,
   supportsCheckInAccountLogin,
@@ -57,7 +60,7 @@ export function useAccountEditRouteAction({
         (id) => id === routeFocusSection,
       )
       const focusSection =
-        requestedSection === "account-login" &&
+        requestedSection === ACCOUNT_FORM_SECTIONS.LOGIN &&
         !supportsAccountCredentialRecovery(account) &&
         !supportsCheckInAccountLogin(
           account,
@@ -67,7 +70,7 @@ export function useAccountEditRouteAction({
             siteUrl: account.baseUrl,
           }),
         )
-          ? "account-auth"
+          ? ACCOUNT_FORM_SECTIONS.AUTH
           : requestedSection
       openEditAccount(account, focusSection ? { focusSection } : undefined)
     } else {

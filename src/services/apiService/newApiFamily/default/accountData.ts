@@ -248,8 +248,11 @@ export async function fetchAccountQuota(
 }
 
 /** Observe the common default USD denomination; unknown deployments retain native quota. */
-export async function fetchAccountBalance(request: ApiServiceAccountRequest) {
-  const value = await fetchAccountQuota(request)
+export async function fetchAccountBalance(
+  request: ApiServiceAccountRequest,
+  readQuota = fetchAccountQuota,
+) {
+  const value = await readQuota(request)
   const nativeAmount = newApiFinancialAmount(
     value,
     request.baseUrl,

@@ -163,6 +163,41 @@ it("updates only selected pages in all three locales and retains before/after co
   expect(await fs.readFile(result.report, "utf8")).toContain("comparison.png")
 })
 
+it("updates the New API account guide screenshots in all three locales", async () => {
+  const { updateDocScreenshots } = await import(pathToFileURL(cli).href)
+  const { root, imageDir, before } = await fixture()
+  const calls: string[][] = []
+  const names = [
+    "new-api-token-creation-entry.png",
+    "new-api-token-ready-to-save.png",
+  ]
+  const locales = ["", "en", "ja"]
+  const result = await updateDocScreenshots(
+    { root, pages: "add-account" },
+    {
+      run: async (_command: string, args: string[]) => {
+        calls.push(args)
+        if (!args[0]?.endsWith("generate-doc-screenshots.mjs")) return
+        const output = args.find((arg) => arg.startsWith("--output="))!.slice(9)
+        for (const locale of locales) {
+          await fs.mkdir(path.join(output, locale), { recursive: true })
+          for (const name of names)
+            await fs.writeFile(path.join(output, locale, name), before)
+        }
+      },
+    },
+  )
+
+  expect(calls.some((args) => args[0]?.endsWith("e2e-build.mjs"))).toBe(true)
+  expect(calls.some((args) => args.includes("build"))).toBe(false)
+  expect(result.images).toHaveLength(6)
+  for (const locale of locales)
+    for (const name of names)
+      expect(await fs.readFile(path.join(imageDir, locale, name))).toEqual(
+        before,
+      )
+})
+
 it("builds only the test extension for webpage captures and keeps originals when a capture is incomplete", async () => {
   const { updateDocScreenshots } = await import(pathToFileURL(cli).href)
   const { root, imageDir, before } = await fixture()

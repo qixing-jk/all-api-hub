@@ -1,5 +1,4 @@
 import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   BAI_API_CHECK_IN_ENDPOINT,
   BAI_API_CHECK_IN_STATUS_ENDPOINT,
@@ -7,6 +6,7 @@ import {
   resolveBaiApiCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/baiApiCheckInProtocol"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
@@ -16,6 +16,11 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 /**
  * The 柏API deployment serves its daily rewards module from the host's own
@@ -119,8 +124,9 @@ function readStreakDays(data: Record<string, unknown>) {
 export async function fetchBaiApiCheckInStatus(
   request: ApiServiceRequest,
   timezone = resolveBaiApiCheckInTimezone(),
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     BAI_API_CHECK_IN_STATUS_ENDPOINT,
     async (authenticated) => {
@@ -130,11 +136,7 @@ export async function fetchBaiApiCheckInStatus(
       })
       return parseBaiApiCheckInStatusResponse(response)
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    auth,
   )
 }
 
@@ -155,10 +157,10 @@ export async function performBaiApiCheckIn(
     request,
     BAI_API_CHECK_IN_ENDPOINT,
     async (authenticated) => {
-      const response = await fetchApiResponse<unknown>(authenticated, {
-        endpoint: BAI_API_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticated,
+        BAI_API_CHECK_IN_ENDPOINT,
+      )
       return parseBaiApiCheckInMutationResponse(response)
     },
     fetchBaiApiCheckInStatus,

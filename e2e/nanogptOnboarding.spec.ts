@@ -134,7 +134,7 @@ for (const mismatchedRefresh of [false, true]) {
         accessTokenInput: "",
         exchangeRateInput: "7.2",
       },
-      saveState: "absent",
+      saveState: "validates-access-token",
       guidance: "Complete NanoGPT credentials",
       timeoutMs: 60000,
     })

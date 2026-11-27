@@ -2046,6 +2046,7 @@ describe("autoDetectSmart", () => {
     "navigated",
     "permission-denied",
     "receiver-still-missing",
+    "receiver-attaches-late",
     "signed-out",
     "passive",
   ])(
@@ -2073,9 +2074,14 @@ describe("autoDetectSmart", () => {
       mockIsMessageReceiverUnavailableError.mockReturnValue(true)
       mockReadAccountBrowserSessionFromTab.mockImplementation(
         async (options) => {
+          const attempts =
+            mockReadAccountBrowserSessionFromTab.mock.calls.length
           if (
-            scenario !== "signed-out" ||
-            mockReadAccountBrowserSessionFromTab.mock.calls.length === 1
+            scenario === "signed-out"
+              ? attempts === 1
+              : scenario === "receiver-attaches-late"
+                ? attempts < 4
+                : true
           )
             options.onError?.(new Error("Receiving end does not exist"))
           return null
@@ -2088,7 +2094,7 @@ describe("autoDetectSmart", () => {
       )
       expect(result.success).toBe(false)
       expect(result.errorCode).toBe(
-        scenario === "signed-out"
+        ["signed-out", "receiver-attaches-late"].includes(scenario)
           ? undefined
           : AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
       )
@@ -2096,7 +2102,11 @@ describe("autoDetectSmart", () => {
         ["navigated", "passive"].includes(scenario) ? 0 : 1,
       )
       expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledTimes(
-        ["receiver-still-missing", "signed-out"].includes(scenario) ? 2 : 1,
+        ["receiver-still-missing", "receiver-attaches-late"].includes(scenario)
+          ? 4
+          : scenario === "signed-out"
+            ? 2
+            : 1,
       )
     },
   )

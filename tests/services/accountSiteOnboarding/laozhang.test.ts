@@ -125,7 +125,7 @@ describe.each([
     expect(await getAccountSiteType(baseUrl)).toBe("laozhang")
     expect(getAccountSiteDefinition(SITE_TYPES.LAOZHANG)).toMatchObject({
       scopes: ["account"],
-      adapterFamily: "newApiFamily",
+      adapterFamily: "shellApiFamily",
       productProfile: { auth: { defaultAuthType: AuthTypeEnum.AccessToken } },
     })
   })

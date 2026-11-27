@@ -377,9 +377,13 @@ for (const method of ["linuxdo", "password"] as const) {
         id: "account-login-dependency-missing",
         extensionDir,
       })
+      await dialog
+        .getByRole("button", { name: "Save Changes", exact: true })
+        .click()
+      await expect(dialog).toBeVisible()
       await expect(
-        dialog.getByRole("button", { name: "Save Changes", exact: true }),
-      ).toBeDisabled()
+        loginSection.getByLabel("Login username or email"),
+      ).toBeFocused()
       await loginSection
         .getByLabel("Login username or email")
         .fill("native-member")

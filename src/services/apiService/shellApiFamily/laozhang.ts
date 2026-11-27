@@ -9,7 +9,6 @@ import type {
   NewApiTokenWrite,
 } from "~/services/apiService/newApiFamily/tokenTypes"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { TodayLogQueryConfig } from "~/services/history/usageHistory/usageLogModel"
 
 /** Project restrictions from native fields rather than empty compatibility aliases. */
 function normalizeToken(token: NewApiToken): NewApiToken {
@@ -72,13 +71,4 @@ export function updateApiToken(
   values: NewApiTokenWrite,
 ) {
   return updateFamilyToken(request, id, toNativeTokenWrite(values))
-}
-
-// https://api2.laozhang.ai/log v31.1.5 uses p=0&pageSize and bare arrays.
-// The stat endpoint shares the family's quota envelope; never treat page one
-// or a short bare page as a complete collection.
-export const LAOZHANG_TODAY_LOG_QUERY_CONFIG: TodayLogQueryConfig = {
-  pageIndexOffset: -1,
-  pageSizeParamName: "pageSize",
-  paginateArraysUntilEmpty: true,
 }

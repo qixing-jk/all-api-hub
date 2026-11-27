@@ -1,18 +1,9 @@
-import { Plus, Trash2 } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { BrowserTabSitePicker } from "~/components/BrowserTabSitePicker"
-import {
-  Button,
-  Modal,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-} from "~/components/ui"
+import { Button, Modal } from "~/components/ui"
 import type { WebAiApiCheckSiteRule } from "~/services/preferences/preferencesSchema"
 import {
   WEB_AI_API_CHECK_RULE_LIST,
@@ -25,14 +16,15 @@ import {
   type WebAiApiCheckRuleList,
   type WebAiApiCheckRuleMutation,
 } from "~/services/verification/webAiApiCheck/siteRules"
+import type { RecentBrowserTabSite } from "~/utils/browser/recentTabSites"
 
-export type SiteRuleRowDraft = {
-  id: number
-  text: string
-  syntax: WebAiApiCheckSiteRule["syntax"]
-  url?: string
-  origin?: string
-}
+import {
+  formatWholeSiteWildcard,
+  WebAiApiCheckRuleRow,
+  type SiteRuleRowDraft,
+  type SiteRuleRowPatch,
+} from "./WebAiApiCheckRuleRow"
+
 export type SiteRuleDraft = {
   text: string
   syntax: WebAiApiCheckSiteRule["syntax"]
@@ -43,6 +35,11 @@ export type SiteRuleEditorState = {
   list: WebAiApiCheckRuleList
   original?: WebAiApiCheckSiteRule
   draft: SiteRuleDraft
+}
+
+/** Identifies the textarea to focus after splitting a pasted rule list. */
+function getRuleRowInputId(id: number): string {
+  return `web-api-rule-row-${id}`
 }
 
 /** Each pending rule owns its syntax and URL scope; confirmation writes the batch once. */
@@ -74,13 +71,18 @@ export function WebAiApiCheckRuleEditor({
   const focusRow = useRef<number | null>(null)
   useEffect(() => {
     if (focusRow.current !== null) {
-      document.getElementById(`web-api-rule-row-${focusRow.current}`)?.focus()
+      document.getElementById(getRuleRowInputId(focusRow.current))?.focus()
       focusRow.current = null
     }
   }, [rows])
   const [attempted, setAttempted] = useState(false)
   const [failed, setFailed] = useState(false)
-  const changeRow = (id: number, patch: Partial<SiteRuleRowDraft>) => {
+  const createWildcardRow = (text = ""): SiteRuleRowDraft => ({
+    id: nextId.current++,
+    text,
+    syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+  })
+  const changeRow = (id: number, patch: SiteRuleRowPatch) => {
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, ...patch } : row)),
     )
@@ -88,11 +90,7 @@ export function WebAiApiCheckRuleEditor({
   }
   const setRowText = (id: number, text: string) => {
     const lines = editor.original ? [text] : text.split(/\r?\n/)
-    const additions = lines.slice(1).map((line) => ({
-      id: nextId.current++,
-      text: line,
-      syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
-    }))
+    const additions = lines.slice(1).map(createWildcardRow)
     if (additions.length) focusRow.current = additions.at(-1)!.id
     setRows((current) =>
       current.flatMap((row) =>
@@ -102,6 +100,35 @@ export function WebAiApiCheckRuleEditor({
       ),
     )
     setFailed(false)
+  }
+  const selectedOrigins = new Set(rows.map((row) => row.origin))
+  const selectTabSites = (sites: readonly RecentBrowserTabSite[]) => {
+    const nextOrigins = new Set(sites.map((site) => site.value))
+    setRows((current) => {
+      const currentOrigins = new Set(current.map((row) => row.origin))
+      const kept = current.filter(
+        (row) =>
+          (!row.origin || nextOrigins.has(row.origin)) && row.text.trim(),
+      )
+      const added = sites
+        .filter((site) => !currentOrigins.has(site.value))
+        .map((site) => ({
+          ...createWildcardRow(formatWholeSiteWildcard(new URL(site.url).host)),
+          url: site.url,
+          origin: site.value,
+        }))
+      const next = [...kept, ...added]
+      return next.length ? next : [createWildcardRow()]
+    })
+    setAttempted(false)
+    setFailed(false)
+  }
+  const removeRow = (id: number) => {
+    setRows((current) =>
+      current.length === 1
+        ? [createWildcardRow()]
+        : current.filter((row) => row.id !== id),
+    )
   }
   const close = () => {
     if (!pending)
@@ -176,202 +203,23 @@ export function WebAiApiCheckRuleEditor({
             label={t("webAiApiCheck:settings.siteRules.tabPicker")}
             emptyMessage={t("webAiApiCheck:settings.siteRules.noTabs")}
             disabled={pending}
-            selectedOrigins={rows.flatMap((row) =>
-              row.origin ? [row.origin] : [],
-            )}
-            onSelect={(sites) => {
-              setRows((current) => {
-                const kept = current.filter(
-                  (row) =>
-                    !row.origin ||
-                    sites.some((site) => site.value === row.origin),
-                )
-                const added = sites
-                  .filter(
-                    (site) => !current.some((row) => row.origin === site.value),
-                  )
-                  .map((site) => ({
-                    id: nextId.current++,
-                    text: `*://${new URL(site.url).host}/*`,
-                    syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
-                    url: site.url,
-                    origin: site.value,
-                  }))
-                const nonempty = kept.filter((row) => row.text.trim())
-                const result = [...nonempty, ...added]
-                return result.length
-                  ? result
-                  : [
-                      {
-                        id: nextId.current++,
-                        text: "",
-                        syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
-                      },
-                    ]
-              })
-              setAttempted(false)
-              setFailed(false)
-            }}
+            isSiteSelected={(site) => selectedOrigins.has(site.value)}
+            onSelect={selectTabSites}
           />
         ) : null}
-        {validation.map(({ row, invalid }) => {
-          let url: URL | null = null
-          try {
-            const candidate = new URL(
-              /^https?:\/\//i.test(row.text.trim())
-                ? row.text.trim()
-                : row.url ?? "",
-            )
-            if (/^https?:$/.test(candidate.protocol)) url = candidate
-          } catch {
-            /* Manual wildcard rules need no URL shortcuts. */
-          }
-          const page = url
-          return (
-            <div
-              key={row.id}
-              role="group"
-              aria-label={t("webAiApiCheck:settings.siteRules.content")}
-              className="border-border space-y-density-2 rounded-lg border p-3"
-            >
-              <div className="flex items-center gap-2">
-                <Select
-                  value={row.syntax}
-                  onValueChange={(value) =>
-                    changeRow(row.id, {
-                      syntax: value as WebAiApiCheckSiteRule["syntax"],
-                    })
-                  }
-                  disabled={pending}
-                >
-                  <SelectTrigger
-                    aria-label={t("webAiApiCheck:settings.siteRules.syntax")}
-                    className="min-w-0 flex-1"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD}>
-                      {t("webAiApiCheck:settings.siteRules.wildcard")}
-                    </SelectItem>
-                    <SelectItem value={WEB_AI_API_CHECK_RULE_SYNTAX.EXACT}>
-                      {t("webAiApiCheck:settings.siteRules.exact")}
-                    </SelectItem>
-                    <SelectItem value={WEB_AI_API_CHECK_RULE_SYNTAX.REGEX}>
-                      {t("webAiApiCheck:settings.siteRules.regex")}
-                    </SelectItem>
-                    {row.syntax === WEB_AI_API_CHECK_RULE_SYNTAX.LEGACY ? (
-                      <SelectItem value={WEB_AI_API_CHECK_RULE_SYNTAX.LEGACY}>
-                        {t("webAiApiCheck:settings.siteRules.legacy")}
-                      </SelectItem>
-                    ) : null}
-                  </SelectContent>
-                </Select>
-                {!editor.original ? (
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-muted-foreground shrink-0"
-                    aria-label={t("common:actions.remove")}
-                    title={t("common:actions.remove")}
-                    disabled={pending}
-                    onClick={() =>
-                      setRows((current) =>
-                        current.length === 1
-                          ? [
-                              {
-                                id: nextId.current++,
-                                text: "",
-                                syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
-                              },
-                            ]
-                          : current.filter((item) => item.id !== row.id),
-                      )
-                    }
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                ) : null}
-              </div>
-              <Textarea
-                id={`web-api-rule-row-${row.id}`}
-                aria-label={t("webAiApiCheck:settings.siteRules.content")}
-                value={row.text}
-                onChange={(event) => setRowText(row.id, event.target.value)}
-                disabled={pending}
-                rows={2}
-                placeholder={t("webAiApiCheck:settings.siteRules.placeholder")}
-                onKeyDown={(event) => {
-                  if (
-                    (event.ctrlKey || event.metaKey) &&
-                    event.key === "Enter"
-                  ) {
-                    event.preventDefault()
-                    void save()
-                  }
-                }}
-              />
-              <p className="text-muted-foreground text-xs">
-                {row.syntax === WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD
-                  ? t("webAiApiCheck:settings.siteRules.wildcardHint")
-                  : row.syntax === WEB_AI_API_CHECK_RULE_SYNTAX.EXACT
-                    ? t("webAiApiCheck:settings.siteRules.exactHint")
-                    : row.syntax === WEB_AI_API_CHECK_RULE_SYNTAX.LEGACY
-                      ? t("webAiApiCheck:settings.siteRules.legacyHint")
-                      : t("webAiApiCheck:settings.siteRules.regexHint")}
-              </p>
-              {row.syntax === WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD && page ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() =>
-                      changeRow(row.id, {
-                        text: `*://${page.host}/*`,
-                        url: page.href,
-                      })
-                    }
-                  >
-                    {t("webAiApiCheck:settings.siteRules.wholeSite")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() =>
-                      changeRow(row.id, {
-                        text: page.href,
-                        syntax: WEB_AI_API_CHECK_RULE_SYNTAX.EXACT,
-                      })
-                    }
-                  >
-                    {t("webAiApiCheck:settings.siteRules.currentPage")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() =>
-                      changeRow(row.id, {
-                        text: `*://*.${page.hostname}${page.port ? `:${page.port}` : ""}/*`,
-                        url: page.href,
-                      })
-                    }
-                  >
-                    {t("webAiApiCheck:settings.siteRules.subdomains")}
-                  </Button>
-                </div>
-              ) : null}
-              {attempted && invalid.length ? (
-                <p role="alert" className="text-destructive text-xs">
-                  {t("webAiApiCheck:settings.siteRules.invalid")}{" "}
-                  {invalid.join(", ")}
-                </p>
-              ) : null}
-            </div>
-          )
-        })}
+        {validation.map(({ row, invalid }) => (
+          <WebAiApiCheckRuleRow
+            key={row.id}
+            row={row}
+            inputId={getRuleRowInputId(row.id)}
+            pending={pending}
+            invalid={attempted ? invalid : []}
+            onChange={(patch) => changeRow(row.id, patch)}
+            onTextChange={(text) => setRowText(row.id, text)}
+            onRemove={editor.original ? undefined : () => removeRow(row.id)}
+            onSubmit={() => void save()}
+          />
+        ))}
         {!editor.original ? (
           <Button
             variant="ghost"
@@ -379,26 +227,19 @@ export function WebAiApiCheckRuleEditor({
             disabled={pending}
             leftIcon={<Plus className="size-4" />}
             onClick={() =>
-              setRows((current) => [
-                ...current,
-                {
-                  id: nextId.current++,
-                  text: "",
-                  syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
-                },
-              ])
+              setRows((current) => [...current, createWildcardRow()])
             }
           >
             {t("webAiApiCheck:settings.siteRules.addRow")}
           </Button>
         ) : null}
         {attempted && hasInvalid ? (
-          <p role="alert" className="text-destructive text-xs">
+          <p role="alert" className="text-xs text-destructive">
             {t("webAiApiCheck:settings.siteRules.invalid")}
           </p>
         ) : null}
         {failed ? (
-          <p role="alert" className="text-destructive text-xs">
+          <p role="alert" className="text-xs text-destructive">
             {t("webAiApiCheck:settings.siteRules.saveFailed")}
           </p>
         ) : null}

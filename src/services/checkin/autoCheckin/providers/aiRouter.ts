@@ -12,6 +12,7 @@ import {
   performAiRouterDailyCheckIn,
   probeAiRouterDailyCheckInStatus,
 } from "~/services/apiService/sub2api/checkin/aiRouterCheckIn"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
@@ -22,10 +23,8 @@ import {
 } from "~/types/autoCheckin"
 import type { CheckInMethodUnknownReason } from "~/types/checkIn"
 
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderReadContext,
-} from "./contracts"
+import type { AutoCheckinProviderReadContext } from "./contracts"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -65,10 +64,14 @@ const unknownDetection = (
     attemptedAt,
   }) as const
 
-const readStatus = async (context: AutoCheckinProviderReadContext) => {
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) => {
   try {
     const probe = await probeAiRouterDailyCheckInStatus(
       createSub2ApiCheckInReadRequest(context),
+      auth,
     )
     if (probe.outcome !== AI_ROUTER_STATUS_OUTCOMES.Matched) {
       return unknownStatus(
@@ -92,15 +95,16 @@ const readStatus = async (context: AutoCheckinProviderReadContext) => {
  * method is only discovered for accounts on that deployment; it does not send
  * probes to other Sub2API sites.
  */
-export const aiRouterProvider: AutoCheckinProvider = {
+export const aiRouterProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
 
-  async detect(context) {
+  async detect(context, auth) {
     try {
       const probe = await probeAiRouterDailyCheckInStatus(
         createSub2ApiCheckInReadRequest(context),
+        auth,
       )
       if (probe.outcome === AI_ROUTER_STATUS_OUTCOMES.Matched) {
         return {
@@ -127,7 +131,7 @@ export const aiRouterProvider: AutoCheckinProvider = {
 
   getStatus: readStatus,
 
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -138,8 +142,12 @@ export const aiRouterProvider: AutoCheckinProvider = {
 
     try {
       const result = await performAiRouterDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       switch (result.kind) {
         case AI_ROUTER_DAILY_CHECK_IN_RESULT_KINDS.Applied:
@@ -176,4 +184,4 @@ export const aiRouterProvider: AutoCheckinProvider = {
       )
     }
   },
-}
+})

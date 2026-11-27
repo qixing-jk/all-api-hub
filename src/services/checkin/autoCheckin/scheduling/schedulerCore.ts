@@ -89,8 +89,11 @@ class AutoCheckinScheduler {
   }
 
   /** Reads and reconciles selected-method status without mutation. */
-  verifyAccountStatus(accountId: string) {
-    return verifyAccountStatus(accountId, this.retryScheduling)
+  verifyAccountStatus(
+    accountId: string,
+    execution?: Extract<ProtectionBypassExecution, { kind: "user_command" }>,
+  ) {
+    return verifyAccountStatus(accountId, this.retryScheduling, execution)
   }
 
   private isInitialized = false

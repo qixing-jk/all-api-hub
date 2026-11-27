@@ -65,9 +65,11 @@
       "includeAccountSiteUrlsDesc": "Cho phép tất cả các trang dưới URL của trang web của mỗi tài khoản (cùng nguồn gốc).",
       "includeCheckInAndRedeemUrls": "Bao gồm URL điểm danh/đổi mã",
       "includeCheckInAndRedeemUrlsDesc": "Cho phép trang điểm danh và đổi mã của mỗi tài khoản (tùy chỉnh hoặc mặc định).",
+      "noTabs": "Không có tab web phù hợp. Bạn có thể nhập mẫu bên dưới.",
       "patterns": "Quy tắc biểu thức chính quy tùy chỉnh",
       "patternsDesc": "Mỗi dòng là một biểu thức chính quy theo cú pháp JavaScript RegExp (không phân biệt chữ hoa chữ thường khi khớp).",
-      "patternsPlaceholder": "^https://example\\.com/console/topup"
+      "patternsPlaceholder": "^https://example\\.com/console/topup",
+      "tabPicker": "Chọn từ các thẻ đang mở"
     }
   }
 }

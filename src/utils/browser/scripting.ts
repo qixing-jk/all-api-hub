@@ -1,5 +1,24 @@
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
 
+/** Execute in the extension's isolated world and preserve injection failures. */
+export async function executeIsolatedFunction<TArgs extends unknown[], TResult>(
+  tabId: number,
+  func: (...args: TArgs) => TResult,
+  args: NoInfer<TArgs>,
+  injectImmediately = false,
+): Promise<TResult> {
+  if (typeof browser.scripting?.executeScript !== "function")
+    throw new Error("Scripting is unavailable")
+  const [result] = await browser.scripting.executeScript({
+    target: { tabId },
+    func,
+    args,
+    injectImmediately,
+  } as unknown as browser.scripting.ScriptInjection)
+  if (!result || result.error) throw new Error("Script injection failed")
+  return result.result as TResult
+}
+
 /** Restore the registered isolated content script on a still-matching HTTP tab. */
 export async function injectContentScript(
   tabId: number,
