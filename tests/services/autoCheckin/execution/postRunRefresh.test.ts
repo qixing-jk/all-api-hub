@@ -3,11 +3,7 @@ import "~~/tests/services/autoCheckin/schedulerTestHarness"
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
-import {
-  accountCheckinRunWorkflow,
-  getAccountsEligibleForPostCheckinRefresh,
-} from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
@@ -26,50 +22,6 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
 describe("execution/postRunRefresh", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  it("avoids repeating FreeGG's side-effecting balance read after quick or batch success", () => {
-    expect(
-      getAccountsEligibleForPostCheckinRefresh([
-        {
-          result: {
-            accountId: "freegg",
-            accountName: "FreeGG",
-            status: "success",
-            methodId: AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
-            timestamp: 1,
-          },
-        },
-        {
-          result: {
-            accountId: "new-api",
-            accountName: "New API",
-            status: "success",
-            methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
-            timestamp: 1,
-          },
-        },
-        {
-          result: {
-            accountId: "already-checked",
-            accountName: "FreeGG",
-            status: "already_checked",
-            methodId: AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
-            timestamp: 1,
-          },
-        },
-        {
-          result: {
-            accountId: "reused",
-            accountName: "New API",
-            status: "success",
-            methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
-            timestamp: 1,
-          },
-          reused: true,
-        },
-      ]),
-    ).toEqual(["new-api"])
   })
 
   it("dispatches post-checkin refreshes concurrently with best-effort isolation", async () => {

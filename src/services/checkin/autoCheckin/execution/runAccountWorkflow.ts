@@ -1,5 +1,4 @@
 import { type AccountLoginProvider } from "~/constants/accountLogin"
-import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { resolveLoginProviderOwners } from "~/services/accountLogin/providerClaims"
 import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
@@ -16,36 +15,12 @@ import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/provi
 import { type ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { type SiteAccount } from "~/types"
-import {
-  CHECKIN_RESULT_STATUS,
-  type CheckinAccountResult,
-} from "~/types/autoCheckin"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { CheckInMethodId } from "~/types/checkIn"
 import { type TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 
 type PostCheckinRefreshOutcome = "refreshed" | "unchanged" | "failed"
-
-/**
- * Selects newly successful executions that are safe to follow with the generic
- * account refresh. FreeGG grants its daily allowance during `/api/user/self`,
- * so the forced refresh would repeat that same side-effecting request.
- */
-export function getAccountsEligibleForPostCheckinRefresh(
-  outcomes: readonly {
-    result: CheckinAccountResult
-    reused?: boolean
-  }[],
-): string[] {
-  return outcomes
-    .filter(
-      ({ result, reused }) =>
-        !reused &&
-        result.status === CHECKIN_RESULT_STATUS.SUCCESS &&
-        result.methodId !== AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
-    )
-    .map(({ result }) => result.accountId)
-}
 
 /** Owns run-level account execution, observation and best-effort result effects. */
 class AccountCheckinRunWorkflow {

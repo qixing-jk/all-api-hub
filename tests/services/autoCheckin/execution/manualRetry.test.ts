@@ -39,6 +39,32 @@ describe("autoCheckinScheduler.retryAccount", () => {
     vi.clearAllMocks()
   })
 
+  it("refreshes the account balance after a successful FreeGG allowance claim", async () => {
+    const account = buildSiteAccount({
+      id: "freegg-refresh",
+      site_url: "https://freegg.app",
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: runnableCheckIn(),
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: "executed",
+      methodId: "freegg:daily-allowance",
+      result: { status: "success" },
+      retryable: false,
+      completedAt: Date.now(),
+    })
+
+    const response = await retryAccountForTest(account.id)
+
+    expect(response.result.status).toBe("success")
+    expect(mockedAccountStorage.refreshAccount).toHaveBeenCalledWith(
+      account.id,
+      true,
+      expect.any(Object),
+    )
+  })
+
   it.each([{ order: ["A1", "A2", "A1"] }, { order: ["A2", "A1", "A1"] }])(
     "keeps award-bearing receipt provenance across out-of-order results: $order",
     async ({ order }) => {

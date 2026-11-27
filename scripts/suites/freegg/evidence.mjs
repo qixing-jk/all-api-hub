@@ -59,7 +59,7 @@ export function findAllowance(items, { userId, from, to }) {
   })
 }
 
-/** Native credit evidence is independent of the provider's stricter attribution. */
+/** Verify a newly observed native credit independently of the extension result. */
 export function findNewAllowance(before, after, { userId, dayStart }) {
   if (
     findAllowance(before.items, {

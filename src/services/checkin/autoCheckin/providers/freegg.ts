@@ -27,7 +27,10 @@ import {
   isFreeggUrl,
 } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
 import { composeAbortSignals } from "~/services/apiTransport/abortableTask"
-import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import {
+  API_DIRECT_REQUEST_REASONS,
+  type ApiServiceRequest,
+} from "~/services/apiTransport/type"
 import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import {
   createUnconfirmedCheckInResult,
@@ -40,6 +43,7 @@ import {
 } from "~/services/checkin/statusObservation"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { CheckInMethodStatus } from "~/types/checkIn"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 import type { AutoCheckinProvider } from "./contracts"
@@ -72,6 +76,76 @@ function alreadyClaimed(account: SiteAccount) {
   )
 }
 
+/** Read one day-stable ledger observation for both status and completion. */
+async function readAllowanceObservation(
+  request: ApiServiceRequest,
+  observedAt = Date.now(),
+): Promise<{
+  status: CheckInMethodStatus
+  record?: Record<string, unknown>
+  complete?: boolean
+}> {
+  const unknown = () => ({
+    status: {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+      reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse,
+      attemptedAt: observedAt,
+    },
+  })
+  const stable = await readDayStableCheckInObservation(
+    () => fetchFreeggAllowanceLogs(request),
+    FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+  )
+  if (!stable) return unknown()
+  const { records, complete, serverTime } = stable.observation
+  observedAt = stable.observedAt
+  if (
+    (serverTime !== undefined &&
+      !isCheckInObservationCurrent(
+        serverTime,
+        FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+        observedAt,
+      )) ||
+    records.some(
+      (record) =>
+        !isValidFreeggLog(
+          record,
+          request.auth.userId,
+          serverTime ?? observedAt,
+        ),
+    )
+  )
+    return unknown()
+  const day = getDayKeyFromUnixSeconds(
+    observedAt / 1000,
+    FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+  )
+  const record = records.find(
+    (item) =>
+      isFreeggAllowanceRecord(item) &&
+      getDayKeyFromUnixSeconds(
+        item.created_at as number,
+        FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+      ) === day,
+  )
+  if (!record && !complete) return unknown()
+  return {
+    record,
+    complete,
+    status: {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      today: record
+        ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+        : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt,
+      },
+    },
+  }
+}
+
 /**
  * FreeGG v1.0.0-rc.49 has a daily allowance separate from checkin_enabled.
  * The public console describes a fixed grant on the first authenticated visit.
@@ -81,6 +155,7 @@ function alreadyClaimed(account: SiteAccount) {
  * are presentation positions; timestamped account evidence confirms a claim.
  */
 export const freeggProvider: AutoCheckinProvider = {
+  requiresAuthoritativeStatusBeforeMutation: true,
   getReadiness(account) {
     if (!isFreeggUrl(account.site_url) || !account.account_info?.id) {
       return {
@@ -112,7 +187,8 @@ export const freeggProvider: AutoCheckinProvider = {
     }
   },
   async getStatus({ account, request, observedAt, signal }) {
-    if (!request && account && !this.getReadiness(account).ready) return
+    if (!request && account && !freeggProvider.getReadiness(account).ready)
+      return
     const source =
       request ??
       (account
@@ -134,68 +210,21 @@ export const freeggProvider: AutoCheckinProvider = {
         new URL(source.baseUrl).origin !== new URL(account.site_url).origin)
     )
       return
-    const unknown = () => ({
-      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
-      reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse,
-      attemptedAt: observedAt,
-    })
     const composed = composeAbortSignals([signal, source.abortSignal])
     try {
-      const stable = await readDayStableCheckInObservation(
-        () =>
-          fetchFreeggAllowanceLogs({
+      return (
+        await readAllowanceObservation(
+          {
             baseUrl: source.baseUrl,
             auth: source.auth,
             accountId: source.accountId,
             siteType: source.siteType,
             directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
             abortSignal: composed.signal,
-          }),
-        FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-      )
-      if (!stable) return unknown()
-      const { records, complete, serverTime } = stable.observation
-      observedAt = stable.observedAt
-      if (
-        serverTime !== undefined &&
-        !isCheckInObservationCurrent(
-          serverTime,
-          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+          },
           observedAt,
         )
-      )
-        return unknown()
-      const businessDay = getDayKeyFromUnixSeconds(
-        observedAt / 1000,
-        FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-      )
-      if (
-        records.some(
-          (r) =>
-            !isValidFreeggLog(r, source.auth.userId, serverTime ?? Date.now()),
-        )
-      )
-        return unknown()
-      const checked = records.some(
-        (r) =>
-          isFreeggAllowanceRecord(r) &&
-          getDayKeyFromUnixSeconds(
-            r.created_at as number,
-            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-          ) === businessDay,
-      )
-      if (!checked && !complete) return unknown()
-      return {
-        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-        today: checked
-          ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
-          : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-        resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-        evidence: {
-          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-          observedAt,
-        },
-      }
+      ).status
     } finally {
       composed.dispose()
     }
@@ -206,15 +235,14 @@ export const freeggProvider: AutoCheckinProvider = {
         error: new Error("FreeGG account is required"),
       })
     }
-    if (!this.getReadiness(account).ready) {
+    if (!freeggProvider.getReadiness(account).ready) {
       return createUnconfirmedCheckInResult(account)
     }
     let triggerAttempted = false
     try {
       const storedRequest =
         createAccountApiRequestFromStoredAccount(account).request
-      // Direct token requests only: even opening a recovery page could credit
-      // the allowance before the explicit trigger or issue it for another user.
+      // Keep the claim bound to the saved token, independently of browser sessions.
       const request = {
         baseUrl: account.site_url,
         accountId: account.id,
@@ -222,100 +250,39 @@ export const freeggProvider: AutoCheckinProvider = {
         auth: storedRequest.auth,
         directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       }
-      const baselineRequestedAt = Date.now()
-      const baseline = await fetchFreeggAllowanceLogs(request)
-      if (
-        !baseline.complete ||
-        (baseline.serverTime !== undefined &&
-          !isCheckInObservationCurrent(
-            baseline.serverTime,
-            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-          ))
-      )
+      // The shared executor supplies its preflight status. Direct callers use
+      // the same read-only status path instead of another admission policy.
+      const before =
+        context.statusProof ??
+        (await freeggProvider.getStatus?.({
+          account,
+          observedAt: Date.now(),
+        }))
+      if (before?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known)
         return createUnconfirmedCheckInResult(account)
-      const before = baseline.records
-      if (
-        before.some(
-          (r) =>
-            !isValidFreeggLog(
-              r,
-              account.account_info.id,
-              baseline.serverTime ?? Date.now(),
-            ),
-        )
-      )
+      if (before.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked)
+        return alreadyClaimed(account)
+      if (before.today !== CHECK_IN_METHOD_TODAY_STATUSES.NotChecked)
         return createUnconfirmedCheckInResult(account)
-      const day = getDayKeyFromUnixSeconds(
-        Date.now() / 1000,
-        FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-      )
-      const already = before.find(
-        (item) =>
-          isFreeggAllowanceRecord(item) &&
-          getDayKeyFromUnixSeconds(
-            item.created_at as number,
-            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-          ) === day,
-      )
-      if (already) return alreadyClaimed(account)
       if (
         context.beforeRecoveredMutation &&
         !(await context.beforeRecoveredMutation())
       ) {
         return createUnconfirmedCheckInResult(account)
       }
-      const dispatchUpperBound = () =>
-        baseline.serverTime === undefined
-          ? Date.now()
-          : baseline.serverTime + 1000 + Date.now() - baselineRequestedAt
-      const baselineDayCurrent = () =>
-        [Date.now(), dispatchUpperBound()].every(
-          (time) =>
-            getDayKeyFromUnixSeconds(
-              time / 1000,
-              FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-            ) === day,
-        )
-      if (!baselineDayCurrent()) return createUnconfirmedCheckInResult(account)
-      // HTTP Date and ledger events have second precision. Include the entire
-      // baseline request interval and elapsed admission time in the server-clock
-      // bound. A record in the ambiguous dispatch second cannot prove new income.
-      let startedAt: number | undefined
-      const dispatchAbort = new AbortController()
       triggerAttempted = true
       let response: Awaited<ReturnType<typeof triggerFreeggDailyAllowance>>
       let triggerResponseLost = false
       try {
         response = await triggerFreeggDailyAllowance({
           ...request,
-          abortSignal: dispatchAbort.signal,
-          observer: {
-            ...context.mutationLifecycle,
-            onDispatch() {
-              if (!baselineDayCurrent()) {
-                dispatchAbort.abort(
-                  new Error("FreeGG baseline day expired before dispatch"),
-                )
-                return
-              }
-              startedAt =
-                baseline.serverTime === undefined
-                  ? Math.floor(Date.now() / 1000) + 1
-                  : Math.ceil(dispatchUpperBound() / 1000)
-              context.mutationLifecycle?.onDispatch()
-            },
-            onResponse() {
-              context.mutationLifecycle?.onResponse()
-            },
-          },
+          observer: context.mutationLifecycle,
         })
       } catch {
         // A lost response may have credited the grant. Read logs once below;
         // never replay self and never assume its missing identity matched.
         triggerResponseLost = true
       }
-      if (startedAt === undefined)
-        return createUnconfirmedCheckInResult(account)
       const expectedIdentity = String(account.account_info.id)
       if (
         !triggerResponseLost &&
@@ -323,40 +290,14 @@ export const freeggProvider: AutoCheckinProvider = {
       ) {
         return createUnconfirmedCheckInResult(account)
       }
-      const readback = await fetchFreeggAllowanceLogs(request)
+      const readback = await readAllowanceObservation(request)
+      const record = readback.record
       if (
         !readback.complete ||
-        (readback.serverTime !== undefined &&
-          !isCheckInObservationCurrent(
-            readback.serverTime,
-            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-          ))
+        !record ||
+        (triggerResponseLost && String(record.user_id) !== expectedIdentity)
       )
         return createUnconfirmedCheckInResult(account)
-      const after = readback.records
-      if (
-        after.some(
-          (r) =>
-            !isValidFreeggLog(
-              r,
-              account.account_info.id,
-              readback.serverTime ?? Date.now(),
-            ),
-        )
-      )
-        return createUnconfirmedCheckInResult(account)
-      const completedAt = Math.floor((readback.serverTime ?? Date.now()) / 1000)
-      const record = after.find(
-        (item) =>
-          isFreeggAllowanceRecord(item) &&
-          (!triggerResponseLost || String(item.user_id) === expectedIdentity) &&
-          getDayKeyFromUnixSeconds(
-            item.created_at as number,
-            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-          ) === day &&
-          (item.created_at as number) <= completedAt,
-      )
-      if (!record) return createUnconfirmedCheckInResult(account)
       if (
         response?.allowanceDate &&
         response.allowanceDate !==
@@ -366,15 +307,6 @@ export const freeggProvider: AutoCheckinProvider = {
           )
       )
         return createUnconfirmedCheckInResult(account)
-      if ((record.created_at as number) < startedAt) {
-        // The ledger confirms today's grant even when its trigger is ambiguous.
-        return isCheckInObservationCurrent(
-          (record.created_at as number) * 1000,
-          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-        )
-          ? alreadyClaimed(account)
-          : createUnconfirmedCheckInResult(account)
-      }
       const usdAmount = readFreeggAllowanceUsd(record)
       return withCheckInResponseConfirmation(
         account,

@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { type newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
+import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { freeggProvider } from "~/services/checkin/autoCheckin/providers/freegg"
 import {
   getAutoCheckinCandidateMethodIds,
@@ -81,8 +82,7 @@ const log = (extra: Record<string, unknown> = {}) => ({
   }),
   ...extra,
 })
-// Successful execution fixtures model a grant two seconds after dispatch.
-// A grant in the dispatch second has insufficient timestamp precision.
+// Ordinary fixtures include a short server response delay.
 const grant = (extra: Record<string, unknown> = {}) =>
   log({ created_at: now / 1000 + 2, ...extra })
 const logs = (items: unknown[]) => ({
@@ -120,12 +120,70 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("FreeGG daily allowance", () => {
+  it("uses the shared execution preflight once and confirms the newly observed allowance", async () => {
+    const site = account()
+    site.checkIn = {
+      automaticExecutionEnabled: true,
+      selection: {
+        mode: "manual",
+        methodId: AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
+      },
+      methodKnowledge: {
+        methods: {
+          [AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance]: {
+            detection: {
+              outcome: "matched",
+              evidence: { source: "probe", observedAt: now },
+            },
+          },
+        },
+      },
+    }
+    mockExecution([], [log()])
+
+    expect(
+      await executeSelectedCheckIn({
+        account: site,
+        globalAutomaticExecutionEnabled: true,
+        context,
+      }),
+    ).toMatchObject({ kind: "executed", result: { status: "success" } })
+    expect(envelope.mock.calls.map(([, options]) => options.endpoint)).toEqual([
+      "/api/log/self?p=1&page_size=100&type=1",
+      "/api/user/self",
+      "/api/log/self?p=1&page_size=100&type=1",
+    ])
+  })
+  it("claims and confirms the current day when the queued request crosses midnight", async () => {
+    vi.setSystemTime("2026-11-24T15:59:59Z")
+    transportDelayMs = 2000
+    mockExecution(
+      [],
+      [log({ created_at: Date.parse("2026-11-24T16:00:01Z") / 1000 })],
+    )
+
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "success",
+      confirmation: { completedAt: Date.parse("2026-11-24T16:00:01Z") },
+    })
+  })
+  it("completes today's allowance when the grant arrives in the request's second", async () => {
+    envelope
+      .mockResolvedValueOnce(logs([]))
+      .mockResolvedValueOnce({ success: true, message: "", data: { id: 17 } })
+      .mockResolvedValueOnce(logs([log()]))
+
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "success",
+      awards: [{ amount: { value: "20" } }],
+    })
+  })
   it.each([
     ["2026-11-24T15:59:55Z", "uncertain"],
-    ["2026-11-24T15:59:59Z", "success"],
-    ["2026-11-24T16:00:01Z", "uncertain"],
+    ["2026-11-24T15:59:59Z", "uncertain"],
+    ["2026-11-24T16:00:01Z", "success"],
   ])(
-    "confirms only the baseline day's grant at %s after readback crosses midnight",
+    "confirms only the current day's grant at %s after readback crosses midnight",
     async (grantAt, status) => {
       vi.setSystemTime("2026-11-24T15:59:55Z")
       envelope
@@ -142,38 +200,40 @@ describe("FreeGG daily allowance", () => {
       })
     },
   )
-  it("does not dispatch when the projected server clock has reached tomorrow", async () => {
+  it("confirms the new day after a queued request and server clock cross midnight", async () => {
     vi.setSystemTime("2026-11-24T15:59:55Z")
     serverClockOffsetMs = 3000
     transportDelayMs = 3000
-    mockExecution([], [grant()])
+    mockExecution(
+      [],
+      [log({ created_at: Date.parse("2026-11-24T16:00:01Z") / 1000 })],
+    )
     expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
-      status: "uncertain",
+      status: "success",
     })
     expect(
       envelope.mock.calls.some(
         ([, options]) => options.endpoint === "/api/user/self",
       ),
-    ).toBe(false)
+    ).toBe(true)
   })
-  it("reports today as already claimed when a grant arrives while the trigger waits in transport", async () => {
+  it("completes today's allowance when another visit grants it during execution", async () => {
     transportDelayMs = 5000
     mockExecution([], [grant()])
 
     const result = await freeggProvider.checkIn(account(), context)
 
     expect(result).toMatchObject({
-      status: "already_checked",
-      confirmation: { kind: "observed", status: { today: "checked" } },
+      status: "success",
+      awards: [{ amount: { value: "20" } }],
     })
-    expect(result.awards).toBeUndefined()
     expect(
       envelope.mock.calls.filter(
         ([, options]) => options.endpoint === "/api/user/self",
       ),
     ).toHaveLength(1)
   })
-  it("cancels a queued trigger when transport reaches the next business day", async () => {
+  it("does not mistake an old grant for completion after the queued trigger crosses midnight", async () => {
     vi.setSystemTime("2026-11-24T15:59:59Z")
     transportDelayMs = 2000
     mockExecution([], [grant()])
@@ -184,7 +244,7 @@ describe("FreeGG daily allowance", () => {
       envelope.mock.calls.some(
         ([, options]) => options.endpoint === "/api/user/self",
       ),
-    ).toBe(false)
+    ).toBe(true)
   })
   it.each([401, 429])(
     "does not claim or renew credentials when ledger reads return HTTP %i",
@@ -216,7 +276,7 @@ describe("FreeGG daily allowance", () => {
     expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
     expect(envelope).toHaveBeenCalledTimes(1)
   })
-  it("does not claim with yesterday's baseline after admission crosses midnight", async () => {
+  it("requires a current-day grant when admission crosses midnight", async () => {
     vi.setSystemTime("2026-11-24T15:59:59Z")
     mockExecution([], [log()])
     expect(
@@ -228,7 +288,7 @@ describe("FreeGG daily allowance", () => {
         },
       }),
     ).toMatchObject({ status: "uncertain" })
-    expect(envelope).toHaveBeenCalledTimes(1)
+    expect(envelope).toHaveBeenCalledTimes(3)
   })
   it("keeps a readback on the server's next business day uncertain", async () => {
     vi.setSystemTime("2026-11-24T15:59:50Z")
@@ -300,7 +360,7 @@ describe("FreeGG daily allowance", () => {
     expect(envelope).toHaveBeenCalledTimes(3)
   })
   it.each([1, 5])(
-    "reports already claimed without awarding a grant at second %i before or indistinguishable from dispatch",
+    "accepts the newly observed daily grant at second %i regardless of which visit triggered it",
     async (grantSecond) => {
       mockExecution([], [log({ created_at: now / 1000 + grantSecond })])
       const result = await freeggProvider.checkIn(account(), {
@@ -310,8 +370,10 @@ describe("FreeGG daily allowance", () => {
           return true
         },
       })
-      expect(result).toMatchObject({ status: "already_checked" })
-      expect(result.awards).toBeUndefined()
+      expect(result).toMatchObject({
+        status: "success",
+        awards: [{ amount: { value: "20" } }],
+      })
       expect(envelope).toHaveBeenCalledTimes(3)
     },
   )
@@ -332,7 +394,7 @@ describe("FreeGG daily allowance", () => {
           result,
           AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
         ),
-      ).toBe(false)
+      ).toBe(true)
       expect(envelope).toHaveBeenCalledTimes(3)
     },
   )
@@ -956,7 +1018,7 @@ describe("FreeGG daily allowance", () => {
     expect(envelope).not.toHaveBeenCalled()
   })
 
-  it("does not replay a lost self response or schedule another mutation", async () => {
+  it("does not replay a lost response inline and allows the shared status-checked retry", async () => {
     envelope
       .mockResolvedValueOnce(logs([]))
       .mockRejectedValueOnce(new Error("response lost"))
@@ -969,7 +1031,7 @@ describe("FreeGG daily allowance", () => {
         result,
         AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
       ),
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it("confirms a lost trigger response using one account-matched new allowance log", async () => {

@@ -1,11 +1,7 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
-import type { AccountCheckinExecutionOutcome } from "~/services/checkin/autoCheckin/execution/accountExecution"
-import {
-  accountCheckinRunWorkflow,
-  getAccountsEligibleForPostCheckinRefresh,
-} from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import type { AutoCheckinRetryScheduling } from "~/services/checkin/autoCheckin/execution/runContracts"
 import {
   notifyScheduledRunResult,
@@ -104,7 +100,7 @@ export async function runRetryCheckins(
 
   const updates: Record<string, CheckinAccountResult> = {}
   const attemptedAccountIds: string[] = []
-  const outcomesToRefresh: AccountCheckinExecutionOutcome[] = []
+  const accountIdsToRefresh: string[] = []
   let successfulAttemptCount = 0
   const loginProviderOwners =
     await accountCheckinRunWorkflow.resolveLoginProviderOwners(allAccounts)
@@ -171,7 +167,7 @@ export async function runRetryCheckins(
       !outcome.reused &&
       outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS
     ) {
-      outcomesToRefresh.push(outcome)
+      accountIdsToRefresh.push(outcome.result.accountId)
     }
   }
 
@@ -240,16 +236,12 @@ export async function runRetryCheckins(
     .filter((result) => isSuccessfulCheckinStatus(result.status))
     .map((result) => result.accountId)
 
-  const accountIdsToRefresh =
-    getAccountsEligibleForPostCheckinRefresh(outcomesToRefresh)
-  if (accountIdsToRefresh.length > 0) {
-    await accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
-      accountIds: accountIdsToRefresh,
-      force: true,
-      tempWindowRequestSource,
-      protectionBypassExecution,
-    })
-  }
+  await accountCheckinRunWorkflow.refreshAccountsAfterSuccessfulCheckins({
+    accountIds: accountIdsToRefresh,
+    force: true,
+    tempWindowRequestSource,
+    protectionBypassExecution,
+  })
 
   if (notifyUiOnCompletion) {
     await notifyUiRunCompleted({

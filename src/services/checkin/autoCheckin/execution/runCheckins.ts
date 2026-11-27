@@ -4,10 +4,7 @@ import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/discovery/automaticDiscovery"
 import { isAutomaticExecutionEnabled } from "~/services/checkin/autoCheckin/execution/accountExecution"
 import { isRetryableCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
-import {
-  accountCheckinRunWorkflow,
-  getAccountsEligibleForPostCheckinRefresh,
-} from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
 import {
   notifyScheduledRunResult,
   notifyUiRunCompleted,
@@ -467,8 +464,13 @@ export async function runCheckins(options: {
       ).length,
     )
 
-    const accountIdsToRefresh =
-      getAccountsEligibleForPostCheckinRefresh(checkinOutcomes)
+    const accountIdsToRefresh = checkinOutcomes
+      .filter(
+        (outcome) =>
+          !outcome.reused &&
+          outcome.result.status === CHECKIN_RESULT_STATUS.SUCCESS,
+      )
+      .map((outcome) => outcome.result.accountId)
 
     const analyticsSnapshots = buildAnalyticsSnapshots(
       allAccounts,

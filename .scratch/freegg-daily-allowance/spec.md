@@ -2,6 +2,50 @@
 
 Status: ready-for-agent
 
+## Current scope: ensure today's allowance (2026-11-28)
+
+The user clarified that FreeGG should behave like the other check-in methods:
+the goal is to receive today's allowance, including through an ordinary account
+read or a concurrent website visit. Request-level causal attribution is not a
+product requirement. This supersedes the historical dispatch-time attribution
+and post-check-in refresh exclusions below.
+
+Keep the saved account identity, read-only discovery/status, authoritative daily
+ledger evidence and existing shared execution controls. Remove FreeGG-specific
+dispatch clock projection and the scheduler's balance-refresh exception.
+Use the existing authoritative-status admission requirement, as other status-based
+methods do: an unavailable preflight or final ledger cannot establish a successful
+claim. Reuse the shared executor's status proof instead of reading a second baseline.
+A newly observed grant may supply its actual amount without claiming which
+concurrent visit caused it.
+
+Use the shared retry policy: uncertain execution may be scheduled for a later
+attempt, which must first confirm the current status. Transport still does not
+replay the explicit claim inline. Normal account queries retain their usual
+recovery and refresh behavior; there is no cross-cutting FreeGG self policy.
+
+Validation uses the existing provider and scheduler interfaces, with failing
+behavior tests before implementation. Baseline for this iteration is
+`8d08929df4`; main `7dce5bd68a` was merged without rewriting published history.
+Acceptance evidence: `test-results/freegg-pr1933/completion-simplification.md`.
+
+The original requests, #1874 and #1908, describe automatic check-in on visiting
+the website without a fresh logout/login. Comparison of original `566305de46`,
+published repair `8d08929df4`, and the current implementation is retained in
+the acceptance report. The original type-4/stable-ID/quota assumptions differ
+from the subsequently verified native contract below; they must not be restored
+as a simplification.
+
+Current validation: TypeScript compile; 698 tests across 24 affected unit and
+component files; five live-evidence helper tests; live-runner syntax check.
+Independent Standards and Spec reviews found no remaining implementation blocker
+after updating the live runner to expect one claim plus the normal balance
+refresh. Same-second, concurrent, and rollover completion remain controlled-test
+evidence; no new live grant was obtained during this iteration. Existing native
+evidence and screenshots retain their original build/scenario limits.
+
+## Historical repair scope and evidence
+
 Take over the published PR without rewriting its history. Preserve one method
 identity (`freegg:daily-allowance`), its mutation admission/no-replay safeguards,
 and verify the deployed protocol through real browser observations.

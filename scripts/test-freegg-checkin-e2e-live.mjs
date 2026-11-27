@@ -366,8 +366,8 @@ async function onboardingAndCheckin() {
             requests
               .slice(claimStart)
               .filter((item) => item.path === "/api/user/self").length,
-            1,
-            "One explicit daily mutation only",
+            2,
+            "One allowance request followed by the ordinary balance refresh",
           )
           const claimed = await ledger()
           assert.equal(

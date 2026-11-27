@@ -190,7 +190,6 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     // Linxi deployments may require a manual security step; never queue a retry.
     AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
-    AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
     AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
   ])
 
