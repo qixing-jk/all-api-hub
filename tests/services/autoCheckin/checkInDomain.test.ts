@@ -111,6 +111,60 @@ const unknown: CheckInMethodDetection = {
   attemptedAt: 100,
 }
 
+describe("check-in reset timezone of imported status", () => {
+  it.each([
+    {
+      methodId: AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+      importedZone: "UTC",
+      eligible: true,
+    },
+    {
+      methodId: NEW_API_METHOD_ID,
+      importedZone: "Asia/Shanghai",
+      eligible: false,
+    },
+    {
+      methodId: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+      importedZone: undefined,
+      eligible: true,
+    },
+  ])("preserves the existing calendar for $methodId", (scenario) => {
+    const { methodId, importedZone, eligible } = scenario
+    const config = normalizeCheckInConfigV7({
+      automaticExecutionEnabled: true,
+      selection: { mode: "automatic", methodId },
+      methodKnowledge: {
+        methods: {
+          [methodId]: {
+            detection: matched,
+            status: {
+              outcome: "known",
+              availability: "enabled",
+              today: "checked",
+              resetTimeZone: importedZone,
+              evidence: {
+                source: "probe",
+                observedAt: Date.parse("2026-11-24T15:59:00Z"),
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const state = inspectCheckInMethods({
+      config,
+      candidateMethodIds: [methodId],
+      now: Date.parse("2026-11-24T16:01:00Z"),
+      timeZone: "UTC",
+    })
+    expect(state.executionEligibility.eligible).toBe(eligible)
+    expect(config.methodKnowledge.methods[methodId]?.status).not.toHaveProperty(
+      "resetTimeZone",
+    )
+  })
+})
+
 describe("automatic check-in discovery policy", () => {
   it.each([
     {

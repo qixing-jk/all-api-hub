@@ -334,7 +334,11 @@ class AccountCheckInState {
   async markAccountAsSiteCheckedIn(
     id: string,
     observedAt?: number,
-    execution?: { account: SiteAccount; methodId: CheckInMethodId },
+    execution?: {
+      account: SiteAccount
+      methodId: CheckInMethodId
+      resetTimeZone?: string
+    },
   ): Promise<boolean> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
@@ -352,6 +356,7 @@ class AccountCheckInState {
               config: account.checkIn,
               methodId,
               observedAt: observedAt ?? Date.now(),
+              resetTimeZone: execution?.resetTimeZone,
             })
           : account.checkIn
         if (nextCheckIn === account.checkIn) {

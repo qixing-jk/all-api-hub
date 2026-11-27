@@ -38,6 +38,10 @@ import {
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
 import {
+  LINXI_DEFAULT_RESET_TIME_ZONE,
+  linxiStatusRoute,
+} from "~/services/apiService/sub2api/checkin/linxiCheckInProtocol"
+import {
   createNexaVlinksCheckInStatusEndpoint,
   resolveNexaVlinksCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/nexavlinksCheckInProtocol"
@@ -126,6 +130,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "sidrune"
   | "nexavlinks"
   | "xingya"
+  | "linxi"
   | "apiKeyCasa"
   | "agentRouter"}`
 
@@ -140,6 +145,8 @@ export type CheckInMethodPresentationMetadata = {
 interface AutoCheckinMethodDefinitionBase {
   /** Calendar used by the site to reset its daily check-in. Defaults to the device calendar. */
   readonly resetTimeZone?: string
+  /** The method can verify a deployment-specific reset timezone in its protocol. */
+  readonly reportsResetTimeZone?: boolean
   readonly presentation?: Partial<
     Omit<CheckInMethodPresentationMetadata, "sourceName">
   >
@@ -171,6 +178,8 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
+    // Linxi deployments may require a manual security step; never queue a retry.
+    AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
   ])
@@ -427,6 +436,32 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: "/api/v1/redeem/checkin/status" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: {
+    resetTimeZone: LINXI_DEFAULT_RESET_TIME_ZONE,
+    reportsResetTimeZone: true,
+    // Public frontend bundles for both K40 hosts use the same `/api/v1`
+    // check-in status and claim contract as 100xLabs. The HTTP-only K40
+    // origin is intentionally excluded because authenticated calls would
+    // expose the account bearer token without TLS.
+    discoveryOrigins: [
+      "https://sub.100xlabs.space",
+      "https://k40.shengqainbang.cn",
+    ],
+    presentation: { sourceNameKey: "methods.sources.linxi" },
+    id: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    origins: ["https://sub.100xlabs.space", "https://k40.shengqainbang.cn"],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Linxi / 100xLabs",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: linxiStatusRoute() },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -778,13 +813,26 @@ export function getUnknownCheckInDiscoveryPriority(
   )
 }
 
-/** A missing reset zone uses the device calendar. */
+/** Only methods with a timezone-bearing protocol can override their default calendar. */
 export function getCheckInResetTimeZone(
   methodId: CheckInMethodId,
+  observedTimeZone?: string,
 ): string | undefined {
   const definition: AutoCheckinMethodDefinition =
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
-  return definition.resetTimeZone
+  return (
+    (definition.reportsResetTimeZone ? observedTimeZone : undefined) ??
+    definition.resetTimeZone
+  )
+}
+
+/** Whether persisted observations of this method may carry a site-reported zone. */
+export function reportsCheckInResetTimeZone(
+  methodId: CheckInMethodId,
+): boolean {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.reportsResetTimeZone === true
 }
 
 /** Returns whether the selected method can verify today without posting. */
