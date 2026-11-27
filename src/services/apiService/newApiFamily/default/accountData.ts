@@ -42,7 +42,6 @@ import {
 import { NEW_API_FINANCIAL_CONTRACT_VERSIONS } from "~/services/apiService/newApiFamily/financialContractVersions"
 import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
-import { freeggSelfRequestPolicy } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
@@ -242,7 +241,6 @@ export async function fetchAccountQuota(
     {
       endpoint: "/api/user/self",
       credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
-      ...freeggSelfRequestPolicy(request.baseUrl),
     },
   )
 

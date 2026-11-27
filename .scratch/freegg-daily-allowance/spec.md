@@ -58,8 +58,8 @@ Use the dedicated structured key and execution timestamp, validate returned
 identity and any valid receipt date, and derive USD only from an explicit dollar
 marker. Damaged/incomplete negative evidence stays unknown. Never infer a grant
 from balance growth, quota=0, unrelated top-ups or a changed list-position ID.
-Read-only status uses the ledger; normal account reads retain their native side
-effect and receive mutation/no-recovery/no-fallback transport policy on FreeGG.
+Read-only status uses the ledger. Normal account reads can credit the allowance
+and use the standard New API transport policy.
 
 The native token creation UI was exercised with read-only scopes, 30-day expiry,
 and a test name. Its only verification option, GitHub OAuth, returned 404 at the
@@ -165,7 +165,7 @@ passes 89 tests for these final provider and evidence-helper behaviors.
 ## Discovery and concurrent grants follow-up
 
 Discovery matches the verified HTTPS origin even during a public status outage
-or a site rename. The current-user group lookup applies the same FreeGG self
-request policy as account refresh and token validation. When valid same-day
+or a site rename. An explicit allowance request disables recovery and replay.
+Ordinary New API queries use their existing recovery policy. When valid same-day
 ledger readback confirms the allowance but cannot tie it to the dispatched
 request, the result is already claimed with no new award.

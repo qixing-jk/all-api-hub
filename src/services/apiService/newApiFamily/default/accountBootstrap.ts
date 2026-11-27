@@ -10,7 +10,6 @@ import type {
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
-import { freeggSelfRequestPolicy } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_OPERATION_SEMANTICS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -190,7 +189,6 @@ export async function fetchUserInfo(
     endpoint: "/api/user/self",
     ...(options ? { options } : {}),
     credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
-    ...freeggSelfRequestPolicy(request.baseUrl),
   })
   const userId = normalizeAccountIdentity(userData.id)
 

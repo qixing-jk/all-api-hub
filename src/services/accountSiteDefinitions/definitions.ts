@@ -102,7 +102,7 @@ import {
   FOXCODE_HOSTNAMES,
   FOXCODE_INFERENCE_ORIGIN,
   FOXCODE_WEB_ORIGIN,
-  FREEGG_DAILY_ALLOWANCE_HOSTNAMES,
+  FREEGG_HOSTNAMES,
   FREEMODEL_ANTHROPIC_BASE_URL,
   FREEMODEL_HOSTNAMES,
   FREEMODEL_OPENAI_BASE_URL,
@@ -794,7 +794,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
         showRotationWarning: true,
       },
       detection: {
-        hostnames: FREEGG_DAILY_ALLOWANCE_HOSTNAMES,
+        hostnames: FREEGG_HOSTNAMES,
         titlePatterns: [makeTitleRegex(SITE_TYPES.NEW_API)],
         compatUserIdHeaderNames: ["New-API-User"],
       },

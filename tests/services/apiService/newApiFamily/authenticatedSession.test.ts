@@ -30,26 +30,6 @@ const session = (sendSiteAction = vi.fn()): AccountAuthenticatedSession => ({
   setVerificationReason: vi.fn(),
 })
 
-it("marks FreeGG session identity verification as a non-replayable mutation", async () => {
-  vi.mocked(newApiFamilyRequests.envelope).mockResolvedValue({
-    success: true,
-    message: "",
-    data: { id: account.account_info.id },
-  })
-  await createNewApiAuthenticatedSessionRequest(
-    session(vi.fn().mockResolvedValueOnce(bundle())),
-    { ...account, site_url: "https://freegg.app" },
-  )
-  expect(newApiFamilyRequests.envelope).toHaveBeenCalledWith(
-    expect.anything(),
-    expect.objectContaining({
-      endpoint: "/api/user/self",
-      operationSemantics: "mutation",
-      tempWindowFallback: { codes: [], statusCodes: [] },
-    }),
-  )
-})
-
 it.each([401, 404, 405])(
   "uses a verified legacy cookie session after refresh HTTP %s",
   async (status) => {
