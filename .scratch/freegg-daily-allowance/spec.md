@@ -44,14 +44,16 @@ refresh. Same-second, concurrent, and rollover completion remain controlled-test
 evidence; no new live grant was obtained during this iteration. Existing native
 evidence and screenshots retain their original build/scenario limits.
 
-## Maintained deployment recognition (2026-11-28)
+## Check-in origin scope and ordinary site-type detection (2026-11-28)
 
-Keep the known deployment's New API account-family declaration and the static
-daily-allowance origin list. The account API and allowance behavior were verified
-independently; recognizing this known deployment does not require probing again
-or inferring its family from today's check-in result. The hostname declaration
-remains justified by that verified account contract, independently of the earlier
-goal of avoiding incidental self requests.
+The user clarified that the static list is for check-in eligibility, not a forced
+account site type. Remove the FreeGG hostname from the New API account-site
+definition and remove the shared FREEGG_HOSTNAMES constant. Keep the verified
+HTTPS origin directly in freeggDailyAllowanceConfig.ts, owned by the allowance
+adapter. Normal site-type detection and mismatch checks use their existing
+protocol/title/status signals; the same hostname may resolve to another type or
+remain unknown when those signals do not identify it. This supersedes the
+maintained account-family mapping described in commit 1f24111ef5.
 
 The allowance implementation can serve further deployments after verifying the
 same trigger and ledger contract. Do not broaden discovery to all New API sites:
@@ -59,8 +61,16 @@ public `system_name` is branding, and `checkin_enabled` describes a separate nat
 check-in feature. Allowance logs prove a grant but do not independently prove its
 self-request trigger; new accounts may have no logs. A distinctive read-only
 capability marker could support generic discovery if verified in the future.
-For now, maintain the known origins and reuse the existing provider. No additional
-discovery requests, site types, or generic detection framework are introduced.
+For now, maintain the known check-in origins and reuse the existing provider.
+Check-in discovery remains local; ordinary site detection resumes its shared
+requests. No new site types or generic detection framework are introduced.
+
+Validation: the site-type regression first failed for a changed backend and
+unidentifiable responses because the hostname forced agreement. After removing
+the mapping, 288 tests across 11 affected files, TypeScript compile and the Chrome
+MV3 production build passed. Both account-site definition files now match main;
+only the check-in adapter owns the FreeGG origin list. These are controlled-test
+and build results, not a new live onboarding or allowance run.
 
 ## Historical repair scope and evidence
 
