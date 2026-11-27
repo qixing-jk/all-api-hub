@@ -83,6 +83,17 @@ afterEach(() => {
 })
 
 describe("WebDAV verified commit", () => {
+  it("isolates browser credentials throughout backup commit and cleanup", async () => {
+    const gateway = createGateway()
+    await upload()
+    expect(gateway.requests("PUT")).not.toHaveLength(0)
+    for (const [, init] of gateway.fetch.mock.calls) {
+      expect(init).toMatchObject({
+        credentials: "omit",
+        headers: { Authorization: `Basic ${btoa("test:test")}` },
+      })
+    }
+  })
   it("bounds final-file post-processing retries and keeps the recovery copy", async () => {
     vi.useFakeTimers()
     const gateway = createGateway(({ url, method }) => {

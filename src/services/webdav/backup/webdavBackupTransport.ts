@@ -1,5 +1,6 @@
 import { tryParseEncryptedWebdavBackupEnvelope } from "~/services/webdav/backup/webdavBackupEncryption"
 import { parseWebdavBackupJson } from "~/services/webdav/backup/webdavBackupValidation"
+import { webdavFetch } from "~/services/webdav/webdavFetch"
 import { t } from "~/utils/i18n/core"
 
 /**
@@ -167,7 +168,7 @@ export async function ensureBackupDirectory(
   const dirUrl = getBackupDirUrl(targetUrl)
   // Some servers require MKCOL on the exact collection URL
   // Try MKCOL; 201 Created -> ok, 405/301/302 -> already exists/redirect, 409 -> parent not found
-  const res = await fetch(dirUrl, {
+  const res = await webdavFetch(dirUrl, {
     method: "MKCOL",
     headers: {
       Authorization: buildAuthHeader(username, password),
@@ -182,7 +183,7 @@ export async function ensureBackupDirectory(
   }
   // Some servers respond 409 if parent exists but trailing slash missing; try again with slash
   if (!/\/$/.test(dirUrl)) {
-    const res2 = await fetch(dirUrl + "/", {
+    const res2 = await webdavFetch(dirUrl + "/", {
       method: "MKCOL",
       headers: {
         Authorization: buildAuthHeader(username, password),
@@ -209,7 +210,7 @@ async function putWebdavContent(params: {
   password: string
   content: string
 }) {
-  const res = await fetch(params.url, {
+  const res = await webdavFetch(params.url, {
     method: "PUT",
     headers: {
       Authorization: buildAuthHeader(params.username, params.password),
@@ -281,7 +282,7 @@ async function getWebdavContent(params: {
   password: string
   failureMessage?: string
 }) {
-  const res = await fetch(params.url, {
+  const res = await webdavFetch(params.url, {
     method: "GET",
     cache: "no-store",
     signal: AbortSignal.timeout(UPLOAD_READBACK_TIMEOUT_MS),
@@ -350,7 +351,7 @@ async function moveWebdavContent(params: {
   username: string
   password: string
 }) {
-  const res = await fetch(params.sourceUrl, {
+  const res = await webdavFetch(params.sourceUrl, {
     method: "MOVE",
     headers: {
       Authorization: buildAuthHeader(params.username, params.password),
@@ -377,7 +378,7 @@ async function deleteWebdavDestinationBeforeMoveRetry(params: {
   password: string
 }) {
   try {
-    const res = await fetch(params.destinationUrl, {
+    const res = await webdavFetch(params.destinationUrl, {
       method: "DELETE",
       headers: {
         Authorization: buildAuthHeader(params.username, params.password),
@@ -417,7 +418,7 @@ async function deleteWebdavContentBestEffort(params: {
   password: string
 }) {
   try {
-    await fetch(params.url, {
+    await webdavFetch(params.url, {
       method: "DELETE",
       signal: AbortSignal.timeout(TEMP_CLEANUP_TIMEOUT_MS),
       headers: {
@@ -525,7 +526,7 @@ async function cleanupStaleTempBackupsBestEffort(params: {
   now?: number
 }) {
   try {
-    const res = await fetch(params.collectionUrl, {
+    const res = await webdavFetch(params.collectionUrl, {
       method: "PROPFIND",
       headers: {
         Authorization: buildAuthHeader(params.username, params.password),
