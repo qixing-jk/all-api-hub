@@ -9,6 +9,7 @@ import type {
   TempWindowRequestSource,
   TempWindowResponseType,
 } from "~/types/tempWindowFetch"
+import type { DispatchBoundRequestInit } from "~/utils/browser/requestInitMessage"
 
 export interface ApiResponse<T = any> {
   success: boolean
@@ -218,7 +219,7 @@ export interface FetchApiOptions {
   endpoint: string
   /** Actual operation semantics can prohibit replay even for a GET endpoint. */
   operationSemantics?: ApiOperationSemantics
-  options?: RequestInit
+  options?: DispatchBoundRequestInit
   responseType?: TempWindowResponseType
   tempWindowFallback?: TempWindowFallbackAllowlist
   currentTabTransport?: "prefer" | "disabled"

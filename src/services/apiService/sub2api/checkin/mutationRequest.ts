@@ -57,6 +57,7 @@ export async function postSub2ApiCheckIn<T = unknown>(
     responseType?: "text"
     body?: string
     headers?: HeadersInit
+    dispatchDeadlineAt?: number
     isNativeLoginRejection?: (envelope: Record<string, unknown>) => boolean
   } = {},
 ): Promise<ApiTransportResponse<T>> {

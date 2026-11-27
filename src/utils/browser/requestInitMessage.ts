@@ -1,3 +1,21 @@
+export type DispatchBoundRequestInit = RequestInit & {
+  /** Absolute deadline carried through extension messaging alongside RequestInit. */
+  dispatchDeadlineAt?: number
+}
+
+/** Check after acquiring transport, before marking a fetch dispatched. */
+export function assertFetchDispatchDeadline(
+  options?: DispatchBoundRequestInit,
+) {
+  const deadline = options?.dispatchDeadlineAt
+  if (
+    deadline !== undefined &&
+    (!Number.isFinite(deadline) || Date.now() >= deadline)
+  ) {
+    throw new DOMException("Request expired before dispatch", "TimeoutError")
+  }
+}
+
 /**
  * Converts supported header inputs into a structured-clone-safe object.
  */
