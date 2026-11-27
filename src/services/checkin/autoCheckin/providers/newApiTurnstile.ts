@@ -2,8 +2,10 @@ import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
 import type { NewApiCheckInResponse } from "~/services/apiService/newApiFamily/checkInDto"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
+import { resolveNativePageCheckinResult } from "~/services/checkin/autoCheckin/providers/newApiNativePage"
 import {
   fetchCheckedInTodayStatus,
+  NEW_API_AWARD_SOURCES,
   NEW_API_MESSAGE_KEYS,
   readNewApiAwards,
   resolveCheckInEndpoint,
@@ -31,11 +33,16 @@ import {
   CHECKIN_RESULT_STATUS,
   getAutoCheckinSkipReasonTranslationKey,
 } from "~/types/autoCheckin"
+import {
+  TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
+  TEMP_WINDOW_TURNSTILE_STATUSES,
+  type TempWindowCheckinPageAction,
+} from "~/types/tempWindowFetch"
 import type {
   TempWindowRequestSource,
   TempWindowTurnstileFetch,
 } from "~/types/tempWindowFetch"
-import { TEMP_WINDOW_TURNSTILE_STATUSES } from "~/types/tempWindowFetch"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
 import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
 import { joinUrl } from "~/utils/core/url"
@@ -115,7 +122,8 @@ function buildTurnstileAssistedParams(
     authType: getEffectiveAuthType(account),
     cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
     turnstileTimeoutMs: TURNSTILE_ASSIST_TIMEOUT_MS,
-    turnstilePreTrigger: resolveTurnstilePreTrigger(account),
+    // Native submissions own their proof; token capture never clicks a grant control.
+    turnstilePreTrigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.None },
     tempWindowRequestSource,
     protectionBypassExecution,
   } as const
@@ -233,9 +241,8 @@ async function runTurnstileAssistedAttempt(input: {
       awards: observation?.checkedInToday
         ? readNewApiAwards(
             input.account,
-            observation.todayQuotaAwarded,
-            observation.todayCheckinDate,
-            "stats.records[].quota_awarded",
+            observation.todayRecord,
+            NEW_API_AWARD_SOURCES.Status,
           )
         : undefined,
     })
@@ -281,6 +288,28 @@ export async function resolveTurnstileAssistedCheckinResult(params: {
       messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
       rawMessage: params.responseMessage,
     }
+  let nativeFailure: CheckinResult | undefined
+  if (
+    resolveTurnstilePreTrigger(params.account).kind !==
+    TURNSTILE_PRE_TRIGGER_KINDS.None
+  ) {
+    const native = await resolveNativePageCheckinResult(params)
+    const action = native.data as TempWindowCheckinPageAction | undefined
+    // Only explicit pre-click refusals permit a separate token request. A click,
+    // verification failure or lost response must never authorize API replay.
+    if (
+      native.status !== CHECKIN_RESULT_STATUS.FAILED ||
+      action?.trigger?.clicked ||
+      ![
+        TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMissing,
+        TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMismatch,
+        TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound,
+      ].some((reason) => reason === action?.reason)
+    ) {
+      return native
+    }
+    nativeFailure = native
+  }
   const assistedParams = buildTurnstileAssistedParams(
     params.account,
     checkInUrl,
@@ -312,13 +341,15 @@ export async function resolveTurnstileAssistedCheckinResult(params: {
       initial.response.turnstile.hasTurnstile
     )
       return initial.result
-    if ((incognitoAllowed ?? (await isAllowedIncognitoAccess())) === false)
+    if ((incognitoAllowed ?? (await isAllowedIncognitoAccess())) === false) {
+      if (nativeFailure) return nativeFailure
       return {
         ...initial.result,
         messageKey: NEW_API_MESSAGE_KEYS.turnstileIncognitoAccessRequired,
         messageParams: { checkInUrl },
         data: initial.response,
       }
+    }
   }
   const fallback = await runTurnstileAssistedAttempt({
     ...attemptInput,

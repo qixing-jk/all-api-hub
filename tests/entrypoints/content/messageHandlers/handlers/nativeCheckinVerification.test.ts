@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS } from "~/constants/turnstile"
-import { handleTriggerCheckinPageAction } from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
+import {
+  handleInspectCheckinPage,
+  handleTriggerCheckinPageAction,
+} from "~/entrypoints/content/messageHandlers/handlers/checkinPage"
 import { showTurnstileManualAssistToast } from "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
 import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import {
@@ -20,6 +23,203 @@ vi.mock(
 )
 
 describe("native check-in verification", () => {
+  it("waits for a configured grant control during inspection without dispatching it", async () => {
+    document.body.innerHTML = "<main></main>"
+    const reply = vi.fn()
+    handleInspectCheckinPage(
+      {
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#grant",
+          targetWaitMs: 2_000,
+        },
+      },
+      reply,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    expect(reply).not.toHaveBeenCalled()
+
+    const button = document.createElement("button")
+    button.id = "grant"
+    const click = vi.fn()
+    button.addEventListener("click", click)
+    document.querySelector("main")!.append(button)
+    await vi.advanceTimersByTimeAsync(250)
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, hasTarget: true }),
+    )
+    expect(click).not.toHaveBeenCalled()
+  })
+
+  it("returns unusable evidence when the document cannot be inspected", () => {
+    const query = vi
+      .spyOn(document, "querySelectorAll")
+      .mockImplementation(() => {
+        throw new Error("Document was replaced")
+      })
+    const reply = vi.fn()
+    try {
+      handleInspectCheckinPage({}, reply)
+      expect(reply).toHaveBeenCalledWith({
+        success: false,
+        hasTarget: false,
+        candidates: [],
+      })
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it.each(["disabled", "checked", "hidden"])(
+    "leaves a %s verification control to manual completion",
+    async (attribute) => {
+      const activate = vi.fn()
+      document.querySelector("button")!.addEventListener("click", () => {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<altcha-widget><div class="altcha" data-state="unverified"><input type="checkbox" ${attribute}></div></altcha-widget>`,
+        )
+        document.querySelector("input")!.addEventListener("click", activate)
+      })
+      const reply = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: "manual-control",
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
+        },
+        reply,
+      )
+      await vi.advanceTimersByTimeAsync(55_000)
+      expect(activate).not.toHaveBeenCalled()
+      expect(reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification: { status: "required", provider: "altcha" },
+        }),
+      )
+    },
+  )
+
+  it("requires manual assistance when a native action reveals multiple ALTCHA widgets", async () => {
+    const activate = vi.fn()
+    document.querySelector("button")!.addEventListener("click", () => {
+      for (let index = 0; index < 2; index++) {
+        const widget = document.createElement("altcha-widget")
+        widget.innerHTML =
+          '<div class="altcha" data-state="unverified"><input type="checkbox"></div>'
+        widget.querySelector("input")!.addEventListener("click", activate)
+        document.body.append(widget)
+      }
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "ambiguous-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(55_000)
+    expect(activate).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "required", provider: "altcha" },
+      }),
+    )
+  })
+  it("requires manual completion of ALTCHA widgets that appear during hydration", async () => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        "<altcha-widget></altcha-widget>",
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "delayed-ambiguous-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    const firstWidget = document.querySelector("altcha-widget")!
+    firstWidget.innerHTML =
+      '<div class="altcha" data-state="unverified"><input type="checkbox"></div>'
+    const secondWidget = firstWidget.cloneNode(true) as Element
+    document.body.append(secondWidget)
+    const activate = vi.fn()
+    for (const widget of [firstWidget, secondWidget]) {
+      widget.querySelector("input")!.addEventListener("click", activate)
+    }
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(activate).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    expect(response).not.toHaveBeenCalled()
+
+    firstWidget.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(250)
+    expect(response).not.toHaveBeenCalled()
+    secondWidget
+      .querySelector(".altcha")!
+      .setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(250)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+    expect(activate).not.toHaveBeenCalled()
+  })
+
+  it("does not automatically retry ALTCHA when the page replaces the activated widget", async () => {
+    const activate = vi.fn()
+    document.querySelector("button")!.addEventListener("click", () => {
+      const widget = document.createElement("altcha-widget")
+      widget.innerHTML =
+        '<div class="altcha" data-state="unverified"><input type="checkbox"></div>'
+      widget.querySelector("input")!.addEventListener("click", () => {
+        activate()
+        const replacement = widget.cloneNode(true) as Element
+        replacement.querySelector<HTMLInputElement>("input")!.checked = false
+        replacement.addEventListener("click", activate)
+        widget.replaceWith(replacement)
+      })
+      document.body.append(widget)
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "replaced-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(activate).toHaveBeenCalledOnce()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    expect(response).not.toHaveBeenCalled()
+    document.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(250)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+  })
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
@@ -27,6 +227,188 @@ describe("native check-in verification", () => {
     globalThis.__aahTurnstilePreTriggerState = undefined
   })
   afterEach(() => vi.useRealTimers())
+
+  it.each(["verifying", "error", "expired", "unverified"])(
+    "keeps ALTCHA %s pending without repeating activation or trusting an unrelated proof",
+    async (state) => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<altcha-widget><div class="altcha" data-state="verified"><input name="altcha" value="other-proof"></div></altcha-widget>',
+      )
+      const activate = vi.fn()
+      document.querySelector("button")!.addEventListener("click", () => {
+        const widget = document.createElement("altcha-widget")
+        widget.id = "active-altcha"
+        widget.innerHTML =
+          '<div class="altcha" data-state="unverified"><input type="checkbox"><input type="hidden" name="altcha"></div>'
+        widget.querySelector("input")!.addEventListener("click", () => {
+          activate()
+          widget.querySelector(".altcha")!.setAttribute("data-state", state)
+        })
+        document.body.append(widget)
+      })
+      const response = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: `pending-altcha-${state}`,
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
+        },
+        response,
+      )
+      await vi.advanceTimersByTimeAsync(55_000)
+      expect(activate).toHaveBeenCalledOnce()
+      expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification: { status: "required", provider: "altcha" },
+        }),
+      )
+    },
+  )
+
+  it("waits for a delayed ALTCHA render then accepts manual completion after assistance", async () => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        "<altcha-widget></altcha-widget>",
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "delayed-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    const widget = document.querySelector("altcha-widget")!
+    widget.innerHTML =
+      '<div class="altcha" data-state="verifying"><input type="checkbox" disabled></div>'
+    const activate = vi.fn()
+    widget.querySelector("input")!.addEventListener("click", activate)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(response).not.toHaveBeenCalled()
+    expect(activate).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    widget.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+  })
+
+  it.each([
+    '<script src="https://cdn.example/altcha.js"></script>',
+    '<section hidden><altcha-widget><div class="altcha" data-state="unverified"><input type="checkbox"></div></altcha-widget></section>',
+  ])("ignores inactive ALTCHA evidence: %s", async (html) => {
+    document
+      .querySelector("button")!
+      .addEventListener("click", () =>
+        document.body.insertAdjacentHTML("beforeend", html),
+      )
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "inactive-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(3_000)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ verification: { status: "not_present" } }),
+    )
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("handles ALTCHA in open shadow DOM without page-world methods", async () => {
+    let root: ShadowRoot
+    const activate = vi.fn(() => {
+      root.querySelector(".altcha")!.setAttribute("data-state", "verifying")
+    })
+    document.querySelector("button")!.addEventListener("click", () => {
+      const widget = document.createElement("altcha-widget")
+      root = widget.attachShadow({ mode: "open" })
+      root.innerHTML =
+        '<div class="altcha" data-state="unverified"><input type="checkbox"></div>'
+      root.querySelector("input")!.addEventListener("click", activate)
+      document.body.append(widget)
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "shadow-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(activate).toHaveBeenCalledOnce()
+    expect(response).not.toHaveBeenCalled()
+    root!.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+  })
+
+  it("starts native ALTCHA proof of work once and waits for its verified state", async () => {
+    const activate = vi.fn()
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<altcha-widget><div class="altcha" data-state="unverified"><input type="checkbox"><input type="hidden" name="altcha"></div></altcha-widget>',
+      )
+      document
+        .querySelector<HTMLInputElement>('input[type="checkbox"]')!
+        .addEventListener("click", () => {
+          activate()
+          document
+            .querySelector(".altcha")!
+            .setAttribute("data-state", "verifying")
+        })
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "native-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(activate).toHaveBeenCalledOnce()
+    expect(response).not.toHaveBeenCalled()
+    document.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+    expect(activate).toHaveBeenCalledOnce()
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
 
   it("waits for the PM-API wallet button to render before dispatching one click", async () => {
     document.body.innerHTML = '<main id="wallet"></main>'

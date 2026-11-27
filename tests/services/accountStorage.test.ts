@@ -8,6 +8,7 @@ import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/checkInStatus"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import {
   accountBalanceScope,
@@ -882,6 +883,74 @@ describe("accountStorage core behaviors", () => {
         first!,
       ),
     ).toBeNull()
+  })
+
+  it("remembers a verified native destination separately and drops it after a manual path edit", async () => {
+    const account = createAccount({
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: { ...createCanonicalCheckIn(), nativePagePath: "/broken" },
+    })
+    seedStorage([account])
+    expect(
+      await accountCheckInState.rememberNativeCheckInPage(
+        account,
+        account.site_url + "/invite",
+      ),
+    ).toBe(true)
+    const saved = await accountStorage.getAccountById(account.id)
+    expect(saved?.checkIn).toMatchObject({
+      nativePagePath: "/broken",
+      nativePageHint: {
+        path: "/invite",
+        configuredPath: "/broken",
+        origin: account.site_url,
+        userId: account.account_info.id,
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+    await accountMutations.updateAccountWithCheckInDraft(
+      account.id,
+      {},
+      { ...saved!.checkIn, nativePagePath: "/manual" },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    expect(
+      (await accountStorage.getAccountById(account.id))?.checkIn.nativePageHint,
+    ).toBeUndefined()
+    expect(
+      await accountCheckInState.rememberNativeCheckInPage(
+        account,
+        account.site_url + "/late",
+      ),
+    ).toBe(false)
+    expect(
+      (await accountStorage.getAccountById(account.id))?.checkIn.nativePageHint,
+    ).toBeUndefined()
+  })
+
+  it("stores a same-origin destination without a configured path and refuses cross-origin updates", async () => {
+    const account = createAccount({ site_type: SITE_TYPES.NEW_API })
+    seedStorage([account])
+    expect(
+      await accountCheckInState.rememberNativeCheckInPage(
+        account,
+        account.site_url + "/rewards?tab=daily#/checkin",
+      ),
+    ).toBe(true)
+    for (const invalidUrl of [
+      "/relative",
+      "https://other.example.test/confirm",
+    ])
+      expect(
+        await accountCheckInState.rememberNativeCheckInPage(
+          account,
+          invalidUrl,
+        ),
+      ).toBe(false)
+    const hint = (await accountStorage.getAccountById(account.id))?.checkIn
+      .nativePageHint
+    expect(hint?.path).toBe("/rewards?tab=daily#/checkin")
+    expect(hint).not.toHaveProperty("configuredPath")
   })
   it("preserves newly configured credentials when saving an old check-in draft", async () => {
     const login = {
@@ -5500,6 +5569,28 @@ describe("accountStorage core behaviors", () => {
           .routeOverrides?.["new-api:daily-checkin"],
       ).toEqual(edit)
     }
+  })
+
+  it("persists a native page edit and clear through the atomic account editor save", async () => {
+    const account = createAccount({ site_type: SITE_TYPES.NEW_API })
+    seedStorage([account])
+    await accountStorage.updateAccountWithCheckInDraft(
+      account.id,
+      {},
+      { ...account.checkIn, nativePagePath: "/invite" },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    const saved = await accountStorage.getAccountById(account.id)
+    expect(saved?.checkIn.nativePagePath).toBe("/invite")
+    await accountStorage.updateAccountWithCheckInDraft(
+      account.id,
+      {},
+      { ...saved!.checkIn, nativePagePath: undefined },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    expect(
+      (await accountStorage.getAccountById(account.id))?.checkIn.nativePagePath,
+    ).toBeUndefined()
   })
 
   it("keeps account fields and the check-in draft unchanged when their atomic save fails", async () => {

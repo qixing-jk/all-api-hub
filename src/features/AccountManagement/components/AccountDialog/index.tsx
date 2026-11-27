@@ -632,7 +632,8 @@ export default function AccountDialog({
                 isAccountSubmissionBlocked || recoveryContinuation?.isOpening
               }
               isSaving={state.isSaving}
-              onAutoConfig={() => {
+              onAutoConfig={async () => {
+                if (!formElementRef.current?.reportValidity()) return
                 cancelTokenVerification()
                 return handlers.handleAutoConfig()
               }}

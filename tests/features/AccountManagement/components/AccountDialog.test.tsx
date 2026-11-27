@@ -68,11 +68,11 @@ const verifyEnteredToken = vi.mocked(validateNewApiAccessToken)
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: { getStatus: vi.fn().mockResolvedValue(null) },
 }))
-vi.mock("~/services/checkin/feedback/scan", async (original) => ({
-  ...(await original<typeof import("~/services/checkin/feedback/scan")>()),
-  collectCheckInFeedbackClues: vi
-    .fn()
-    .mockRejectedValue(new Error("unavailable")),
+vi.mock("~/services/checkin/discovery/evidence/scan", async (original) => ({
+  ...(await original<
+    typeof import("~/services/checkin/discovery/evidence/scan")
+  >()),
+  collectCheckInEvidence: vi.fn().mockRejectedValue(new Error("unavailable")),
 }))
 
 const {
@@ -2009,6 +2009,38 @@ describe("AccountDialog", () => {
       screen.queryByText("accountDialog:accessTokenValidation.valid"),
     ).not.toBeInTheDocument()
     expect(verifyEnteredToken).toHaveBeenCalledOnce()
+  })
+
+  it("blocks Save and configure while the native page path is invalid", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.siteType = SITE_TYPES.NEW_API
+    mockState.draft.siteType = SITE_TYPES.NEW_API
+    mockState.userId = mockState.draft.userId
+    mockState.accessToken = mockState.draft.accessToken
+    const user = userEvent.setup()
+    render(
+      <AccountDialog
+        isOpen
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    const path = await screen.findByLabelText(
+      "accountDialog:form.checkInPagePath",
+    )
+    await user.type(path, "https://other.example/welfare")
+    expect(path).toBeInvalid()
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton),
+    )
+    expect(mockHandlers.handleAutoConfig).not.toHaveBeenCalled()
+    await user.clear(path)
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton),
+    )
+    expect(mockHandlers.handleAutoConfig).toHaveBeenCalledOnce()
   })
 
   it("aborts verification when Save and configure starts", async () => {

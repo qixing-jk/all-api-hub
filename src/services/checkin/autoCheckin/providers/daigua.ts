@@ -16,6 +16,7 @@ import {
 } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
   withCheckInConfirmation,
@@ -28,6 +29,8 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
+import { TEMP_WINDOW_TURNSTILE_STATUSES } from "~/types/tempWindowFetch"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
 
 import type {
@@ -76,7 +79,10 @@ async function assistTurnstile(
   context: AutoCheckinProviderContext,
   request: ApiServiceRequest,
 ) {
-  const checkInUrl = new URL("/checkin", account.site_url).href
+  let checkInUrl = new URL(
+    normalizeCheckInPagePath(account.checkIn.nativePagePath) ?? "/checkin",
+    account.site_url,
+  ).href
   const manual = () => ({
     status: CHECKIN_RESULT_STATUS.FAILED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
@@ -116,6 +122,9 @@ async function assistTurnstile(
       tempWindowTurnstileFetch({
         originUrl: account.site_url,
         pageUrl: checkInUrl,
+        discoverCheckInPage: !normalizeCheckInPagePath(
+          account.checkIn.nativePagePath,
+        ),
         fetchUrl: new URL(DAIGUA_CHECK_IN_ENDPOINT, account.site_url).href,
         fetchOptions: {
           method: "POST",
@@ -133,7 +142,7 @@ async function assistTurnstile(
         turnstileTokenPlacement: "json-body",
         turnstileTimeoutMs: TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
         turnstilePreTrigger: {
-          kind: "clickSelector",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
           selector: '[data-testid="header-normal-checkin"]',
           throttle: { maxAttempts: 1 },
         },
@@ -142,7 +151,11 @@ async function assistTurnstile(
       }),
     PASSIVE_CHECK_IN_AUTH,
   )
-  if (response.turnstile?.status !== "token_obtained") return manual()
+  if (response.pageUrl) checkInUrl = response.pageUrl
+  if (
+    response.turnstile?.status !== TEMP_WINDOW_TURNSTILE_STATUSES.TokenObtained
+  )
+    return manual()
   if (
     !response.success &&
     response.status === 400 &&

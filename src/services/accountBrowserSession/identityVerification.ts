@@ -8,6 +8,7 @@ import type {
   BrowserIdentityObservation,
   BrowserIdentityRead,
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { isRecord } from "~/utils/core/object"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
@@ -159,12 +160,15 @@ async function checkObservation(
 /**
  * Best-effort current-page identity. Providers read local session evidence first;
  * unchanged evidence reuses recent verification, and missing/expired evidence
- * stays unconfirmed. Failures never start login, session refresh, or onboarding.
+ * stays unconfirmed. Passive reads never start login, refresh, or onboarding.
+ * Explicit native mutations request fresh evidence; modern New API verifies
+ * through its current refresh session instead of a Cookie-only self endpoint.
  */
 export async function verifyAccountBrowserIdentity(input: {
   siteType: AccountSiteType
   url?: string
   candidateUserIds?: readonly unknown[]
+  fresh?: boolean
 }): Promise<string | null> {
   try {
     const origin = tryParseOrigin(location.href)
@@ -183,6 +187,15 @@ export async function verifyAccountBrowserIdentity(input: {
     }
     const capability = getAccountBrowserIdentityCapability(context)
     if (!capability) return null
+    if (input.fresh && capability.verifyFreshSession) {
+      const verifyFreshSession = capability.verifyFreshSession
+      const identity = await runAbortableTask(
+        (signal) => verifyFreshSession(context, signal),
+        { timeoutMs: IDENTITY_VERIFICATION_TIMEOUT_MS },
+      )
+      if (tryParseOrigin(location.href) !== origin) return null
+      if (identity !== undefined) return normalizeAccountIdentity(identity)
+    }
     const observation = capability.observe(context)
     let cache = documentCaches.get(document)
     if (!cache) {
@@ -204,7 +217,11 @@ export async function verifyAccountBrowserIdentity(input: {
       context.candidateUserIds,
       observation.sessionKey,
     ])
-    if (previous?.key === key && previous.expiresAt > Date.now())
+    if (
+      !input.fresh &&
+      previous?.key === key &&
+      previous.expiresAt > Date.now()
+    )
       return previous.identity
 
     previous?.controller.abort()

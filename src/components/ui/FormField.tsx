@@ -11,7 +11,11 @@ type FieldControlProps = Pick<
 
 export interface FormFieldProps {
   label?: React.ReactNode
+  /** Help or other secondary controls adjacent to, but outside, the input label. */
+  labelAccessory?: React.ReactNode
   labelAction?: React.ReactNode
+  /** Allow wide actions to move below the label on narrow layouts. */
+  wrapLabelAction?: boolean
   required?: boolean
   disabled?: boolean
   error?: string
@@ -30,7 +34,9 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
   (
     {
       label,
+      labelAccessory,
       labelAction,
+      wrapLabelAction = false,
       required,
       disabled,
       error,
@@ -91,19 +97,27 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
         {...props}
       >
         {(label || labelAction) && (
-          <div className="flex items-center justify-between gap-density-2">
+          <div
+            className={cn(
+              "flex items-center justify-between gap-x-density-2 gap-y-density-1",
+              wrapLabelAction && "flex-wrap",
+            )}
+          >
             {label && (
-              <Label
-                htmlFor={
-                  htmlFor ??
-                  (typeof children === "function" ? controlId : undefined)
-                }
-                required={required}
-                variant={invalid ? "error" : success ? "success" : "default"}
-                className={labelClassName}
-              >
-                {label}
-              </Label>
+              <div className="inline-flex min-w-0 items-center gap-x-1 gap-y-density-1">
+                <Label
+                  htmlFor={
+                    htmlFor ??
+                    (typeof children === "function" ? controlId : undefined)
+                  }
+                  required={required}
+                  variant={invalid ? "error" : success ? "success" : "default"}
+                  className={labelClassName}
+                >
+                  {label}
+                </Label>
+                {labelAccessory}
+              </div>
             )}
             {labelAction}
           </div>

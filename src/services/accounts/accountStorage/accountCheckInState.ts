@@ -10,6 +10,7 @@ import {
   hasSameAccountRequestIdentity,
   hasSameCheckInRequestCredentials,
 } from "~/services/accounts/identity/accountIdentity"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/domain"
 import {
@@ -78,6 +79,60 @@ export const isAutomaticCheckInDiscoveryCurrent = (
     snapshot.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt
 
 class AccountCheckInState {
+  /** Persist only a verified execution destination while its source is still current under the account lock. */
+  async rememberNativeCheckInPage(
+    snapshot: SiteAccount,
+    pageUrl: string,
+  ): Promise<boolean> {
+    let url: URL
+    try {
+      url = new URL(pageUrl)
+    } catch {
+      return false
+    }
+    const path = normalizeCheckInPagePath(url.pathname + url.search + url.hash)
+    if (
+      !path ||
+      url.origin !== new URL(snapshot.site_url).origin ||
+      url.username ||
+      url.password
+    )
+      return false
+    try {
+      return (
+        (await accountConfigStore.mutateAccount(snapshot.id, (account) => {
+          if (
+            !hasSameCheckInRequestCredentials(account, snapshot) ||
+            account.checkIn.nativePagePath !==
+              snapshot.checkIn.nativePagePath ||
+            account.disabled
+          ) {
+            return { nextAccount: account, result: false, changed: false }
+          }
+          const now = Date.now()
+          const nativePageHint = {
+            path,
+            origin: url.origin,
+            siteType: account.site_type,
+            userId: String(account.account_info.id).trim(),
+            observedAt: now,
+            ...(account.checkIn.nativePagePath
+              ? { configuredPath: account.checkIn.nativePagePath }
+              : {}),
+          }
+          const nextAccount = applySiteAccountUpdates({
+            account,
+            updates: { checkIn: { ...account.checkIn, nativePageHint } },
+            now,
+            userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+          })
+          return { nextAccount, result: true, changed: true }
+        })) ?? false
+      )
+    } catch {
+      return false
+    }
+  }
   /** Commits a detected choice only while the dialog's identity, facts and selection remain current. */
   async selectDetectedCheckInMethod(
     snapshot: SiteAccount,

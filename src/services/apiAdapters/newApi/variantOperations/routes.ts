@@ -22,6 +22,7 @@ import {
 
 const NEW_API_FRONTEND_THEMES = {
   Default: "default",
+  NewLlma: "newllma",
 } as const
 
 type DynamicRouteKind = Exclude<
@@ -136,6 +137,13 @@ export const resolveNewApiThemeRoute: DynamicAccountRouteResolver = async (
     target.baseUrl,
     accountBootstrap,
   )
+  // newllma keeps its own theme name but serves check-in at /profile.
+  // Verified on novaapi.ai v0.6.6-custom for issue #1853, 2026-11-16.
+  if (
+    facts.theme === NEW_API_FRONTEND_THEMES.NewLlma &&
+    route === SITE_ROUTE_KINDS.CheckIn
+  )
+    return "/profile"
   return facts.theme === NEW_API_FRONTEND_THEMES.Default
     ? (NEW_API_DEFAULT_THEME_ROUTE_PATHS[route] ?? staticPath)
     : staticPath

@@ -107,6 +107,7 @@ export const RuntimeActionIds = {
   GetInternalTabIds: "getInternalTabIds",
   GetSenderPageContext: "getSenderPageContext",
   CancelCheckinFeedbackScan: "cancelCheckinFeedbackScan",
+  CancelCheckinPageDiscovery: "cancelCheckinPageDiscovery",
   ContentCheckinFeedbackScan: "contentCheckinFeedbackScan",
   ContentCancelCheckinFeedbackScan: "contentCancelCheckinFeedbackScan",
   TempWindowCancelOpenRouterManagementKeyAction:
@@ -211,6 +212,7 @@ export const RuntimeActionIds = {
   TurnstileAssistOpen: "turnstileAssistOpen",
   ContentVerificationAssistOpened: "verificationAssistOpened",
   ContentTriggerCheckinPageAction: "triggerCheckinPageAction",
+  ContentInspectCheckinPage: "inspectCheckinPage",
   ContentOpenRouterManagementKeyAction: "openRouterManagementKeyAction",
   ContentRequestyManagementKeyAction: "requestyManagementKeyAction",
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",

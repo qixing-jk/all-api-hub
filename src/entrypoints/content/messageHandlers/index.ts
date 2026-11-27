@@ -8,6 +8,7 @@ import {
   handleGetLocalStorage,
   handleGetRenderedTitle,
   handleGetUserFromLocalStorage,
+  handleInspectCheckinPage,
   handleOpenRouterManagementKeyAction,
   handlePerformTempWindowFetch,
   handlePrepareAgentRouterOAuth,
@@ -224,6 +225,9 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentTriggerCheckinPageAction) {
       return handleTriggerCheckinPageAction(request, sendResponse)
+    }
+    if (request.action === RuntimeActionIds.ContentInspectCheckinPage) {
+      return handleInspectCheckinPage(request, sendResponse)
     }
 
     if (request.action === RuntimeActionIds.ContentWaitAndGetUserInfo) {

@@ -8,6 +8,7 @@ import {
   REQUESTY_PROVISIONING_STATES,
 } from "~/services/apiAdapters/requesty/keys/managementKeyPageContract"
 import { executeTempCheckinFeedbackScan } from "~/services/browsingContext/tempPage/checkinFeedbackScan"
+import { executeTempCheckinPageDiscovery } from "~/services/browsingContext/tempPage/checkinPageDiscovery"
 import { handleTempWindowOpenRouterManagementKeyAction } from "~/services/browsingContext/tempPage/openrouterManagementKeyAction"
 import { handleTempWindowRequestyManagementKeyAction } from "~/services/browsingContext/tempPage/requestyManagementKeyAction"
 import {
@@ -147,6 +148,15 @@ export async function executeAuthorizedTempContextTask(
 
   if (task.kind === TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan) {
     await executeTempCheckinFeedbackScan(
+      task.params,
+      suppressMinimize,
+      authorizeAtAcquire,
+      sendResponse,
+    )
+    return
+  }
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.CheckinPageDiscovery) {
+    await executeTempCheckinPageDiscovery(
       task.params,
       suppressMinimize,
       authorizeAtAcquire,

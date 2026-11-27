@@ -533,6 +533,7 @@ describe("evaluateProtectionBypassPolicy", () => {
         "session_read",
       ],
       checkin: [
+        "checkin_page_discovery",
         "checkin_feedback_scan",
         "api_fallback_fetch",
         "explicit_page_fetch",
@@ -601,6 +602,15 @@ describe("evaluateProtectionBypassPolicy", () => {
               originUrl: fetchParams.originUrl,
               requestId: "scan-1",
               input: { baseUrl: fetchParams.originUrl, siteType: "new-api" },
+            },
+          }
+        case "checkin_page_discovery":
+          return {
+            kind,
+            params: {
+              originUrl: fetchParams.originUrl,
+              requestId: "page-scan-1",
+              siteType: "new-api",
             },
           }
         case "credential_page_inspect":

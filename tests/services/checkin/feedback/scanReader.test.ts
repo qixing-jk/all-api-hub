@@ -1,9 +1,23 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { FEEDBACK_SCAN_LIMITS } from "~/services/checkin/feedback/scanLimits"
-import { createScanReader } from "~/services/checkin/feedback/scanReader"
+import { CHECK_IN_EVIDENCE_SCAN_LIMITS } from "~/services/checkin/discovery/evidence/scanLimits"
+import { createScanReader } from "~/services/checkin/discovery/evidence/scanReader"
 
 describe("feedback response boundaries", () => {
+  it("does not spend a request or report exhausted resources after cancellation", async () => {
+    const controller = new AbortController()
+    const fetcher = vi.fn()
+    const reader = createScanReader(
+      "https://example.com",
+      controller.signal,
+      fetcher,
+    )
+    controller.abort()
+    await expect(reader.read("/app.js")).rejects.toThrow("scan_limit")
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(reader.issues.size).toBe(0)
+  })
+
   it("rejects foreign origins and embedded credentials before dispatch", async () => {
     const fetcher = vi.fn()
     const reader = createScanReader(
@@ -43,10 +57,12 @@ describe("feedback response boundaries", () => {
       "https://api.ai-router.dev/status",
       expect.objectContaining({ credentials: "omit", redirect: "error" }),
     )
-    for (let i = 1; i < FEEDBACK_SCAN_LIMITS.requests; i++)
+    for (let i = 1; i < CHECK_IN_EVIDENCE_SCAN_LIMITS.requests; i++)
       await reader.read("/app.js")
     await expect(reader.readStatus("/status")).rejects.toThrow("scan_limit")
-    expect(fetcher).toHaveBeenCalledTimes(FEEDBACK_SCAN_LIMITS.requests)
+    expect(fetcher).toHaveBeenCalledTimes(
+      CHECK_IN_EVIDENCE_SCAN_LIMITS.requests,
+    )
   })
 
   it("handles empty responses and stops dispatching after the request budget", async () => {
@@ -56,14 +72,16 @@ describe("feedback response boundaries", () => {
       new AbortController().signal,
       fetcher,
     )
-    for (let i = 0; i < FEEDBACK_SCAN_LIMITS.requests; i++)
+    for (let i = 0; i < CHECK_IN_EVIDENCE_SCAN_LIMITS.requests; i++)
       expect(await reader.read("/status")).toEqual({
         status: 204,
         text: "",
         type: "",
       })
     await expect(reader.read("/status")).rejects.toThrow("scan_limit")
-    expect(fetcher).toHaveBeenCalledTimes(FEEDBACK_SCAN_LIMITS.requests)
+    expect(fetcher).toHaveBeenCalledTimes(
+      CHECK_IN_EVIDENCE_SCAN_LIMITS.requests,
+    )
     expect(reader.issues).toEqual(new Set(["limit"]))
   })
 })

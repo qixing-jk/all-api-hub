@@ -3,16 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useFeedbackClues } from "~/features/CheckInFeedback/useFeedbackClues"
-import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
+import { collectCheckInEvidenceInBrowser } from "~/services/checkin/discovery/evidence/scanClient"
 import {
   FEEDBACK_SCAN_STATUSES,
-  type CheckInFeedbackClues,
-} from "~/services/checkin/feedback/scanTypes"
+  type CheckInEvidence,
+} from "~/services/checkin/discovery/evidence/scanTypes"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
-vi.mock("~/services/checkin/feedback/scanClient", () => ({
-  collectFeedbackCluesInBrowser: vi.fn(),
+vi.mock("~/services/checkin/discovery/evidence/scanClient", () => ({
+  collectCheckInEvidenceInBrowser: vi.fn(),
 }))
 afterEach(() => vi.clearAllMocks())
 
@@ -20,8 +20,8 @@ describe("feedback clue collection", () => {
   it.each(["success", "failure"] as const)(
     "aborts the previous site scan and ignores its late %s after the source changes",
     async (outcome) => {
-      const previous = createDeferred<CheckInFeedbackClues>()
-      vi.mocked(collectFeedbackCluesInBrowser)
+      const previous = createDeferred<CheckInEvidence>()
+      vi.mocked(collectCheckInEvidenceInBrowser)
         .mockReturnValueOnce(previous.promise)
         .mockResolvedValueOnce({
           status: FEEDBACK_SCAN_STATUSES.Completed,
@@ -38,7 +38,8 @@ describe("feedback clue collection", () => {
         ({ snapshot }) => useFeedbackClues(snapshot),
         { initialProps: { snapshot: source } },
       )
-      const signal = vi.mocked(collectFeedbackCluesInBrowser).mock.calls[0]![1]!
+      const signal = vi.mocked(collectCheckInEvidenceInBrowser).mock
+        .calls[0]![1]!
       rerender({
         snapshot: { ...source, baseUrl: "https://second.example.com" },
       })

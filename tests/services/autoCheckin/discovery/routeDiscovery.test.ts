@@ -11,8 +11,8 @@ const { mockCollectFeedbackCluesInBrowser } = vi.hoisted(() => ({
   mockCollectFeedbackCluesInBrowser: vi.fn(),
 }))
 
-vi.mock("~/services/checkin/feedback/scanClient", () => ({
-  collectFeedbackCluesInBrowser: mockCollectFeedbackCluesInBrowser,
+vi.mock("~/services/checkin/discovery/evidence/scanClient", () => ({
+  collectCheckInEvidenceInBrowser: mockCollectFeedbackCluesInBrowser,
 }))
 
 const METHOD_ID = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn

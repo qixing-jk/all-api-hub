@@ -19,6 +19,7 @@
       "add_account": "新增帳號",
       "checkin_feedback": "收集簽到回報資訊",
       "detect_account": "識別帳號",
+      "find_checkin_page": "尋找簽到頁面",
       "manage_api_keys": "管理 API 金鑰",
       "manage_site_channels": "管理站點渠道",
       "manual_checkin": "手動簽到",

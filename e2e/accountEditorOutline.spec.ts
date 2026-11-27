@@ -486,26 +486,28 @@ for (const siteType of [
       })
       await expect(importButton).toBeVisible()
       const label = dialog.locator('label[for="account-session-cookie"]')
-      const alignment = await label.evaluate((element) => {
-        const labelBounds = element.getBoundingClientRect()
-        const center = labelBounds.y + labelBounds.height / 2
-        const delta = (action: Element) => {
-          const bounds = action.getBoundingClientRect()
-          return Math.abs(center - (bounds.y + bounds.height / 2))
-        }
-        const row = element.parentElement!
-        const help = row.querySelector(
-          'button[aria-label="About the session Cookie"]',
-        )
-        return {
-          importing: delta(
-            row.querySelector(
-              'button[aria-label="Import from current login"]',
-            )!,
-          ),
-          help: help ? delta(help) : null,
-        }
-      })
+      const importAction = await importButton.elementHandle()
+      const helpAction =
+        siteType === SITE_TYPES.ANYROUTER ? await help.elementHandle() : null
+      // Measure the actual controls in one frame while section scrolling settles.
+      const alignment = await label.evaluate(
+        (element, { importAction, helpAction }) => {
+          const centerY = (target: Element) => {
+            const bounds = target.getBoundingClientRect()
+            return bounds.y + bounds.height / 2
+          }
+          const labelCenter = centerY(element)
+          return {
+            importing: Math.abs(labelCenter - centerY(importAction)),
+            help: helpAction
+              ? Math.abs(labelCenter - centerY(helpAction))
+              : null,
+          }
+        },
+        { importAction, helpAction },
+      )
+      await importAction.dispose()
+      await helpAction?.dispose()
       expect(alignment.importing).toBeLessThanOrEqual(2)
       if (siteType === SITE_TYPES.ANYROUTER) {
         const credential = dialog.getByRole("group", {

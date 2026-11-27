@@ -3,6 +3,7 @@ import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { AccountIdentity } from "~/types"
+import type { CheckInConfig } from "~/types/checkIn"
 
 export const ACCOUNT_BOOTSTRAP_ROUTE_KINDS = {
   Login: "login",
@@ -22,6 +23,7 @@ export type AccountBootstrapRouteTarget = {
   /** Optional explicit intent for rendered fallback after network discovery. */
   pageInspectionExecution?: ProtectionBypassExecution
   siteType: AccountSiteType
+  checkIn?: Pick<CheckInConfig, "nativePagePath">
   /** Saved identity/credential for providers whose console routes are team-scoped. */
   userId?: AccountIdentity
   token?: string
