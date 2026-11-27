@@ -9,6 +9,7 @@ import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/api
 import { baiApiProvider } from "~/services/checkin/autoCheckin/providers/baiApi"
 import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
+import { hogLotteryProvider } from "~/services/checkin/autoCheckin/providers/hogLottery"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
@@ -108,7 +109,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(27)
+    expect(registrationContracts).toHaveLength(28)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -191,6 +192,11 @@ describe("autoCheckinMethodRegistry", () => {
           candidateSiteTypes: [SITE_TYPES.NEW_API],
           provider: xingyaProvider,
         },
+        {
+          id: "hog:free-daily-draw",
+          candidateSiteTypes: [SITE_TYPES.NEW_API],
+          provider: hogLotteryProvider,
+        },
       ]),
     )
 
@@ -253,6 +259,11 @@ describe("autoCheckinMethodRegistry", () => {
     ])
     expect(
       autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://fapi.leileihog.top")
+        .map(({ id }) => id),
+    ).toContain(AUTO_CHECKIN_METHOD_IDS.HogDailyLottery)
+    expect(
+      autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.UNKNOWN, "https://agentrouter.org")
         .map(({ id }) => id),
     ).toEqual([AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn])
@@ -290,6 +301,9 @@ describe("autoCheckinMethodRegistry", () => {
     expect(
       getAutoCheckinCandidateMethodIds(SITE_TYPES.NEW_API, undefined),
     ).toContain(AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn)
+    expect(
+      getAutoCheckinCandidateMethodIds(SITE_TYPES.NEW_API, undefined),
+    ).not.toContain(AUTO_CHECKIN_METHOD_IDS.HogDailyLottery)
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.NEW_API)).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     ])

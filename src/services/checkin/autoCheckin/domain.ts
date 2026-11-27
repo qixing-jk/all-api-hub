@@ -1,6 +1,7 @@
 import {
   AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
+  CHECK_IN_DISCOVERY_PRIORITIES,
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
@@ -15,6 +16,7 @@ import {
 } from "~/constants/checkIn"
 import {
   getCheckInDiscoveryPriority,
+  getCheckInMethodStatusPeriodKey,
   getCheckInResetTimeZone,
   getUnknownCheckInDiscoveryPriority,
 } from "~/services/checkin/autoCheckin/providers/registry"
@@ -46,15 +48,30 @@ export function isCheckInMethodStatusCurrent(
   const timeZone = getCheckInResetTimeZone(methodId) ?? fallbackTimeZone
   const evidence = status.evidence
   if (
-    evidence.source !== CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
-  )
-    return isCheckInObservationCurrent(evidence.observedAt, timeZone, now)
-  if (evidence.legacyObservedAt !== undefined)
-    return isCheckInObservationCurrent(evidence.legacyObservedAt, timeZone, now)
-  return (
-    evidence.legacyDayKey ===
-    getDayKeyFromUnixSeconds(Math.floor(now / 1000), timeZone)
-  )
+    evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
+  ) {
+    if (evidence.legacyObservedAt !== undefined) {
+      const period = getCheckInMethodStatusPeriodKey(
+        methodId,
+        evidence.legacyObservedAt,
+      )
+      if (period !== undefined)
+        return period === getCheckInMethodStatusPeriodKey(methodId, now)
+      return isCheckInObservationCurrent(
+        evidence.legacyObservedAt,
+        timeZone,
+        now,
+      )
+    }
+    return (
+      evidence.legacyDayKey ===
+      getDayKeyFromUnixSeconds(Math.floor(now / 1000), timeZone)
+    )
+  }
+  const period = getCheckInMethodStatusPeriodKey(methodId, evidence.observedAt)
+  if (period !== undefined)
+    return period === getCheckInMethodStatusPeriodKey(methodId, now)
+  return isCheckInObservationCurrent(evidence.observedAt, timeZone, now)
 }
 
 const uniqueCandidateMethodIds = (
@@ -107,12 +124,33 @@ const deriveDiscoveryDecision = (
   choices: readonly CheckInMethodChoice[],
   config: CheckInConfig,
 ): CheckInDiscoveryDecision => {
-  const allMatchedMethodIds = choices
+  let allMatchedMethodIds = choices
     .filter(
       (choice) =>
         choice.detectionOutcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
     )
     .map((choice) => choice.methodId)
+  const isKnownDisabled = (id: CheckInMethodId) => {
+    const status = config.methodKnowledge.methods[id]?.status
+    return (
+      status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
+    )
+  }
+  // Optional fallback activities yield to ordinary usable methods. Only when
+  // such a fallback matched may a disabled method yield; existing specific-vs-
+  // generic semantics otherwise stay intact. Unknown is never enablement proof.
+  if (
+    allMatchedMethodIds.some(
+      (id) =>
+        getCheckInDiscoveryPriority(id) ===
+          CHECK_IN_DISCOVERY_PRIORITIES.Fallback && !isKnownDisabled(id),
+    )
+  ) {
+    allMatchedMethodIds = allMatchedMethodIds.filter(
+      (id) => !isKnownDisabled(id),
+    )
+  }
   const highestPriority = Math.max(
     ...allMatchedMethodIds.map(getCheckInDiscoveryPriority),
   )

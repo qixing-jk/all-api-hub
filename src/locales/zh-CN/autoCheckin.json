@@ -174,6 +174,10 @@
       "description": "此方式使用 {{source}} 的第三方签到协议，仅适用于支持该协议的部署。",
       "name": "{{source}} 签到"
     },
+    "freeDailyDraw": {
+      "description": "领取 {{source}} 符合条件的免费每日抽奖和福利空投。需要配置控制台登录。",
+      "name": "{{source}} 免费每日奖励"
+    },
     "generic": {
       "name": "每日签到"
     },
@@ -193,6 +197,7 @@
       "freeApi": "露娜",
       "geniusProgrammer": "天才程序员中转站",
       "hiyo": "Hiyo Free",
+      "hog": "Hog API Gateway",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

@@ -79,7 +79,7 @@ export function getCheckInObservationTime(
     : status.evidence.observedAt
 }
 
-/** Returns whether the selected method status was observed for the current day. */
+/** Returns whether the selected status belongs to its method's current period. */
 export function isSelectedCheckInStatusCurrent(
   account: StatusAccount,
 ): boolean {

@@ -174,6 +174,10 @@
       "description": "この方式はサードパーティーの {{source}} チェックインプロトコルを使用し、対応する環境でのみ利用できます。",
       "name": "{{source}} のデイリーチェックイン"
     },
+    "freeDailyDraw": {
+      "description": "{{source}} の対象となる無料デイリー抽選と福祉エアドロップを受け取ります。ダッシュボードログインの設定が必要です。",
+      "name": "{{source}} の無料デイリー報酬"
+    },
     "generic": {
       "name": "デイリーチェックイン"
     },
@@ -193,6 +197,7 @@
       "freeApi": "Luna",
       "geniusProgrammer": "天才プログラマー中継サイト",
       "hiyo": "Hiyo Free",
+      "hog": "Hog API Gateway",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

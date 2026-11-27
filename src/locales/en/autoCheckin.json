@@ -178,6 +178,10 @@
       "description": "This method uses the third-party {{source}} check-in protocol and only works on deployments that support it.",
       "name": "{{source}} daily check-in"
     },
+    "freeDailyDraw": {
+      "description": "Claims eligible free daily draws and welfare airdrops from {{source}}. Requires a configured dashboard login.",
+      "name": "{{source}} free daily rewards"
+    },
     "generic": {
       "name": "Daily check-in"
     },
@@ -197,6 +201,7 @@
       "freeApi": "Luna",
       "geniusProgrammer": "Genius Programmer Relay",
       "hiyo": "Hiyo Free",
+      "hog": "Hog API Gateway",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

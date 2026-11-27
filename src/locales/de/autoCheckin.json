@@ -178,6 +178,10 @@
       "description": "Diese Methode verwendet das Check-in-Protokoll des Drittanbieters {{source}} und funktioniert nur bei Installationen, die es unterstützen.",
       "name": "Täglicher Check-in über {{source}}"
     },
+    "freeDailyDraw": {
+      "description": "Beansprucht verfügbare kostenlose Tagesziehungen und Wohlfahrts-Airdrops bei {{source}}. Eine konfigurierte Dashboard-Anmeldung ist erforderlich.",
+      "name": "{{source}} – kostenlose Tagesprämien"
+    },
     "generic": {
       "name": "Täglicher Check-in"
     },
@@ -197,6 +201,7 @@
       "freeApi": "Luna",
       "geniusProgrammer": "Genius Programmer Relay",
       "hiyo": "Hiyo Free",
+      "hog": "Hog API Gateway",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

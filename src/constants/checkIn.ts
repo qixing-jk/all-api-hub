@@ -10,6 +10,7 @@ export const CHECK_IN_ROUTE_OVERRIDE_SOURCES = {
 } as const
 
 export const AUTO_CHECKIN_METHOD_IDS = {
+  HogDailyLottery: "hog:free-daily-draw",
   NewApiDailyCheckIn: "new-api:daily-checkin",
   VeloeraDailyCheckIn: "veloera:daily-checkin",
   WongGongyiDailyCheckIn: "wong-gongyi:daily-checkin",
@@ -68,6 +69,7 @@ export const CHECK_IN_PROVIDER_READINESS_REASONS = {
 
 /** Protocol specificity, independent of enablement or execution readiness. */
 export const CHECK_IN_DISCOVERY_PRIORITIES = {
+  Fallback: -1,
   Generic: 0,
   Specific: 1,
 } as const
