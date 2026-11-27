@@ -27,6 +27,8 @@ The same run's financial failure spent approximately 60 seconds inside a single 
 
 Chrome 114 locally also reproduced a worker teardown error after all three Sub2API login-recovery cases passed. The test closed every context page before the fixture closed the context. Close auxiliary pages while leaving the fixture-owned primary page for fixture teardown; do not change shared teardown or suppress its errors.
 
+The second full compatibility run on `1f13fe96c9` exposed a financial-sorting reload race in Chrome 148. Every click and pre-reload row-order assertion passed; reloading immediately after the final optimistic update restored ascending order. Holding the existing preferences write lock for three seconds reproduced the identical result locally. Waiting for stored income/descending preferences before reloading passed under the same delay. Keep the existing post-reload assertions; the temporary delay is retained only as a local reproduction patch.
+
 ## Review and retained evidence
 
 The [local acceptance report](artifacts/acceptance.md) records commands, actual results, and remaining limits. Logs, original failures, diagnostic probes, downloaded browsers, timing profiles and real-site artifacts remain local under `artifacts/` for review. They are excluded from Git and must be reviewed/redacted before any publication.
