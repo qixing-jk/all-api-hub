@@ -183,6 +183,18 @@ const statusProtocols: HttpCheckInProtocol[] = [
       reward_amount: 0.1,
     }),
   },
+  {
+    name: "Loxo",
+    methodId: AUTO_CHECKIN_METHOD_IDS.LoxoDailyCheckIn,
+    statusPath: "/api/v1/user/check-in",
+    status: (checked) => ({
+      enabled: true,
+      checked_in_today: checked,
+      captcha_required: false,
+    }),
+    claimPath: "/api/v1/user/check-in",
+    receipt: () => ({ reward: 0.12, streak_days: 3 }),
+  },
 ]
 
 type Scenario =

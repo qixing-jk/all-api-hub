@@ -63,6 +63,18 @@ describe("Sub2API check-in read request", () => {
         data: { signedToday: false, config: { enabled: true } },
       }),
     },
+    {
+      method: AUTO_CHECKIN_METHOD_IDS.LoxoDailyCheckIn,
+      status: {
+        code: 0,
+        message: "ok",
+        data: {
+          enabled: true,
+          checked_in_today: false,
+          captcha_required: false,
+        },
+      },
+    },
   ])(
     "keeps $method submission on the browser session admitted by the first GET",
     async ({ method, status, begin }) => {

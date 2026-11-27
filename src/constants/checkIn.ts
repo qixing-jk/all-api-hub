@@ -27,6 +27,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   ClawhudDailyCheckIn: "clawhud:daily-checkin",
   DaiguaDailyCheckIn: "daigua:daily-checkin",
   XiaoenDailyCheckIn: "xiaoen:daily-checkin",
+  LoxoDailyCheckIn: "loxo:daily-checkin",
   SidruneDailyCheckIn: "sidrune:daily-checkin",
   FreeApiDailyCheckIn: "freeapi:daily-checkin",
   NexaVlinksDailyCheckIn: "nexavlinks:daily-checkin",

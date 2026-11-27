@@ -24,6 +24,11 @@ export const CHECK_IN_STATUS_DAY_GUARD_OWNERS = {
 /** Read-only context shared by discovery and selected status refresh. */
 export interface AutoCheckinProviderReadContext {
   account?: SiteAccount
+  /** Only authorized execution admission may renew credentials; discovery and reconciliation stay passive. */
+  authenticationRecovery?: Pick<
+    AutoCheckinProviderContext,
+    "tempWindowRequestSource" | "protectionBypassExecution"
+  >
   /** Existing refresh transport context; discovery supplies `account`. */
   request?: ApiServiceRequest
   signal?: AbortSignal

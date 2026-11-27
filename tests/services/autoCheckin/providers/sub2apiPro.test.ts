@@ -186,6 +186,19 @@ vi.mock(
 )
 
 vi.mock(
+  "~/services/apiService/sub2api/checkin/loxoCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/loxoCheckIn")
+    >()),
+    fetchLoxoCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported Loxo protocol", 404)),
+    performLoxoCheckIn: vi.fn(),
+  }),
+)
+
+vi.mock(
   "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<

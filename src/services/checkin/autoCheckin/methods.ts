@@ -857,6 +857,16 @@ async function executeSelectedCheckInOnce(
             account,
             observedAt: Date.now(),
             dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
+            ...(!attempt
+              ? {
+                  authenticationRecovery: {
+                    tempWindowRequestSource:
+                      input.context.tempWindowRequestSource,
+                    protectionBypassExecution:
+                      input.context.protectionBypassExecution,
+                  },
+                }
+              : {}),
           }),
         getCheckInResetTimeZone(registration.id),
       )
