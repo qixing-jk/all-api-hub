@@ -37,7 +37,10 @@ import {
   createHiyoCheckInStatusEndpoint,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
-import { linxiStatusRoute } from "~/services/apiService/sub2api/checkin/linxiCheckInProtocol"
+import {
+  LINXI_DEFAULT_RESET_TIME_ZONE,
+  linxiStatusRoute,
+} from "~/services/apiService/sub2api/checkin/linxiCheckInProtocol"
 import {
   createNexaVlinksCheckInStatusEndpoint,
   resolveNexaVlinksCheckInTimezone,
@@ -142,6 +145,8 @@ export type CheckInMethodPresentationMetadata = {
 interface AutoCheckinMethodDefinitionBase {
   /** Calendar used by the site to reset its daily check-in. Defaults to the device calendar. */
   readonly resetTimeZone?: string
+  /** The method can verify a deployment-specific reset timezone in its protocol. */
+  readonly reportsResetTimeZone?: boolean
   readonly presentation?: Partial<
     Omit<CheckInMethodPresentationMetadata, "sourceName">
   >
@@ -435,6 +440,8 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: {
+    resetTimeZone: LINXI_DEFAULT_RESET_TIME_ZONE,
+    reportsResetTimeZone: true,
     // Public frontend bundles for both K40 hosts use the same `/api/v1`
     // check-in status and claim contract as 100xLabs. The HTTP-only K40
     // origin is intentionally excluded because authenticated calls would
@@ -806,13 +813,26 @@ export function getUnknownCheckInDiscoveryPriority(
   )
 }
 
-/** A missing reset zone uses the device calendar. */
+/** Only methods with a timezone-bearing protocol can override their default calendar. */
 export function getCheckInResetTimeZone(
   methodId: CheckInMethodId,
+  observedTimeZone?: string,
 ): string | undefined {
   const definition: AutoCheckinMethodDefinition =
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
-  return definition.resetTimeZone
+  return (
+    (definition.reportsResetTimeZone ? observedTimeZone : undefined) ??
+    definition.resetTimeZone
+  )
+}
+
+/** Whether persisted observations of this method may carry a site-reported zone. */
+export function reportsCheckInResetTimeZone(
+  methodId: CheckInMethodId,
+): boolean {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.reportsResetTimeZone === true
 }
 
 /** Returns whether the selected method can verify today without posting. */

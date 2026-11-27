@@ -81,7 +81,8 @@ export const createSub2ApiCheckInReadRequest = (
     ? bindApiTransportRequest(
         {
           ...readRequest,
-          ...transportPolicy,
+          tempWindowRequestSource: transportPolicy.tempWindowRequestSource,
+          protectionBypassExecution: transportPolicy.protectionBypassExecution,
         },
         API_DIRECT_REQUEST_REASONS.CallerManaged,
       )

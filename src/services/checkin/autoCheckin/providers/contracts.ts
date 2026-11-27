@@ -52,6 +52,8 @@ export interface AnyrouterCheckInParams {
 export interface AutoCheckinMutationLifecycle extends ApiTransportRequestObserver {
   dispatched: boolean
   responseReceived: boolean
+  /** Earliest possible submission and its verified site calendar. */
+  admittedMutation?: { startedAt: number; resetTimeZone: string }
 }
 
 export type KnownCheckInMethodStatus = Extract<

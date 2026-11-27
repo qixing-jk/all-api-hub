@@ -66,6 +66,7 @@ type ConfirmationEvidence =
       kind: typeof CHECK_IN_CONFIRMATION_KINDS.Response
       /** Protocol date attribution, independent of when the response arrived. */
       completedAt?: number
+      resetTimeZone?: string
     }
   | {
       kind:
@@ -181,6 +182,7 @@ export async function confirmCheckInAttempt(input: {
   account: SiteAccount
   result: AutoCheckinProviderOutcome
   startedAt: number
+  mutationStartedAt?: number
   readStatus?: () => Promise<
     | {
         status: CheckInMethodStatus
@@ -286,7 +288,7 @@ export async function confirmCheckInAttempt(input: {
     (result.status !== CHECKIN_RESULT_STATUS.UNCERTAIN ||
       !input.timeZone ||
       isCheckInObservationCurrent(
-        input.startedAt,
+        input.mutationStartedAt ?? input.startedAt,
         input.timeZone,
         confirmation.observedAt,
       ))

@@ -26,14 +26,16 @@ describe("Linxi and 100xLabs check-in response", () => {
     vi.setSystemTime(new Date("2026-11-22T16:01:00Z"))
   })
   afterEach(() => vi.useRealTimers())
-  it("reads the native time-zone query and code/data envelope", () => {
-    expect(linxiStatusRoute("Asia/Singapore")).toBe(
-      "/api/v1/check-in/status?timezone=Asia%2FSingapore",
+  it("uses the same fallback timezone in the status query and response parser", () => {
+    expect(linxiStatusRoute()).toBe(
+      "/api/v1/check-in/status?timezone=Asia%2FShanghai",
     )
     expect(parseLinxiStatus(response(status))).toEqual({
       enabled: true,
       checkedInToday: false,
       requiresManualVerification: false,
+      observedAt: Date.now(),
+      resetTimeZone: "Asia/Shanghai",
     })
     expect(
       parseLinxiStatus(response({ ...status, enabled: false })).enabled,
@@ -44,6 +46,8 @@ describe("Linxi and 100xLabs check-in response", () => {
     { ...status, check_in_date: "2026-02-31" },
     { ...status, turnstile_required: undefined },
     { ...status, enabled: "false" },
+    { ...status, timezone: "" },
+    { ...status, timezone: "Invalid/Zone" },
   ])("rejects stale or incomplete status", (data) => {
     expect(() => parseLinxiStatus(response(data))).toThrow()
   })
@@ -56,6 +60,11 @@ describe("Linxi and 100xLabs check-in response", () => {
     already_checked_in: false,
   }
   it("requires today's attendance and an explicit duplicate flag", () => {
+    const completion = {
+      day,
+      completedAt: Date.now(),
+      resetTimeZone: "Asia/Shanghai",
+    }
     expect(
       parseLinxiClaim(
         response({
@@ -65,11 +74,14 @@ describe("Linxi and 100xLabs check-in response", () => {
           lottery_grant: { enabled: true },
         }),
       ),
-    ).toEqual({ kind: "applied", day, pool: "free", amount: 0 })
+    ).toEqual({ kind: "applied", ...completion, pool: "free", amount: 0 })
     expect(
       parseLinxiClaim(response({ ...record, already_checked_in: true })),
-    ).toEqual({ kind: "already", day })
-    expect(parseLinxiClaim(response(record))).toEqual({ kind: "applied", day })
+    ).toEqual({ kind: "already", ...completion })
+    expect(parseLinxiClaim(response(record))).toEqual({
+      kind: "applied",
+      ...completion,
+    })
   })
   it.each([
     { already_checked_in: true },

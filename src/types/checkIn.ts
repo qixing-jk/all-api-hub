@@ -94,6 +94,8 @@ export type CheckInMethodStatus =
        * keep their meaning.
        */
       requiresManualVerification?: boolean
+      /** Reset timezone confirmed by this deployment's status protocol. */
+      resetTimeZone?: string
       evidence:
         | {
             source: typeof CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe
