@@ -23,9 +23,9 @@ import autoCheckinLocale from "~/locales/en/autoCheckin.json"
 import commonLocale from "~/locales/en/common.json"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { collectCheckInEvidenceInBrowser } from "~/services/checkin/discovery/evidence/scanClient"
+import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/discovery/evidence/scanTypes"
 import { FEEDBACK_EXECUTION_RECORDS } from "~/services/checkin/feedback/executionTypes"
-import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
-import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/feedback/scanTypes"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -51,12 +51,15 @@ vi.mock("~/utils/navigation", () => ({ openAccountManagerWithSearch: vi.fn() }))
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: { getStatus: vi.fn() },
 }))
-vi.mock("~/services/checkin/feedback/scanClient", async (original) => ({
-  ...(await original<
-    typeof import("~/services/checkin/feedback/scanClient")
-  >()),
-  collectFeedbackCluesInBrowser: vi.fn(),
-}))
+vi.mock(
+  "~/services/checkin/discovery/evidence/scanClient",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/checkin/discovery/evidence/scanClient")
+    >()),
+    collectCheckInEvidenceInBrowser: vi.fn(),
+  }),
+)
 vi.mock("~/utils/browser/tabs", async (original) => ({
   ...(await original<typeof import("~/utils/browser/tabs")>()),
   createTab: vi.fn(),
@@ -89,7 +92,7 @@ afterAll(() => {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(autoCheckinStorage.getStatus).mockReset().mockResolvedValue(null)
-  vi.mocked(collectFeedbackCluesInBrowser).mockRejectedValue(
+  vi.mocked(collectCheckInEvidenceInBrowser).mockRejectedValue(
     new Error("unavailable"),
   )
   vi.mocked(createTab).mockResolvedValue(undefined)
@@ -102,7 +105,7 @@ afterEach(() => {
 
 describe("check-in feedback workflow", () => {
   it("discloses unavailable authenticated queries while retaining public scan results", async () => {
-    vi.mocked(collectFeedbackCluesInBrowser).mockResolvedValueOnce({
+    vi.mocked(collectCheckInEvidenceInBrowser).mockResolvedValueOnce({
       status: FEEDBACK_SCAN_STATUSES.Partial,
       routes: [],
       statusQueries: [],
@@ -340,9 +343,9 @@ describe("check-in feedback workflow", () => {
   it("explains that collection updates the report while leaving description and navigation optional", async () => {
     const user = userEvent.setup()
     let finishScan!: (
-      value: Awaited<ReturnType<typeof collectFeedbackCluesInBrowser>>,
+      value: Awaited<ReturnType<typeof collectCheckInEvidenceInBrowser>>,
     ) => void
-    vi.mocked(collectFeedbackCluesInBrowser).mockImplementationOnce(
+    vi.mocked(collectCheckInEvidenceInBrowser).mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           finishScan = resolve
@@ -1117,7 +1120,7 @@ describe("check-in feedback workflow", () => {
 
   it("lets users edit completed clues and retry a failed GitHub opening", async () => {
     const user = userEvent.setup()
-    vi.mocked(collectFeedbackCluesInBrowser).mockResolvedValue({
+    vi.mocked(collectCheckInEvidenceInBrowser).mockResolvedValue({
       status: FEEDBACK_SCAN_STATUSES.Completed,
       routes: ["/api/checkin"],
       statusQueries: [],
@@ -1166,12 +1169,12 @@ describe("check-in feedback workflow", () => {
       ),
     )
     await screen.findByLabelText("What happened? (optional)")
-    expect(collectFeedbackCluesInBrowser).not.toHaveBeenCalled()
+    expect(collectCheckInEvidenceInBrowser).not.toHaveBeenCalled()
   })
 
   it("presents collected information without an incomplete-query warning and retains diagnostic notes", async () => {
     const user = userEvent.setup()
-    vi.mocked(collectFeedbackCluesInBrowser).mockResolvedValue({
+    vi.mocked(collectCheckInEvidenceInBrowser).mockResolvedValue({
       status: FEEDBACK_SCAN_STATUSES.Partial,
       statusQueries: [
         { path: "/api/user/check_in_status", status: 403, keys: ["success"] },
@@ -1448,7 +1451,7 @@ describe("check-in feedback workflow", () => {
     await screen.findByLabelText("What happened? (optional)")
     expect(accountQueries.getAccountById).toHaveBeenCalledWith("unconfigured")
     expect(autoCheckinStorage.getStatus).toHaveBeenCalledOnce()
-    expect(collectFeedbackCluesInBrowser).toHaveBeenCalledOnce()
+    expect(collectCheckInEvidenceInBrowser).toHaveBeenCalledOnce()
     expect(
       screen.getByRole("button", {
         name: accountDialogLocale.checkInFeedback.open,
@@ -1497,7 +1500,7 @@ describe("check-in feedback workflow", () => {
       )
       await screen.findByLabelText("What happened? (optional)")
       expect(accountQueries.getAccountById).not.toHaveBeenCalled()
-      expect(collectFeedbackCluesInBrowser).toHaveBeenCalledOnce()
+      expect(collectCheckInEvidenceInBrowser).toHaveBeenCalledOnce()
       expect(autoCheckinStorage.getStatus).not.toHaveBeenCalled()
       expect(redetect).not.toHaveBeenCalled()
       await user.type(
@@ -1911,9 +1914,9 @@ describe("check-in feedback workflow", () => {
   it("keeps submission available during scanning and cancels on unmount", async () => {
     const user = userEvent.setup()
     let complete!: (
-      value: Awaited<ReturnType<typeof collectFeedbackCluesInBrowser>>,
+      value: Awaited<ReturnType<typeof collectCheckInEvidenceInBrowser>>,
     ) => void
-    vi.mocked(collectFeedbackCluesInBrowser).mockImplementation(
+    vi.mocked(collectCheckInEvidenceInBrowser).mockImplementation(
       () =>
         new Promise((resolve) => {
           complete = resolve
@@ -1931,7 +1934,7 @@ describe("check-in feedback workflow", () => {
     expect(
       screen.getByText(accountDialogLocale.checkInFeedback.scanning),
     ).toBeVisible()
-    expect(collectFeedbackCluesInBrowser).toHaveBeenCalledOnce()
+    expect(collectCheckInEvidenceInBrowser).toHaveBeenCalledOnce()
     await user.type(
       screen.getByLabelText("What happened? (optional)"),
       "Keep my description",
@@ -1955,7 +1958,7 @@ describe("check-in feedback workflow", () => {
   })
 
   it("aborts an active scan when the feedback view closes", async () => {
-    vi.mocked(collectFeedbackCluesInBrowser).mockImplementation(
+    vi.mocked(collectCheckInEvidenceInBrowser).mockImplementation(
       () => new Promise(() => {}),
     )
     const { unmount } = render(
@@ -1963,7 +1966,7 @@ describe("check-in feedback workflow", () => {
     )
     await screen.findByLabelText("What happened? (optional)")
     const signal = atIndex(
-      vi.mocked(collectFeedbackCluesInBrowser).mock.calls,
+      vi.mocked(collectCheckInEvidenceInBrowser).mock.calls,
       0,
     )[1]
     unmount()

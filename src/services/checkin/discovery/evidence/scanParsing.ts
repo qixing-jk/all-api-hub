@@ -1,4 +1,6 @@
-import { FEEDBACK_SCAN_LIMITS } from "./scanLimits"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
+
+import { CHECK_IN_EVIDENCE_SCAN_LIMITS } from "./scanLimits"
 
 export const KEYWORDS = [
   "checkin",
@@ -115,18 +117,52 @@ export function extractCheckInRoutes(source: string): string[] {
     const literal = rawLiteral.replaceAll("\\/", "/")
     if (!ROUTE_KEYWORDS.test(literal) || !/^(?:\/|https?:\/\/)/i.test(literal))
       continue
-    try {
-      const path = new URL(literal, "https://scan.invalid").pathname
-      if (path.length > 200 || !/^\/[a-zA-Z0-9/_{}:.%-]*$/.test(path)) continue
-      if (/(?:sk-|eyJ)[a-zA-Z0-9_-]{12,}|[a-zA-Z0-9_-]{40,}/.test(path))
-        continue
+    const path = normalizeCheckInRouteClue(literal)
+    if (path) {
       routes.add(path)
-      if (routes.size >= FEEDBACK_SCAN_LIMITS.routes) break
-    } catch {
-      // A malformed candidate is not a route clue.
+      if (routes.size >= CHECK_IN_EVIDENCE_SCAN_LIMITS.routes) break
     }
   }
   return [...routes]
+}
+
+/** Declared frontend routes are hints only; never interpret a generic URL literal as a page. */
+export function extractNativeCheckInPageRoutes(source: string): string[] {
+  const routes = new Set<string>()
+  for (const match of decodeSource(source).matchAll(
+    /(?:\bpath\s*:\s*|\b(?:createFileRoute|createLazyFileRoute)\s*\(\s*)["'`]([^"'`\r\n]{1,1000})["'`]/g,
+  )) {
+    const raw = match[1]?.replaceAll("\\/", "/")
+    if (!raw?.startsWith("/") || raw.startsWith("//") || /[?#]/.test(raw))
+      continue
+    // TanStack's pathless layout IDs do not appear in the actual browser URL.
+    const path = normalizeCheckInRouteClue(
+      raw.replace(/\/_authenticated(?=\/)/g, ""),
+    )
+    if (
+      path &&
+      normalizeCheckInPagePath(path) &&
+      !/^\/api(?:\/|$)/i.test(path) &&
+      /(?:^|\/)(?:invite|profile|personal|check[\s_-]?in|daily|reward[s]?|welfare|attendance)(?:\/|$)/i.test(
+        path,
+      )
+    )
+      routes.add(path)
+  }
+  return [...routes]
+}
+
+/** Keep bounded path facts from source or navigation; discard query values and secrets. */
+export function normalizeCheckInRouteClue(literal: string): string | null {
+  try {
+    const path = new URL(literal, "https://scan.invalid").pathname
+    if (path.length > 200 || !/^\/[a-zA-Z0-9/_{}:.%-]*$/.test(path)) return null
+    if (/(?:sk-|eyJ)[a-zA-Z0-9_-]{12,}|[a-zA-Z0-9_-]{40,}/.test(path))
+      return null
+    return path
+  } catch {
+    return null
+  }
 }
 
 /** Includes only ordinary top-level key names from JSON-shaped status responses. */

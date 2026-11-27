@@ -5,6 +5,8 @@ export interface NewApiCheckInRecord {
    */
   checkin_date: string
   quota_awarded: number | string
+  /** Flowbee welfare points; independent of the legacy quota field. */
+  points_awarded?: number
 }
 
 export interface NewApiCheckInStatus {

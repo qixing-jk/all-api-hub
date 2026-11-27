@@ -28,6 +28,7 @@ import {
   ACCOUNT_LOGIN_PROVIDERS,
 } from "~/constants/accountLogin"
 import {
+  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_ACCOUNT_LOGIN_MODES,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_AVAILABILITIES,
@@ -61,7 +62,9 @@ import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/
 import { getCheckInAccountLoginMode } from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig } from "~/types"
 
+import { AccountCheckInPageField } from "./AccountCheckInPageField"
 import { AccountVerificationContinuation } from "./AccountVerificationContinuation"
+import type { NativePageDiscoveryIdentity } from "./useNativeCheckInPageDiscovery"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
 const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
@@ -84,6 +87,7 @@ const ACCOUNT_CHECK_IN_TARGET_IDS = {
 } as const
 
 interface AccountCheckInSectionProps {
+  nativePageDiscoveryIdentity?: NativePageDiscoveryIdentity
   continuous?: boolean
   loginMethodId?: string
   loginConfigured?: boolean
@@ -114,6 +118,7 @@ export function AccountCheckInSection({
   onRedetectCheckInMethods,
   isRedetectingCheckInMethods,
   checkInRedetectionFeedback,
+  nativePageDiscoveryIdentity,
 }: AccountCheckInSectionProps) {
   const { t } = useTranslation(["accountDialog", "messages", "autoCheckin"])
   const { openFeedback, feedbackDialog } = useCheckInFeedback()
@@ -542,6 +547,16 @@ export function AccountCheckInSection({
         checkIn={checkIn}
         candidateMethodIds={candidateMethodIds}
         onCheckInChange={onCheckInChange}
+      />
+      <AccountCheckInPageField
+        checkIn={checkIn}
+        onCheckInChange={onCheckInChange}
+        siteUrl={siteUrl}
+        siteType={siteType}
+        discoveryEnabled={candidateMethodIds.includes(
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+        )}
+        discoveryIdentity={nativePageDiscoveryIdentity}
       />
       <FormField
         label={t("form.customCheckInUrl")}

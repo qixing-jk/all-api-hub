@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { collectCheckInFeedbackClues } from "~/services/checkin/feedback/scan"
-import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
+import { collectCheckInEvidence } from "~/services/checkin/discovery/evidence/scan"
+import { collectCheckInEvidenceInBrowser } from "~/services/checkin/discovery/evidence/scanClient"
 import {
-  FEEDBACK_SCAN_SESSION_TIMEOUT_MS,
+  CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS,
   FEEDBACK_SCAN_STATUSES,
-} from "~/services/checkin/feedback/scanTypes"
+  type CheckInEvidence,
+} from "~/services/checkin/discovery/evidence/scanTypes"
 import { AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
@@ -22,8 +23,8 @@ vi.mock("~/utils/browser/runtimeMessages", () => ({
 vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   getCurrentTempWindowRequestSource: () => "options",
 }))
-vi.mock("~/services/checkin/feedback/scan", () => ({
-  collectCheckInFeedbackClues: vi.fn(),
+vi.mock("~/services/checkin/discovery/evidence/scan", () => ({
+  collectCheckInEvidence: vi.fn(),
 }))
 
 const input = {
@@ -38,7 +39,7 @@ const clues = {
 }
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(collectCheckInFeedbackClues).mockResolvedValue(clues)
+  vi.mocked(collectCheckInEvidence).mockResolvedValue(clues)
 })
 afterEach(() => vi.useRealTimers())
 
@@ -48,8 +49,12 @@ describe("feedback browser scan", () => {
       success: true,
       data: clues,
     })
-    await collectFeedbackCluesInBrowser(
-      { ...input, routePaths: ["/api/user/daily-custom"] },
+    await collectCheckInEvidenceInBrowser(
+      {
+        ...input,
+        routePaths: ["/api/user/daily-custom"],
+        nativePagePath: "/invite?tab=daily#/claim",
+      },
       new AbortController().signal,
     )
     expect(executeProtectionBypassTask).toHaveBeenCalledWith(
@@ -60,6 +65,7 @@ describe("feedback browser scan", () => {
               baseUrl: "https://example.com",
               siteType: SITE_TYPES.NEW_API,
               routePaths: ["/api/user/daily-custom"],
+              nativePagePath: "/invite?tab=daily#/claim",
             },
           }),
         }),
@@ -68,7 +74,7 @@ describe("feedback browser scan", () => {
   })
   it("avoids a browser task for an invalid origin", async () => {
     expect(
-      await collectFeedbackCluesInBrowser(
+      await collectCheckInEvidenceInBrowser(
         { ...input, baseUrl: "invalid" },
         new AbortController().signal,
       ),
@@ -81,7 +87,7 @@ describe("feedback browser scan", () => {
       success: true,
       data: clues,
     })
-    await collectFeedbackCluesInBrowser(
+    await collectCheckInEvidenceInBrowser(
       {
         ...input,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "selected" },
@@ -104,7 +110,7 @@ describe("feedback browser scan", () => {
       data: clues,
     })
     expect(
-      await collectFeedbackCluesInBrowser(
+      await collectCheckInEvidenceInBrowser(
         {
           ...input,
           auth: {
@@ -141,31 +147,37 @@ describe("feedback browser scan", () => {
         }),
       }),
     )
-    expect(collectCheckInFeedbackClues).not.toHaveBeenCalled()
+    expect(collectCheckInEvidence).not.toHaveBeenCalled()
   })
 
   it("falls back to bounded direct reads when a temporary page is unavailable", async () => {
     vi.mocked(executeProtectionBypassTask).mockResolvedValue({ success: false })
     expect(
-      await collectFeedbackCluesInBrowser(input, new AbortController().signal),
+      await collectCheckInEvidenceInBrowser(
+        input,
+        new AbortController().signal,
+      ),
     ).toEqual(clues)
-    expect(collectCheckInFeedbackClues).toHaveBeenCalledOnce()
+    expect(collectCheckInEvidence).toHaveBeenCalledOnce()
   })
 
   it("cancels the remote request without falling back or waiting for a late result", async () => {
     vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
       new Error("port closed"),
     )
-    const remote = createDeferred<any>()
+    const remote = createDeferred<{
+      success: boolean
+      data?: CheckInEvidence
+    }>()
     vi.mocked(executeProtectionBypassTask).mockReturnValue(remote.promise)
     const controller = new AbortController()
-    const pending = collectFeedbackCluesInBrowser(input, controller.signal)
+    const pending = collectCheckInEvidenceInBrowser(input, controller.signal)
     controller.abort()
     await expect(pending).rejects.toThrow("scan_cancelled")
     expect(sendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({ action: "cancelCheckinFeedbackScan" }),
     )
-    expect(collectCheckInFeedbackClues).not.toHaveBeenCalled()
+    expect(collectCheckInEvidence).not.toHaveBeenCalled()
     remote.resolve({ success: true, data: clues })
   })
 
@@ -174,13 +186,13 @@ describe("feedback browser scan", () => {
     vi.mocked(executeProtectionBypassTask).mockReturnValue(
       new Promise(() => {}),
     )
-    const pending = collectFeedbackCluesInBrowser(
+    const pending = collectCheckInEvidenceInBrowser(
       input,
       new AbortController().signal,
     )
-    await vi.advanceTimersByTimeAsync(FEEDBACK_SCAN_SESSION_TIMEOUT_MS)
+    await vi.advanceTimersByTimeAsync(CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS)
     expect((await pending).issues).toEqual(["task_timeout"])
-    expect(collectCheckInFeedbackClues).not.toHaveBeenCalled()
+    expect(collectCheckInEvidence).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   })
 })

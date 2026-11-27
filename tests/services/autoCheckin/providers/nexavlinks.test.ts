@@ -25,6 +25,7 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { tempWindowTriggerCheckinPageAction } from "~/utils/browser/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -397,34 +398,47 @@ describe("NexaVlinks check-in integration", () => {
     expect(fetchNexaVlinksDailyCheckInStatus).not.toHaveBeenCalled()
   })
 
-  it("opens the site's own check-in page with a scoped button trigger", async () => {
-    vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(
-      clickedAction({ status: "completed", provider: "interactive" }) as never,
-    )
-    vi.mocked(fetchNexaVlinksDailyCheckInStatus).mockResolvedValue({
-      enabled: true,
-      checkedInToday: true,
-    })
+  it.each([undefined, "/rewards?tab=daily#/claim"])(
+    "opens the native page override %s with a scoped button trigger",
+    async (nativePagePath) => {
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(
+        clickedAction({
+          status: "completed",
+          provider: "interactive",
+        }) as never,
+      )
+      vi.mocked(fetchNexaVlinksDailyCheckInStatus).mockResolvedValue({
+        enabled: true,
+        checkedInToday: true,
+      })
 
-    await checkInWithStatusProof()
+      const account = createAccount()
+      account.checkIn.nativePagePath = nativePagePath
+      await nexavlinksProvider.checkIn(account, {
+        ...executionContext(),
+        statusProof: notCheckedStatusProof,
+      })
 
-    // The site's sidebar also links "Check In", and the generic text trigger
-    // prefers the shortest label, so the trigger is scoped to the page body.
-    expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        originUrl: CONSOLE_ORIGIN,
-        pageUrl: CHECK_IN_URL,
-        siteType: SITE_TYPES.SUB2API,
-        expectedUserId: "6262",
-        accountId: "nexavlinks-account",
-        trigger: {
-          kind: "clickText",
-          candidateSelector: "main button",
-          positivePattern: "check\\s*in|签到",
-        },
-      }),
-    )
-  })
+      // The site's sidebar also links "Check In", and the generic text trigger
+      // prefers the shortest label, so the trigger is scoped to the page body.
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          originUrl: CONSOLE_ORIGIN,
+          pageUrl: nativePagePath
+            ? `${CONSOLE_ORIGIN}${nativePagePath}`
+            : CHECK_IN_URL,
+          siteType: SITE_TYPES.SUB2API,
+          expectedUserId: "6262",
+          accountId: "nexavlinks-account",
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
+            candidateSelector: "main button",
+            positivePattern: "check\\s*in|签到",
+          },
+        }),
+      )
+    },
+  )
 
   it("confirms a check-in the page completed and reports it as done today", async () => {
     vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(

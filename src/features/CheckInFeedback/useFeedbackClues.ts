@@ -2,16 +2,16 @@ import { useEffect, useState } from "react"
 
 import type { AuthConfig } from "~/services/apiTransport/type"
 import { listCheckInRoutePaths } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
+import { collectCheckInEvidenceInBrowser } from "~/services/checkin/discovery/evidence/scanClient"
+import {
+  FEEDBACK_SCAN_STATUSES,
+  type FeedbackScanStatus,
+} from "~/services/checkin/discovery/evidence/scanTypes"
 import {
   getFeedbackOrigin,
   type CheckInFeedbackSnapshot,
 } from "~/services/checkin/feedback/report"
 import { formatCheckInFeedbackClues } from "~/services/checkin/feedback/scan"
-import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
-import {
-  FEEDBACK_SCAN_STATUSES,
-  type FeedbackScanStatus,
-} from "~/services/checkin/feedback/scanTypes"
 
 const FEEDBACK_COLLECTION_STATUSES = {
   Idle: "idle",
@@ -42,7 +42,7 @@ export function useFeedbackClues(
     setScanStatus(FEEDBACK_COLLECTION_STATUSES.Running)
     const collect = async () => {
       try {
-        const result = await collectFeedbackCluesInBrowser(
+        const result = await collectCheckInEvidenceInBrowser(
           {
             baseUrl: snapshot.baseUrl,
             siteType: snapshot.siteType,
@@ -50,6 +50,7 @@ export function useFeedbackClues(
             // A deployment's own path is what this account actually calls, so
             // the report reads it first instead of only the canonical route.
             routePaths: listCheckInRoutePaths(snapshot.checkIn),
+            nativePagePath: snapshot.checkIn.nativePagePath,
           },
           run.signal,
         )

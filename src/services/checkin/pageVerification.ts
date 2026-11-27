@@ -6,28 +6,37 @@ import {
   TURNSTILE_MANUAL_WAIT_MS,
   TURNSTILE_RESPONSE_FIELD_SELECTOR,
 } from "~/constants/turnstile"
-import type { PageVerificationResult } from "~/types/turnstile"
+import { isCheckInElementShown } from "~/services/checkin/discovery/evidence/visibility"
+import {
+  PAGE_VERIFICATION_PROVIDERS,
+  PAGE_VERIFICATION_STATUSES,
+  type PageVerificationResult,
+} from "~/types/turnstile"
 
 import { createVerificationManualWindow } from "./verificationManualWindow"
 
 const APPEARANCE_WAIT_MS = 2_000
 const POLL_INTERVAL_MS = 250
+const ALTCHA_STATES = {
+  Unverified: "unverified",
+  Verified: "verified",
+} as const
 
 // Scripts and page text alone do not establish that this action needs a captcha.
 const WIDGETS = [
   {
-    provider: "turnstile",
+    provider: PAGE_VERIFICATION_PROVIDERS.Turnstile,
     widget: `${TURNSTILE_CONTAINER_SELECTOR}, ${TURNSTILE_IFRAME_SELECTOR}`,
     response: TURNSTILE_RESPONSE_FIELD_SELECTOR,
   },
   {
-    provider: "recaptcha",
+    provider: PAGE_VERIFICATION_PROVIDERS.Recaptcha,
     widget:
       '.g-recaptcha, iframe[src*="/recaptcha/api2/anchor"], iframe[src*="/recaptcha/api2/bframe"], iframe[src*="/recaptcha/enterprise/anchor"], iframe[src*="/recaptcha/enterprise/bframe"]',
     response: '[name="g-recaptcha-response"]',
   },
   {
-    provider: "hcaptcha",
+    provider: PAGE_VERIFICATION_PROVIDERS.Hcaptcha,
     widget: '.h-captcha, iframe[src*="hcaptcha.com/captcha"]',
     response: '[name="h-captcha-response"]',
   },
@@ -36,26 +45,10 @@ const WIDGETS = [
 type ObservedVerification = {
   provider: Exclude<
     PageVerificationResult,
-    { status: "not_present" }
+    { status: typeof PAGE_VERIFICATION_STATUSES.NotPresent }
   >["provider"]
   isPending: () => boolean
-}
-
-/** Ignore detached or explicitly hidden verification UI, including ancestors. */
-function isShown(element: Element): boolean {
-  if (!element.isConnected) return false
-  for (let node: Element | null = element; node; node = node.parentElement) {
-    const style = getComputedStyle(node)
-    if (
-      node.hasAttribute("hidden") ||
-      node.getAttribute("aria-hidden") === "true" ||
-      (node.tagName === "DIALOG" && !node.hasAttribute("open")) ||
-      style.display === "none" ||
-      style.visibility === "hidden"
-    )
-      return false
-  }
-  return true
+  tryAutoVerify?: () => void
 }
 
 const CAPTCHA_HINT = /captcha|verification\s*code|验证码|驗證碼/i
@@ -75,7 +68,7 @@ const IMAGE_INSTRUCTION =
 /** Require an image resource, drawing surface or image background. */
 function hasChallengeSurface(element: Element): boolean {
   return (
-    isShown(element) &&
+    isCheckInElementShown(element) &&
     (element.tagName === "CANVAS" ||
       (element.tagName === "IMG" && !!element.getAttribute("src")) ||
       getComputedStyle(element).backgroundImage.startsWith("url("))
@@ -101,7 +94,7 @@ function observeGenericVerification(): ObservedVerification | undefined {
     }
   }
   for (const scope of scopes) {
-    if (!isShown(scope)) continue
+    if (!isCheckInElementShown(scope)) continue
     const text = (scope.textContent ?? "").slice(0, 2_000)
     const instruction = IMAGE_INSTRUCTION.test(text)
     const surfaces = Array.from(
@@ -112,7 +105,7 @@ function observeGenericVerification(): ObservedVerification | undefined {
       scope.querySelectorAll<HTMLInputElement>(
         'input:not([type="hidden"]):not([type="password"]):not([type="email"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea',
       ),
-    ).filter((input) => isShown(input) && !input.disabled)
+    ).filter((input) => isCheckInElementShown(input) && !input.disabled)
     const answer = inputs.some(
       (input) =>
         hasCaptchaHint(input) ||
@@ -132,7 +125,10 @@ function observeGenericVerification(): ObservedVerification | undefined {
           inputs.length &&
           (answer || /captcha|图形验证码|图片验证码|圖片驗證碼/i.test(text))))
     ) {
-      return { provider: "image", isPending: () => isShown(scope) }
+      return {
+        provider: PAGE_VERIFICATION_PROVIDERS.Image,
+        isPending: () => isCheckInElementShown(scope),
+      }
     }
     if (
       surfaces.length &&
@@ -145,9 +141,12 @@ function observeGenericVerification(): ObservedVerification | undefined {
         scope.querySelectorAll(
           '[role="slider"], input[type="range"], [tabindex], [draggable="true"], button',
         ),
-      ).some(isShown)
+      ).some(isCheckInElementShown)
     ) {
-      return { provider: "interactive", isPending: () => isShown(scope) }
+      return {
+        provider: PAGE_VERIFICATION_PROVIDERS.Interactive,
+        isPending: () => isCheckInElementShown(scope),
+      }
     }
   }
   return undefined
@@ -157,7 +156,7 @@ function observeGenericVerification(): ObservedVerification | undefined {
 function shownVendorWidgets(selector: string): Element[] {
   return Array.from(document.querySelectorAll(selector)).filter(
     (element) =>
-      isShown(element) &&
+      isCheckInElementShown(element) &&
       !element.closest('.grecaptcha-badge, [data-size="invisible"]') &&
       !/[?&]size=invisible\b/i.test(element.getAttribute("src") ?? ""),
   )
@@ -165,7 +164,55 @@ function shownVendorWidgets(selector: string): Element[] {
 
 /** Remember visible vendor UI so unrelated, unchanged widgets are not attributed to a click. */
 export function capturePageVerificationWidgets(): ReadonlySet<Element> {
-  return new Set(WIDGETS.flatMap((widget) => shownVendorWidgets(widget.widget)))
+  return new Set([
+    ...WIDGETS.flatMap((widget) => shownVendorWidgets(widget.widget)),
+    ...shownVendorWidgets("altcha-widget"),
+  ])
+}
+
+/** Let ALTCHA's own checkbox run its PoW and native callback, without exporting proof. */
+function observeAltcha(
+  existingWidgets?: ReadonlySet<Element>,
+): ObservedVerification | undefined {
+  const currentWidgets = () =>
+    shownVendorWidgets("altcha-widget").filter(
+      (element) => !existingWidgets?.has(element),
+    )
+  if (!currentWidgets().length) return undefined
+  let activated = false
+  const root = (element: Element) => element.shadowRoot ?? element
+  const state = (element: Element) =>
+    root(element)
+      .querySelector(".altcha[data-state]")
+      ?.getAttribute("data-state")
+  return {
+    provider: PAGE_VERIFICATION_PROVIDERS.Altcha,
+    isPending: () =>
+      currentWidgets().some(
+        (element) => state(element) !== ALTCHA_STATES.Verified,
+      ),
+    tryAutoVerify: () => {
+      // Multiple new challenges cannot be attributed to one native action.
+      // Leave their completion to the existing manual-assistance path.
+      const widgets = currentWidgets()
+      if (activated || widgets.length !== 1) return
+      const element = widgets[0]!
+      if (state(element) !== ALTCHA_STATES.Unverified) return
+      const checkbox = root(element).querySelector<HTMLInputElement>(
+        'input[type="checkbox"]',
+      )
+      if (
+        !checkbox ||
+        checkbox.disabled ||
+        checkbox.checked ||
+        !isCheckInElementShown(checkbox)
+      )
+        return
+      // Native callbacks may replace the widget; that must not authorize replay.
+      activated = true
+      checkbox.click()
+    },
+  }
 }
 
 /** Accept tokens only from an unambiguous container of the active widgets. */
@@ -201,6 +248,8 @@ function hasActiveWidgetResponse(
 function observeVerification(
   existingWidgets?: ReadonlySet<Element>,
 ): ObservedVerification | undefined {
+  const altcha = observeAltcha(existingWidgets)
+  if (altcha) return altcha
   const widget = WIDGETS.find((candidate) =>
     shownVendorWidgets(candidate.widget).some(
       (element) => !existingWidgets?.has(element),
@@ -214,7 +263,7 @@ function observeVerification(
       provider: widget.provider,
       isPending: () =>
         !hasActiveWidgetResponse(widget, activeWidgets) &&
-        activeWidgets.some(isShown),
+        activeWidgets.some(isCheckInElementShown),
     }
   }
 
@@ -223,14 +272,14 @@ function observeVerification(
   for (const panel of document.querySelectorAll(
     ".captcha-panel, .geetest_panel, .geetest_holder",
   )) {
-    if (!isShown(panel)) continue
+    if (!isCheckInElementShown(panel)) continue
     const surface = Array.from(
       panel.querySelectorAll("img, canvas, .gc-picture"),
     ).find((element) => hasChallengeSurface(element))
     if (surface)
       return {
-        provider: "interactive",
-        isPending: () => isShown(panel),
+        provider: PAGE_VERIFICATION_PROVIDERS.Interactive,
+        isPending: () => isCheckInElementShown(panel),
       }
   }
 
@@ -239,23 +288,26 @@ function observeVerification(
   for (const scope of document.querySelectorAll(
     '[role="dialog"], dialog, form, [class*="captcha"], [id*="captcha"]',
   )) {
-    if (!isShown(scope)) continue
+    if (!isCheckInElementShown(scope)) continue
     const images = () =>
       Array.from(scope.querySelectorAll("img")).filter(
-        (element) => isShown(element) && hasCaptchaHint(element),
+        (element) => isCheckInElementShown(element) && hasCaptchaHint(element),
       )
     const inputs = () =>
       Array.from(
         scope.querySelectorAll(
           'input:not([type="hidden"]):not([type="password"]), textarea',
         ),
-      ).filter((element) => isShown(element) && hasCaptchaHint(element))
+      ).filter(
+        (element) => isCheckInElementShown(element) && hasCaptchaHint(element),
+      )
     if (images().length && inputs().length)
       return {
-        provider: "image",
+        provider: PAGE_VERIFICATION_PROVIDERS.Image,
         // Typing is not verification. Let the native page submit the answer.
         isPending: () =>
-          isShown(scope) && !!(images().length || inputs().length),
+          isCheckInElementShown(scope) &&
+          !!(images().length || inputs().length),
       }
   }
   return observeGenericVerification()
@@ -279,7 +331,7 @@ export async function waitForPageVerification(params: {
     if (observed) break
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
   }
-  if (!observed) return { status: "not_present" }
+  if (!observed) return { status: PAGE_VERIFICATION_STATUSES.NotPresent }
 
   const provider = observed.provider
   const autoDeadline = Date.now() + TURNSTILE_AUTO_ASSIST_MS
@@ -298,8 +350,10 @@ export async function waitForPageVerification(params: {
     ) {
       if (!observed.isPending()) {
         // Disappearance is only a cue to read back status, never proof of success.
-        return { status: "completed", provider }
+        return { status: PAGE_VERIFICATION_STATUSES.Completed, provider }
       }
+
+      observed.tryAutoVerify?.()
 
       if (!assistRequested && Date.now() >= autoDeadline) {
         assistRequested = true
@@ -318,7 +372,7 @@ export async function waitForPageVerification(params: {
       await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
     }
 
-    return { status: "required", provider }
+    return { status: PAGE_VERIFICATION_STATUSES.Required, provider }
   } finally {
     manualWindow.dispose()
   }

@@ -16,6 +16,7 @@ import { createAutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -75,9 +76,9 @@ const response = (data: unknown) => ({
   headers: {},
   body: { code: 0, message: "success", data },
 })
-const run = () =>
+const run = (siteAccount = account()) =>
   executeSelectedCheckIn({
-    account: account(),
+    account: siteAccount,
     globalAutomaticExecutionEnabled: true,
     context: {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -474,65 +475,70 @@ describe("registered DaiGua daily check-in", () => {
     })
   })
 
-  it("tries shared browser assistance once with a body token after explicit rejection", async () => {
-    vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(response(statusData()))
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        headers: {},
-        body: {
-          code: 400,
-          message: "turnstile verification failed",
-          reason: "TURNSTILE_VERIFICATION_FAILED",
+  it.each([undefined, "/rewards?tab=daily#/claim"])(
+    "tries shared assistance using native page override %s",
+    async (nativePagePath) => {
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(response(statusData()))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "turnstile verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockResolvedValueOnce(response(statusData()))
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValue({
+        success: true,
+        status: 200,
+        data: {
+          code: 0,
+          message: "success",
+          data: { reward_amount: 0.29, checkin_type: "normal" },
+        },
+        turnstile: { status: "token_obtained", hasTurnstile: true },
+      })
+      const siteAccount = account()
+      siteAccount.checkIn.nativePagePath = nativePagePath
+      await expect(run(siteAccount)).resolves.toMatchObject({
+        kind: "executed",
+        result: {
+          status: "success",
+          awards: [
+            {
+              asset: { kind: "currency", code: "USD" },
+              amount: { status: "known", value: "0.29" },
+            },
+          ],
         },
       })
-      .mockResolvedValueOnce(response(statusData()))
-    vi.mocked(tempWindowTurnstileFetch).mockResolvedValue({
-      success: true,
-      status: 200,
-      data: {
-        code: 0,
-        message: "success",
-        data: { reward_amount: 0.29, checkin_type: "normal" },
-      },
-      turnstile: { status: "token_obtained", hasTurnstile: true },
-    })
-    await expect(run()).resolves.toMatchObject({
-      kind: "executed",
-      result: {
-        status: "success",
-        awards: [
-          {
-            asset: { kind: "currency", code: "USD" },
-            amount: { status: "known", value: "0.29" },
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          pageUrl: `https://api.daigua.icu${nativePagePath ?? "/checkin"}`,
+          fetchUrl: "https://api.daigua.icu/api/v1/checkin",
+          turnstileTokenPlacement: "json-body",
+          turnstileParamName: "turnstile_token",
+          turnstilePreTrigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: '[data-testid="header-normal-checkin"]',
+            throttle: { maxAttempts: 1 },
           },
-        ],
-      },
-    })
-    expect(tempWindowTurnstileFetch).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        pageUrl: "https://api.daigua.icu/checkin",
-        fetchUrl: "https://api.daigua.icu/api/v1/checkin",
-        turnstileTokenPlacement: "json-body",
-        turnstileParamName: "turnstile_token",
-        turnstilePreTrigger: {
-          kind: "clickSelector",
-          selector: '[data-testid="header-normal-checkin"]',
-          throttle: { maxAttempts: 1 },
-        },
-        fetchOptions: expect.objectContaining({
-          method: "POST",
-          body: "{}",
-          credentials: "omit",
-          headers: {
-            Authorization: "Bearer example-token",
-            "Content-Type": "application/json",
-          },
+          fetchOptions: expect.objectContaining({
+            method: "POST",
+            body: "{}",
+            credentials: "omit",
+            headers: {
+              Authorization: "Bearer example-token",
+              "Content-Type": "application/json",
+            },
+          }),
         }),
-      }),
-    )
-  })
+      )
+    },
+  )
 
   it("preserves the USD award through registered execution", async () => {
     vi.mocked(fetchApiResponse)

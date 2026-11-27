@@ -26,6 +26,15 @@ import { AuthTypeEnum } from "~/types"
 
 const canonicalTasks = [
   {
+    kind: "checkin_page_discovery",
+    params: {
+      originUrl: "https://example.invalid",
+      requestId: "page-scan-1",
+      siteType: "new-api",
+      nativePagePath: "/broken",
+    },
+  },
+  {
     kind: TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect,
     params: { originUrl: "https://example.invalid" },
   },
@@ -361,6 +370,7 @@ describe("protection bypass runtime contracts", () => {
         "credential_page_inspect",
         "rendered_title",
         "checkin_feedback_scan",
+        "checkin_page_discovery",
         "session_read",
         "new_api_session_read",
         "octopus_api_fetch",
@@ -746,6 +756,28 @@ describe("protection bypass runtime contracts", () => {
             baseUrl: "https://example.invalid",
             siteType: "new-api",
             routePaths: paths,
+          },
+        },
+      }),
+    ).toBe(accepted)
+  })
+
+  it.each([
+    ["/invite?tab=daily#/claim", true],
+    ["//other.invalid/", false],
+    ["https://other.invalid/", false],
+    ["/a/../invite", false],
+  ])("validates diagnostic page authority: %s", (nativePagePath, accepted) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+        params: {
+          originUrl: "https://example.invalid",
+          requestId: "page",
+          input: {
+            baseUrl: "https://example.invalid",
+            siteType: "new-api",
+            nativePagePath,
           },
         },
       }),

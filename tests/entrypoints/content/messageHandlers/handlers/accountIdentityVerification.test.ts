@@ -23,6 +23,36 @@ function verifyIdentity(
 }
 
 describe("current browser account identity verification", () => {
+  it("aborts a stalled fresh session refresh and completes without a retry", async () => {
+    vi.useFakeTimers()
+    let requestSignal: AbortSignal | undefined
+    let finishFetch!: (response: Response) => void
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      requestSignal = init?.signal ?? undefined
+      return new Promise<Response>((resolve) => {
+        finishFetch = resolve
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+    const response = vi.fn()
+    handleGetUserFromLocalStorage(
+      {
+        siteType: SITE_TYPES.NEW_API,
+        verifyIdentity: true,
+        requireFreshIdentity: true,
+      },
+      response,
+    )
+    try {
+      await vi.advanceTimersByTimeAsync(5001)
+      expect(response).toHaveBeenCalledWith({ success: false })
+      expect(requestSignal?.aborted).toBe(true)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    } finally {
+      finishFetch(new Response(null, { status: 401 }))
+      await vi.advanceTimersByTimeAsync(0)
+    }
+  })
   let stopRateLimitMessaging: () => void
 
   beforeEach(() => {
@@ -846,9 +876,8 @@ describe("current browser account identity verification", () => {
 
     stopRateLimitMessaging()
     vi.resetModules()
-    const restartedBackground = await import(
-      "~/services/accountBrowserSession/identityRateLimit"
-    )
+    const restartedBackground =
+      await import("~/services/accountBrowserSession/identityRateLimit")
     stopRateLimitMessaging =
       restartedBackground.setupAccountBrowserIdentityRateLimitMessaging()
     vi.stubGlobal("document", document.implementation.createHTMLDocument())
@@ -898,9 +927,8 @@ describe("current browser account identity verification", () => {
 
     stopRateLimitMessaging()
     vi.resetModules()
-    const restartedBackground = await import(
-      "~/services/accountBrowserSession/identityRateLimit"
-    )
+    const restartedBackground =
+      await import("~/services/accountBrowserSession/identityRateLimit")
     stopRateLimitMessaging =
       restartedBackground.setupAccountBrowserIdentityRateLimitMessaging()
     now += 5001

@@ -11,6 +11,7 @@ import {
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { createTempContextTurnstileAssist } from "~/services/browsingContext/tempPage/turnstileAssist"
 import { TURNSTILE_ASSIST_PRESENTATIONS } from "~/services/checkin/turnstile/assistPresentation"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 
 const originalBrowser = (globalThis as any).browser
 
@@ -403,6 +404,54 @@ describe("tempWindowPool Turnstile assist turns", () => {
   }
 
   /** Starts one in-flight Turnstile fetch for a distinct origin. */
+  it("keeps a usable default verification page without exploring its links", async () => {
+    const original = sendMessageMock.getMockImplementation()!
+    sendMessageMock.mockImplementation(async (tabId, message) =>
+      message.action === RuntimeActionIds.ContentInspectCheckinPage
+        ? { success: true, hasTarget: true, candidates: ["/daily"] }
+        : original(tabId, message),
+    )
+    const response = vi.fn()
+    const request = fetchFromPool(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/checkin",
+        fetchUrl: "https://example.invalid/api/checkin",
+        fetchOptions: { method: "POST" },
+        requestId: "widget-default",
+        discoverCheckInPage: true,
+        turnstilePreTrigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
+        },
+      },
+      response,
+    )
+    await settleTempContextReadiness()
+    const context = createdContexts[0]!
+    contentWaits.get(context.tabId)!.resolve({
+      success: true,
+      status: "found",
+      token: "token-default",
+      detection: { hasTurnstile: true, reasons: [], score: 1 },
+    })
+    await request
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true }),
+    )
+    expect(
+      tabsUpdateMock.mock.calls.some(
+        ([, options]) => options?.url === "https://example.invalid/daily",
+      ),
+    ).toBe(false)
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      context.tabId,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentInspectCheckinPage,
+        acceptVerificationWidget: true,
+      }),
+    )
+  })
+
   async function startTurnstileFetch(requestId: string, origin: string) {
     const sendResponse = vi.fn()
     const request = fetchFromPool(

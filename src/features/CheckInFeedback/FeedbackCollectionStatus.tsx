@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next"
 
 import { InlineMessage, NoticeActionButton, Spinner } from "~/components/ui"
+import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/discovery/evidence/scanTypes"
 import {
   FEEDBACK_EXECUTION_RECORDS,
   type FeedbackExecutionRecord,
 } from "~/services/checkin/feedback/executionTypes"
-import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/feedback/scanTypes"
 
 import type { FeedbackCollectionStatus } from "./useFeedbackClues"
 

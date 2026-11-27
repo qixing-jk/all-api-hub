@@ -1,5 +1,5 @@
 /** Fixed budgets shared by scan orchestration, parsing and streamed reads. */
-export const FEEDBACK_SCAN_LIMITS = {
+export const CHECK_IN_EVIDENCE_SCAN_LIMITS = {
   taskTimeoutMs: 20000,
   requestTimeoutMs: 8000,
   resourceConcurrency: 4,

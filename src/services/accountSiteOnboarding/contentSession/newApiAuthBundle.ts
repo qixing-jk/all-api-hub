@@ -59,9 +59,11 @@ async function extractNewApiAuthBundle(
   diagnostics?.record("refresh_started")
 
   try {
+    context.abortSignal?.throwIfAborted()
     response = await fetch(`${origin}${NEW_API_DASHBOARD_AUTH_REFRESH_PATH}`, {
       credentials: "include",
       method: "POST",
+      ...(context.abortSignal ? { signal: context.abortSignal } : {}),
     })
   } catch (error) {
     diagnostics?.record("refresh_failed", {

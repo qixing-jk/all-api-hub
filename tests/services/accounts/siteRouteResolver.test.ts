@@ -33,6 +33,48 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 }))
 
 describe("siteRouteResolver", () => {
+  it("opens the newllma check-in profile without requiring a manual page path", async () => {
+    mockLoadBootstrapFacts.mockResolvedValue({ frontendTheme: "newllma" })
+    await expect(
+      resolveAccountSiteRouteUrl(
+        { baseUrl: "https://novaapi.ai", siteType: SITE_TYPES.NEW_API },
+        SITE_ROUTE_KINDS.CheckIn,
+      ),
+    ).resolves.toBe("https://novaapi.ai/profile")
+  })
+
+  it.each(["https://flowbee.top", "https://unusual.example"])(
+    "uses the configured native page on %s without probing the theme",
+    async (baseUrl) => {
+      const target = {
+        baseUrl,
+        siteType: SITE_TYPES.NEW_API,
+        checkIn: { nativePagePath: "/invite?daily=1#/claim" },
+      }
+      mockLoadBootstrapFacts.mockResolvedValue({ frontendTheme: "default" })
+      expect(
+        getStaticAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn),
+      ).toBe(`${baseUrl}/invite?daily=1#/claim`)
+      await expect(
+        resolveAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn),
+      ).resolves.toBe(`${baseUrl}/invite?daily=1#/claim`)
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
+    },
+  )
+  it("restores the theme default when the page is cleared, including on Flowbee", async () => {
+    const target = {
+      baseUrl: "https://flowbee.top",
+      siteType: SITE_TYPES.NEW_API,
+      checkIn: { nativePagePath: undefined },
+    }
+    mockLoadBootstrapFacts.mockResolvedValue({ frontendTheme: "default" })
+    expect(getStaticAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn)).toBe(
+      "https://flowbee.top/console/personal",
+    )
+    await expect(
+      resolveAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn),
+    ).resolves.toBe("https://flowbee.top/profile")
+  })
   it("resolves account token acquisition separately from administrator credentials when pages differ", async () => {
     await expect(
       resolveAccountSiteRouteUrl(

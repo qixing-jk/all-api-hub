@@ -88,6 +88,7 @@ export function handleGetUserFromLocalStorage(
         const userId = await verifyAccountBrowserIdentity({
           url: context.url,
           siteType: context.siteTypeHint,
+          fresh: request.requireFreshIdentity === true,
           candidateUserIds: Array.isArray(request.candidateUserIds)
             ? request.candidateUserIds
             : undefined,

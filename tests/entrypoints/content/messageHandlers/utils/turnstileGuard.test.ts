@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  detectTurnstileWidget,
   maybeAutoStartTurnstile,
-  triggerCheckinPageAction,
   waitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
+import { detectTurnstileWidget } from "~/services/checkin/turnstile/dom"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 
 /**
  * Creates a mock DOM element for tests.
@@ -151,154 +151,6 @@ describe("turnstileGuard", () => {
     })
   })
 
-  describe("triggerCheckinPageAction", () => {
-    it("returns error when requestId is missing", async () => {
-      const result = triggerCheckinPageAction({
-        requestId: "   ",
-        trigger: { kind: "checkinButton" },
-      })
-
-      expect(result).toMatchObject({
-        status: "error",
-        clicked: false,
-        reason: "missingRequestId",
-      })
-    })
-
-    it("clicks the default check-in button and returns a serializable clicked result", async () => {
-      const button = createMockElement("button", (el) => {
-        el.textContent = "签到"
-        el.click = vi.fn()
-      })
-      document.body.appendChild(button)
-
-      const result = triggerCheckinPageAction({
-        requestId: "req-native-click",
-        trigger: { kind: "checkinButton" },
-      })
-
-      expect(result).toMatchObject({
-        status: "clicked",
-        clicked: true,
-        reason: "clicked",
-      })
-      expect(result.target?.text).toBe("签到")
-      expect(result.detection.hasTurnstile).toBe(false)
-      expect(button.click).toHaveBeenCalledTimes(1)
-    })
-
-    it("returns target_not_found when the trigger is disabled", async () => {
-      const result = triggerCheckinPageAction({
-        requestId: "req-native-disabled",
-        trigger: { kind: "none" },
-      })
-
-      expect(result).toMatchObject({
-        status: "target_not_found",
-        clicked: false,
-        reason: "disabled",
-      })
-    })
-
-    it("returns target_not_found when no configured trigger exists", async () => {
-      const result = triggerCheckinPageAction({
-        requestId: "req-native-missing",
-        trigger: {
-          kind: "clickSelector",
-          selector: ".missing-checkin-button",
-        },
-      })
-
-      expect(result).toMatchObject({
-        status: "target_not_found",
-        clicked: false,
-        reason: "noTarget",
-      })
-    })
-
-    it("returns throttled when the same request clicks too frequently", async () => {
-      const button = createMockElement("button", (el) => {
-        el.textContent = "Check in"
-        el.click = vi.fn()
-      })
-      document.body.appendChild(button)
-
-      const trigger = {
-        kind: "checkinButton",
-        throttle: { maxAttempts: 2, minIntervalMs: 1200 },
-      } as const
-
-      const first = triggerCheckinPageAction({
-        requestId: "req-native-throttle",
-        trigger,
-      })
-      const second = triggerCheckinPageAction({
-        requestId: "req-native-throttle",
-        trigger,
-      })
-
-      expect(first.status).toBe("clicked")
-      expect(second).toMatchObject({
-        status: "throttled",
-        clicked: false,
-        reason: "throttled",
-      })
-      expect(button.click).toHaveBeenCalledTimes(1)
-    })
-
-    it("returns throttled when the attempt limit is reached", async () => {
-      const button = createMockElement("button", (el) => {
-        el.textContent = "Check in"
-        el.click = vi.fn()
-      })
-      document.body.appendChild(button)
-
-      const trigger = {
-        kind: "checkinButton",
-        throttle: { maxAttempts: 1, minIntervalMs: 0 },
-      } as const
-
-      const first = triggerCheckinPageAction({
-        requestId: "req-native-max-attempts",
-        trigger,
-      })
-      const second = triggerCheckinPageAction({
-        requestId: "req-native-max-attempts",
-        trigger,
-      })
-
-      expect(first.status).toBe("clicked")
-      expect(second).toMatchObject({
-        status: "throttled",
-        clicked: false,
-        reason: "maxAttempts",
-      })
-      expect(button.click).toHaveBeenCalledTimes(1)
-    })
-
-    it("keeps the default negative label filter for completed buttons", async () => {
-      const completed = createMockElement("button", (el) => {
-        el.textContent = "已签到"
-        el.click = vi.fn()
-      })
-      const actionable = createMockElement("button", (el) => {
-        el.textContent = "签到"
-        el.click = vi.fn()
-      })
-      document.body.appendChild(completed)
-      document.body.appendChild(actionable)
-
-      const result = triggerCheckinPageAction({
-        requestId: "req-native-negative-filter",
-        trigger: { kind: "checkinButton" },
-      })
-
-      expect(result.status).toBe("clicked")
-      expect(completed.click).not.toHaveBeenCalled()
-      expect(actionable.click).toHaveBeenCalledTimes(1)
-    })
-  })
-
   describe("waitForTurnstileToken", () => {
     it("waits for a configured verification widget that mounts after page readiness", async () => {
       const timer = setTimeout(() => {
@@ -425,7 +277,7 @@ describe("turnstileGuard", () => {
       const result = await waitForTurnstileToken({
         requestId: "req-pretrigger",
         timeoutMs: 1500,
-        preTrigger: { kind: "checkinButton" },
+        preTrigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
       })
 
       expect(result.status).toBe("token_obtained")
@@ -450,7 +302,7 @@ describe("turnstileGuard", () => {
         requestId: "req-selector",
         timeoutMs: 1500,
         preTrigger: {
-          kind: "clickSelector",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
           selector: ".turnstile-trigger",
         },
       })
@@ -482,7 +334,7 @@ describe("turnstileGuard", () => {
         requestId: "req-click-text",
         timeoutMs: 1500,
         preTrigger: {
-          kind: "clickText",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
           positivePattern: "check\\s*in",
           negativePattern: "already|已签到",
         },
@@ -531,7 +383,7 @@ describe("turnstileGuard", () => {
         requestId: "req-click-text-candidates",
         timeoutMs: 1500,
         preTrigger: {
-          kind: "clickText",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
           positivePattern: "check\\s*in",
           negativePattern: "already",
           candidateSelector: ".turnstile-candidate",
@@ -561,7 +413,7 @@ describe("turnstileGuard", () => {
         requestId: "req-invalid-patterns",
         timeoutMs: 1500,
         preTrigger: {
-          kind: "checkinButton",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
           positivePattern: "(",
           negativePattern: "x".repeat(300),
         },
@@ -588,7 +440,7 @@ describe("turnstileGuard", () => {
         requestId: "req-string-timeout",
         timeoutMs: "1500",
         preTrigger: {
-          kind: "clickSelector",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
           selector: ".turnstile-string-timeout",
         },
       })
@@ -609,7 +461,7 @@ describe("turnstileGuard", () => {
         requestId: "req-zero-max-attempts",
         timeoutMs: 500,
         preTrigger: {
-          kind: "checkinButton",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
           throttle: {
             maxAttempts: 0,
             minIntervalMs: 0,
@@ -632,7 +484,7 @@ describe("turnstileGuard", () => {
       const result = await waitForTurnstileToken({
         requestId: "   ",
         timeoutMs: 500,
-        preTrigger: { kind: "checkinButton" },
+        preTrigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
       })
 
       expect(result.status).toBe("not_present")
@@ -650,7 +502,7 @@ describe("turnstileGuard", () => {
       const result = await waitForTurnstileToken({
         requestId: "req-pretrigger-throttle",
         timeoutMs: 1000,
-        preTrigger: { kind: "checkinButton" },
+        preTrigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
       })
 
       expect(result.status).toBe("not_present")
@@ -663,7 +515,7 @@ describe("turnstileGuard", () => {
         requestId: "req-missing-pretrigger",
         timeoutMs: 500,
         preTrigger: {
-          kind: "clickSelector",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
           selector: ".missing-turnstile-trigger",
         },
       })
@@ -713,7 +565,7 @@ describe("turnstileGuard", () => {
       const firstResult = await waitForTurnstileToken({
         requestId: "req-pretrigger-reset",
         timeoutMs: 1500,
-        preTrigger: { kind: "checkinButton" },
+        preTrigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
       })
 
       expect(firstResult.status).toBe("token_obtained")
@@ -727,7 +579,7 @@ describe("turnstileGuard", () => {
       const secondResult = await waitForTurnstileToken({
         requestId: "req-pretrigger-reset",
         timeoutMs: 1500,
-        preTrigger: { kind: "checkinButton" },
+        preTrigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
       })
 
       expect(secondResult.status).toBe("token_obtained")
