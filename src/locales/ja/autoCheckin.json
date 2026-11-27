@@ -166,6 +166,10 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "毎日無料ギフトのみを受け取ります。ポイントや残高を消費する抽選にはサイト上で参加してください。",
+      "name": "{{source}} の毎日無料ギフト"
+    },
     "daily": {
       "description": "この方式はサードパーティーの {{source}} チェックインプロトコルを使用し、対応する環境でのみ利用できます。",
       "name": "{{source}} のデイリーチェックイン"
@@ -182,10 +186,12 @@
       "aiRouter": "AI-ROUTER",
       "apiKeyCasa": "ApiKey Casa",
       "baiApi": "Bai API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",
       "daigua": "DaiGua",
       "denxio": "Denxio",
       "freeApi": "Luna",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "天才プログラマー中継サイト",
       "hiyo": "Hiyo Free",
       "nexavlinks": "NexaVlinks",

@@ -75,6 +75,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
         AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
       ].map((id, index) => ({
         id,

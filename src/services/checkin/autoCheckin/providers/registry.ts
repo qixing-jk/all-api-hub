@@ -103,19 +103,26 @@ type FeedbackStatusRoutes = readonly [
 ]
 
 type CheckInMethodLabelKey =
-  "methods.generic.name" | "methods.daily.name" | "methods.login.name"
+  | "methods.generic.name"
+  | "methods.daily.name"
+  | "methods.login.name"
+  | "methods.bizDecipherFreeGift.name"
 type CheckInMethodDisclosureKey =
-  "methods.daily.description" | "methods.login.description"
+  | "methods.daily.description"
+  | "methods.login.description"
+  | "methods.bizDecipherFreeGift.description"
 type CheckInMethodSourceNameKey = `methods.sources.${
   | "geniusProgrammer"
   | "denxio"
   | "xiaobaiCode"
   | "clawhud"
   | "freeApi"
+  | "freeGg"
   | "baiApi"
   | "sub2apiPro"
   | "toolcode"
   | "hiyo"
+  | "bizDecipher"
   | "aiRouter"
   | "daigua"
   | "sidrune"
@@ -136,7 +143,7 @@ interface AutoCheckinMethodDefinitionBase {
   /** Calendar used by the site to reset its daily check-in. Defaults to the device calendar. */
   readonly resetTimeZone?: string
   readonly presentation?: Partial<
-    Pick<CheckInMethodPresentationMetadata, "kind" | "sourceNameKey">
+    Omit<CheckInMethodPresentationMetadata, "sourceName">
   >
   readonly discoveryPriority?: number
   /** Lower the rank of an inconclusive probe while keeping positive protocol matches as peers. */
@@ -161,6 +168,7 @@ interface AutoCheckinMethodDefinitionBase {
 /** These methods can award again or lack a verified duplicate guarantee. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
+    AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
@@ -369,6 +377,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Specific,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN],
     origins: FREEGG_DAILY_ALLOWANCE_ORIGINS,
+    presentation: { sourceNameKey: "methods.sources.freeGg" },
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "FreeGG",
@@ -517,6 +526,26 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     supportsStatusReadback: true,
     feedbackStatusRoutes: (): FeedbackStatusRoutes => [
       { path: createHiyoCheckInStatusEndpoint(resolveHiyoCheckInTimezone()) },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn]: {
+    presentation: {
+      labelKey: "methods.bizDecipherFreeGift.name",
+      disclosureKey: "methods.bizDecipherFreeGift.description",
+      sourceNameKey: "methods.sources.bizDecipher",
+    },
+    discoveryOrigins: ["https://bizdecipher.com"],
+    id: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "BizDecipher",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createUserCheckInStatusEndpoint(resolveUserCheckInTimezone()) },
     ],
     legacy: false,
     newAccountCompatibility: false,

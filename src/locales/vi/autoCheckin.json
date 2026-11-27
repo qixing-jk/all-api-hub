@@ -166,6 +166,10 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "Chỉ nhận quà miễn phí hằng ngày. Hãy vào trang web để tham gia lượt quay tốn điểm hoặc số dư.",
+      "name": "Quà miễn phí hằng ngày của {{source}}"
+    },
     "daily": {
       "description": "Phương thức này dùng giao thức điểm danh của bên thứ ba {{source}} và chỉ hoạt động trên các bản triển khai có hỗ trợ giao thức đó.",
       "name": "Điểm danh hằng ngày qua {{source}}"
@@ -182,10 +186,12 @@
       "aiRouter": "AI-ROUTER",
       "apiKeyCasa": "ApiKey Casa",
       "baiApi": "Bai API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",
       "daigua": "DaiGua",
       "denxio": "Denxio",
       "freeApi": "Luna",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "Trạm chuyển tiếp Lập trình viên Thiên tài",
       "hiyo": "Hiyo Free",
       "nexavlinks": "NexaVlinks",

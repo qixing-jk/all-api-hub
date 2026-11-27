@@ -166,6 +166,10 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "僅領取每日免費禮物。消耗點數或餘額的抽獎需在站內手動參加。",
+      "name": "{{source}} 每日免費禮物"
+    },
     "daily": {
       "description": "此方式使用 {{source}} 的第三方簽到協定，僅適用於支援該協定的部署。",
       "name": "{{source}} 簽到"
@@ -182,10 +186,12 @@
       "aiRouter": "AI-ROUTER",
       "apiKeyCasa": "ApiKey Casa",
       "baiApi": "柏API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "詞元公益站",
       "daigua": "DaiGua",
       "denxio": "登仙公益站",
       "freeApi": "露娜",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "天才程式設計師中轉站",
       "hiyo": "Hiyo Free",
       "nexavlinks": "NexaVlinks",

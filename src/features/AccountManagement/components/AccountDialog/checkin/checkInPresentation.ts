@@ -97,6 +97,7 @@ export function getCheckInSelectionPresentation(
   const needsConfirmation =
     selectedChoice?.detectionOutcome ===
     CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown
+  const isAutomatic = selection.mode === CHECK_IN_SELECTION_MODES.Automatic
   const selectionLabel = needsConfirmation
     ? t("form.checkInMethodNeedsConfirmation", { method: selectedMethod.label })
     : selectedMethod.label
@@ -117,32 +118,41 @@ export function getCheckInSelectionPresentation(
     detail: automaticDetail,
   })
 
-  const helperText = needsConfirmation
-    ? t("form.checkInSelectionUnconfirmed", { method: selectedMethod.label })
+  const attentionMessage = needsConfirmation
+    ? t("form.checkInSelectionUnconfirmed", {
+        action: t("form.detectCheckInMethod"),
+      })
     : state.selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale
-      ? t("form.checkInSelectionStale")
-      : selection.mode === CHECK_IN_SELECTION_MODES.Manual
-        ? t("form.checkInSelectionManual", { method: selectedMethod.label })
-        : selectedMethodId
-          ? t("form.checkInSelectionAutomatic", {
-              method: selectedMethod.label,
-            })
+      ? t("form.checkInSelectionStale", {
+          action: t("form.detectCheckInMethod"),
+        })
+      : !isAutomatic || selectedMethodId
+        ? null
+        : state.decision.outcome ===
+            CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
+          ? t("form.checkInSelectionAutomaticNeedsChoice")
           : state.decision.outcome ===
-              CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
-            ? t("form.checkInSelectionAutomaticNeedsChoice")
-            : state.decision.outcome ===
-                CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
-              ? t("form.checkInSelectionAutomaticUnavailable")
-              : t("form.checkInSelectionAutomaticPending")
+              CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+            ? t("form.checkInSelectionAutomaticUnavailable")
+            : t("form.checkInSelectionAutomaticPending")
+  const disclosure = selectedMethod.disclosure
+  const description =
+    disclosure && attentionMessage
+      ? t("form.checkInSelectionScope", { description: disclosure })
+      : (disclosure ??
+        (!isAutomatic && !attentionMessage
+          ? t("form.checkInSelectionManual")
+          : null))
 
   return {
     selectedMethodId,
-    selectedMethodDisclosure: selectedMethod.disclosure,
-    triggerLabel:
-      selection.mode === CHECK_IN_SELECTION_MODES.Automatic
-        ? automaticLabel
-        : selectionLabel,
-    helperText,
+    triggerLabel: isAutomatic ? automaticLabel : selectionLabel,
+    redetectionHint:
+      isAutomatic && selectedMethodId && !attentionMessage
+        ? t("form.checkInSelectionAutomatic")
+        : null,
+    attentionMessage,
+    description,
   }
 }
 
