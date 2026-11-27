@@ -38,6 +38,8 @@ const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
     vi.fn(),
     vi.fn(),
     vi.fn(),
+    vi.fn(),
+    vi.fn(),
   ],
   checkIn: vi.fn(),
 }))

@@ -108,7 +108,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(27)
+    expect(registrationContracts).toHaveLength(28)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
