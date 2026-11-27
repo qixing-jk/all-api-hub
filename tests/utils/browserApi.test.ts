@@ -868,6 +868,24 @@ describe("browserApi sendTabMessageWithRetry", () => {
     ).resolves.toEqual({ ok: true })
   })
 
+  it("cancels a queued tab send before the browser receives it", async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ ok: true })
+    ;(globalThis as any).browser = { tabs: { sendMessage } }
+    const retry = new AbortController()
+    const pending = sendTabMessageWithRetry(
+      123,
+      { action: RuntimeActionIds.PermissionsCheck },
+      {
+        abortSignal: new AbortController().signal,
+        retrySignal: retry.signal,
+      },
+    )
+
+    retry.abort()
+    await expect(pending).rejects.toBe(retry.signal.reason)
+    expect(sendMessage).not.toHaveBeenCalled()
+  })
+
   it("forwards tab message targeting options", async () => {
     const sendMessageMock = vi.fn().mockResolvedValue({ ok: true })
     ;(globalThis as any).browser = { tabs: { sendMessage: sendMessageMock } }
@@ -1244,9 +1262,8 @@ describe("browserApi getSidePanelSupport", () => {
       .mockResolvedValueOnce(undefined)
     ;(globalThis as any).browser = { sidebarAction: { open } }
     ;(globalThis as any).chrome = {}
-    const { getSidePanelSupport, openSidePanel } = await import(
-      "~/utils/browser/sidePanel"
-    )
+    const { getSidePanelSupport, openSidePanel } =
+      await import("~/utils/browser/sidePanel")
     await expect(openSidePanel()).rejects.toThrow("user gesture expired")
     expect(getSidePanelSupport().supported).toBe(true)
     await expect(openSidePanel()).resolves.toBeUndefined()
@@ -1257,9 +1274,8 @@ describe("browserApi getSidePanelSupport", () => {
     ;(globalThis as any).browser = {}
     ;(globalThis as any).chrome = {}
 
-    const { getSidePanelSupport, openSidePanel } = await import(
-      "~/utils/browser/sidePanel"
-    )
+    const { getSidePanelSupport, openSidePanel } =
+      await import("~/utils/browser/sidePanel")
     const result = getSidePanelSupport()
 
     expect(result.supported).toBe(false)
@@ -1406,9 +1422,8 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { openSidePanel, getSidePanelSupport } = await import(
-      "~/utils/browser/sidePanel"
-    )
+    const { openSidePanel, getSidePanelSupport } =
+      await import("~/utils/browser/sidePanel")
 
     await expect(openSidePanel()).rejects.toThrow(
       "Side panel open failed: active tab/window not found",
@@ -1423,9 +1438,8 @@ describe("browserApi getSidePanelSupport", () => {
     const open = vi.fn().mockRejectedValue(failure)
     ;(globalThis as any).browser = {}
     ;(globalThis as any).chrome = { sidePanel: { open } }
-    const { openSidePanel, getSidePanelSupport } = await import(
-      "~/utils/browser/sidePanel"
-    )
+    const { openSidePanel, getSidePanelSupport } =
+      await import("~/utils/browser/sidePanel")
     await expect(
       openSidePanel({ windowId: 9 } as browser.tabs.Tab),
     ).rejects.toBe(failure)

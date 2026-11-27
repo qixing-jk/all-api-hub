@@ -42,6 +42,40 @@ const props = {
 }
 
 describe("account password login guidance", () => {
+  it.each([
+    [" ", "existing password", "usernameOrEmail"],
+    ["member", "", "password"],
+  ] as const)(
+    "associates the visible login error with the missing credential (%s, %s)",
+    async (username, password, field) => {
+      render(
+        <AccountLoginSection
+          {...props}
+          siteType={SITE_TYPES.NEW_API}
+          siteUrl="https://gateway.example"
+          login={{ methodId: "password", credentials: { username, password } }}
+          validationProps={{
+            "aria-invalid": true,
+            "aria-describedby": "login-error",
+          }}
+          feedback={
+            <p id="login-error">Complete the selected login credentials</p>
+          }
+        />,
+      )
+      const invalid = await screen.findByLabelText(
+        new RegExp(`^accountDialog:login\\.${field}`),
+      )
+      expect(invalid).toHaveAttribute("aria-invalid", "true")
+      expect(invalid).toHaveAccessibleDescription(
+        "Complete the selected login credentials",
+      )
+      expect(
+        screen.getByRole("combobox", { name: "accountDialog:login.method" }),
+      ).not.toHaveAttribute("aria-invalid")
+    },
+  )
+
   it("lets a Sub2API token account enable recovery without a refresh token", async () => {
     render(
       <AccountLoginSection

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import ActionButtons from "~/features/AccountManagement/components/AccountDialog/ActionButtons"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -231,7 +232,7 @@ describe("AccountDialog ActionButtons", () => {
 
     expect(
       await screen.findByRole("button", { name: "common:actions.cancel" }),
-    ).toBeInTheDocument()
+    ).toHaveClass("hidden sm:inline-flex")
     expect(
       await screen.findByRole("button", {
         name: "accountDialog:actions.saveAccount",
@@ -308,6 +309,41 @@ describe("AccountDialog ActionButtons", () => {
     await user.click(autoConfigButton)
 
     expect(props.onAutoConfig).not.toHaveBeenCalled()
+  })
+
+  it("pairs an enabled primary Save with secondary detection when the draft has validation issues", async () => {
+    render(
+      <ActionButtons
+        {...createProps()}
+        formSource="manual"
+        isFormValid={false}
+        hasValidationIssues
+      />,
+    )
+    const detect = await screen.findByRole("button", {
+      name: "accountDialog:mode.autoDetect",
+    })
+    expect(detect).toHaveClass("w-full sm:w-auto")
+    expect(detect).toHaveAttribute("data-variant", "outline")
+    expect(detect.querySelector(".lucide-sparkles")).toBeInTheDocument()
+    const save = screen.getByRole("button", {
+      name: "accountDialog:actions.saveAccount",
+    })
+    expect(save).toBeEnabled()
+    expect(save).toHaveAttribute("data-variant", "default")
+    expect(save.querySelector(".lucide-check")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton),
+    ).not.toBeInTheDocument()
+  })
+
+  it("stretches credential detection across the narrow full-form footer", async () => {
+    render(<ActionButtons {...createProps()} detectFromCredential />)
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:mode.autoDetect",
+      }),
+    ).toHaveClass("w-full sm:w-auto")
   })
 
   it("switches submit labels for detected and saving states and disables submission while busy", async () => {

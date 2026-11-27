@@ -79,6 +79,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         // detectors by index, so preserve existing detector indexes.
         AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],

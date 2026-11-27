@@ -13,6 +13,7 @@ Read the section that matches the change.
 
 - Use `InlineMessage` for short contextual guidance, local status and operation results. Keep ordinary text muted and express status tone in the icon; put an inline action in `NoticeActionButton`. Use `role="note"` for static guidance and `role="alert"` for errors that need immediate announcement.
 - Keep `Alert`/`Notice` for substantial warnings, grouped details, multi-step recovery or multiple actions; do not select a container solely from its tone. Field-bound descriptions/errors belong to `FormField`, and floating page notices belong to `ContentNotice`.
+- Below `sm`, including 340–400 px extension popups and narrow side panels, omit the footer Cancel button when the dialog header already has a close (×) button. Let the task actions use the full footer width.
 
 ## Options page motion
 

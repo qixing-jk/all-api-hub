@@ -5,6 +5,14 @@ import {
 } from "~/types/autoCheckin"
 import type { CheckInExecutionSkipReason } from "~/types/checkIn"
 
+/** These discovery gates can be resolved by confirming the selected protocol. */
+export const canConfirmSelectedCheckInMethod = (
+  reason: CheckInExecutionSkipReason | AutoCheckinSkipReason | undefined,
+) =>
+  reason === CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched ||
+  reason === CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported ||
+  reason === CHECK_IN_EXECUTION_SKIP_REASONS.Timeout
+
 /** Maps domain execution gates to their existing user-facing reason codes. */
 export const toAutoCheckinSkipReason = (
   reason: CheckInExecutionSkipReason,

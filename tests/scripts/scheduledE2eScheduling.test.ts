@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
@@ -12,6 +13,69 @@ function job(source: string, name: string) {
   if (!body) throw new Error(`Missing job ${name}`)
   return body
 }
+
+function compatibilityMatrix(...inputs: string[]) {
+  return spawnSync(
+    process.execPath,
+    ["scripts/github-browser-compat-matrix.mjs", ...inputs],
+    { encoding: "utf8", env: { ...process.env, GITHUB_OUTPUT: "" } },
+  )
+}
+
+describe("browser compatibility matrix selection", () => {
+  it("keeps all versions and shards when scheduled or explicitly requested", () => {
+    for (const inputs of [[], ["all", "all"]]) {
+      const result = compatibilityMatrix(...inputs)
+      expect(result.status, result.stderr).toBe(0)
+      expect(JSON.parse(result.stdout)).toEqual({
+        chrome_version: [
+          "114",
+          "116",
+          "120",
+          "122",
+          "144",
+          "147",
+          "148",
+          "stable",
+        ],
+        shard: [1, 2, 3],
+      })
+    }
+  })
+
+  it.each([
+    ["114, stable", "2", ["114", "stable"], [2]],
+    [
+      "all",
+      "1, 3",
+      ["114", "116", "120", "122", "144", "147", "148", "stable"],
+      [1, 3],
+    ],
+    ["stable,114,114", "all", ["114", "stable"], [1, 2, 3]],
+  ])(
+    "selects Chrome %s and shards %s",
+    (versions, shards, chrome_version, shard) => {
+      const result = compatibilityMatrix(versions, shards)
+      expect(result.status, result.stderr).toBe(0)
+      expect(JSON.parse(result.stdout)).toEqual({ chrome_version, shard })
+    },
+  )
+
+  it.each([
+    ["114,invalid", "2", "Chrome versions"],
+    ["stable", "2,4", "shards"],
+    ["stable", "all,2", "shards"],
+    ["114,", "2", "Chrome versions"],
+  ])(
+    "rejects Chrome %s and shards %s when invalid",
+    (versions, shards, label) => {
+      const result = compatibilityMatrix(versions, shards)
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain(`Invalid ${label}`)
+      expect(result.stdout).toBe("")
+    },
+  )
+})
 
 describe("scheduled E2E build reuse", () => {
   it("installs the video recorder before compatibility tests use ordinary page fixtures", () => {
@@ -97,19 +161,15 @@ describe("scheduled E2E build reuse", () => {
     expect(source).toContain('default: "2"')
     expect(source).toContain("type: choice")
     expect(source).toMatch(/options:\s*\n\s*- "2"\s*\n\s*- "4"/)
-    expect(tests).toContain("shard: [1, 2, 3]")
-    for (const version of [
-      "114",
-      "116",
-      "120",
-      "122",
-      "144",
-      "147",
-      "148",
-      "stable",
-    ]) {
-      expect(tests).toContain(`- "${version}"`)
-    }
+    const planner = job(source, "browser-compat-matrix")
+    expect(planner).toContain("inputs.chrome_versions || 'all'")
+    expect(planner).toContain("inputs.shards || 'all'")
+    expect(planner).toContain("scripts/github-browser-compat-matrix.mjs")
+    expect(job(source, "e2e-build")).toContain("needs: browser-compat-matrix")
+    expect(tests).toContain("needs: [browser-compat-matrix, e2e-build]")
+    expect(tests).toContain(
+      "matrix: ${{ fromJSON(needs.browser-compat-matrix.outputs.matrix) }}",
+    )
     expect(tests).toContain("--shard=${{ matrix.shard }}/3")
     expect(readFileSync("playwright.config.ts", "utf8")).not.toMatch(
       /fullyParallel:\s*true/,

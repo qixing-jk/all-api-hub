@@ -121,12 +121,12 @@ describe("Linxi daily check-in provider", () => {
       autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.SUB2API, "https://k40.shengqainbang.cn")
         .map((candidate) => candidate.id),
-    ).not.toContain(METHOD_ID)
+    ).toContain(METHOD_ID)
   })
 
   it("presents the matched method under the 100xLabs name", () => {
     expect(AUTO_CHECKIN_METHOD_DEFINITIONS[METHOD_ID].source.sourceName).toBe(
-      "100xLabs",
+      "Linxi / 100xLabs",
     )
   })
 

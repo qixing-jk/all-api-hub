@@ -91,3 +91,25 @@ describe("request-header permission lifecycle", () => {
     },
   )
 })
+
+describe("favicon permission", () => {
+  it.each(["chrome", "edge"])(
+    "requires favicon access alongside tabs on %s",
+    async (browser) => {
+      const manifest = await permissionsFor(browser)
+      expect(manifest.permissions).toEqual(
+        expect.arrayContaining(["favicon", "tabs"]),
+      )
+      expect(manifest.optional_permissions).not.toContain("favicon")
+    },
+  )
+
+  it.each(["firefox", "safari"])(
+    "omits Chromium favicon access on %s",
+    async (browser) => {
+      const manifest = await permissionsFor(browser)
+      expect(manifest.permissions).not.toContain("favicon")
+      expect(manifest.optional_permissions).not.toContain("favicon")
+    },
+  )
+})

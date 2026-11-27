@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -13,12 +14,43 @@ import {
   getFeedbackExecutionRecord,
   type CheckInFeedbackSnapshot,
 } from "~/services/checkin/feedback/report"
-import { AUTO_CHECKIN_SKIP_REASON } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+  type AutoCheckinSkipReason,
+} from "~/types/autoCheckin"
 import { getBrowserVersionInfo } from "~/utils/browser/userAgent"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 import pkg from "~~/package.json"
 
 const REPORT_MESSAGE_MAX_LENGTH = 2000
+
+/** Uses short, localized descriptions for supported reasons in public titles. */
+function getIssueTitleReason(
+  t: TFunction<["accountDialog", "autoCheckin"]>,
+  reason: AutoCheckinSkipReason | undefined,
+): string | undefined {
+  switch (reason) {
+    case AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED:
+      return t(
+        "accountDialog:checkInFeedback.titleReasons.authenticationRequired",
+      )
+    case AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED:
+      return t(
+        "accountDialog:checkInFeedback.titleReasons.manualVerificationRequired",
+      )
+    case AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED:
+      return t("accountDialog:checkInFeedback.titleReasons.methodNotMatched")
+    case AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR:
+      return t("accountDialog:checkInFeedback.titleReasons.networkError")
+    case AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD:
+      return t("accountDialog:checkInFeedback.titleReasons.noAvailableMethod")
+    case AUTO_CHECKIN_SKIP_REASON.TIMEOUT:
+      return t("accountDialog:checkInFeedback.titleReasons.timeout")
+    default:
+      return undefined
+  }
+}
 
 /** Owns diagnostic details and evidence reloads without replacing authored notes or clues. */
 export function useFeedbackDetails(
@@ -43,24 +75,31 @@ export function useFeedbackDetails(
   const [reloading, setReloading] = useState(false)
   const reloadInFlight = useRef(false)
   const recordState = getFeedbackExecutionRecord(snapshot)
+  const execution =
+    recordState === FEEDBACK_EXECUTION_RECORDS.Available
+      ? snapshot.execution
+      : undefined
+  const titleReason =
+    execution &&
+    execution.status !== CHECKIN_RESULT_STATUS.SUCCESS &&
+    execution.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+      ? getIssueTitleReason(t, execution.reasonCode)
+      : undefined
+  const issueTitleSummary = titleReason
+    ? t("checkInFeedback.titleLastCheckIn", { reason: titleReason })
+    : undefined
   const executionMessage = (() => {
+    if (!execution) return ""
+    const { reasonCode, messageKey } = execution
     if (
-      recordState !== FEEDBACK_EXECUTION_RECORDS.Available ||
-      !snapshot.execution
-    )
-      return ""
-    if (
-      snapshot.execution.reasonCode &&
-      snapshot.execution.reasonCode !==
-        AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED &&
-      snapshot.execution.reasonCode !==
-        AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR &&
-      !snapshot.execution.messageKey
+      reasonCode &&
+      reasonCode !== AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED &&
+      reasonCode !== AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR &&
+      !messageKey
     ) {
       return ""
     }
-    const text = getAutoCheckinResultMessage(t, snapshot.execution)
-    return sanitizeReportMessage(text)
+    return sanitizeReportMessage(getAutoCheckinResultMessage(t, execution))
   })()
   /** Redacts known credentials and URL details before public report generation. */
   function sanitizeReportMessage(text: string) {
@@ -126,7 +165,9 @@ export function useFeedbackDetails(
     browserInfo,
     details,
     setDetails,
+    execution,
     executionMessage,
+    issueTitleSummary,
     recordState,
     reloading,
     handleReloadExecution,

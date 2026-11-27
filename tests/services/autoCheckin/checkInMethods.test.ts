@@ -120,7 +120,7 @@ describe("check-in methods compatibility activation", () => {
     ),
   })
 
-  it("allows authentication recovery only for authorized execution admission", async () => {
+  it("keeps generic provider status reads passive during execution admission", async () => {
     const registration = getNewApiExecutionRegistration()
     const account = createNewApiExecutionAccount()
     const context = createExecutionContext()
@@ -146,9 +146,7 @@ describe("check-in methods compatibility activation", () => {
       context,
     })
     expect(read).toHaveBeenCalledTimes(2)
-    expect(read.mock.calls[0]?.[0]).toMatchObject({
-      authenticationRecovery: context,
-    })
+    expect(read.mock.calls[0]?.[0]).not.toHaveProperty("authenticationRecovery")
     expect(read.mock.calls[1]?.[0]).not.toHaveProperty("authenticationRecovery")
 
     read.mockClear()
@@ -1681,6 +1679,42 @@ describe("check-in methods compatibility activation", () => {
     expect(checkInRequest).not.toHaveBeenCalled()
     expect(revalidateAccount).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ["identity", "account_unavailable"],
+    ["selection", "no_selected_method"],
+    ["disabled account", "account_disabled"],
+  ] as const)(
+    "honors the changed %s returned while saving a selected method probe",
+    async (change, reason) => {
+      const registration = getNewApiExecutionRegistration()
+      const account = createUnrecordedMethodAccount()
+      vi.spyOn(registration.provider, "detect").mockResolvedValue({
+        outcome: "matched",
+        evidence: { source: "probe", observedAt: 400 },
+      })
+      const read = vi
+        .spyOn(registration.provider, "getStatus")
+        .mockResolvedValue(undefined)
+      const claim = vi.spyOn(registration.provider, "checkIn")
+      const persisted = { ...account, checkIn: { ...account.checkIn } }
+      if (change === "identity")
+        persisted.site_url = "https://different.example"
+      if (change === "selection")
+        persisted.checkIn.selection = { mode: "automatic" }
+      if (change === "disabled account") persisted.disabled = true
+      await expect(
+        executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          revalidateAccount: async () => persisted,
+        }),
+      ).resolves.toMatchObject({ kind: "skipped", reason })
+      expect(read).not.toHaveBeenCalled()
+      expect(claim).not.toHaveBeenCalled()
+    },
+  )
 
   it("records an unsupported manual method and does not switch away from it", async () => {
     const registration = getNewApiExecutionRegistration()

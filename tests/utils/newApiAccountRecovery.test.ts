@@ -141,8 +141,9 @@ describe("New API account recovery dialog readiness", () => {
     failureText: string | null,
     overrides: { confirmAddButton?: Record<string, unknown> } = {},
   ) {
-    const recoveryHeading = {
+    const absentRecoveryControl = {
       isVisible: vi.fn().mockResolvedValue(false),
+      or: vi.fn((fallback: unknown) => fallback),
     }
     const failureBanner = {
       isVisible: vi.fn().mockResolvedValue(Boolean(failureText)),
@@ -151,8 +152,11 @@ describe("New API account recovery dialog readiness", () => {
     }
     failureBanner.first.mockReturnValue(failureBanner)
     const dialogRoot = {
+      getByRole: vi.fn(() => absentRecoveryControl),
       getByText: vi.fn((matcher: unknown) =>
-        matcher instanceof RegExp ? failureBanner : recoveryHeading,
+        matcher instanceof RegExp && matcher.test("Auto-detection failed: test")
+          ? failureBanner
+          : absentRecoveryControl,
       ),
     }
 

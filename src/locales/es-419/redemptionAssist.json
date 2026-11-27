@@ -67,9 +67,11 @@
       "includeAccountSiteUrlsDesc": "Permite todas las páginas bajo el origen de la URL del sitio de cada cuenta.",
       "includeCheckInAndRedeemUrls": "Incluir URLs de check-in y canje",
       "includeCheckInAndRedeemUrlsDesc": "Permite las páginas de check-in y canje (personalizadas o predeterminadas) para cada cuenta.",
+      "noTabs": "No hay pestañas web que coincidan. Puedes ingresar un patrón abajo.",
       "patterns": "Patrones regex personalizados",
       "patternsDesc": "Un patrón RegExp de JavaScript por línea. Se aplica coincidencia sin distinguir mayúsculas/minúsculas.",
-      "patternsPlaceholder": "^https://example\\.com/console/topup"
+      "patternsPlaceholder": "^https://example\\.com/console/topup",
+      "tabPicker": "Elegir entre pestañas abiertas"
     }
   }
 }

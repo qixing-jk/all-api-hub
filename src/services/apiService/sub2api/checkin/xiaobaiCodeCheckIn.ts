@@ -1,13 +1,20 @@
 import { CHECK_IN_METHOD_DETECTION_OUTCOMES } from "~/constants/checkIn"
 import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+
+import type { Sub2ApiCheckInStatusAuth } from "./statusAuthentication"
+import {
+  fetchAuthenticatedCheckInStatusText,
+  fetchCheckInStatusText,
+  tryParseCheckInJson,
+} from "./textStatusRequest"
 
 /**
  * The 小白Code deployment serves its check-in app on its own origin, outside
@@ -53,14 +60,6 @@ const toRecord = (value: unknown): Record<string, unknown> | null =>
     ? (value as Record<string, unknown>)
     : null
 
-const tryParseJson = (body: string): unknown => {
-  try {
-    return JSON.parse(body) as unknown
-  } catch {
-    return undefined
-  }
-}
-
 /**
  * Reads the app's status without mutating anything. A deployment that does not
  * host the app answers with its frontend SPA fallback (HTTP 200 HTML), so a
@@ -70,12 +69,11 @@ const tryParseJson = (body: string): unknown => {
  */
 export async function probeXiaobaiCodeCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ): Promise<XiaobaiCodeStatusProbe> {
-  const response = await fetchApiResponse<string>(request, {
-    endpoint: STATUS_ENDPOINT,
-    options: { method: "GET", cache: "no-store" },
-    responseType: "text",
-  })
+  const response = auth
+    ? await fetchAuthenticatedCheckInStatusText(request, STATUS_ENDPOINT, auth)
+    : await fetchCheckInStatusText(request, STATUS_ENDPOINT)
   if (!response.ok) {
     if (response.status === 404 || response.status === 405) {
       return { outcome: XIAOBAI_CODE_STATUS_OUTCOMES.Absent }
@@ -97,7 +95,7 @@ export async function probeXiaobaiCodeCheckInStatus(
       reason: "invalid_response",
     }
   }
-  const parsed = tryParseJson(response.body)
+  const parsed = tryParseCheckInJson(response.body)
   if (parsed === undefined) {
     return { outcome: XIAOBAI_CODE_STATUS_OUTCOMES.Absent }
   }
@@ -141,16 +139,19 @@ export async function performXiaobaiCodeDailyCheckIn(
     request,
     CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<string>(authenticatedRequest, {
-        endpoint: CHECK_IN_ENDPOINT,
-        options: {
-          method: "POST",
-          cache: "no-store",
+      const response = await postSub2ApiCheckIn<string>(
+        authenticatedRequest,
+        CHECK_IN_ENDPOINT,
+        {
           headers: { "Content-Type": "application/json" },
           body: "{}",
+          responseType: "text",
+          isNativeLoginRejection: (body) =>
+            body.ok === false &&
+            body.code === "LOGIN_REQUIRED" &&
+            Object.keys(body).length === 3,
         },
-        responseType: "text",
-      })
+      )
       if (!response.ok) {
         throw new ApiError(
           `小白Code daily check-in failed with HTTP ${response.status}`,
@@ -165,7 +166,7 @@ export async function performXiaobaiCodeDailyCheckIn(
                 : API_ERROR_CODES.HTTP_OTHER,
         )
       }
-      const parsed = tryParseJson(response.body)
+      const parsed = tryParseCheckInJson(response.body)
       if (parsed === undefined) throw invalidCheckInResponse()
       const envelope = toRecord(parsed)
       const data = envelope?.ok === true ? toRecord(envelope.data) : null

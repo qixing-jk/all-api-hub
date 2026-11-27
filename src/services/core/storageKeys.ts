@@ -11,6 +11,8 @@
 export const I18NEXT_LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
 export const LINKED_CHANNEL_CLEANUP_STORAGE_KEY = "linkedChannelCleanupTasks"
 export const AIMLAPI_ONBOARDING_STORAGE_KEY = "aimlapiConnectionCredentials_v1"
+/** Non-secret issuance markers prevent duplicate PAT creation after response loss. */
+export const NEW_API_TOKEN_ISSUANCE_KEY_PREFIX = "newApiTokenIssuance:"
 /**
  * Browser session that currently owns the extension's temporary pages.
  *
@@ -32,6 +34,7 @@ export const STORAGE_LOCKS = {
   /** Serializes account login recovery across extension contexts. */
   ACCOUNT_CREDENTIAL_RECOVERY: "all-api-hub:account-credential-recovery",
   AIMLAPI_ONBOARDING: "all-api-hub:aimlapi-onboarding",
+  NEW_API_TOKEN_ISSUANCE: "all-api-hub:new-api-token-issuance",
   /** Serializes sponsor creation handoffs between popup and side panels. */
   SPONSOR_WORKFLOW: "all-api-hub:sponsor-workflow",
   /** Serializes local Dahl key names and website-sync acknowledgements. */

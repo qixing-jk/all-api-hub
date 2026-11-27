@@ -13,7 +13,12 @@ import {
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
-import { getCheckInDiscoveryPriority } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getCheckInDiscoveryPriority,
+  getCheckInResetTimeZone,
+  getUnknownCheckInDiscoveryPriority,
+} from "~/services/checkin/autoCheckin/providers/registry"
+import { isCheckInObservationCurrent } from "~/services/checkin/statusObservation"
 import type {
   CheckInAccountState,
   CheckInConfig,
@@ -29,6 +34,28 @@ import type {
   PersistedCheckInMethodId,
 } from "~/types/checkIn"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
+
+/** Projects known daily status using the method's reset day, including migrated evidence. */
+export function isCheckInMethodStatusCurrent(
+  methodId: CheckInMethodId,
+  status: CheckInMethodStatus | undefined,
+  now = Date.now(),
+  fallbackTimeZone?: string,
+) {
+  if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) return false
+  const timeZone = getCheckInResetTimeZone(methodId) ?? fallbackTimeZone
+  const evidence = status.evidence
+  if (
+    evidence.source !== CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
+  )
+    return isCheckInObservationCurrent(evidence.observedAt, timeZone, now)
+  if (evidence.legacyObservedAt !== undefined)
+    return isCheckInObservationCurrent(evidence.legacyObservedAt, timeZone, now)
+  return (
+    evidence.legacyDayKey ===
+    getDayKeyFromUnixSeconds(Math.floor(now / 1000), timeZone)
+  )
+}
 
 const uniqueCandidateMethodIds = (
   candidateMethodIds: readonly CheckInMethodId[],
@@ -98,7 +125,7 @@ const deriveDiscoveryDecision = (
         choice.detectionOutcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown,
     )
     .map((choice) => choice.methodId)
-    .filter((id) => getCheckInDiscoveryPriority(id) >= highestPriority)
+    .filter((id) => getUnknownCheckInDiscoveryPriority(id) >= highestPriority)
 
   if (matchedMethodIds.length > 1) {
     const scores = matchedMethodIds.map((id) => {
@@ -330,26 +357,19 @@ const deriveExecutionEligibility = (
     status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
       ? status
       : undefined
-  const statusObservedAt =
+  const statusControlsExecution =
     knownStatus &&
-    (knownStatus.evidence.source ===
-      CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe ||
-      knownStatus.evidence.source ===
-        CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution)
-      ? knownStatus.evidence.observedAt
-      : undefined
-  const statusControlsExecution = statusObservedAt !== undefined
+    knownStatus.evidence.source !==
+      CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
   const checkedStatusIsCurrent =
     statusControlsExecution &&
     knownStatus?.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked &&
-    getDayKeyFromUnixSeconds(
-      Math.floor(statusObservedAt / 1000),
+    isCheckInMethodStatusCurrent(
+      methodId,
+      knownStatus,
+      input.now,
       input.timeZone,
-    ) ===
-      getDayKeyFromUnixSeconds(
-        Math.floor((input.now ?? Date.now()) / 1000),
-        input.timeZone,
-      )
+    )
   if (
     statusControlsExecution &&
     knownStatus?.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
@@ -543,20 +563,18 @@ export function mergeCheckInDiscoveryResults(input: {
   const selectedDetection = selectedMethodIsCandidate
     ? methods[selectedMethodId]?.detection
     : undefined
-  const unresolvedPreferredMethodIds =
+  const unresolvedPriorities =
     decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown
-      ? decision.unknownMethodIds
+      ? decision.unknownMethodIds.map(getUnknownCheckInDiscoveryPriority)
       : decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
-        ? decision.methodIds
+        ? decision.methodIds.map(getCheckInDiscoveryPriority)
         : []
   if (
     (decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved &&
       decision.methodId !== selectedMethodId) ||
     (selectedMethodIsCandidate &&
-      unresolvedPreferredMethodIds.some(
-        (id) =>
-          getCheckInDiscoveryPriority(id) >
-          getCheckInDiscoveryPriority(selectedMethodId),
+      unresolvedPriorities.some(
+        (priority) => priority > getCheckInDiscoveryPriority(selectedMethodId),
       )) ||
     !selectedMethodIsCandidate ||
     selectedDetection?.outcome ===

@@ -41,6 +41,7 @@ import {
   mockedRefreshSelectedStatus,
   mockedUserPreferences,
   runnableCheckIn,
+  schedulerTestState,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
 
 describe("execution/statusVerification", () => {
@@ -53,7 +54,7 @@ describe("execution/statusVerification", () => {
   const verificationAccount = {
     id: "verify-account",
     site_type: SITE_TYPES.NEW_API,
-    checkIn: runnableCheckIn(),
+    checkIn: runnableCheckIn(true, SITE_TYPES.NEW_API),
   } as any
 
   it.each([
@@ -183,7 +184,7 @@ describe("execution/statusVerification", () => {
         today: checked
           ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
           : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-        observedAt: Date.now(),
+        evidence: { source: "probe", observedAt: Date.now() },
       })
       await expect(
         autoCheckinScheduler.verifyAccountStatus(account.id),
@@ -222,9 +223,72 @@ describe("execution/statusVerification", () => {
 
     expect(
       mockedAccountStorage.prepareAccountForSelectedCheckIn,
-    ).toHaveBeenCalledWith(verificationAccount.id, verificationAccount.checkIn)
+    ).toHaveBeenCalledWith(
+      verificationAccount.id,
+      verificationAccount.checkIn,
+      verificationAccount,
+    )
     expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
   })
+
+  it.each(["selection", "observation", "run result"] as const)(
+    "keeps the scheduler state when a newer %s supersedes verification",
+    async (changed) => {
+      const observedAt = Date.now() - 100
+      const persisted = {
+        ...verificationAccount,
+        checkIn: structuredClone(verificationAccount.checkIn),
+      }
+      if (changed === "selection") persisted.checkIn.selection.methodId = null
+      const observed = {
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+        evidence: { source: "probe", observedAt },
+      }
+      mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([persisted])
+      mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+        persisted,
+      )
+      mockedRefreshSelectedStatus.mockImplementation(
+        async ({ config, onOutcome }: any) => {
+          onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+          return config
+        },
+      )
+      mockedInspection.getSelectedCheckInStatus.mockImplementation(
+        ({ config }: any) =>
+          config === persisted.checkIn && changed === "observation"
+            ? {
+                ...observed,
+                today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+                evidence: { source: "probe", observedAt: observedAt + 1 },
+              }
+            : observed,
+      )
+      const stored = {
+        perAccount: {
+          [verificationAccount.id]: {
+            accountId: verificationAccount.id,
+            accountName: "Verify Account",
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            timestamp:
+              changed === "run result" ? observedAt + 1 : observedAt - 1,
+          },
+        },
+        retryState: {
+          day: formatLocalDayKey(),
+          pendingAccountIds: [verificationAccount.id],
+          attemptsByAccount: { [verificationAccount.id]: 1 },
+        },
+      }
+      schedulerTestState.storedStatus = stored as any
+      await expect(
+        autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+      ).resolves.toMatchObject({ outcome: "not_saved" })
+      expect(schedulerTestState.storedStatus).toEqual(stored)
+    },
+  )
 
   it("updates autoCheckinStorage when verified status is confirmed checked", async () => {
     let storedStatus: any = {
@@ -279,7 +343,7 @@ describe("execution/statusVerification", () => {
     mockedInspection.getSelectedCheckInStatus.mockReturnValue({
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
       today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
-      observedAt: Date.now(),
+      evidence: { source: "probe", observedAt: Date.now() },
     })
 
     const outcome = await autoCheckinScheduler.verifyAccountStatus(
@@ -373,7 +437,7 @@ describe("execution/statusVerification", () => {
         today: checked
           ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
           : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-        observedAt: now,
+        evidence: { source: "probe", observedAt: now },
       })
       const outcome = await autoCheckinScheduler.verifyAccountStatus(
         verificationAccount.id,
@@ -456,7 +520,7 @@ describe("execution/statusVerification", () => {
     mockedInspection.getSelectedCheckInStatus.mockReturnValue({
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
       today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-      observedAt: Date.now(),
+      evidence: { source: "probe", observedAt: Date.now() },
     })
 
     const outcome = await autoCheckinScheduler.verifyAccountStatus(
@@ -526,7 +590,7 @@ describe("execution/statusVerification", () => {
     mockedInspection.getSelectedCheckInStatus.mockReturnValue({
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
       today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
-      observedAt: Date.now(),
+      evidence: { source: "probe", observedAt: Date.now() },
     })
 
     const mutableSet = NON_REPEAT_SAFE_CHECKIN_METHOD_IDS as Set<string>
@@ -674,7 +738,7 @@ describe("execution/statusVerification", () => {
     mockedInspection.getSelectedCheckInStatus.mockReturnValue({
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
       today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
-      observedAt: Date.now(),
+      evidence: { source: "probe", observedAt: Date.now() },
     })
     mockedUserPreferences.getPreferences.mockResolvedValue({
       autoCheckin: DEFAULT_PREFERENCES.autoCheckin,
@@ -689,55 +753,103 @@ describe("execution/statusVerification", () => {
     ).resolves.toMatchObject({ outcome: "not_saved" })
   })
 
-  it("does not update stored status when verified status is unknown", async () => {
-    let storedStatus: any = {
-      perAccount: {
-        [verificationAccount.id]: {
-          accountId: verificationAccount.id,
-          accountName: "Verify Account",
-          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
-          timestamp: 1,
+  it.each([
+    "unknown",
+    "expired",
+    "expired while waiting for the status lock",
+  ] as const)(
+    "does not update stored status when verified status is %s",
+    async (state) => {
+      const account = {
+        ...verificationAccount,
+        site_type: SITE_TYPES.SUB2API,
+        checkIn: {
+          ...verificationAccount.checkIn,
+          selection: {
+            mode: "manual",
+            methodId: AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+          },
+          methodKnowledge: {
+            methods: {
+              [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: Date.now() },
+                },
+              },
+            },
+          },
         },
-      },
-    }
-    mockedAutoCheckinStorage.getStatus.mockImplementation(
-      async () => storedStatus,
-    )
-    mockedAutoCheckinStorage.updateStatus.mockImplementation(
-      async (updater: any) => {
-        const applied = updater(storedStatus)
-        if (applied.patch) {
-          storedStatus = { ...storedStatus, ...applied.patch }
-        }
-        return { ok: true, result: applied.result ?? null }
-      },
-    )
+      }
+      vi.setSystemTime(new Date("2026-11-26T15:59:59.900Z"))
+      let storedStatus: any = {
+        retryState: {
+          day: formatLocalDayKey(),
+          pendingAccountIds: [account.id],
+        },
+        perAccount: {
+          [verificationAccount.id]: {
+            accountId: verificationAccount.id,
+            accountName: "Verify Account",
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            timestamp: 1,
+          },
+        },
+      }
+      mockedAutoCheckinStorage.getStatus.mockImplementation(
+        async () => storedStatus,
+      )
+      mockedAutoCheckinStorage.updateStatus.mockImplementation(
+        async (updater: any) => {
+          if (state === "expired while waiting for the status lock")
+            vi.setSystemTime(new Date("2026-11-26T16:00:00.100Z"))
+          const applied = updater(storedStatus)
+          if (applied.patch) {
+            storedStatus = { ...storedStatus, ...applied.patch }
+          }
+          return { ok: true, result: applied.result ?? null }
+        },
+      )
 
-    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
-    mockedAccountStorage.getAllAccounts.mockResolvedValue([verificationAccount])
-    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
-      verificationAccount,
-    )
-    mockedRefreshSelectedStatus.mockImplementation(
-      async ({ onOutcome, config }: any) => {
-        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
-        return config
-      },
-    )
-    mockedInspection.getSelectedCheckInStatus.mockReturnValue({
-      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
-      observedAt: Date.now(),
-    })
+      mockedAccountStorage.getAccountById.mockResolvedValue(account)
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+        account,
+      )
+      mockedRefreshSelectedStatus.mockImplementation(
+        async ({ onOutcome, config }: any) => {
+          onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
+          return config
+        },
+      )
+      mockedInspection.getSelectedCheckInStatus.mockReturnValue(
+        state === "unknown"
+          ? {
+              outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+              attemptedAt: Date.now(),
+            }
+          : {
+              outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+              today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+              evidence: {
+                source: "probe",
+                observedAt:
+                  state === "expired" ? Date.now() - 86_400_000 : Date.now(),
+              },
+            },
+      )
 
-    const outcome = await autoCheckinScheduler.verifyAccountStatus(
-      verificationAccount.id,
-    )
-    expect(outcome).toMatchObject({
-      outcome: "verified",
-      verifiedStatus: "unknown",
-    })
-    expect(storedStatus.perAccount[verificationAccount.id].status).toBe(
-      CHECKIN_RESULT_STATUS.UNCERTAIN,
-    )
-  })
+      const outcome = await autoCheckinScheduler.verifyAccountStatus(
+        verificationAccount.id,
+      )
+      expect(outcome).toMatchObject({
+        outcome: "verified",
+        verifiedStatus: "unknown",
+      })
+      expect(storedStatus.retryState.pendingAccountIds).toEqual([account.id])
+      expect(storedStatus.perAccount[verificationAccount.id].status).toBe(
+        CHECKIN_RESULT_STATUS.UNCERTAIN,
+      )
+    },
+  )
 })

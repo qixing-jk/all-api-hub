@@ -1,20 +1,11 @@
 import { useTranslation } from "react-i18next"
 
-import { Spinner } from "~/components/ui"
+import { DialogLoadingIndicator } from "~/components/ui/Dialog/DialogLoadingIndicator"
 
 /**
  * Loading state shown while copy key data is being fetched.
  */
 export function LoadingIndicator() {
   const { t } = useTranslation("ui")
-  const loadingLabel = t("dialog.copyKey.loading")
-
-  return (
-    <div className="py-density-8 flex flex-col items-center justify-center">
-      <Spinner size="lg" className="mb-density-4" aria-label={loadingLabel} />
-      <p className="dark:text-secondary-foreground text-muted-foreground text-sm">
-        {loadingLabel}
-      </p>
-    </div>
-  )
+  return <DialogLoadingIndicator label={t("dialog.copyKey.loading")} />
 }

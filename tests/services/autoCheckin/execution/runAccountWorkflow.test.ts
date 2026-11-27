@@ -162,7 +162,10 @@ describe("execution/runAccountWorkflow", () => {
       expect(outcome.result.timestamp).toBe(observedAt)
       expect(
         mockedAccountStorage.markAccountAsSiteCheckedIn,
-      ).toHaveBeenCalledWith(account.id, observedAt)
+      ).toHaveBeenCalledWith(account.id, observedAt, {
+        account,
+        methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      })
       const selected = selectCurrentRunResults(
         {
           [account.id]: {
@@ -763,9 +766,23 @@ describe("execution/runAccountWorkflow", () => {
 
     expect(
       mockedAccountStorage.markAccountAsSiteCheckedIn,
-    ).toHaveBeenNthCalledWith(1, "success-account", expect.any(Number))
+    ).toHaveBeenNthCalledWith(
+      1,
+      "success-account",
+      expect.any(Number),
+      expect.objectContaining({
+        methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      }),
+    )
     expect(
       mockedAccountStorage.markAccountAsSiteCheckedIn,
-    ).toHaveBeenNthCalledWith(2, "already-checked-account", expect.any(Number))
+    ).toHaveBeenNthCalledWith(
+      2,
+      "already-checked-account",
+      expect.any(Number),
+      expect.objectContaining({
+        methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      }),
+    )
   })
 })

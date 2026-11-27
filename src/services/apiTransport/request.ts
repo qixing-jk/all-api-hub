@@ -2,7 +2,10 @@ import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
-import { executeWithCurrentTabContentPreference } from "~/services/apiTransport/currentTabTransport"
+import {
+  executeWithCurrentTabContentPreference,
+  resolveCurrentTabFetchContext,
+} from "~/services/apiTransport/currentTabTransport"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLimiter"
 import { executePreparedRequest } from "~/services/apiTransport/requestExecution"
@@ -22,6 +25,7 @@ import type {
 } from "~/services/apiTransport/type"
 import {
   API_AUTH_TOKEN_MODES,
+  API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
   summarizeApiTransportFetchContext,
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
@@ -394,6 +398,7 @@ const _fetchApiWithMapper = async <T, TResult>(
     request.managementApiBaseUrl ?? resolveDeploymentApiOrigin(baseUrl),
     options.endpoint,
   )
+  const fetchContext = resolveCurrentTabFetchContext({ request, url, options })
 
   const resolvedAuth: NormalizedAuthContext = {
     authType: request.auth?.authType ?? AuthTypeEnum.None,
@@ -535,11 +540,17 @@ const _fetchApiWithMapper = async <T, TResult>(
         }
         return await primaryRequest()
       }
-      if (dispatchedContext.forceTempWindow) return await fallback()
+      const requiresCurrentTab =
+        fetchContext &&
+        request.currentTabFallback ===
+          API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid
+      if (dispatchedContext.forceTempWindow && !requiresCurrentTab)
+        return await fallback()
 
       return await executeWithCurrentTabContentPreference<T, TResult>(
         {
           request,
+          fetchContext,
           url,
           endpoint: options.endpoint,
           fetchOptions: dispatchedFetchOptions,

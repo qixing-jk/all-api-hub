@@ -6,7 +6,7 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 
 describe("accountFormSections config", () => {
-  it("defines the section order used by the account form information architecture", () => {
+  it("recognizes the account edit route's section IDs", () => {
     expect(ACCOUNT_FORM_SECTION_IDS).toEqual([
       "site-info",
       "account-auth",
@@ -17,7 +17,7 @@ describe("accountFormSections config", () => {
     ])
   })
 
-  it("keeps check-in ahead of balance in the mobile default-open strategy", () => {
+  it("defaults balance to collapsed and the other mobile sections to open", () => {
     expect(ACCOUNT_FORM_MOBILE_DEFAULT_OPEN).toEqual({
       "site-info": true,
       "account-auth": true,

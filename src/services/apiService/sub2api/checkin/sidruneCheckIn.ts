@@ -1,14 +1,20 @@
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import { readSub2ApiSessionBindingMismatch } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 const SIDRUNE_CHECK_IN_STATUS_ENDPOINT = "/api/v1/welfare/profile"
 export const SIDRUNE_CHECK_IN_ENDPOINT = "/api/v1/welfare/checkin"
@@ -47,9 +53,10 @@ function readData(response: ApiTransportResponse<unknown>, endpoint: string) {
       response.ok ? undefined : response.status,
       endpoint,
       code,
-      typeof body?.reason === "string"
-        ? body.reason
-        : String(body?.code ?? response.status),
+      readSub2ApiSessionBindingMismatch(body) ??
+        (typeof body?.reason === "string"
+          ? body.reason
+          : String(body?.code ?? response.status)),
     )
   }
   const data = record(body?.data)
@@ -65,8 +72,9 @@ function readData(response: ApiTransportResponse<unknown>, endpoint: string) {
  */
 export async function fetchSidruneDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     SIDRUNE_CHECK_IN_STATUS_ENDPOINT,
     async (authenticated) => {
@@ -87,11 +95,7 @@ export async function fetchSidruneDailyCheckInStatus(
         checkedInToday: data.checked_in_today,
       }
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    auth,
   )
 }
 
@@ -104,10 +108,10 @@ export async function performSidruneDailyCheckIn(
     request,
     SIDRUNE_CHECK_IN_ENDPOINT,
     async (authenticated) => {
-      const response = await fetchApiResponse<unknown>(authenticated, {
-        endpoint: SIDRUNE_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticated,
+        SIDRUNE_CHECK_IN_ENDPOINT,
+      )
       const data = readData(response, SIDRUNE_CHECK_IN_ENDPOINT)
       const amount = data.reward_amount
       const bonus = data.milestone_bonus

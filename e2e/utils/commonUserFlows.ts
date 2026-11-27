@@ -2,6 +2,7 @@ import {
   expect,
   type BrowserContext,
   type ConsoleMessage,
+  type Frame,
   type Page,
   type Worker,
 } from "@playwright/test"
@@ -576,19 +577,15 @@ export async function seedApiCredentialProfiles(
 }
 
 /**
- * Match an already-open extension page against the expected path, hash, and
+ * Match an extension URL against the expected path, hash, and
  * optional query parameters used by popup quick-action navigations.
  */
-function isMatchingExtensionPage(
-  page: Page,
+function isMatchingExtensionUrl(
+  pageUrl: string,
   params: WaitForExtensionPageParams,
 ): boolean {
-  if (page.isClosed()) {
-    return false
-  }
-
   try {
-    const url = new URL(page.url())
+    const url = new URL(pageUrl)
     if (url.protocol !== "chrome-extension:") {
       return false
     }
@@ -628,28 +625,60 @@ export async function waitForExtensionPage(
   const excludedPages = new Set(
     params.reuseExistingPage === false ? context.pages() : [],
   )
+  const observedMatches = new Set<Page>()
+  const navigationListeners = new Map<Page, (frame: Frame) => void>()
+  const observePage = (page: Page) => {
+    if (excludedPages.has(page) || navigationListeners.has(page)) return
+    const observeNavigation = (frame: Frame) => {
+      if (
+        frame === page.mainFrame() &&
+        isMatchingExtensionUrl(frame.url(), params)
+      ) {
+        observedMatches.add(page)
+      }
+    }
+    navigationListeners.set(page, observeNavigation)
+    page.on("framenavigated", observeNavigation)
+    observeNavigation(page.mainFrame())
+  }
+  context.on("page", observePage)
+  context.pages().forEach(observePage)
   const findMatchingPage = () =>
     context
       .pages()
       .find(
         (page) =>
-          !excludedPages.has(page) && isMatchingExtensionPage(page, params),
+          !excludedPages.has(page) &&
+          !page.isClosed() &&
+          isMatchingExtensionUrl(
+            page.url(),
+            observedMatches.has(page)
+              ? { ...params, searchParams: {} }
+              : params,
+          ),
       )
 
-  // Chrome can emit the page event before its first navigation commits. Observe
-  // the destination as well as new pages, including navigation of reused tabs.
-  await expect
-    .poll(() => Boolean(findMatchingPage()), {
-      timeout: params.timeoutMs ?? 15_000,
-      message: `Waiting for extension page ${params.path}${params.hash ?? ""}`,
-    })
-    .toBe(true)
+  try {
+    // A route may consume action parameters before polling sees them. Remember
+    // the matching navigation, while still requiring the current destination.
+    await expect
+      .poll(() => Boolean(findMatchingPage()), {
+        timeout: params.timeoutMs ?? 15_000,
+        message: `Waiting for extension page ${params.path}${params.hash ?? ""}`,
+      })
+      .toBe(true)
 
-  const page = findMatchingPage()
-  if (!page)
-    throw new Error("Matching extension page closed before it was ready")
-  await page.waitForLoadState("domcontentloaded")
-  return page
+    const page = findMatchingPage()
+    if (!page)
+      throw new Error("Matching extension page closed before it was ready")
+    await page.waitForLoadState("domcontentloaded")
+    return page
+  } finally {
+    context.off("page", observePage)
+    for (const [page, listener] of navigationListeners) {
+      page.off("framenavigated", listener)
+    }
+  }
 }
 
 /**

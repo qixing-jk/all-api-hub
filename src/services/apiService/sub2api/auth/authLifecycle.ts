@@ -69,6 +69,10 @@ type HydratedSub2ApiAuth<
 type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
 
 type AuthenticatedSub2ApiRequestOptions = {
+  /** Stop after the first credential repair, even if its replacement token is rejected. */
+  singleRecovery?: boolean
+  /** Bind the authorized transport only when credentials actually need recovery. */
+  prepareRecoveryRequest?: (request: ApiServiceRequest) => ApiServiceRequest
   proactiveRefresh?: boolean
   /** Allow read-only probes to skip refresh and browser recovery for absent tokens. */
   recoverMissingAccessToken?: boolean
@@ -568,7 +572,7 @@ const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
  * unauthorized recovery hidden behind one interface.
  */
 async function executeSub2ApiAuthLifecycle<T>(
-  state: { request: ApiServiceRequest },
+  state: { request: ApiServiceRequest; recoveryStarted?: boolean },
   endpoint: string,
   runner: AuthenticatedSub2ApiRunner<T>,
   options: AuthenticatedSub2ApiRequestOptions = {},
@@ -578,8 +582,14 @@ async function executeSub2ApiAuthLifecycle<T>(
   const accessToken = normalizeSub2ApiAccessToken(
     state.request.auth?.accessToken,
   )
+  const startRecovery = () => {
+    state.recoveryStarted = true
+    state.request =
+      options.prepareRecoveryRequest?.(state.request) ?? state.request
+  }
 
   if (!accessToken && options.recoverMissingAccessToken !== false) {
+    startRecovery()
     if (normalizeSub2ApiRefreshToken(state.request.auth?.refreshToken)) {
       try {
         const refreshed = await refreshSub2ApiRequestAuth({
@@ -614,10 +624,12 @@ async function executeSub2ApiAuthLifecycle<T>(
   )
   if (
     options.proactiveRefresh !== false &&
+    !(options.singleRecovery && state.recoveryStarted) &&
     refreshToken &&
     typeof tokenExpiresAt === "number" &&
     isCloseToExpiry(tokenExpiresAt)
   ) {
+    startRecovery()
     try {
       const refreshed = await refreshSub2ApiRequestAuth({
         request: state.request,
@@ -657,7 +669,12 @@ async function executeSub2ApiAuthLifecycle<T>(
       state.request.observer,
       "onPreHandlerUnauthorized",
     )
-    if (options.recoverUnauthorized === false) throw error
+    if (
+      options.recoverUnauthorized === false ||
+      (options.singleRecovery && state.recoveryStarted)
+    )
+      throw error
+    startRecovery()
 
     if (isSub2ApiSessionBindingMismatch(error)) {
       return await retrySub2ApiRunnerWithResyncedAuth({
@@ -719,6 +736,7 @@ async function executeSub2ApiAuthLifecycle<T>(
         })
       } catch (retryError) {
         if (
+          options.singleRecovery ||
           !isAuthenticationRequiredError(retryError) ||
           state.request.allowAccountCredentialRecovery !== true
         )
@@ -754,12 +772,17 @@ export async function executeAuthenticatedSub2ApiRequest<T>(
 ): Promise<T> {
   // Preparation can fail before runner executes; recovery must still compare
   // against the hydrated/current credential, not the caller's older snapshot.
-  const state = { request }
+  const state = {
+    request,
+    recoveryStarted: false,
+    attemptedAfterRecovery: false,
+  }
   try {
     return await executeSub2ApiAuthLifecycle(
       state,
       endpoint,
       (next) => {
+        if (state.recoveryStarted) state.attemptedAfterRecovery = true
         state.request = next
         return runner(next)
       },
@@ -773,6 +796,7 @@ export async function executeAuthenticatedSub2ApiRequest<T>(
   } catch (error) {
     if (
       request.allowAccountCredentialRecovery !== true ||
+      (options.singleRecovery && state.attemptedAfterRecovery) ||
       options.recoverUnauthorized === false
     )
       throw error

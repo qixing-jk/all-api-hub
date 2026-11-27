@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test"
 
+import { encryptNewApiPassword } from "~/services/apiService/newApiFamily/passwordEncryption"
 import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 
 import {
@@ -80,6 +81,10 @@ export interface CompatibleApiRealSiteLoginResult {
   cleanupOwnedSession?: () => Promise<void>
   /** Read-only proof that detection cannot fall back to rotating a legacy PAT. */
   probeScopedAccessTokens?: () => Promise<boolean>
+  ownedScopedToken?: {
+    find: () => Promise<number | undefined>
+    revoke: () => Promise<void>
+  }
 }
 
 type CompatibleApiLoginApiPayload = {
@@ -96,6 +101,7 @@ type CompatibleApiLoginOptions = {
   authBundle?: boolean
   logSessionDiagnostics?: boolean
   pruneStaleSessions?: boolean
+  ownedScopedTokenName?: string
 }
 
 type CompatibleAuthBundle = {
@@ -114,8 +120,7 @@ type CompatibleLoginPayload = CompatibleAuthBundle | CompatibleLegacyUser
 type CompatibleLoginPayloadMode = "authBundleFirst" | "legacyFirst"
 
 type AuthBundleProbeResult =
-  | CompatibleAuthBundle
-  | { kind: "anonymous" | "legacyFallback" }
+  CompatibleAuthBundle | { kind: "anonymous" | "legacyFallback" }
 
 class TerminalCompatibleApiLoginError extends Error {}
 
@@ -544,8 +549,8 @@ function isRecognizableAuthBundleAttempt(payload: unknown) {
 
   return Boolean(
     isRecord(payload.session) &&
-      (Object.prototype.hasOwnProperty.call(payload.session, "sid") ||
-        Object.prototype.hasOwnProperty.call(payload.session, "current")),
+    (Object.prototype.hasOwnProperty.call(payload.session, "sid") ||
+      Object.prototype.hasOwnProperty.call(payload.session, "current")),
   )
 }
 
@@ -657,9 +662,153 @@ async function probeCompatibleAuthBundle(
   return { kind: "legacyFallback" }
 }
 
+/** Bind access and cleanup to this run's token name without exposing session credentials. */
+function createOwnedScopedTokenAccess(
+  page: Page,
+  config: Pick<
+    CompatibleApiRealSiteConfig,
+    "baseUrl" | "password" | "totpSecret"
+  >,
+  authBundle: CompatibleAuthBundle,
+  name: string,
+) {
+  const headers = {
+    Authorization: `Bearer ${authBundle.accessToken}`,
+    "X-Auth-Session": authBundle.sessionId,
+    Accept: "application/json",
+  }
+  const tokenPath = "/api/user/access_tokens"
+  const revokeScope = "access_token.revoke"
+  const listScopedAccessTokens = async () => {
+    const response = await page.request.get(
+      resolveRealSiteUrl(config.baseUrl, tokenPath),
+      {
+        timeout: 10_000,
+        headers,
+      },
+    )
+    const body: unknown = response.ok() ? await response.json() : undefined
+    if (
+      !isRecord(body) ||
+      body.success !== true ||
+      !isRecord(body.data) ||
+      !Array.isArray(body.data.items)
+    )
+      throw new Error("New API scoped access tokens could not be listed")
+    return body.data.items.map((row: unknown) => {
+      if (
+        !isRecord(row) ||
+        typeof row.id !== "number" ||
+        typeof row.name !== "string"
+      )
+        throw new Error(
+          "New API returned an invalid scoped access token listing",
+        )
+      return { id: row.id, name: row.name }
+    })
+  }
+  const find = async () => {
+    const [token, duplicate] = (await listScopedAccessTokens()).filter(
+      (row) => row.name === name,
+    )
+    if (duplicate)
+      throw new Error("New API cleanup requires a unique run-owned token name")
+    return token?.id
+  }
+  return {
+    find,
+    revoke: async () => {
+      const tokenId = await find()
+      if (tokenId === undefined) return
+      const get = async (path: string) => {
+        const response = await page.request.get(
+          resolveRealSiteUrl(config.baseUrl, path),
+          { headers, timeout: 10_000 },
+        )
+        if (!response.ok())
+          throw new Error(
+            "New API token cleanup could not read verification settings",
+          )
+        return response.json()
+      }
+      const methods = extractCompatibleApiPayload(
+        await get(`/api/verify/methods?scope=${revokeScope}`),
+      )
+      if (
+        !isRecord(methods) ||
+        !Array.isArray(methods.methods) ||
+        methods.scope !== revokeScope
+      ) {
+        throw new Error(
+          "New API token cleanup received invalid verification settings",
+        )
+      }
+      const candidates: unknown[] = methods.methods
+      const available = (method: string) =>
+        candidates.some(
+          (candidate) =>
+            isRecord(candidate) &&
+            candidate.method === method &&
+            candidate.available === true,
+        )
+      const grant =
+        config.totpSecret && available("2fa")
+          ? {
+              method: "2fa",
+              code: generateNewApiTotpCode(config.totpSecret),
+            }
+          : available("password")
+            ? {
+                method: "password",
+                ...(methods.password_encryption_enabled
+                  ? await encryptNewApiPassword(config.password, () =>
+                      get("/api/user/login/encryption-key"),
+                    )
+                  : { password: config.password }),
+              }
+            : undefined
+      if (!grant)
+        throw new Error(
+          "New API token cleanup has no configured verification method",
+        )
+      const verified = await page.request.post(
+        resolveRealSiteUrl(config.baseUrl, "/api/verify"),
+        {
+          headers,
+          timeout: 10_000,
+          data: {
+            ...grant,
+            scope: revokeScope,
+            context: { token_id: tokenId },
+          },
+        },
+      )
+      const proof = verified.ok()
+        ? extractCompatibleApiPayload(await verified.json())
+        : undefined
+      if (
+        !isRecord(proof) ||
+        typeof proof.proof_token !== "string" ||
+        proof.scope !== revokeScope
+      ) {
+        throw new Error("New API token cleanup could not verify revocation")
+      }
+      const removed = await page.request.delete(
+        resolveRealSiteUrl(config.baseUrl, `${tokenPath}/${tokenId}`),
+        {
+          headers: { ...headers, "X-Security-Proof": proof.proof_token },
+          timeout: 10_000,
+        },
+      )
+      if (!removed.ok() || (await find()) !== undefined)
+        throw new Error("New API token cleanup could not confirm revocation")
+    },
+  }
+}
+
 async function createAuthBundleLoginResult(
   page: Page,
-  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
+  config: CompatibleApiRealSiteConfig,
   options: CompatibleApiLoginOptions,
   authBundle: CompatibleAuthBundle,
   reusedSession: boolean,
@@ -667,6 +816,14 @@ async function createAuthBundleLoginResult(
   const result = {
     reusedSession,
     user: authBundle.user,
+    ...(options.ownedScopedTokenName && {
+      ownedScopedToken: createOwnedScopedTokenAccess(
+        page,
+        config,
+        authBundle,
+        options.ownedScopedTokenName,
+      ),
+    }),
     probeScopedAccessTokens: async () => {
       try {
         const response = await page.request.get(
@@ -1113,7 +1270,7 @@ export function extractCompatibleApiPayload(payload: unknown) {
     return null
   }
 
-  return "data" in record ? record.data ?? null : payload
+  return "data" in record ? (record.data ?? null) : payload
 }
 
 async function maybeSubmitTotp(

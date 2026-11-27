@@ -1,5 +1,12 @@
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "~/services/apiService/sub2api/checkin/statusAuthentication"
+import {
+  executeSub2ApiCheckInWithRecovery,
+  type Sub2ApiCheckInRecoveryOptions,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
@@ -15,12 +22,6 @@ import {
 
 const { parseEnvelopeData, invalidResponse } =
   createCheckInCodeEnvelopeParser("Linxi")
-const passiveAuth = {
-  proactiveRefresh: false,
-  recoverMissingAccessToken: false,
-  recoverUnauthorized: false,
-} as const
-
 /** The native calendar uses check_in_date; both observed deployments default to Asia/Shanghai. */
 function checkInDay(data: Record<string, unknown>, endpoint: string) {
   const zone = data.timezone ?? "Asia/Shanghai"
@@ -84,10 +85,10 @@ export function parseLinxiClaim(response: ApiTransportResponse<unknown>) {
 /** Discovery stays passive; an admitted execution may renew its saved authentication before GET. */
 export function fetchLinxiStatus(
   request: ApiServiceRequest,
-  options: { allowAuthenticationRecovery?: boolean } = {},
+  auth: Sub2ApiCheckInStatusAuth = {},
 ) {
   const endpoint = linxiStatusRoute()
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     endpoint,
     async (authenticated) =>
@@ -97,13 +98,16 @@ export function fetchLinxiStatus(
           options: { method: "GET", cache: "no-store" },
         }),
       ),
-    options.allowAuthenticationRecovery ? {} : passiveAuth,
+    auth,
   )
 }
 
 /** Submit the ordinary claim once. Uncertain results are reconciled by the executor's GET. */
-export function performLinxiClaim(request: ApiServiceRequest) {
-  return executeAuthenticatedSub2ApiRequest(
+export function performLinxiClaim(
+  request: ApiServiceRequest,
+  options: Sub2ApiCheckInRecoveryOptions = {},
+) {
+  return executeSub2ApiCheckInWithRecovery(
     request,
     LINXI_CHECK_IN_ENDPOINT,
     async (authenticated) =>
@@ -117,6 +121,8 @@ export function performLinxiClaim(request: ApiServiceRequest) {
           },
         }),
       ),
-    passiveAuth,
+    (authenticated) =>
+      fetchLinxiStatus(authenticated, { allowAuthenticationRecovery: false }),
+    options,
   )
 }

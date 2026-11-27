@@ -1,9 +1,12 @@
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
+
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "~/features/AccountManagement/testIds"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "~/features/KeyManagement/testIds"
 import { MODEL_LIST_TEST_IDS as models } from "~/features/ModelList/testIds"
 import { AuthTypeEnum } from "~/types"
-import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { expect, test as extensionTest } from "~~/e2e/fixtures/extensionTest"
 import { refreshAccountRowsAndReadStorage } from "~~/e2e/scenarios/accountManualAdd"
 import { verifyAccountModelCatalog } from "~~/e2e/scenarios/modelListCatalog"
 import {
@@ -25,7 +28,32 @@ import {
   waitForSavedAccount,
 } from "~~/e2e/utils/realSite/accountAdd"
 
-const origin = "https://shell-gateway.example.com"
+const test = extensionTest.extend<{ navigationOrigin: string }>({
+  navigationOrigin: async ({ browserName }, run) => {
+    void browserName
+    // Serve document targets directly: older Chrome can navigate extension-created
+    // tabs before Playwright attaches request interception to their first request.
+    const server = createServer((request, response) => {
+      if (request.url === "/" || request.url === "/account/profile") {
+        response.writeHead(200, { "Content-Type": "text/html" })
+        response.end("<title>Example Gateway</title>")
+      } else {
+        response.writeHead(404)
+        response.end()
+      }
+    })
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    try {
+      // Localhost retains the Secure/SameSite=None bootstrap Cookie.
+      await run(`http://localhost:${(server.address() as AddressInfo).port}`)
+    } finally {
+      server.closeAllConnections()
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()))
+      })
+    }
+  },
+})
 const user = { id: 42, username: "shell-fixture" }
 
 for (const mode of ["cookie", "token", "manual-token"] as const) {
@@ -35,7 +63,12 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
     context,
     extensionId,
     page,
+    navigationOrigin,
   }, testInfo) => {
+    const origin =
+      mode === "manual-token"
+        ? navigationOrigin
+        : "https://shell-gateway.example.com"
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
     const serviceWorker = await getServiceWorker(context)
@@ -53,7 +86,8 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
     const logPages: (string | null)[] = []
     let quota = 750000
     let token: Record<string, unknown> | undefined
-    await context.route(origin + "/**", async (route) => {
+    const routePattern = origin + (mode === "manual-token" ? "/api/**" : "/**")
+    await context.route(routePattern, async (route) => {
       const { pathname, searchParams } = new URL(route.request().url())
       requests.push(route.request().method() + " " + pathname)
       if (pathname === "/" || pathname === "/account/profile")
@@ -199,8 +233,15 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
         "Uses the browser session for this site",
       )
     if (mode === "manual-token") {
+      await page.bringToFront()
       await expect(dialog.accessTokenInput).toHaveValue("")
-      await expect(dialog.confirmAddButton).toBeHidden()
+      await expect(dialog.confirmAddButton).toBeEnabled()
+      await dialog.confirmAddButton.click()
+      await expect(dialog.accessTokenInput).toBeFocused()
+      await expect(dialog.accessTokenInput).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      )
       await expect(dialog.dialog).toContainText("Use an existing System token")
       await dialog.dialog.screenshot({
         path: testInfo.outputPath("shell-manual-token-guide.png"),
@@ -212,7 +253,9 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
         .click()
       const profilePage = await profilePagePromise
       await expect(profilePage).toHaveURL(origin + "/account/profile")
+      await expect(profilePage).toHaveTitle("Example Gateway")
       await profilePage.close()
+      await page.bringToFront()
       await expect(dialog.userIdInput).toHaveValue(String(user.id))
       await expect(dialog.usernameInput).toHaveValue(user.username)
       await dialog.accessTokenInput.fill(systemToken)

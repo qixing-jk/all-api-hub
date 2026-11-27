@@ -7,6 +7,7 @@ import {
   performLinxiClaim,
 } from "~/services/apiService/sub2api/checkin/linxiCheckIn"
 import { LINXI_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/linxiCheckInProtocol"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { ApiError } from "~/services/apiTransport/errors"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
 import type { SiteAccount } from "~/types"
@@ -21,6 +22,7 @@ import type {
 } from "./contracts"
 import { detectWithStatusReadback } from "./detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS as messages } from "./shared"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -31,10 +33,13 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) => {
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth: Sub2ApiCheckInStatusAuth = {},
+) => {
   const status = await fetchLinxiStatus(
     createSub2ApiCheckInReadRequest(context),
-    { allowAuthenticationRecovery: Boolean(context.authenticationRecovery) },
+    auth,
   )
   return {
     ...toSub2ApiCheckInStatus(status, context.observedAt),
@@ -48,15 +53,13 @@ const manualVerification = (account: SiteAccount) => ({
   messageParams: { checkInUrl: new URL("/check-in", account.site_url).href },
 })
 
-export const linxiProvider: AutoCheckinProvider = {
+export const linxiProvider: AutoCheckinProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
   getReadiness: getSub2ApiCheckInReadiness,
-  detect: (context) =>
-    detectWithStatusReadback(context, (input) =>
-      readStatus({ ...input, authenticationRecovery: undefined }),
-    ),
+  detect: (context, auth) =>
+    detectWithStatusReadback(context, (input) => readStatus(input, auth)),
   getStatus: readStatus,
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -75,7 +78,8 @@ export const linxiProvider: AutoCheckinProvider = {
           AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
         )
       const result = await performLinxiClaim(
-        createSub2ApiCheckInMutationRequest(site, context),
+        attempt?.request ?? createSub2ApiCheckInMutationRequest(site, context),
+        attempt?.recovery,
       )
       if (result.kind === "already")
         return withCheckInResponseConfirmation(
@@ -114,4 +118,4 @@ export const linxiProvider: AutoCheckinProvider = {
       return mapSub2ApiCheckInMutationError(error, context, site)
     }
   },
-}
+})

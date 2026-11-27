@@ -166,12 +166,11 @@ describe("Linxi scheduled authentication", () => {
   })
   afterEach(() => vi.useRealTimers())
 
-  it("keeps detection passive even when passed an execution recovery context", async () => {
+  it("keeps detection passive", async () => {
     await expect(
       linxiProvider.detect!({
         account: account(),
         observedAt: Date.now(),
-        authenticationRecovery: context,
       }),
     ).resolves.toMatchObject({
       outcome: "unknown",

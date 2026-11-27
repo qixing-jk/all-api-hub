@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from "react"
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -23,10 +29,19 @@ export function VercelTeamSelector({
   accessToken,
   value,
   onChange,
+  validationProps,
+  feedback,
 }: {
   accessToken: string
   value: string
   onChange: (value: string) => void
+  validationProps?: Pick<
+    ComponentProps<typeof SelectTrigger>,
+    "aria-invalid" | "aria-describedby"
+  > & {
+    "data-account-validation-field"?: string
+  }
+  feedback?: ReactNode
 }) {
   const { t } = useTranslation("accountDialog")
   const callbacks = useRef({ value, onChange })
@@ -75,6 +90,7 @@ export function VercelTeamSelector({
         <SelectTrigger
           aria-label={t("form.vercelTeam")}
           data-testid="account-management-vercel-team-select"
+          {...validationProps}
         >
           <SelectValue placeholder={t("form.vercelTeamPlaceholder")} />
         </SelectTrigger>
@@ -89,6 +105,7 @@ export function VercelTeamSelector({
       <p className="text-xs text-muted-foreground">
         {t("form.vercelTeamHelp")}
       </p>
+      {feedback}
       {loaded?.error && (
         <div role="alert">
           <p>{t("form.vercelTeamLoadFailed")}</p>

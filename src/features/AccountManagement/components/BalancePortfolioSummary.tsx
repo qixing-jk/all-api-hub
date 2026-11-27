@@ -38,6 +38,10 @@ import {
   getAssetLabel,
 } from "~/utils/core/money"
 
+import {
+  FILTERED_SUMMARY_CONTENT_ROWS,
+  FILTERED_SUMMARY_METRIC_ROWS,
+} from "./AccountList/filteredSummaryLayout"
 import { AllowanceDetailsPopover } from "./AccountList/rows/AllowanceDetailsPopover"
 import { getBalancePortfolioPresentation } from "./balancePortfolioPresentation"
 import { FinancialAccountExclusions } from "./FinancialAccountExclusions"
@@ -176,7 +180,13 @@ export function BalancePortfolioSummary({
       className={cn(
         "min-w-0",
         inline
-          ? "space-y-1 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:row-span-2 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid-rows-subgrid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:space-y-0 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0"
+          ? cn(
+              "space-y-1",
+              showAccountBreakdown
+                ? FILTERED_SUMMARY_METRIC_ROWS
+                : FILTERED_SUMMARY_CONTENT_ROWS,
+              "[@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0",
+            )
           : compact
             ? showAccountBreakdown
               ? "space-y-1"
@@ -205,6 +215,7 @@ export function BalancePortfolioSummary({
       {(!compact || inline) && (
         <div className="flex items-center justify-between gap-2">
           <Caption
+            data-filtered-summary-label={inline ? "" : undefined}
             className={cn(
               "font-medium",
               inline && "block min-h-8 [@container(min-width:30rem)]:min-h-4",
