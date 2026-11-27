@@ -1,7 +1,10 @@
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import type { AccountSiteType } from "~/constants/siteType"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
-import { withAccountAuthSession } from "~/services/accounts/accountSiteProfile/authSession"
+import {
+  shouldDecorateAccountApiRequestWithAuthSession,
+  withAccountAuthSession,
+} from "~/services/accounts/accountSiteProfile/authSession"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   buildAccountKeyResourceRuntimeKeyFromFacts,
@@ -116,7 +119,16 @@ interface StoredAccountApiRequestSource {
   account_info: SiteAccount["account_info"]
   cookieAuth?: SiteAccount["cookieAuth"]
   aimlApiAuth?: SiteAccount["aimlApiAuth"]
+  sub2apiAuth?: SiteAccount["sub2apiAuth"]
 }
+
+/** The stored session can issue an access token without a browser login. */
+export const hasStoredSub2ApiRefreshToken = (
+  account: Pick<SiteAccount, "site_type" | "authType" | "sub2apiAuth">,
+): boolean =>
+  shouldDecorateAccountApiRequestWithAuthSession(account.site_type) &&
+  account.authType === AuthTypeEnum.AccessToken &&
+  hasNonEmptyString(account.sub2apiAuth?.refreshToken)
 
 interface AccountApiRequestSource {
   id: unknown
@@ -125,6 +137,7 @@ interface AccountApiRequestSource {
   authType: AuthTypeEnum
   userId: unknown
   accessToken: unknown
+  canHydrateRefreshToken?: boolean
   cookie: unknown
   aimlApiKey: unknown
 }
@@ -160,7 +173,8 @@ const createAccountApiContextFromSource = (
   if (
     source.authType === AuthTypeEnum.None ||
     (source.authType === AuthTypeEnum.AccessToken &&
-      !hasNonEmptyString(accessToken))
+      !hasNonEmptyString(accessToken) &&
+      !source.canHydrateRefreshToken)
   ) {
     throw new StoredAccountApiContextError(
       "MISSING_CREDENTIAL",
@@ -219,6 +233,7 @@ const createAccountApiContextFromSource = (
 
 export const createAccountApiRequestFromStoredAccount = (
   account: StoredAccountApiRequestSource,
+  options?: { allowStoredSub2ApiRefreshToken?: boolean },
 ): AccountApiContext =>
   createAccountApiContextFromSource({
     id: account.id,
@@ -227,6 +242,9 @@ export const createAccountApiRequestFromStoredAccount = (
     authType: account.authType,
     userId: account.account_info?.id,
     accessToken: account.account_info?.access_token ?? "",
+    canHydrateRefreshToken:
+      options?.allowStoredSub2ApiRefreshToken &&
+      hasStoredSub2ApiRefreshToken(account),
     cookie: account.cookieAuth?.sessionCookie,
     aimlApiKey: account.aimlApiAuth?.apiKey ?? "",
   })

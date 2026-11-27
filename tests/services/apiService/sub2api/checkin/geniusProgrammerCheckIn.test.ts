@@ -19,6 +19,8 @@ import type {
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
+import { expiredCheckInJwt } from "./jwtFixture"
+
 vi.mock(
   "~/services/apiService/sub2api/auth/browserAuth",
   async (importOriginal) => ({
@@ -301,7 +303,7 @@ describe("Genius Programmer check-in protocol", () => {
     expect(fetchApiResponse).toHaveBeenCalledTimes(1)
     expect(fetchApiResponse).toHaveBeenCalledWith(expect.anything(), {
       endpoint: "/api/v1/user/checkin",
-      options: { method: "POST", cache: "no-store" },
+      options: { method: "POST", cache: "no-store", redirect: "error" },
     })
   })
 
@@ -309,7 +311,10 @@ describe("Genius Programmer check-in protocol", () => {
     fetchGeniusProgrammerDailyCheckInStatus,
     performGeniusProgrammerDailyCheckIn,
   ])("does not replay after an unauthorized response", async (operation) => {
-    vi.mocked(fetchApiResponse).mockResolvedValue(response(null, 401))
+    vi.mocked(fetchApiResponse).mockResolvedValue({
+      ...response(null, 401),
+      body: expiredCheckInJwt,
+    })
     await expect(operation(request)).rejects.toMatchObject({
       statusCode: 401,
     })

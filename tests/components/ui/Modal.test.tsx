@@ -1,6 +1,7 @@
 import { act, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { StrictMode, useState } from "react"
+import { createPortal } from "react-dom"
 import { describe, expect, it, vi } from "vitest"
 
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -28,6 +29,74 @@ describe("Modal", () => {
     const dialog = await screen.findByRole("dialog", { name: "Empty content" })
     expect(dialog.querySelector('[data-slot="modal-body"]')).toBeNull()
   })
+
+  it.each([
+    { label: "null", footer: null },
+    { label: "false", footer: false },
+    { label: "empty string", footer: "" },
+    { label: "empty array", footer: [] },
+    { label: "nested empty array", footer: [null, [false, undefined]] },
+    { label: "empty fragment", footer: <>{[null, false]}</> },
+  ])("omits the footer for $label", async ({ footer }) => {
+    render(
+      <Modal
+        isOpen
+        onClose={vi.fn()}
+        title="Empty footer"
+        footer={footer}
+        footerTestId="modal-footer-test"
+      >
+        <p>Content</p>
+      </Modal>,
+    )
+    const dialog = await screen.findByRole("dialog", { name: "Empty footer" })
+    expect(dialog.querySelector('[data-slot="modal-footer"]')).toBeNull()
+    expect(screen.queryByTestId("modal-footer-test")).toBeNull()
+  })
+
+  it.each([true, false])(
+    "keeps the same portal host as actions arrive and leave (:has support %s)",
+    async (supportsHas) => {
+      vi.stubGlobal("CSS", { supports: () => supportsHas })
+      function PortalFooter({ showAction }: { showAction: boolean }) {
+        const [host, setHost] = useState<HTMLDivElement | null>(null)
+        return (
+          <Modal
+            isOpen
+            onClose={vi.fn()}
+            title="Portal footer"
+            footer={<div ref={setHost} />}
+            footerTestId="modal-footer-test"
+          >
+            <p>Content</p>
+            {showAction &&
+              host &&
+              createPortal(<button>Continue</button>, host)}
+          </Modal>
+        )
+      }
+      const { rerender } = render(<PortalFooter showAction={false} />)
+      const footer = await screen.findByTestId("modal-footer-test")
+      expect(footer).toHaveAttribute("data-slot", "modal-footer")
+      expect(footer).toHaveClass(
+        "empty:hidden",
+        "has-[>:only-child:empty]:hidden",
+      )
+      const host = footer.firstElementChild
+      expect(host).toBeEmptyDOMElement()
+      expect(footer.hidden).toBe(!supportsHas)
+      rerender(<PortalFooter showAction />)
+      expect(footer.firstElementChild).toBe(host)
+      expect(host).toContainElement(
+        await screen.findByRole("button", { name: "Continue" }),
+      )
+      expect(footer.hidden).toBe(false)
+      rerender(<PortalFooter showAction={false} />)
+      expect(footer.firstElementChild).toBe(host)
+      expect(host).toBeEmptyDOMElement()
+      await waitFor(() => expect(footer.hidden).toBe(!supportsHas))
+    },
+  )
 
   it("omits an empty body by default while keeping header and footer actions", async () => {
     const onClose = vi.fn()

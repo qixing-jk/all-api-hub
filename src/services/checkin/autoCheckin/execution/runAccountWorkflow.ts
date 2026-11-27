@@ -20,6 +20,7 @@ import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
 } from "~/types/autoCheckin"
+import type { CheckInMethodId } from "~/types/checkIn"
 import { type TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -186,6 +187,7 @@ class AccountCheckinRunWorkflow {
     protectionBypassExecution: ProtectionBypassExecution
     loginProviderOwners: ReadonlyMap<AccountLoginProvider, SiteAccount>
     allowAutomaticDiscovery?: boolean
+    selectedConfirmations?: ReadonlyMap<string, CheckInMethodId>
   }): Promise<AccountCheckinExecutionOutcome[]> {
     return Promise.all(
       params.accounts.map(async (account) => {
@@ -199,6 +201,9 @@ class AccountCheckinRunWorkflow {
             params.protectionBypassExecution,
             {
               allowAutomaticDiscovery: params.allowAutomaticDiscovery,
+              confirmAfterDiscovery: params.selectedConfirmations?.get(
+                account.id,
+              ),
               loginProviderOwners: params.loginProviderOwners,
             },
           )

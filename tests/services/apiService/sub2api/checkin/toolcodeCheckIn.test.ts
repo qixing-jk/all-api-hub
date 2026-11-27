@@ -165,7 +165,7 @@ describe("ToolCode growth-center check-in protocol", () => {
     expect(fetchApiResponse).toHaveBeenCalledTimes(1)
     expect(fetchApiResponse).toHaveBeenCalledWith(expect.anything(), {
       endpoint: "/api/v1/engagement/checkin",
-      options: { method: "POST", cache: "no-store" },
+      options: { method: "POST", cache: "no-store", redirect: "error" },
     })
   })
 
@@ -210,7 +210,7 @@ describe("ToolCode growth-center check-in protocol", () => {
     await expect(performToolcodeDailyCheckIn(request)).rejects.toThrow()
   })
 
-  it.each([401, 403, 429, 500])(
+  it.each([403, 429, 500])(
     "does not replay an HTTP %s mutation",
     async (status) => {
       vi.mocked(fetchApiResponse).mockResolvedValue(response({}, status))

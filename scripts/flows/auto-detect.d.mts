@@ -24,7 +24,7 @@ export function assertAccountDetectionOutcome(options: {
       string
     >
   >
-  saveState: "absent" | "disabled" | "enabled"
+  saveState: "absent" | "disabled" | "enabled" | "validates-access-token"
   guidance?: string | RegExp
   timeoutMs?: number
 }): Promise<Locator>

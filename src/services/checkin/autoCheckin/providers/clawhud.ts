@@ -9,11 +9,10 @@ import {
   performClawhudDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
 import { isForeignCheckInContract } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { ApiError } from "~/services/apiTransport/errors"
 import { withCheckInResponseConfirmation } from "~/services/checkin/autoCheckin/confirmation"
-import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
 import {
@@ -22,10 +21,13 @@ import {
 } from "~/types/autoCheckin"
 
 import type {
-  AutoCheckinProvider,
   AutoCheckinProviderContext,
   AutoCheckinProviderReadContext,
 } from "./contracts"
+import {
+  createSub2ApiStatusDetector,
+  withSub2ApiCheckInExecution,
+} from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -36,9 +38,13 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) => {
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) => {
   const status = await fetchClawhudDailyCheckInStatus(
     createSub2ApiCheckInReadRequest(context),
+    auth,
   )
   return toSub2ApiCheckInStatus(status, context.observedAt)
 }
@@ -65,23 +71,16 @@ const mapMutationError = (
   return mapSub2ApiCheckInMutationError(error, context, account)
 }
 
-export const clawhudProvider: AutoCheckinProvider = {
+export const clawhudProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
 
-  detect(context) {
-    return detectWithStatusReadback(
-      context,
-      readStatus,
-      getCheckInMethodUnknownReason,
-      isForeignCheckInContract,
-    )
-  },
+  detect: createSub2ApiStatusDetector(readStatus, isForeignCheckInContract),
 
   getStatus: readStatus,
 
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -92,8 +91,12 @@ export const clawhudProvider: AutoCheckinProvider = {
 
     try {
       const result = await performClawhudDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       return withCheckInResponseConfirmation(
         account as SiteAccount,
@@ -117,4 +120,4 @@ export const clawhudProvider: AutoCheckinProvider = {
       return mapMutationError(error, context, account as SiteAccount)
     }
   },
-}
+})

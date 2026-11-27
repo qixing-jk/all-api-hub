@@ -1958,6 +1958,33 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
   })
 
+  it.each([
+    ["username", ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput],
+    ["userId", ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput],
+  ] as const)(
+    "opens the mobile authentication section to focus %s",
+    async (field, id) => {
+      mediaQueryState.isSmallScreen = true
+      const props = createProps()
+      const ref = createRef<AccountFormHandle>()
+      const user = userEvent.setup()
+      render(<AccountForm {...withSitePolicy(props)} ref={ref} />)
+      const auth = within(
+        await screen.findByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionAuth,
+        ),
+      )
+      await user.click(
+        auth.getByRole("button", {
+          name: "accountDialog:sections.accountAuth.title",
+        }),
+      )
+      expect(screen.queryByTestId(id)).not.toBeInTheDocument()
+      act(() => ref.current?.focusIssue(field))
+      expect(await screen.findByTestId(id)).toHaveFocus()
+    },
+  )
+
   it.each([false, true])(
     "propagates core field edits, exposes access-token controls, and surfaces validation states (continuous: %s)",
     async (continuous) => {
@@ -2137,11 +2164,13 @@ describe("AccountDialog AccountForm", () => {
 
       const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
-      expect(
-        await screen.findByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
-        ),
-      ).toBeInTheDocument()
+      const recommendation = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
+      )
+      expect(recommendation).toHaveRole("note")
+      expect(recommendation).toHaveTextContent(
+        "accountDialog:form.cookiePermissionNeeded",
+      )
       expect(
         screen.getByText(
           "accountDialog:form.cookiePermissionRecommendationDesc",
@@ -2151,11 +2180,13 @@ describe("AccountDialog AccountForm", () => {
         screen.queryByText("accountDialog:form.cookiePermissionManualFallback"),
       ).not.toBeInTheDocument()
 
-      await user.click(
-        screen.getByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
-        ),
+      const grantButton = screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
       )
+      expect(grantButton).toHaveTextContent(
+        "accountDialog:form.cookiePermissionEnableShort",
+      )
+      await user.click(grantButton)
 
       expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
 

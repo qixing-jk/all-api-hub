@@ -2,6 +2,7 @@ import { REPO_URL } from "~/constants/about"
 
 /** Destination and budgets shared by report links and background navigation validation. */
 export const CHECKIN_FEEDBACK_ISSUE_URL = `${REPO_URL}/issues/new`
+export const CHECKIN_FEEDBACK_ISSUE_TEMPLATE = "checkin_adaptation.yml"
 export const CHECKIN_FEEDBACK_ISSUE_LIMITS = {
   urlLength: 6000,
   titleLength: 200,

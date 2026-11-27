@@ -152,10 +152,10 @@ describe("ToolCode check-in integration", () => {
       signal,
       observedAt: 200,
     })
-    expect(fetchToolcodeDailyCheckInStatus).toHaveBeenCalledWith({
-      ...request,
-      abortSignal: signal,
-    })
+    expect(fetchToolcodeDailyCheckInStatus).toHaveBeenCalledWith(
+      { ...request, abortSignal: signal },
+      undefined,
+    )
     expect(request.abortSignal).toBe(originalSignal)
   })
 

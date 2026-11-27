@@ -13,6 +13,14 @@ Regular E2E is path-triggered and includes desktop Firefox smoke tests. The [bro
 
 ### Browser test sharding and build variants
 
+Scheduled browser compatibility runs cover every supported Chrome version and all three shards. A manual run can select comma-separated `chrome_versions` and `shards`. Both default to `all`. For example, run the second shard on Chrome 114 and Chrome stable with:
+
+```bash
+gh workflow run e2e-browser-compat.yml -f chrome_versions=114,stable -f shards=2
+```
+
+Shard numbers still refer to the original three-way split. The isolated performance suite runs for each selected browser when shard 2 is included.
+
 The default E2E suite uses six runners and balances specs by measured duration. Each shard records a JSON report, and a follow-up job caches `.e2e-durations/spec-durations.json` built from those reports. Pull requests restore the base branch's copy. Without a duration manifest, the jobs fall back to Playwright's `--shard`. Use `node scripts/write-e2e-spec-durations.mjs` and `node scripts/e2e-shard-plan.mjs --index 1 --total 6` to reproduce the pipeline locally.
 
 The DNR and bookmarks E2E variants are derived from the default build with `node scripts/e2e-build-variants.mjs` instead of being built separately: `wxt.config.ts` changes only `permissions` and `optional_permissions` between them. [A test](../../tests/scripts/e2eBuildVariantDerive.test.ts) compares the real manifest factory across variants and fails if any other field diverges, so a future variant-specific manifest change cannot silently ship the wrong build.

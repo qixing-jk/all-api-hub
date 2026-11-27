@@ -49,7 +49,7 @@ const { toast, getCurrentTempWindowRequestSourceMock } = vi.hoisted(() => ({
           const value = await promise
           return typeof handlers?.success === "function"
             ? handlers.success(value)
-            : handlers?.success ?? value
+            : (handlers?.success ?? value)
         } catch (error) {
           if (typeof handlers?.error === "function") {
             return handlers.error(error as Error)
@@ -137,9 +137,8 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
       type: string,
       data?: Record<string, unknown>,
     ) => {
-      const { sendRuntimeMessage } = await import(
-        "~/utils/browser/runtimeMessages"
-      )
+      const { sendRuntimeMessage } =
+        await import("~/utils/browser/runtimeMessages")
       return sendRuntimeMessage(type, data)
     },
   }
@@ -599,8 +598,7 @@ describe("AutoCheckin account actions", () => {
     const browserApi = await import("~/utils/browser/runtimeMessages")
 
     let resolveRetry:
-      | ((value: { success: boolean; error?: string }) => void)
-      | undefined
+      ((value: { success: boolean; error?: string }) => void) | undefined
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
       .mockImplementation(async (message: unknown, data?: unknown) => {
@@ -793,7 +791,12 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.VerifyAccountStatus,
-        { accountId: "alpha" },
+        {
+          accountId: "alpha",
+          protectionBypassExecution: expect.objectContaining({
+            command: "verify_checkin_status",
+          }),
+        },
       )
       expect(toast.success).toHaveBeenCalledWith(
         "autoCheckin:messages.success.statusVerified",
@@ -1914,9 +1917,8 @@ describe("AutoCheckin account actions", () => {
   it("keeps existing results rendered while a manual refresh is loading", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/runtimeMessages")
-    const { siteTypeObservations } = await import(
-      "~/services/siteDetection/siteTypeObservations"
-    )
+    const { siteTypeObservations } =
+      await import("~/services/siteDetection/siteTypeObservations")
 
     // Status loading also awaits storage after the runtime response arrives.
     vi.spyOn(siteTypeObservations, "readForAccounts")
@@ -1928,8 +1930,7 @@ describe("AutoCheckin account actions", () => {
 
     let statusCalls = 0
     let resolveRefresh:
-      | ((value: { success: boolean; data: any }) => void)
-      | undefined
+      ((value: { success: boolean; data: any }) => void) | undefined
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {

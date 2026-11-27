@@ -153,10 +153,10 @@ describe("Genius Programmer check-in integration", () => {
       signal,
       observedAt: 200,
     })
-    expect(fetchGeniusProgrammerDailyCheckInStatus).toHaveBeenCalledWith({
-      ...request,
-      abortSignal: signal,
-    })
+    expect(fetchGeniusProgrammerDailyCheckInStatus).toHaveBeenCalledWith(
+      { ...request, abortSignal: signal },
+      undefined,
+    )
     expect(request.abortSignal).toBe(originalSignal)
   })
 

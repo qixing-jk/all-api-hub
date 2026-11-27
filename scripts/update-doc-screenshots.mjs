@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
 
 import {
+  DOC_SCREENSHOT_E2E_SPECS,
   DOC_SCREENSHOT_LANGUAGE_ALIASES,
   DOC_SCREENSHOT_LOCALES,
   DOC_SCREENSHOT_PAGES,
@@ -80,9 +81,9 @@ export async function updateDocScreenshots(options = {}, dependencies = {}) {
         env,
         log: path.join(directory, "update.log"),
       })
-    if (pages.some((page) => page !== "web-ai-api-check"))
+    if (pages.some((page) => !DOC_SCREENSHOT_E2E_SPECS.has(page)))
       await command([path.join(root, "node_modules/wxt/bin/wxt.mjs"), "build"])
-    if (pages.includes("web-ai-api-check"))
+    if (pages.some((page) => DOC_SCREENSHOT_E2E_SPECS.has(page)))
       await command([path.join(root, "scripts/e2e-build.mjs")])
     await command([
       path.join(root, "scripts/generate-doc-screenshots.mjs"),

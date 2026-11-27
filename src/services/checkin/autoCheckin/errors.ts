@@ -1,4 +1,8 @@
 import { CHECK_IN_METHOD_UNKNOWN_REASON_CODES } from "~/constants/checkIn"
+import {
+  getSub2ApiAuthPersistenceStatus,
+  SUB2API_AUTH_PERSISTENCE_STATUSES,
+} from "~/services/apiService/sub2api/auth/authSession"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import type { CheckInMethodUnknownReason } from "~/types/checkIn"
 import { getErrorMessage } from "~/utils/core/error"
@@ -90,6 +94,13 @@ export function classifyAutoCheckinError(
 export function getCheckInMethodUnknownReason(
   error: unknown,
 ): CheckInMethodUnknownReason {
+  switch (getSub2ApiAuthPersistenceStatus(error)) {
+    case SUB2API_AUTH_PERSISTENCE_STATUSES.IDENTITY_MISMATCH:
+      return CHECK_IN_METHOD_UNKNOWN_REASON_CODES.IdentityMismatch
+    case SUB2API_AUTH_PERSISTENCE_STATUSES.ACCOUNT_MISSING:
+    case SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED:
+      return CHECK_IN_METHOD_UNKNOWN_REASON_CODES.CredentialPersistenceFailed
+  }
   switch (classifyAutoCheckinError(error)) {
     case AUTO_CHECKIN_ERROR_CATEGORIES.AuthenticationRequired:
       return CHECK_IN_METHOD_UNKNOWN_REASON_CODES.AuthenticationRequired

@@ -1603,6 +1603,10 @@ describe("typed runtime messaging setup", () => {
         "autoCheckin:verifyAccountStatus",
       )({ data: { accountId: "account-1" } }),
     ).resolves.toEqual({ success: true, outcome: "verified" })
+    expect(verifyAccountStatus).toHaveBeenLastCalledWith("account-1", undefined)
+    const verifyExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.VerifyCheckinStatus,
+    )
     verifyAccountStatus.mockResolvedValueOnce({
       outcome: "verified",
       verifiedStatus: "checked",
@@ -1611,12 +1615,22 @@ describe("typed runtime messaging setup", () => {
       getRegisteredHandler(
         onAutoCheckinMessage,
         "autoCheckin:verifyAccountStatus",
-      )({ data: { accountId: "account-1" } }),
+      )({
+        data: {
+          accountId: "account-1",
+          protectionBypassExecution: verifyExecution,
+        },
+        sender: OPTIONS_SENDER,
+      }),
     ).resolves.toEqual({
       success: true,
       outcome: "verified",
       verifiedStatus: "checked",
     })
+    expect(verifyAccountStatus).toHaveBeenLastCalledWith(
+      "account-1",
+      verifyExecution,
+    )
     verifyAccountStatus.mockResolvedValueOnce({
       outcome: "unsupported",
       error: "autoCheckin:messages.error.statusVerificationUnsupported",
@@ -1841,7 +1855,6 @@ describe("typed runtime messaging setup", () => {
       protectionBypassExecution: MANUAL_CHECKIN_EXECUTION,
     })
     expect(runCheckins).toHaveBeenCalledTimes(1)
-    expect(verifyAccountStatus).toHaveBeenCalledWith("account-1")
     expect(scheduleNextRun).toHaveBeenCalledWith({ preserveExisting: true })
     expect(debugScheduleDailyAlarmForToday).toHaveBeenCalledWith({
       minutesFromNow: 5,

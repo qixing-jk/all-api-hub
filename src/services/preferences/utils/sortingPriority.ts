@@ -33,7 +33,8 @@ import {
   ASSET_KINDS,
   BALANCE_ROLES,
 } from "~/services/amounts/financialConstants"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { isCheckInMethodStatusCurrent } from "~/services/checkin/autoCheckin/domain"
 import { getDisplayCurrency } from "~/services/preferences/currencyDisplay"
 import type {
   ActiveSortField,
@@ -195,14 +196,19 @@ function isNotCheckedIn(item: DisplaySiteData): boolean {
   const supportsCustomCheckIn =
     typeof checkIn.customCheckIn?.url === "string" &&
     checkIn.customCheckIn.url.trim() !== ""
-  const selectedStatus = getSelectedCheckInStatus({
+  const methodId = resolveSelectedCheckInMethod({
     config: checkIn,
     siteType: item.siteType,
     siteUrl: item.baseUrl,
   })
+  const selectedStatus = methodId
+    ? checkIn.methodKnowledge.methods[methodId]?.status
+    : undefined
   const siteNotCheckedIn =
+    methodId !== null &&
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-    selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
+    selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked &&
+    isCheckInMethodStatusCurrent(methodId, selectedStatus)
   const customNotCheckedIn =
     supportsCustomCheckIn &&
     (checkIn.customCheckIn?.isCheckedInToday ?? false) === false

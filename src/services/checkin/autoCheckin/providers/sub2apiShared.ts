@@ -6,7 +6,10 @@ import {
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { CURRENCIES } from "~/constants/money"
-import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  createAccountApiRequestFromStoredAccount,
+  hasStoredSub2ApiRefreshToken,
+} from "~/services/accounts/utils/apiServiceRequest"
 import type { ConfirmedAward } from "~/services/amounts/awards"
 import {
   ASSET_KINDS,
@@ -57,19 +60,33 @@ import type {
 const hasText = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 
+const createStoredCheckInRequest = (account: SiteAccount) =>
+  createAccountApiRequestFromStoredAccount(account, {
+    allowStoredSub2ApiRefreshToken: true,
+  }).request
+
 export const createSub2ApiCheckInReadRequest = (
   context: AutoCheckinProviderReadContext,
+  transportPolicy?: AutoCheckinProviderContext,
 ): ApiServiceRequest => {
   const request =
     context.request ??
-    (context.account
-      ? createAccountApiRequestFromStoredAccount(context.account).request
-      : null)
+    (context.account ? createStoredCheckInRequest(context.account) : null)
   if (!request) throw new Error("Sub2API account data is unavailable")
-  return {
+  const readRequest = {
     ...request,
     ...(context.signal ? { abortSignal: context.signal } : {}),
   }
+  return transportPolicy
+    ? bindApiTransportRequest(
+        {
+          ...readRequest,
+          tempWindowRequestSource: transportPolicy.tempWindowRequestSource,
+          protectionBypassExecution: transportPolicy.protectionBypassExecution,
+        },
+        API_DIRECT_REQUEST_REASONS.CallerManaged,
+      )
+    : readRequest
 }
 
 export const createSub2ApiCheckInMutationRequest = (
@@ -78,7 +95,7 @@ export const createSub2ApiCheckInMutationRequest = (
 ): ApiServiceRequest =>
   bindApiTransportRequest(
     {
-      ...createAccountApiRequestFromStoredAccount(account).request,
+      ...createStoredCheckInRequest(account),
       tempWindowRequestSource: normalizeTempWindowRequestSource(
         context.tempWindowRequestSource,
       ),
@@ -263,7 +280,10 @@ export const getSub2ApiCheckInReadiness = (
       reason: CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing,
     }
   }
-  if (!hasText(account.account_info?.access_token)) {
+  if (
+    !hasText(account.account_info?.access_token) &&
+    !hasStoredSub2ApiRefreshToken(account)
+  ) {
     return {
       ready: false,
       reason: CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,

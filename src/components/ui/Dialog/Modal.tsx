@@ -23,6 +23,9 @@ import { ToasterPortalHost } from "../../toast/ToasterPortal"
 import { FloatingLayerProvider, hasOpenFloatingLayer } from "../floating-layer"
 import { DeferredDialogFocusContext } from "./DeferredDialogFocusContext"
 
+const MODAL_BODY_SLOT = "modal-body"
+export const MODAL_BODY_SELECTOR = `[data-slot="${MODAL_BODY_SLOT}"]`
+
 type Size = "sm" | "md" | "lg" | "xl"
 
 interface ModalProps {
@@ -60,17 +63,35 @@ const sizeMap: Record<Size, string> = {
   xl: "max-w-5xl",
 }
 
-/** Empty fragments and conditional children do not need a padded scroll region. */
-function hasModalBodyContent(children: ReactNode): boolean {
-  return Children.toArray(children).some((child) => {
+/** Empty fragments and conditional children do not need a padded slot. */
+function hasModalSlotContent(content: ReactNode): boolean {
+  return Children.toArray(content).some((child) => {
     if (
       isValidElement<{ children?: ReactNode }>(child) &&
       child.type === Fragment
     ) {
-      return hasModalBodyContent(child.props.children)
+      return hasModalSlotContent(child.props.children)
     }
     return typeof child !== "string" || child.length > 0
   })
+}
+
+/** Match the footer's :has rule on supported Firefox versions before 121. */
+function observeLegacyFooterVisibility(footer: HTMLDivElement | null) {
+  if (!footer || globalThis.CSS?.supports("selector(:has(*))") !== false) return
+  const update = () => {
+    footer.hidden =
+      footer.matches(":empty") ||
+      Boolean(footer.firstElementChild?.matches(":only-child:empty"))
+  }
+  update()
+  const observer = new MutationObserver(update)
+  observer.observe(footer, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  })
+  return () => observer.disconnect()
 }
 
 type FocusSession = {
@@ -232,7 +253,8 @@ export function Modal({
   restoreDeferredFocus = false,
   onCloseComplete,
 }: ModalProps) {
-  const hasBody = hasModalBodyContent(children)
+  const hasBody = hasModalSlotContent(children)
+  const hasFooter = hasModalSlotContent(footer)
   const contentRef = useRef<HTMLDivElement>(null)
   const [tooltipPortalContainer, setTooltipPortalContainer] =
     useState<HTMLDivElement | null>(null)
@@ -513,7 +535,7 @@ export function Modal({
 
                   {hasBody && (
                     <div
-                      data-slot="modal-body"
+                      data-slot={MODAL_BODY_SLOT}
                       className="flex min-h-0 flex-1 flex-col space-y-density-3 overflow-y-auto px-4 py-density-4 sm:space-y-density-4 sm:px-6 sm:py-density-6"
                     >
                       {/* Keep hints outside body scrolling and sticky pane layers. */}
@@ -525,10 +547,12 @@ export function Modal({
                     </div>
                   )}
 
-                  {footer && (
+                  {hasFooter && (
                     <div
+                      ref={observeLegacyFooterVisibility}
+                      data-slot="modal-footer"
                       data-testid={footerTestId}
-                      className="shrink-0 border-t border-border-subtle px-4 py-density-3 sm:px-6 sm:py-density-4 dark:border-border"
+                      className="shrink-0 border-t border-border-subtle px-4 py-density-3 empty:hidden has-[>:only-child:empty]:hidden sm:px-6 sm:py-density-4 dark:border-border"
                     >
                       {footer}
                     </div>

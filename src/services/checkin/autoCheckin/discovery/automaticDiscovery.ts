@@ -1,4 +1,8 @@
 import {
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
+} from "~/constants/checkIn"
+import {
   accountCheckInState,
   isAutomaticCheckInDiscoveryCurrent,
 } from "~/services/accounts/accountStorage/accountCheckInState"
@@ -7,8 +11,12 @@ import { discoverAccountCheckInMethods } from "~/services/checkin/autoCheckin/di
 import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { resolveCheckInSelectionPolicy } from "~/services/checkin/autoCheckin/domain"
 import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/providers/contracts"
-import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getAutoCheckinCandidateMethodIds,
+  isCheckInMethodId,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type { SiteAccount } from "~/types"
+import type { CheckInMethodId } from "~/types/checkIn"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AutomaticCheckInDiscovery")
@@ -18,7 +26,11 @@ export async function prepareAutomaticCheckIn(input: {
   account: SiteAccount
   context: AutoCheckinProviderContext
   isAutomaticExecutionEnabled: () => Promise<boolean>
-}): Promise<{ account: SiteAccount | null; discovered: boolean }> {
+}): Promise<{
+  account: SiteAccount | null
+  discovered: boolean
+  confirmSelectedMethod?: CheckInMethodId
+}> {
   const unchanged = { account: input.account, discovered: false }
   try {
     if (
@@ -67,7 +79,23 @@ export async function prepareAutomaticCheckIn(input: {
       account,
       discovery.config,
     )
+    let confirmSelectedMethod: CheckInMethodId | undefined
     if (updated?.applied) {
+      // A completed passive scan may leave the same selected method waiting
+      // for authentication. Only this run owns its discovery cooldown.
+      const methodId = updated.account.checkIn.selection.methodId
+      if (
+        isCheckInMethodId(methodId) &&
+        methodId === account.checkIn.selection.methodId
+      ) {
+        const detection = discovery.detections[methodId]
+        if (
+          detection?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown &&
+          detection.reason ===
+            CHECK_IN_METHOD_UNKNOWN_REASON_CODES.AuthenticationRequired
+        )
+          confirmSelectedMethod = methodId
+      }
       logger.info("Automatic check-in discovery completed", {
         accountId: account.id,
         outcome: discovery.decision.outcome,
@@ -78,6 +106,7 @@ export async function prepareAutomaticCheckIn(input: {
     return {
       account: updated?.account ?? null,
       discovered: updated?.applied ?? false,
+      ...(confirmSelectedMethod ? { confirmSelectedMethod } : {}),
     }
   } catch (error) {
     logger.warn("Automatic check-in discovery preparation failed", {

@@ -124,27 +124,27 @@ describe("registered check-in feedback status routes", () => {
       SITE_TYPES.SUB2API,
       "https://ai-router.dev",
     )
-    expect(routes).toHaveLength(12)
-    expect(routes).toContainEqual({ path: "/api/v1/welfare/profile" })
-    expect(
-      routes.some((route) =>
-        route.path.startsWith("/api/v1/user/checkin?timezone="),
-      ),
-    ).toBe(true)
+    const paths = routes.map(({ path }) => path.split("?")[0])
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "/api/v1/user/daily-checkin",
+        "/api/v1/redeem/checkin/status",
+        "/api/v1/user/checkin/status",
+        "/api/v1/engagement/checkin/status",
+        "/api/v1/tbe-sponsor-checkin/status",
+        "/api/v1/checkin",
+        "/checkin/api/status",
+        "/api/v1/checkin/status",
+        "/api/v1/welfare/profile",
+        "/api/v1/user/checkin",
+        "/api/v1/check-in",
+        "/api/v1/daily-rewards/checkin/status",
+        "/api/v1/redeem/checkin",
+      ]),
+    )
     expect(routes[0]?.path).toMatch(
       /^\/api\/v1\/user\/daily-checkin\?timezone=/,
     )
-    expect(
-      routes.some((route) =>
-        route.path.startsWith("/api/v1/user/daily-checkin?timezone="),
-      ),
-    ).toBe(true)
-    expect(routes).toContainEqual({ path: "/checkin/api/status" })
-    expect(
-      routes.some((route) =>
-        route.path.startsWith("/api/v1/daily-rewards/checkin/status?timezone="),
-      ),
-    ).toBe(true)
   })
 
   it("reads the account's own route before the declared defaults", () => {

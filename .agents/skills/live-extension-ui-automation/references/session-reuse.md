@@ -1,5 +1,13 @@
 # Session assessment and reuse
 
+## Default for authenticated desktop extension tests
+
+Use the independent CDP development browser for extension controls. Assess its session first; if unauthenticated, prefer transferring an authorized live website session from the daily browser before starting a new login. The daily browser's extension bridge supplies website observations and supported session reads, while CDP controls the extension under test. A bridge restriction on another extension's URL does not make the website session unavailable.
+
+Verify the site's actual authentication mechanism before copying: a refresh credential may live in localStorage even when marker Cookies are present. Transfer only the required origin-scoped state, snapshot affected target state, and compare source/target identity after the website completes its normal authentication. Keep credentials out of tool output and Git, and remove temporary credential-transfer files after consumption. Record this as test setup; then use the extension's ordinary detection and credential workflow without injecting account records or detected values. If the starting condition itself is under test, apply the preservation rules below instead.
+
+Diagnose an unavailable CDP endpoint, wrong profile/build or failed transfer before falling back. If no applicable authorized path remains, tell the user the specific blocker and the remaining alternatives; consider computer use at that point and follow its foreground-control requirements.
+
 ## Preserve initial session conditions
 
 When testing first-contact WAF, expired credentials, or recovery without an open
@@ -59,9 +67,11 @@ Extension account records and website login sessions are separate. `browser:sync
 
 ### Live Cookie transfer
 
-For a Cookie-authenticated site, verify the live source account, then test `sourceContext.cookies(origin)` with the exact requested origin. An empty unscoped `cookies()` result does not establish that the scoped call is unavailable. Privileged CDP attachment through an extension bridge is a separate capability and is not required for a supported Cookie call.
+For a Cookie-authenticated site, verify the live source account, then call `sourceContext.cookies()` with the actual website and authentication endpoint URLs. Cookie URL filtering includes the path: a root URL omits a refresh Cookie scoped to `/api/user/auth`, even when the dashboard is logged in. Use observed login/refresh paths before concluding that only marker Cookies exist or that transfer is unavailable. An empty unscoped result also does not establish that a scoped call is unavailable. Privileged CDP attachment through an extension bridge is a separate capability and is not required for a supported Cookie call.
 
 Before `targetContext.addCookies`, verify the target dev profile, validate the transferred Cookie domains against the requested host, and snapshot affected target cookies for recovery. Keep session material in memory where practical; any necessary transfer artifact must be in ignored local evidence, with no Cookie/token values in console output or Git. After transfer, query the target identity again with the source account ID as the expected identity. Stop on mismatch or failed verification and recover the affected target state; do not declare success or immediately replace another account.
+
+Copying a rotating refresh Cookie shares one server session; it does not create independent logins. Serialize source/target refreshes, stop task-owned target pages when finished, and verify the daily source still authenticates. If target use rotated the credential, restore the latest origin/path-scoped session to the source through a supported page or Cookie mechanism and verify the same identity before detaching. Establish a viable restoration path before exercising a session that rotates; if none exists, use a separate website login for the test. Preserve only non-secret evidence of the handoff.
 
 If the site uses localStorage or another session mechanism, Cookie access alone does not establish transfer availability. Inspect the applicable mechanism within the task's scope.
 
