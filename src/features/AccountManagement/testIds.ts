@@ -49,9 +49,16 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
     "account-management-account-form-section-tags-notes",
   accountFormSectionCheckIn: "account-management-account-form-section-check-in",
   accountFormSectionBalance: "account-management-account-form-section-balance",
-  sub2apiRefreshTokenSwitch: "account-management-sub2api-refresh-token-switch",
+  sub2apiManualDisclosure: "account-management-sub2api-manual-disclosure",
+  sub2apiBrowserSessionOption:
+    "account-management-sub2api-browser-session-option",
+  sub2apiIndependentSessionOption:
+    "account-management-sub2api-independent-session-option",
+  sub2apiLoginSectionAcquireButton:
+    "account-management-sub2api-login-section-acquire",
   sub2apiImportSessionButton:
     "account-management-sub2api-import-session-button",
+  sub2apiLoginSessionButton: "account-management-sub2api-login-session-button",
   sub2apiRefreshTokenInput: "account-management-sub2api-refresh-token-input",
   cookiePermissionRecommendation:
     "account-management-cookie-permission-recommendation",

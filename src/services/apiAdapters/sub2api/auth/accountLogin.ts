@@ -24,6 +24,7 @@ import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createBrowserOAuthContext } from "~/services/browserOAuth/browserOAuth"
 import { AuthTypeEnum } from "~/types/auth"
 
+import { discardSub2ApiLoginCredential } from "./credentialCleanup"
 import {
   captureSub2ApiLoginCredential,
   sub2ApiLoginCredentialRecovery,
@@ -63,6 +64,8 @@ function supportsSub2ApiAccountLogin(account: AccountLoginTarget): boolean {
 }
 
 export const sub2ApiAccountLogin: AccountLoginCapability = {
+  discardCredential: (account, credential) =>
+    discardSub2ApiLoginCredential(account.site_url, credential),
   credentialRecovery: sub2ApiLoginCredentialRecovery,
   get methods() {
     const policy = loginPolicy()

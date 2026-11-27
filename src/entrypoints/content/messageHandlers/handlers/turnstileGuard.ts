@@ -25,6 +25,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 interface WaitForTurnstileTokenRequest {
+  expectTurnstile?: boolean
   requestId?: string
   timeoutMs?: number
   preTrigger?: TurnstilePreTrigger
@@ -135,6 +136,7 @@ export function handleWaitForTurnstileToken(
         requestId: request.requestId,
         timeoutMs: request.timeoutMs,
         preTrigger: request.preTrigger,
+        ...(request.expectTurnstile === true ? { expectTurnstile: true } : {}),
         userAssist: createTurnstileUserAssist(request.requestId),
       })
 

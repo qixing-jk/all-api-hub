@@ -300,6 +300,26 @@ describe("turnstileGuard", () => {
   })
 
   describe("waitForTurnstileToken", () => {
+    it("waits for a configured verification widget that mounts after page readiness", async () => {
+      const timer = setTimeout(() => {
+        document.body.innerHTML =
+          '<input name="cf-turnstile-response" value="late-widget-token">'
+      }, 20)
+      try {
+        await expect(
+          waitForTurnstileToken({
+            requestId: "late-widget",
+            timeoutMs: 500,
+            expectTurnstile: true,
+          }),
+        ).resolves.toMatchObject({
+          status: "token_obtained",
+          token: "late-widget-token",
+        })
+      } finally {
+        clearTimeout(timer)
+      }
+    })
     it("returns token_obtained when token is already present", async () => {
       document.body.innerHTML =
         '<input name="cf-turnstile-response" value="token-1"></input>'

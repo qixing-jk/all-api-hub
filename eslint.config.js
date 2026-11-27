@@ -107,6 +107,11 @@ const dynamicImportAllowlist = [
     imports: ["./tempPage/browserAdapter"],
   },
   {
+    // Optional wire protocols load without the business adapter registry.
+    file: "src/services/apiAdapters/requestProtocol.ts",
+    imports: ["./sub2api/auth/requestProtocol"],
+  },
+  {
     // Verification defers provider SDKs and quality executors until a test runs.
     file: "src/services/verification/lazyRunners.ts",
     imports: [

@@ -78,6 +78,7 @@ export interface AccountDialogDraft {
 
 export const ACCOUNT_DIALOG_RECOVERY_ACTIONS = {
   Cookie: "cookie",
+  Sub2ApiLogin: "sub2api-login",
   NewApiTokenCreate: "new-api-token-create",
   NewApiTokenSite: "new-api-token-site",
 } as const

@@ -105,6 +105,11 @@
   },
   "errors": {
     "api": {
+      "browserBackgroundVerificationFailed": "サイトの認証をバックグラウンドで完了できませんでした。再試行しても失敗する場合は、このサイトの互換性の問題として報告してください。",
+      "browserLoginCleanupUnconfirmed": "新しいログインセッションの削除を確認できませんでした。再試行する前にサイトで有効なセッションを確認してください。",
+      "browserProofLoginRequired": "この認証情報はサイトのログインセッションに属しています。サイトで同じアカウントにログインして再試行してください。アカウントのログインを設定して独立したセッションを取得することもできます。",
+      "browserProofRejected": "サイトがリクエストの署名を拒否しました。再試行しても失敗する場合は、このサイトの互換性の問題をご報告ください。",
+      "browserProofSecondFactorRequired": "このアカウントは追加認証が必要ですが、このサイトの拡張機能ログインではまだ対応していません。",
       "invalidResponseFormat": "無効な応答形式です",
       "missingRecoveryPolicy": "拡張機能がこのリクエストを準備できませんでした。拡張機能を更新するか、問題を報告してください。",
       "nonJsonContent": "JSON ではなく {{contentType}} が返されました（HTTP {{status}}）",
@@ -214,8 +219,9 @@
   "sub2api": {
     "authPersistenceFailed": "更新された Sub2API のログイン情報をこのアカウントに安全に保存できませんでした。アカウントを更新または再インポートしてから、もう一度お試しください。",
     "configMissing": "先に基本設定で Sub2API のベース URL と管理者 API Key を設定してください。",
-    "loginRequired": "先に Sub2API ダッシュボードへログインして（拡張機能が localStorage から auth_token / auth_user を読めるようにして）、再試行してください。",
-    "refreshTokenInvalid": "Sub2API の Refresh Token が無効または更新済みです。ダッシュボードからセッションを再取り込み（推奨: シークレット / プライベートウィンドウ）するか、新しい refresh_token を貼り付けて再試行してください。"
+    "independentSessionRequired": "この独立した Sub2API セッションの署名鍵を利用できません。アカウント編集画面の「再ログイン」または「セッション取得」でセッションを再取得してください。",
+    "loginRequired": "Sub2API のウェブサイトにログインして再試行するか、アカウントログインを設定して独立したセッションを取得してください。",
+    "refreshTokenInvalid": "この Sub2API リフレッシュトークンではセッションを更新できません。「再ログイン」または「セッション取得」を使うか、サイトが許可している場合は新しいトークンを再インポートするか貼り付けてください。"
   },
   "toast": {
     "error": {

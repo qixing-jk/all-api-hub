@@ -7,6 +7,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import { type TEMP_CONTEXT_TASK_KINDS } from "~/services/protectionBypass/contracts"
+import { AuthTypeEnum } from "~/types"
 import {
   TEMP_WINDOW_TURNSTILE_STATUSES,
   type TempWindowFetch,
@@ -134,7 +135,13 @@ export async function executeTempWindowFetch(
       contextPageUrl,
       tempRequestId,
       suppressMinimize,
-      { incognito: Boolean(useIncognito) },
+      {
+        incognito: Boolean(useIncognito),
+        // Bearers can depend on a signing key or session in this partition.
+        ...(resolvedAuthType === AuthTypeEnum.AccessToken && cookieStoreId
+          ? { cookieStoreId }
+          : {}),
+      },
       authorizeAtAcquire,
     )
     const { tabId } = context
@@ -171,6 +178,7 @@ export async function executeTempWindowFetch(
 
     const response = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
+      ...("siteType" in request ? { siteType: request.siteType } : {}),
       requestId: tempRequestId,
       expectedOrigin: normalizeOrigin(originUrl),
       fetchUrl,

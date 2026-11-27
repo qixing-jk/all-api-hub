@@ -20,6 +20,7 @@ import {
 import { isRecord } from "~/utils/core/object"
 
 import {
+  SUB2API_AUTH_LOGOUT_ENDPOINT,
   SUB2API_AUTH_ME_ENDPOINT,
   SUB2API_PUBLIC_SETTINGS_ENDPOINT,
 } from "../type"
@@ -34,7 +35,6 @@ import {
 
 const FLOW_KEY = "all-api-hub:sub2api-oauth"
 const EMAIL_PROVIDER_KEY = "email_oauth_pending_provider"
-const LOGOUT_ENDPOINT = "/api/v1/auth/logout"
 
 type Request = {
   origin?: unknown
@@ -150,7 +150,7 @@ export function handlePrepareSub2ApiOAuth(
     const refreshToken = readIdentityStorageString(
       SUB2API_AUTH_STORAGE_KEYS.refreshToken,
     )
-    await requestApi(LOGOUT_ENDPOINT, {
+    await requestApi(SUB2API_AUTH_LOGOUT_ENDPOINT, {
       method: "POST",
       body: JSON.stringify(refreshToken ? { refresh_token: refreshToken } : {}),
     })

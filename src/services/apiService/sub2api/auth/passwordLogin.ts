@@ -9,13 +9,17 @@ import {
 import type { AccountLoginResult } from "~/services/apiAdapters/contracts/accountLogin"
 import { SUB2API_AUTH_STORAGE_KEYS } from "~/services/apiService/sub2api/auth/browserSession"
 import { normalizeSub2ApiLoginIdentity } from "~/services/apiService/sub2api/oauth/protocol"
+import {
+  SUB2API_AUTH_LOGIN_ENDPOINT,
+  SUB2API_AUTH_LOGOUT_ENDPOINT,
+  SUB2API_AUTH_ME_ENDPOINT,
+} from "~/services/apiService/sub2api/type"
 import { isRecord } from "~/utils/core/object"
 
 import { requiresSub2ApiPasswordVerification } from "./passwordSettings"
 
 let observed:
-  | { requestId: string; token: string; refreshToken?: string }
-  | undefined
+  { requestId: string; token: string; refreshToken?: string } | undefined
 
 /** Native Sub2API login uses an email, not a New API username/session contract. */
 export function handleSub2ApiPasswordLogin(
@@ -40,7 +44,7 @@ export function handleSub2ApiPasswordLogin(
       const publicSettings = settings.data
       if (requiresSub2ApiPasswordVerification(publicSettings))
         return { status: BROWSER_LOGIN_STATUS.InteractionRequired }
-      const login = await passwordLoginRequest("/api/v1/auth/login", {
+      const login = await passwordLoginRequest(SUB2API_AUTH_LOGIN_ENDPOINT, {
         email: credentials.username,
         password: credentials.password,
       })
@@ -66,9 +70,13 @@ export function handleSub2ApiPasswordLogin(
       const identity = normalizeSub2ApiLoginIdentity(data.user.id)
       if (identity !== expectedIdentity)
         return { status: BROWSER_LOGIN_STATUS.IdentityMismatch }
-      const self = await passwordLoginRequest("/api/v1/auth/me", undefined, {
-        Authorization: `Bearer ${data.access_token}`,
-      })
+      const self = await passwordLoginRequest(
+        SUB2API_AUTH_ME_ENDPOINT,
+        undefined,
+        {
+          Authorization: `Bearer ${data.access_token}`,
+        },
+      )
       if (
         self.code !== 0 ||
         !isRecord(self.data) ||
@@ -126,7 +134,7 @@ export function handleClearSub2ApiPasswordLogin(
       return { status: BROWSER_LOGIN_STATUS.Cancelled }
     observed = undefined
     if (session.refreshToken)
-      await passwordLoginRequest("/api/v1/auth/logout", {
+      await passwordLoginRequest(SUB2API_AUTH_LOGOUT_ENDPOINT, {
         refresh_token: session.refreshToken,
       })
     if (

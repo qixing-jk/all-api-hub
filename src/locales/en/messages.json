@@ -107,6 +107,11 @@
   },
   "errors": {
     "api": {
+      "browserBackgroundVerificationFailed": "The site verification could not finish in the background. Retry; if it still fails, report this site for compatibility investigation.",
+      "browserLoginCleanupUnconfirmed": "The extension could not confirm cleanup of the new login session. Check active sessions on the site before retrying.",
+      "browserProofLoginRequired": "This credential belongs to a website session. Sign in to the same account on the website and retry. You can also configure account login to obtain an independent session.",
+      "browserProofRejected": "The site rejected the request signature. Retry; if it still fails, report this site for compatibility investigation.",
+      "browserProofSecondFactorRequired": "This account requires a second verification step that this site does not yet support in extension login.",
       "invalidResponseFormat": "Invalid response format",
       "missingRecoveryPolicy": "The extension could not prepare this request. Update the extension or report the issue.",
       "nonJsonContent": "returned {{contentType}} instead of JSON (HTTP {{status}})",
@@ -216,8 +221,9 @@
   "sub2api": {
     "authPersistenceFailed": "The refreshed Sub2API sign-in could not be saved to this account. Refresh or re-import the account, then try again.",
     "configMissing": "Please configure the Sub2API Base URL and Admin API Key in basic settings first.",
-    "loginRequired": "Please log in to the Sub2API dashboard first (so the extension can read auth_token/auth_user from localStorage) and try again.",
-    "refreshTokenInvalid": "Sub2API refresh token is invalid/rotated. Re-import the session from the dashboard (recommended: incognito/private window) or paste an updated refresh_token, then try again."
+    "independentSessionRequired": "The signing key for this independent Sub2API session is unavailable. Use “Re-sign in” or “Get session” in the account editor to replace it.",
+    "loginRequired": "Sign in to the Sub2API website and try again, or configure Account Login to obtain an independent session.",
+    "refreshTokenInvalid": "This Sub2API refresh token can no longer renew the session. Use “Re-sign in” or “Get session” with Account Login, or re-import or paste an updated refresh token if the site allows it."
   },
   "toast": {
     "error": {

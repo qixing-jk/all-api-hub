@@ -44,6 +44,29 @@ const { helpers, createCompletionError, createInitialCheckInConfig } =
   })
 
 describe("sub2ApiAccountCompletion", () => {
+  it("keeps website-session ownership when completing an account", async () => {
+    mockLoadBootstrapFacts.mockResolvedValueOnce({ displayName: "Sub2API" })
+    const result = await sub2ApiAccountCompletion.complete(
+      {
+        url: "https://sub2.example.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          siteType: SITE_TYPES.SUB2API,
+          userId: "17",
+          user: { id: "17" },
+          accessToken: "website-access",
+          sub2apiWebsiteSessionBound: true,
+        },
+        context: {},
+      },
+      helpers,
+    )
+    expect(result).toMatchObject({
+      sub2apiWebsiteSessionBound: true,
+      accessToken: "website-access",
+    })
+    expect(result.sub2apiAuth).toBeUndefined()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })

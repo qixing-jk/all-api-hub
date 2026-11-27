@@ -26,6 +26,7 @@ export interface AccountAutoDetectRecoveryData {
   checkIn?: CheckInConfig
   cookieAuthSessionCookie?: string
   transientAuth?: ContentSessionTransientAuth
+  sub2apiWebsiteSessionBound?: true
   sub2apiAuth?: Sub2ApiAuthConfig
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
@@ -38,6 +39,7 @@ interface DetectedAccountRecoverySource {
   rawUser?: Record<string, unknown>
   accessToken?: unknown
   transientAuth?: ContentSessionTransientAuth
+  sub2apiWebsiteSessionBound?: true
   sub2apiAuth?: Sub2ApiAuthConfig
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
@@ -83,6 +85,9 @@ export function createDetectedAccountRecoveryData(params: {
       : {}),
     ...(detected.transientAuth
       ? { transientAuth: detected.transientAuth }
+      : {}),
+    ...(detected.sub2apiWebsiteSessionBound === true
+      ? { sub2apiWebsiteSessionBound: true as const }
       : {}),
     ...(detected.sub2apiAuth ? { sub2apiAuth: detected.sub2apiAuth } : {}),
     ...(detected.kimiOpenPlatformAuth

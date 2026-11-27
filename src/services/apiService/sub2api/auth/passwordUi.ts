@@ -9,6 +9,10 @@ import {
   clearSub2ApiBrowserSession,
   SUB2API_AUTH_STORAGE_KEYS,
 } from "~/services/apiService/sub2api/auth/browserSession"
+import {
+  SUB2API_AUTH_LOGOUT_ENDPOINT,
+  SUB2API_AUTH_ME_ENDPOINT,
+} from "~/services/apiService/sub2api/type"
 import { fetchBrowserOAuthRequest } from "~/services/browserOAuth/contentRequest"
 import { isRecord } from "~/utils/core/object"
 
@@ -18,7 +22,7 @@ import { requiresSub2ApiPasswordVerification } from "./passwordSettings"
 async function readSession(): Promise<PasswordUiSession | null> {
   const token = localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.accessToken)
   if (!token) return null
-  const response = await fetchBrowserOAuthRequest("/api/v1/auth/me", {
+  const response = await fetchBrowserOAuthRequest(SUB2API_AUTH_ME_ENDPOINT, {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (response.status === 401) return null
@@ -46,7 +50,7 @@ export function handleSub2ApiPasswordUi(
         SUB2API_AUTH_STORAGE_KEYS.refreshToken,
       )
       const result = await passwordLoginRequest(
-        "/api/v1/auth/logout",
+        SUB2API_AUTH_LOGOUT_ENDPOINT,
         refresh ? { refresh_token: refresh } : {},
       )
       if (result.code !== 0) throw new Error("Logout failed")

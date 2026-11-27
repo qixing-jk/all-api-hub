@@ -12,6 +12,7 @@ import {
   prepareAccountDialogRecovery,
   type PreparedAccountDialogRecovery,
 } from "~/features/AccountManagement/dialogs/accountDialogRecovery"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 import { closeIfPopup } from "~/utils/navigation/popup"
 
 export interface AccountRecoveryContinuation {
@@ -22,6 +23,7 @@ export interface AccountRecoveryContinuation {
   sidePanelSupported: boolean
   disabled?: boolean
   errorMessage?: string | null
+  onRetry?: () => void
 }
 
 /** Keeps a popup form ready before the user invokes the native sidebar API. */
@@ -33,6 +35,7 @@ export function useAccountDialogRecoveryHandoff({
   state: AccountDialogRecoveryState | null
 }): AccountRecoveryContinuation | undefined {
   const { t } = useTranslation("accountDialog")
+  const canPrepare = enabled && Boolean(state && isHttpUrl(state.url))
   const queue = useRef<Promise<PreparedAccountDialogRecovery | null>>(
     Promise.resolve(null),
   )
@@ -49,15 +52,10 @@ export function useAccountDialogRecoveryHandoff({
     action?: AccountDialogRecoveryAction
   } | null>(null)
   const opening = handoff !== null
+  const [preparationGeneration, setPreparationGeneration] = useState(0)
 
   useEffect(() => {
-    if (
-      !enabled ||
-      !state ||
-      prepared?.state === state ||
-      opening ||
-      handoffStarted.current
-    )
+    if (!canPrepare || !state || prepared || opening || handoffStarted.current)
       return
     let cancelled = false
     const preparation = queue.current.then((previous) =>
@@ -78,7 +76,7 @@ export function useAccountDialogRecoveryHandoff({
     return () => {
       cancelled = true
     }
-  }, [enabled, opening, prepared, state])
+  }, [canPrepare, opening, prepared, state, preparationGeneration])
 
   useEffect(
     () => () => {
@@ -92,8 +90,8 @@ export function useAccountDialogRecoveryHandoff({
     [],
   )
 
-  if (!enabled || !state) return undefined
-  const ready = prepared?.state === state
+  if (!canPrepare || !state) return undefined
+  const ready = prepared !== null
   const currentFailure = failure?.state === state ? failure : null
 
   const triggerContinue = (action?: AccountDialogRecoveryAction) => {
@@ -101,10 +99,15 @@ export function useAccountDialogRecoveryHandoff({
     handoffStarted.current = true
     setHandoff({ action })
     setFailure(null)
-    // Starts synchronously in the click handler; the form is already staged.
-    const openingHandoff = action
-      ? openAccountDialogRecovery(prepared.handle, { recoveryAction: action })
-      : openAccountDialogRecovery(prepared.handle)
+    // Keep the native gesture synchronous and store the latest draft before publishing.
+    const latestState = prepared.state === state ? undefined : state
+    const openingHandoff =
+      action || latestState
+        ? openAccountDialogRecovery(prepared.handle, {
+            ...(action ? { recoveryAction: action } : {}),
+            ...(latestState ? { state: latestState } : {}),
+          })
+        : openAccountDialogRecovery(prepared.handle)
     void openingHandoff
       .then(
         () => closeIfPopup(),
@@ -127,6 +130,12 @@ export function useAccountDialogRecoveryHandoff({
         ? t("accessTokenVerification.prepareFailed")
         : t("accessTokenVerification.continueFailed")
       : null,
+    onRetry: currentFailure?.preparation
+      ? () => {
+          setFailure(null)
+          setPreparationGeneration((value) => value + 1)
+        }
+      : undefined,
     onContinue: triggerContinue,
   }
 }

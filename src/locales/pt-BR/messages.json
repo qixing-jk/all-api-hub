@@ -109,6 +109,11 @@
   },
   "errors": {
     "api": {
+      "browserBackgroundVerificationFailed": "Não foi possível concluir a verificação do site em segundo plano. Tente novamente; se continuar falhando, relate um problema de compatibilidade deste site.",
+      "browserLoginCleanupUnconfirmed": "Não foi possível confirmar a remoção da nova sessão. Verifique as sessões ativas no site antes de tentar novamente.",
+      "browserProofLoginRequired": "Esta credencial pertence a uma sessão do site. Entre com a mesma conta no site e tente novamente. Você também pode configurar o login da conta para obter uma sessão independente.",
+      "browserProofRejected": "O site rejeitou a assinatura da solicitação. Tente novamente; se continuar falhando, relate um problema de compatibilidade com este site.",
+      "browserProofSecondFactorRequired": "Esta conta exige uma segunda verificação que a extensão ainda não suporta neste site.",
       "invalidResponseFormat": "Formato de resposta inválido",
       "missingRecoveryPolicy": "A extensão não conseguiu preparar esta solicitação. Atualize a extensão ou relate o problema.",
       "nonJsonContent": "retornou {{contentType}} em vez de JSON (HTTP {{status}})",
@@ -218,8 +223,9 @@
   "sub2api": {
     "authPersistenceFailed": "Não foi possível salvar com segurança o login atualizado do Sub2API nesta conta. Atualize ou importe a conta novamente e tente outra vez.",
     "configMissing": "Configure primeiro a URL base e a Admin API Key do Sub2API nas configurações básicas.",
-    "loginRequired": "Faça login no painel do Sub2API primeiro (para que a extensão possa ler auth_token/auth_user do localStorage) e tente novamente.",
-    "refreshTokenInvalid": "O refresh token do Sub2API é inválido ou foi alterado/rotacionado. Reimporte a sessão pelo painel (recomendado: janela anônima/privativa) ou cole um refresh_token atualizado e tente novamente."
+    "independentSessionRequired": "A chave de assinatura desta sessão independente do Sub2API não está disponível. Use “Entrar novamente” ou “Obter sessão” no editor da conta para substituí-la.",
+    "loginRequired": "Entre no site do Sub2API e tente novamente ou configure o login da conta para obter uma sessão independente.",
+    "refreshTokenInvalid": "Este token de renovação do Sub2API não pode mais renovar a sessão. Use “Entrar novamente” ou “Obter sessão” ou importe novamente ou cole um token atualizado, se o site permitir."
   },
   "toast": {
     "error": {

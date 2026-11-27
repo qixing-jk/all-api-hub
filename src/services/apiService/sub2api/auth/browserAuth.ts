@@ -23,6 +23,7 @@ type Sub2ApiBrowserAuthOptions = {
   expectedUserId?: string
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution?: ProtectionBypassExecution
+  fetchContext?: AccountBrowserSession["fetchContext"]
 }
 
 const hasUsableAccessToken = (session: AccountBrowserSession): boolean =>
@@ -61,6 +62,11 @@ export async function recoverSub2ApiBrowserAuth(
     siteType: SITE_TYPES.SUB2API,
     useExistingTabs: true,
     useTempWindow: true,
+    browserContext: {
+      incognito: options.fetchContext?.incognito === true,
+      cookieStoreId: options.fetchContext?.cookieStoreId,
+      defaultCookieStoreOnly: true,
+    },
     requestIdPrefix: "sub2api-auth-recovery",
     ...(options.tempWindowRequestSource
       ? { tempWindowRequestSource: options.tempWindowRequestSource }

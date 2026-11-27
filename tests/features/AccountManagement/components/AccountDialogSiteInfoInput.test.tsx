@@ -521,7 +521,7 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
   })
 
-  it("hides the cookie permission action for Sub2API even when stale cookie auth is selected", async () => {
+  it("hides the cookie permission action and session hint for Sub2API with stale cookie auth", async () => {
     const props = createAddModeProps()
     props.testSiteType = SITE_TYPES.SUB2API
     props.authType = AuthTypeEnum.Cookie
@@ -529,9 +529,10 @@ describe("AccountDialog SiteInfoInput", () => {
 
     render(<SiteInfoInput {...withSitePolicy(props)} />)
 
+    await screen.findByLabelText("accountDialog:siteInfo.siteUrl")
     expect(
-      await screen.findByText("accountDialog:siteInfo.sub2apiHint"),
-    ).toBeInTheDocument()
+      screen.queryByText("accountDialog:siteInfo.sub2apiHint"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText(
         "accountDialog:form.cookiePermissionRecommendationDesc",
@@ -721,11 +722,11 @@ describe("AccountDialog SiteInfoInput", () => {
     render(<SiteInfoInput {...withSitePolicy(props)} />)
 
     expect(
-      await screen.findByText("accountDialog:siteInfo.sub2apiHint"),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByLabelText("accountDialog:siteInfo.siteUrl"),
+      await screen.findByLabelText("accountDialog:siteInfo.siteUrl"),
     ).toBeDisabled()
+    expect(
+      screen.queryByText("accountDialog:siteInfo.sub2apiHint"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: "common:actions.clear" }),
     ).toBeNull()
@@ -769,11 +770,9 @@ describe("AccountDialog SiteInfoInput", () => {
             ),
           }),
         ).toBeInTheDocument()
-        if (siteType === SITE_TYPES.SUB2API) {
-          expect(
-            screen.getByText("accountDialog:siteInfo.sub2apiHint"),
-          ).toBeInTheDocument()
-        }
+        expect(
+          screen.queryByText("accountDialog:siteInfo.sub2apiHint"),
+        ).not.toBeInTheDocument()
       } finally {
         testI18n.removeResourceBundle("en", "accountDialog")
       }

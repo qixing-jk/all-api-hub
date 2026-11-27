@@ -7,6 +7,7 @@ import {
 } from "~/constants/accountLogin"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountLoginSection } from "~/features/AccountManagement/components/AccountDialog/login/AccountLoginSection"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { IncognitoAccessNotice } from "~/features/Permissions/components/IncognitoAccessNotice"
 import * as loginCapabilities from "~/services/accountLogin/capabilities"
 import { AuthTypeEnum } from "~/types"
@@ -17,7 +18,13 @@ import {
 } from "~/utils/browser/index"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
 import { createTab } from "~/utils/browser/tabs"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/browser/runtime", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/browser/runtime")>()),
@@ -66,6 +73,9 @@ describe("account password login guidance", () => {
       const invalid = await screen.findByLabelText(
         new RegExp(`^accountDialog:login\\.${field}`),
       )
+      expect(
+        screen.queryByText("accountDialog:login.sub2apiDescription"),
+      ).toBeNull()
       expect(invalid).toHaveAttribute("aria-invalid", "true")
       expect(invalid).toHaveAccessibleDescription(
         "Complete the selected login credentials",
@@ -73,6 +83,106 @@ describe("account password login guidance", () => {
       expect(
         screen.getByRole("combobox", { name: "accountDialog:login.method" }),
       ).not.toHaveAttribute("aria-invalid")
+    },
+  )
+  it("describes full-page continuation and offers a retry for its preparation error", async () => {
+    const onRetry = vi.fn()
+    const onContinue = vi.fn()
+    render(
+      <AccountLoginSection
+        {...props}
+        siteType={SITE_TYPES.SUB2API}
+        authType={AuthTypeEnum.AccessToken}
+        sub2apiSession={{
+          configured: false,
+          action: {
+            onAcquire: vi.fn(),
+            isImporting: false,
+            isAcquiring: false,
+            continuation: {
+              sidePanelSupported: false,
+              isPending: false,
+              disabled: true,
+              errorMessage: "Could not prepare the login",
+              onContinue,
+              onRetry,
+            },
+          },
+        }}
+      />,
+    )
+
+    const action = await screen.findByRole("button", {
+      name: "accountDialog:form.sub2apiLoginForSession",
+    })
+    expect(action).toBeDisabled()
+    expect(action).toHaveAccessibleDescription(
+      "accountDialog:login.sub2apiSessionPrompt accountDialog:form.sub2apiLoginFullPageHelp",
+    )
+    const note = screen.getByRole("note")
+    expect(note).toHaveTextContent("Could not prepare the login")
+    expect(note).not.toHaveAttribute("aria-live")
+    await userEvent.click(
+      within(note).getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(onRetry).toHaveBeenCalledOnce()
+    expect(onContinue).not.toHaveBeenCalled()
+  })
+
+  it.each(["ready", "loading", "moved"] as const)(
+    "handles focus when acquisition completes after focus was %s",
+    async (state) => {
+      const account = {
+        ...props,
+        siteType: SITE_TYPES.SUB2API,
+        authType: AuthTypeEnum.AccessToken,
+      }
+      const action = {
+        onAcquire: vi.fn(),
+        isImporting: false,
+        isAcquiring: false,
+      }
+      const { rerender } = render(
+        <AccountLoginSection
+          {...account}
+          sub2apiSession={{ configured: false, action }}
+        />,
+      )
+      const button = await screen.findByRole("button", {
+        name: "accountDialog:form.sub2apiLoginForSession",
+      })
+      button.focus()
+      expect(button).toHaveFocus()
+
+      const loginMethod = screen.getByRole("combobox", {
+        name: "accountDialog:login.method",
+      })
+      if (state === "loading") {
+        rerender(
+          <AccountLoginSection
+            {...account}
+            sub2apiSession={{
+              configured: false,
+              action: { ...action, isAcquiring: true },
+            }}
+          />,
+        )
+        // Chromium blurs the focused button when acquisition disables it.
+        button.blur()
+      } else if (state === "moved") {
+        loginMethod.focus()
+      }
+
+      rerender(
+        <AccountLoginSection
+          {...account}
+          sub2apiSession={{ configured: true }}
+        />,
+      )
+      const status = screen
+        .getByText("accountDialog:login.sub2apiSessionReady")
+        .closest('[role="status"]')
+      expect(state === "moved" ? loginMethod : status).toHaveFocus()
     },
   )
 
@@ -86,15 +196,77 @@ describe("account password login guidance", () => {
       />,
     )
     const toggle = await screen.findByRole("switch", {
-      name: "accountDialog:login.automaticRecovery",
+      name: "accountDialog:login.sub2apiAutomaticRecovery",
     })
+    expect(
+      screen.getByText("accountDialog:login.sub2apiDescription"),
+    ).toBeVisible()
     expect(toggle).not.toBeChecked()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:form.sub2apiLoginForSession",
+      }),
+    ).not.toBeInTheDocument()
     await userEvent.click(toggle)
     expect(props.onChange).toHaveBeenLastCalledWith({
       ...props.login,
       automaticRecovery: true,
     })
   })
+  it.each(["importing", "acquiring", "preparing", "blocked"] as const)(
+    "prevents a second in-place acquisition while %s",
+    async (state) => {
+      const onAcquire = vi.fn()
+      const onContinue = vi.fn()
+      const { rerender } = render(
+        <AccountLoginSection
+          {...props}
+          siteType={SITE_TYPES.SUB2API}
+          authType={AuthTypeEnum.AccessToken}
+          sub2apiSession={{
+            configured: false,
+            action: {
+              onAcquire,
+              isImporting: state === "importing",
+              isAcquiring: state === "acquiring",
+              continuation: {
+                isPending: state === "preparing",
+                disabled: state === "blocked",
+                sidePanelSupported: true,
+                onContinue,
+              },
+            },
+          }}
+        />,
+      )
+      const action = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiLoginSectionAcquireButton,
+      )
+      expect(action).toBeDisabled()
+      expect(action).toHaveAccessibleDescription(
+        "accountDialog:login.sub2apiSessionPrompt accountDialog:form.sub2apiLoginSidePanelHelp",
+      )
+      if (state === "acquiring" || state === "preparing") {
+        expect(action).toHaveAttribute("aria-busy", "true")
+      }
+      await userEvent.click(action)
+      expect(onAcquire).not.toHaveBeenCalled()
+      expect(onContinue).not.toHaveBeenCalled()
+
+      rerender(
+        <AccountLoginSection
+          {...props}
+          siteType={SITE_TYPES.SUB2API}
+          authType={AuthTypeEnum.AccessToken}
+          sub2apiSession={{ configured: true }}
+        />,
+      )
+      expect(action).not.toBeInTheDocument()
+      expect(
+        screen.getByText("accountDialog:login.sub2apiSessionReady"),
+      ).toBeVisible()
+    },
+  )
   it("only offers Cookie recovery for Cookie authentication and preserves login settings across auth changes", async () => {
     const login = { ...props.login, automaticRecovery: true }
     const target = {

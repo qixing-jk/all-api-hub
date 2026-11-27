@@ -37,6 +37,7 @@ export function AccountDialogEditor({
   accessTokenFeedbackVariant,
   accessTokenContinuation,
   cookieRecoveryContinuation,
+  sub2apiSessionContinuation,
   credentialVerification,
   hasInlineCredentialError,
   manualAddGuideAnchor,
@@ -59,6 +60,7 @@ export function AccountDialogEditor({
   accessTokenFeedbackVariant: AccountFormProps["accessTokenFeedbackVariant"]
   accessTokenContinuation?: AccountRecoveryContinuation
   cookieRecoveryContinuation?: AccountRecoveryContinuation
+  sub2apiSessionContinuation?: AccountRecoveryContinuation
   credentialVerification?: NonNullable<
     AccountDialogWorkspace["state"]["credentialVerification"]
   >
@@ -125,6 +127,7 @@ export function AccountDialogEditor({
         !isAccessTokenRecoveryError(state.detectionError) ||
         !verificationGuide
       }
+      isWebsiteSessionBound={state.isWebsiteSessionBound}
       isImportingSub2apiSession={state.isImportingSub2apiSession}
       isManualBalanceUsdInvalid={state.isManualBalanceUsdInvalid}
       showAccessToken={state.showAccessToken}
@@ -164,6 +167,9 @@ export function AccountDialogEditor({
       }
       onSub2apiRefreshTokenChange={setters.setSub2apiRefreshToken}
       onImportSub2apiSession={handlers.handleImportSub2apiSession}
+      onAcquireSub2apiSession={handlers.handleAcquireSub2apiSession}
+      isAcquiringSub2apiSession={state.isAcquiringSub2apiSession}
+      sub2apiSessionContinuation={sub2apiSessionContinuation}
       onExchangeRateChange={setters.setExchangeRate}
       onManualBalanceUsdChange={setters.setManualBalanceUsd}
       onShowAccessTokenChange={setters.setShowAccessToken}

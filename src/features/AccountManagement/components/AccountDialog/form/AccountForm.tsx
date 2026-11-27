@@ -27,6 +27,7 @@ import {
   type AccountCheckInRedetectionFeedback,
   type AccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
+import type { AccountRecoveryContinuation } from "~/features/AccountManagement/components/AccountDialog/recovery/useAccountDialogRecoveryHandoff"
 import { AccountCredentialRecoveryGuidance } from "~/features/AccountManagement/credentialRecovery/AccountCredentialRecoveryGuidance"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
@@ -110,6 +111,7 @@ interface AccountFormProps {
   showAccessToken: boolean
   isImportingCookies: boolean
   showCookiePermissionWarning: boolean
+  isWebsiteSessionBound?: boolean
   isImportingSub2apiSession: boolean
   onSiteNameChange: (value: string) => void
   onUsernameChange: (value: string) => void
@@ -147,6 +149,9 @@ interface AccountFormProps {
   onSub2apiUseRefreshTokenChange: (value: boolean) => void
   onSub2apiRefreshTokenChange: (value: string) => void
   onImportSub2apiSession: () => void
+  onAcquireSub2apiSession?: () => void
+  isAcquiringSub2apiSession?: boolean
+  sub2apiSessionContinuation?: AccountRecoveryContinuation
   tags: Tag[]
   tagCountsById?: Record<string, number>
   createTag: (name: string) => Promise<Tag>
@@ -188,6 +193,7 @@ export default function AccountForm({
   showAccessToken,
   isImportingCookies,
   showCookiePermissionWarning,
+  isWebsiteSessionBound,
   isImportingSub2apiSession,
   onSiteNameChange,
   onUsernameChange,
@@ -213,6 +219,9 @@ export default function AccountForm({
   onSub2apiUseRefreshTokenChange,
   onSub2apiRefreshTokenChange,
   onImportSub2apiSession,
+  onAcquireSub2apiSession,
+  isAcquiringSub2apiSession = false,
+  sub2apiSessionContinuation,
   tags,
   tagCountsById,
   createTag,
@@ -272,6 +281,18 @@ export default function AccountForm({
   const usesAccountLogin =
     usesLoginCheckIn || supportsAccountCredentialRecovery(loginTarget)
   const loginConfigured = isAccountLoginConfigured(draft.login, loginMethods)
+  const hasUserId = Boolean(userId.trim())
+  const canAcquireSub2apiSession =
+    canUseSub2ApiRefreshToken && hasUserId && loginConfigured
+  const sub2apiSessionAction =
+    canAcquireSub2apiSession && onAcquireSub2apiSession
+      ? {
+          onAcquire: onAcquireSub2apiSession,
+          isAcquiring: isAcquiringSub2apiSession,
+          isImporting: isImportingSub2apiSession,
+          continuation: sub2apiSessionContinuation,
+        }
+      : undefined
   const {
     formRootRef,
     loginMethodRef,
@@ -540,8 +561,19 @@ export default function AccountForm({
             onEnabledChange={onSub2apiUseRefreshTokenChange}
             onRefreshTokenChange={onSub2apiRefreshTokenChange}
             onImportSession={onImportSub2apiSession}
+            acquireSession={sub2apiSessionAction}
+            loginSetup={
+              usesAccountLogin && onAcquireSub2apiSession
+                ? {
+                    hasUserId,
+                    loginConfigured,
+                    onConfigure: handleConfigureLogin,
+                  }
+                : undefined
+            }
+            isAcquiring={isAcquiringSub2apiSession}
             validation={fieldStatusProps(ACCOUNT_FORM_FIELDS.REFRESH_TOKEN)}
-            feedback={fieldStatus(ACCOUNT_FORM_FIELDS.REFRESH_TOKEN)}
+            isWebsiteSessionBound={isWebsiteSessionBound}
           />
         )}
 
@@ -662,6 +694,13 @@ export default function AccountForm({
           feedback={fieldStatus(ACCOUNT_FORM_FIELDS.LOGIN)}
           open={isLoginSectionOpen}
           onOpenChange={setIsLoginSectionOpen}
+          sub2apiSession={
+            sub2apiUseRefreshToken && sub2apiSessionAction
+              ? sub2apiRefreshToken.trim()
+                ? { configured: true }
+                : { configured: false, action: sub2apiSessionAction }
+              : undefined
+          }
         />
       )}
 

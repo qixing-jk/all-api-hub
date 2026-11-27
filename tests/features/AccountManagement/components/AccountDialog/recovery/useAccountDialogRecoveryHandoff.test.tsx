@@ -23,6 +23,7 @@ import {
   act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "~~/tests/test-utils/render"
@@ -75,6 +76,28 @@ const renderGuide = (state: AccountDialogRecoveryState) =>
   })
 
 describe("account dialog recovery continuation", () => {
+  it("retries failed preparation without requiring a draft edit", async () => {
+    vi.mocked(prepareAccountDialogRecovery).mockRejectedValueOnce(
+      new Error("Storage unavailable"),
+    )
+    const state = snapshot()
+    const { result } = renderHook(() =>
+      useAccountDialogRecoveryHandoff({ enabled: true, state }),
+    )
+    await waitFor(() =>
+      expect(result.current?.errorMessage).toBe(message("prepareFailed")),
+    )
+    act(() => result.current?.onRetry?.())
+    await waitFor(() =>
+      expect(prepareAccountDialogRecovery).toHaveBeenCalledTimes(2),
+    )
+    await waitFor(() => expect(result.current?.disabled).toBe(false))
+    expect(result.current?.errorMessage).toBeNull()
+    act(() => result.current?.onContinue("sub2api-login"))
+    expect(openAccountDialogRecovery).toHaveBeenCalledWith(prepared, {
+      recoveryAction: "sub2api-login",
+    })
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(canUseAccountDialogRecoverySidePanel).mockReturnValue(true)
@@ -148,6 +171,32 @@ describe("account dialog recovery continuation", () => {
     expect(screen.getByText(message("fullPageHint"))).toBeVisible()
     expect(openAccountDialogRecovery).toHaveBeenCalledExactlyOnceWith(prepared)
     expect(closeIfPopup).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the action ready after an edit and passes the current draft to navigation in the click turn", async () => {
+    const state = snapshot()
+    const { rerender } = renderGuide(state)
+    const findContinue = () =>
+      screen.getByRole("button", { name: message("continueInSidePanel") })
+    await waitFor(() => expect(findContinue()).toBeEnabled())
+    const edited = {
+      ...state,
+      draft: { ...state.draft, notes: "Latest notes" },
+    }
+    rerender(<HandoffGuide state={edited} />)
+    expect(findContinue()).toBeEnabled()
+    act(() => {
+      fireEvent.click(findContinue())
+      expect(openAccountDialogRecovery).toHaveBeenCalledExactlyOnceWith(
+        prepared,
+        { state: edited },
+      )
+    })
+    expect(prepareAccountDialogRecovery).toHaveBeenCalledExactlyOnceWith(
+      state,
+      null,
+    )
+    await waitFor(() => expect(closeIfPopup).toHaveBeenCalledOnce())
   })
 
   it("keeps the form open after navigation fails and retries the same prepared draft", async () => {
@@ -359,4 +408,23 @@ describe("account dialog recovery continuation", () => {
       expect(closeIfPopup).not.toHaveBeenCalled()
     },
   )
+
+  it("does not prepare or offer handoff for an incomplete URL", async () => {
+    const state = snapshot()
+    const { rerender } = renderGuide({ ...state, url: "https://" })
+    await act(async () => {})
+    expect(prepareAccountDialogRecovery).not.toHaveBeenCalled()
+    expect(screen.queryByText(message("prepareFailed"))).not.toBeInTheDocument()
+    rerender(<HandoffGuide state={state} />)
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: message("continueInSidePanel") }),
+      ).toBeEnabled(),
+    )
+    rerender(<HandoffGuide state={{ ...state, url: "" }} />)
+    expect(
+      screen.queryByRole("button", { name: message("continueInSidePanel") }),
+    ).not.toBeInTheDocument()
+    expect(openAccountDialogRecovery).not.toHaveBeenCalled()
+  })
 })

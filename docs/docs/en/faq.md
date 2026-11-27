@@ -53,7 +53,7 @@ Common characteristics of Sub2API sites: the console interface is at `/api/v1/*`
 
 The plugin supports two working modes:
 
-#### Mode 1: Console Session Mode (Default/Compatible)
+#### Browser session (default)
 
 This mode does not save the `refresh_token` within the plugin. The plugin needs to read `auth_token` / `auth_user` from the console's localStorage to automatically detect and refresh the balance. Therefore, **you must log in to the site's console in your browser first**.
 
@@ -63,25 +63,16 @@ This mode does not save the `refresh_token` within the plugin. The plugin needs 
 3. Enter the site URL and click "Auto-detect".
 
 **Notes and Limitations**:
-- The same site (same origin) can only have one set of login credentials in localStorage within a browser session. Therefore, the experience for **multiple accounts on the same site is poor** in this mode: switching console accounts will overwrite localStorage, and the plugin will follow suit.
+- Each site has one website login per browser session. Switching website accounts leaves the original account saved in the extension. Switch back to the matching website account to resume refreshing it. To use several accounts on the same site at once, choose **Independent session**.
 - If a refresh results in a 401 error, the plugin will attempt to re-read `auth_token` and retry once. If it still fails, please log in to the site console again before refreshing/re-detecting.
 
-#### Mode 2: Plugin Hosted Session (Multi-Account, Recommended)
+#### Independent session
 
-When enabled, the plugin saves the `refresh_token` as an **account-private** credential (and it will be included in exports/WebDAV backups), allowing each Sub2API account to refresh its JWT independently, supporting **multiple accounts on the same site**.
+The extension renews each account in the background so you can add multiple accounts on the same site. The renewal credential is saved with the account and included in exports and WebDAV backups. Keep those files private. Sites that require signed requests also use a signing key in the current browser profile. After restoring an account in a new profile, choose **Re-sign in** to get a new session.
 
-**Recommended Import Process (Incognito/Private Window, Reduce Rotation Conflicts)**:
-1. Open an incognito/private window and log in to the target Sub2API console.
-2. In the plugin, add/edit an account and click "Import from Current Logged-in Account" (or "Auto-detect/Re-detect") to import session information.
-3. In the form, enable "Plugin Hosted Session (Multi-Account)" and confirm that the `refresh_token` has been included, then save.
-4. Close the incognito/private window (clearing localStorage/cookies for this site) to prevent the console and plugin from refreshing the same `refresh_token` concurrently, causing mutual invalidation.
-
-**Security Reminder**:
-- `refresh_token` is a long-term credential. After enabling this mode, it will be saved along with account exports/WebDAV backups. Please keep your backup files and WebDAV credentials secure.
-- If your browser requires it, enable "Allow running in incognito mode" in the extension management settings.
-
-**Troubleshooting**:
-- If you receive a message indicating that the `refresh_token` is invalid/has rotated, please re-import according to the process above (or manually paste the new `refresh_token`) and try again.
+1. Select **Independent session** under **Session mode**, enter the User ID, then choose **Set up login** and enter your login details.
+2. In Account Login, choose **Get session** and complete any verification. Save when **Independent session ready.** appears. If you need a new session, choose **Re-sign in** under **Session mode**.
+3. If you already have a token, expand **Manual import or paste Refresh Token**. On compatible sites, choose **Import from site** or paste the token. Import uses the website session. Using that session in multiple browsers or tools can interrupt renewal. When the site keeps its renewal credential in the browser, use the login action above.
 
 **Other Known Limitations**:
 - Only supports **Access Token (JWT)** mode, not Cookie authentication.
@@ -95,7 +86,7 @@ If auto-detection fails, you can try the following methods:
 1. **Switch Authentication Method**: Try switching from Access Token to Cookie mode.
 2. **Manual Addition**: If auto-detection fails, follow the [Manual Account Addition Guide](./add-account.md#manual-addition), select the site type, and check its corresponding fields:
    - New API and compatible sites: Site Name, Username, User ID, Access Token, and Recharge Ratio
-   - Sub2API: Site Name, User ID, JWT Access Token, and Recharge Ratio; a Refresh Token is also required when extension-managed sessions are enabled
+   - Sub2API uses the Site Name, User ID, JWT Access Token, and Recharge Amount Ratio. With **Independent session** selected, obtain a renewal session before saving.
    - OpenRouter: Site Name, Management Key, and Recharge Ratio; no User ID is required, and Cookie mode is not supported
    - Other sites: Follow the required markers currently shown in the form and the instructions for that site
 3. **Check Login Status**: Ensure you are logged into the target site in your browser.

@@ -24,12 +24,16 @@ import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 /** Adapters select their identity fields; login does not require saved API credentials. */
 export type AccountLoginTarget = Pick<SiteAccount, "site_url"> &
   Partial<Pick<SiteAccount, "site_type" | "login">> & {
-    account_info: Partial<Pick<SiteAccount["account_info"], "id" | "username">>
+    account_info: Partial<
+      Pick<SiteAccount["account_info"], "id" | "username" | "access_token">
+    >
   }
 
 /** Optional effects observed during login; absence does not make login fail. */
 export interface AccountLoginEvidence {
   checkedIn?: boolean
+  /** This operation issued the returned credential; existing browser sessions omit it. */
+  credentialIssued?: boolean
 }
 
 /** Captured console credentials retain their provider-owned renewal material. */
@@ -156,6 +160,11 @@ export interface AccountLoginCapability {
   discover(account: AccountLoginTarget): Promise<AccountLoginMethod[]>
   supports(account: AccountLoginTarget): boolean
   login(request: AccountLoginRequest): Promise<AccountLoginResult>
+  /** Revoke only a newly issued, abandoned credential, never a borrowed browser session. */
+  discardCredential?(
+    account: AccountLoginTarget,
+    credential: AccountLoginCredential,
+  ): Promise<void>
 }
 
 /** A successful recovery must include an independently verified credential. */

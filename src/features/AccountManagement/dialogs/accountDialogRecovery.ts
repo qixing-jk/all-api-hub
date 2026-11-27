@@ -8,7 +8,10 @@ import {
   type AccountDialogRecoveryState,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_ROUTE_PARAMS } from "~/features/AccountManagement/routeParams"
-import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import {
+  supportsAccountCookieRecovery,
+  supportsAccountCredentialRecovery,
+} from "~/services/accountCredentialRecovery/policy"
 import { normalizeAccountLogin } from "~/services/accountLogin/configCodec"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { supportsNewApiTokenSetup } from "~/services/apiService/newApiFamily/accessTokens/validation"
@@ -143,6 +146,18 @@ function normalizeRecoveryState(
     draft.siteNameEdited = rawDraft.siteNameEdited
   }
   if (
+    recoveryAction === ACCOUNT_DIALOG_RECOVERY_ACTIONS.Sub2ApiLogin &&
+    (draft.authType !== AuthTypeEnum.AccessToken ||
+      !supportsAccountCredentialRecovery({
+        site_type: draft.siteType,
+        site_url: state.url,
+        authType: draft.authType,
+        account_info: { id: draft.userId },
+        login,
+      }))
+  )
+    return null
+  if (
     rawDraft.novitaCredentialMode === "console" ||
     rawDraft.novitaCredentialMode === "api-key"
   ) {
@@ -207,23 +222,35 @@ type AccountDialogRecoveryDestination =
 /** Opens the native sidebar in the click turn, with a draft-preserving tab fallback. */
 export async function openAccountDialogRecovery(
   prepared: PreparedAccountDialogRecovery,
-  options?: { recoveryAction?: AccountDialogRecoveryAction },
+  options?: {
+    recoveryAction?: AccountDialogRecoveryAction
+    state?: AccountDialogRecoveryState
+  },
 ): Promise<AccountDialogRecoveryDestination> {
   const recoveryAction = options?.recoveryAction
+  const applyRecoveryAction = (state: AccountDialogRecoveryState) => ({
+    ...state,
+    recoveryAction:
+      recoveryAction ??
+      (isNewApiTokenRecoveryAction(state.recoveryAction)
+        ? undefined
+        : state.recoveryAction),
+  })
+  const latestState = options?.state && applyRecoveryAction(options.state)
+  if (latestState && !normalizeRecoveryState(latestState))
+    throw new Error("Invalid account recovery draft")
+
   let actionUpdate: Promise<void> | undefined
   const ensureRecoveryAction = () => {
-    actionUpdate ??= recoveryChannel
-      .update(prepared.id, (current) => ({
-        ...current,
-        recoveryAction:
-          recoveryAction ??
-          (isNewApiTokenRecoveryAction(current.recoveryAction)
-            ? undefined
-            : current.recoveryAction),
-      }))
-      .catch(() => {
-        throw new Error("Account recovery handoff unavailable")
-      })
+    actionUpdate ??= (
+      latestState
+        ? recoveryChannel
+            .prepare(latestState, prepared.windowId, prepared.id)
+            .then(() => {})
+        : recoveryChannel.update(prepared.id, applyRecoveryAction)
+    ).catch(() => {
+      throw new Error("Account recovery handoff unavailable")
+    })
     return actionUpdate
   }
   const destination = await openSidePanelWithFallback(

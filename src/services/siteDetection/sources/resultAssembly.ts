@@ -29,11 +29,10 @@ export function normalizeSiteTypeHint(
   return isAccountSiteType(value) ? value : undefined
 }
 
-export interface UserDataResult
-  extends Omit<
-    NonNullable<AutoDetectResult["data"]>,
-    "siteType" | "user" | "rawUser"
-  > {
+export interface UserDataResult extends Omit<
+  NonNullable<AutoDetectResult["data"]>,
+  "siteType" | "user" | "rawUser"
+> {
   user: Record<string, unknown>
   siteTypeHint?: AccountSiteType
 }
@@ -65,6 +64,7 @@ export function userDataFromBrowserSession(
     accessToken: session.accessToken,
     ...(session.transientAuth ? { transientAuth: session.transientAuth } : {}),
     sub2apiAuth: session.sub2apiAuth,
+    sub2apiWebsiteSessionBound: session.sub2apiWebsiteSessionBound,
     ...(session.kimiOpenPlatformAuth
       ? { kimiOpenPlatformAuth: session.kimiOpenPlatformAuth }
       : {}),
@@ -164,6 +164,7 @@ export async function combineUserDataAndSiteType(
           ? { transientAuth: userData.transientAuth }
           : {}),
         sub2apiAuth: userData.sub2apiAuth,
+        sub2apiWebsiteSessionBound: userData.sub2apiWebsiteSessionBound,
         ...(userData.kimiOpenPlatformAuth
           ? { kimiOpenPlatformAuth: userData.kimiOpenPlatformAuth }
           : {}),

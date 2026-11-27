@@ -22,6 +22,31 @@ vi.mock("~/utils/browser/runtimeMessages", () => ({
 }))
 
 describe("temp-page onboarding session probe", () => {
+  it("returns website-session ownership from the temporary browser context", async () => {
+    sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "17",
+        siteTypeHint: SITE_TYPES.SUB2API,
+        sub2apiWebsiteSessionBound: true,
+      },
+    })
+    const respond = vi.fn()
+    await executeAutoDetectSite(
+      {
+        url: "https://sub2.example",
+        requestId: "bound-session",
+        siteType: SITE_TYPES.SUB2API,
+      },
+      false,
+      respond,
+    )
+    expect(respond).toHaveBeenCalledWith({
+      success: true,
+      data: expect.objectContaining({ sub2apiWebsiteSessionBound: true }),
+    })
+    expect(release).toHaveBeenCalledWith("bound-session")
+  })
   beforeEach(() => {
     vi.resetAllMocks()
     acquire.mockResolvedValue({ tabId: 42, navigate })

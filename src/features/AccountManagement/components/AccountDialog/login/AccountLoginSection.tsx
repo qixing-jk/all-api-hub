@@ -36,6 +36,12 @@ import type { AccountSiteType } from "~/services/accountSiteDefinitions"
 import type { AuthTypeEnum } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
 
+import { getAccountDialogSitePolicy } from "../form/sitePolicy"
+import {
+  Sub2ApiLoginSession,
+  type Sub2ApiLoginSessionState,
+} from "./Sub2ApiLoginSession"
+
 export const ACCOUNT_LOGIN_SECTION_ID =
   ACCOUNT_FORM_SECTION_ELEMENT_IDS[ACCOUNT_FORM_SECTIONS.LOGIN]
 const UNSET_LOGIN_METHOD = "unset"
@@ -54,6 +60,7 @@ export function AccountLoginSection({
   feedback,
   open,
   onOpenChange,
+  sub2apiSession,
 }: {
   continuous?: boolean
   siteUrl?: string
@@ -72,6 +79,7 @@ export function AccountLoginSection({
     "data-account-validation-field"?: string
   }
   feedback?: ReactNode
+  sub2apiSession?: Sub2ApiLoginSessionState
 }) {
   const { t } = useTranslation(["accountDialog", "messages"])
   const passwordDraft = useRef(
@@ -102,6 +110,12 @@ export function AccountLoginSection({
     ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password
       ? selectedMethod.configuration.identity
       : undefined
+  const offersIndependentSession =
+    siteType &&
+    getAccountDialogSitePolicy(siteType).allowSub2ApiRefreshTokenState
+  const recoveryLabel = offersIndependentSession
+    ? t("login.sub2apiAutomaticRecovery")
+    : t("login.automaticRecovery")
   const supportsRecovery = supportsAccountCredentialRecovery(target)
   const invalidUsername = Boolean(
     passwordIdentity && !credentials.username.trim(),
@@ -121,9 +135,11 @@ export function AccountLoginSection({
       <FormField
         label={t("login.method")}
         description={
-          supportsRecovery
-            ? t("login.recoveryConfigurationDescription")
-            : t("login.description")
+          offersIndependentSession
+            ? t("login.sub2apiDescription")
+            : supportsRecovery
+              ? t("login.recoveryConfigurationDescription")
+              : t("login.description")
         }
       >
         <Select
@@ -199,13 +215,13 @@ export function AccountLoginSection({
       </FormField>
       {supportsRecovery && (
         <FormField
-          label={t("login.automaticRecovery")}
+          label={recoveryLabel}
           htmlFor="account-login-automatic-recovery"
           description={t("login.automaticRecoveryDescription")}
           labelAction={
             <Switch
               id="account-login-automatic-recovery"
-              aria-label={t("login.automaticRecovery")}
+              aria-label={recoveryLabel}
               checked={login?.automaticRecovery === true}
               disabled={
                 !login ||
@@ -279,6 +295,9 @@ export function AccountLoginSection({
             />
           </FormField>
         </>
+      )}
+      {offersIndependentSession && sub2apiSession && (
+        <Sub2ApiLoginSession session={sub2apiSession} />
       )}
     </AccountFormSection>
   )
