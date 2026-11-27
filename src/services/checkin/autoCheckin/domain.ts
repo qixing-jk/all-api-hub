@@ -15,6 +15,7 @@ import {
 } from "~/constants/checkIn"
 import {
   getCheckInDiscoveryPriority,
+  getCheckInMethodStatusPeriodKey,
   getCheckInResetTimeZone,
   getUnknownCheckInDiscoveryPriority,
 } from "~/services/checkin/autoCheckin/providers/registry"
@@ -45,6 +46,16 @@ export function isCheckInMethodStatusCurrent(
   if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) return false
   const timeZone = getCheckInResetTimeZone(methodId) ?? fallbackTimeZone
   const evidence = status.evidence
+  const observedAt =
+    evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
+      ? evidence.legacyObservedAt
+      : evidence.observedAt
+  if (observedAt !== undefined) {
+    const periodKey = getCheckInMethodStatusPeriodKey(methodId, observedAt)
+    if (periodKey !== undefined) {
+      return periodKey === getCheckInMethodStatusPeriodKey(methodId, now)
+    }
+  }
   if (
     evidence.source !== CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
   )
@@ -357,10 +368,15 @@ const deriveExecutionEligibility = (
     status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
       ? status
       : undefined
-  const statusControlsExecution =
+  const statusObservedAt =
     knownStatus &&
-    knownStatus.evidence.source !==
-      CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
+    (knownStatus.evidence.source ===
+      CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe ||
+      knownStatus.evidence.source ===
+        CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution)
+      ? knownStatus.evidence.observedAt
+      : undefined
+  const statusControlsExecution = statusObservedAt !== undefined
   const checkedStatusIsCurrent =
     statusControlsExecution &&
     knownStatus?.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked &&

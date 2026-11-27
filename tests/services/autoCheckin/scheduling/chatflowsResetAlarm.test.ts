@@ -1,0 +1,524 @@
+import { afterEach, describe, expect, it, vi } from "vitest"
+
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
+} from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { getChatflowsCheckInPeriodBounds } from "~/services/apiService/sub2api/checkin/chatflowsCheckInProtocol"
+import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
+import {
+  CHATFLOWS_RESET_ALARM_NAME,
+  createChatflowsResetTarget,
+  mergeChatflowsResetTargets,
+  parseChatflowsResetTargets,
+  partitionChatflowsResetTargets,
+  restoreChatflowsResetAlarm,
+  scheduleChatflowsResetForCheckedAccounts,
+  selectChatflowsResetStatusRetryTargets,
+  selectRunnableChatflowsResetAccountIds,
+  takeDueChatflowsResetTargets,
+  type ChatflowsResetTarget,
+} from "~/services/checkin/autoCheckin/scheduling/chatflowsResetAlarm"
+import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import type { CheckInMethodStatus } from "~/types/checkIn"
+import { clearAlarm, createAlarm, getAlarm } from "~/utils/browser/alarms"
+import {
+  getLocalStorageValues,
+  removeLocalStorage,
+  setLocalStorage,
+} from "~/utils/browser/storage"
+import {
+  buildCheckInConfig,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
+
+vi.mock("~/utils/browser/storage", () => ({
+  getLocalStorageValues: vi.fn(),
+  removeLocalStorage: vi.fn(),
+  setLocalStorage: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/alarms", () => ({
+  clearAlarm: vi.fn(),
+  createAlarm: vi.fn(),
+  getAlarm: vi.fn(),
+}))
+
+vi.mock("~/services/preferences/userPreferences", () => ({
+  userPreferences: { getPreferences: vi.fn() },
+}))
+
+const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+const beforeReset = Date.parse("2026-11-25T03:59:00.000Z")
+const afterReset = Date.parse("2026-11-25T04:01:00.000Z")
+
+const makeAccount = (id: string, automaticExecutionEnabled = true) =>
+  buildSiteAccount({
+    id,
+    site_url: "https://ai.chatflowsai.com",
+    site_type: SITE_TYPES.SUB2API,
+    checkIn: buildCheckInConfig({
+      automaticExecutionEnabled,
+      selection: { mode: "manual", methodId },
+      methodKnowledge: {
+        methods: {
+          [methodId]: {
+            detection: {
+              outcome: "matched",
+              evidence: { source: "probe", observedAt: beforeReset },
+            },
+          },
+        },
+      },
+    }),
+  })
+
+const knownStatus = (
+  today: (typeof CHECK_IN_METHOD_TODAY_STATUSES)[keyof typeof CHECK_IN_METHOD_TODAY_STATUSES],
+  observedAt: number,
+): CheckInMethodStatus => ({
+  outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+  availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+  today,
+  evidence: { source: "execution", observedAt },
+})
+
+describe("Chatflows noon reset alarm", () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+  })
+
+  it("stores only a checked selected account and runs that account once after the next period is eligible", () => {
+    vi.spyOn(Date, "now").mockReturnValue(beforeReset)
+    const target = createChatflowsResetTarget({
+      accountId: "chatflows-account",
+      methodId,
+      automaticExecutionEnabled: true,
+      accountDisabled: false,
+      globalAutomaticExecutionEnabled: true,
+      status: knownStatus(CHECK_IN_METHOD_TODAY_STATUSES.Checked, beforeReset),
+    })
+    expect(target).toEqual({
+      accountId: "chatflows-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    })
+
+    const account = makeAccount("chatflows-account")
+    const otherAccount = makeAccount("other-account", false)
+    const runIds = selectRunnableChatflowsResetAccountIds({
+      targets: [target!],
+      now: afterReset,
+      globalAutomaticExecutionEnabled: true,
+      accounts: [account, otherAccount],
+      statuses: new Map([
+        [
+          account.id,
+          knownStatus(CHECK_IN_METHOD_TODAY_STATUSES.NotChecked, afterReset),
+        ],
+      ]),
+    })
+    expect(runIds).toEqual([account.id])
+
+    const alreadyClaimed = selectRunnableChatflowsResetAccountIds({
+      targets: [target!],
+      now: afterReset,
+      globalAutomaticExecutionEnabled: true,
+      accounts: [account, otherAccount],
+      statuses: new Map([
+        [
+          account.id,
+          knownStatus(CHECK_IN_METHOD_TODAY_STATUSES.Checked, afterReset),
+        ],
+      ]),
+    })
+    expect(alreadyClaimed).toEqual([])
+
+    const retries = selectChatflowsResetStatusRetryTargets({
+      targets: [target!],
+      now: afterReset,
+      globalAutomaticExecutionEnabled: true,
+      accounts: [account, otherAccount],
+      statuses: new Map([
+        [
+          account.id,
+          {
+            outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+            reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network,
+            attemptedAt: afterReset,
+          },
+        ],
+      ]),
+    })
+    expect(retries).toHaveLength(1)
+    expect(retries[0]).toMatchObject({
+      accountId: account.id,
+      statusReadAttempts: 1,
+      nextAttemptAt: afterReset + 30_000,
+      nextResetAt: target!.nextResetAt,
+    })
+    expect(
+      selectRunnableChatflowsResetAccountIds({
+        targets: retries,
+        now: afterReset + 30_000,
+        globalAutomaticExecutionEnabled: true,
+        accounts: [account],
+        statuses: new Map([
+          [
+            account.id,
+            {
+              outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+              reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network,
+              attemptedAt: afterReset + 30_000,
+            },
+          ],
+        ]),
+      }),
+    ).toEqual([])
+    expect(
+      selectChatflowsResetStatusRetryTargets({
+        targets: retries,
+        now: afterReset + 30_000,
+        globalAutomaticExecutionEnabled: true,
+        accounts: [account],
+        statuses: new Map([
+          [
+            account.id,
+            {
+              outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+              reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network,
+              attemptedAt: afterReset + 30_000,
+            },
+          ],
+        ]),
+      }),
+    ).toEqual([])
+  })
+
+  it("rejects stale periods, changed account intent, and a disabled global switch", () => {
+    vi.spyOn(Date, "now").mockReturnValue(beforeReset)
+    const target = createChatflowsResetTarget({
+      accountId: "chatflows-account",
+      methodId,
+      automaticExecutionEnabled: true,
+      accountDisabled: false,
+      globalAutomaticExecutionEnabled: true,
+      status: knownStatus(CHECK_IN_METHOD_TODAY_STATUSES.Checked, beforeReset),
+    })!
+    const laterPeriod = Date.parse("2026-11-26T04:01:00.000Z")
+    const account = makeAccount("chatflows-account")
+    const status = knownStatus(
+      CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      laterPeriod,
+    )
+    expect(
+      selectRunnableChatflowsResetAccountIds({
+        targets: [target],
+        now: laterPeriod,
+        globalAutomaticExecutionEnabled: true,
+        accounts: [account],
+        statuses: new Map([[account.id, status]]),
+      }),
+    ).toEqual([])
+    expect(
+      selectRunnableChatflowsResetAccountIds({
+        targets: [target],
+        now: afterReset,
+        globalAutomaticExecutionEnabled: false,
+        accounts: [account],
+        statuses: new Map([
+          [
+            account.id,
+            knownStatus(CHECK_IN_METHOD_TODAY_STATUSES.NotChecked, afterReset),
+          ],
+        ]),
+      }),
+    ).toEqual([])
+    expect(
+      createChatflowsResetTarget({
+        accountId: "other",
+        methodId: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
+        automaticExecutionEnabled: true,
+        accountDisabled: false,
+        globalAutomaticExecutionEnabled: true,
+        status: knownStatus(
+          CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+          beforeReset,
+        ),
+      }),
+    ).toBeUndefined()
+  })
+
+  it("validates persisted protocol identity and consumes due targets before execution", async () => {
+    const bounds = getChatflowsCheckInPeriodBounds(beforeReset)
+    const due = {
+      accountId: "due-account",
+      methodId,
+      ...bounds,
+    }
+    const future = {
+      ...due,
+      accountId: "future-account",
+      ...getChatflowsCheckInPeriodBounds(
+        Date.parse("2026-11-25T04:01:00.000Z"),
+      ),
+    }
+    expect(
+      parseChatflowsResetTargets({
+        version: 1,
+        targets: [due, { ...due, periodKey: "stale" }],
+      }),
+    ).toEqual([due])
+    expect(
+      parseChatflowsResetTargets({
+        version: 1,
+        targets: [
+          {
+            ...due,
+            accountId: "invalid",
+            nextResetAt: Number.MAX_SAFE_INTEGER,
+          },
+          due,
+        ],
+      }),
+    ).toEqual([due])
+    expect(
+      partitionChatflowsResetTargets([due, future], bounds.nextResetAt),
+    ).toEqual({
+      due: [due],
+      future: [future],
+    })
+
+    vi.mocked(getLocalStorageValues).mockResolvedValue({
+      autoCheckin_chatflowsResetQueue_v1: {
+        version: 1,
+        targets: [due, future],
+      },
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+    await expect(
+      takeDueChatflowsResetTargets(bounds.nextResetAt),
+    ).resolves.toEqual([due])
+    expect(setLocalStorage).toHaveBeenCalledWith({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [future] },
+    })
+    expect(createAlarm).toHaveBeenCalledWith("autoCheckinChatflowsReset", {
+      when: future.nextResetAt,
+    })
+    expect(removeLocalStorage).not.toHaveBeenCalled()
+    expect(clearAlarm).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps due targets persisted when synchronizing the next alarm fails", async () => {
+    const bounds = getChatflowsCheckInPeriodBounds(beforeReset)
+    const due = { accountId: "due-account", methodId, ...bounds }
+    const future = {
+      accountId: "future-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(bounds.nextResetAt + 1),
+    }
+    vi.mocked(getLocalStorageValues).mockResolvedValue({
+      autoCheckin_chatflowsResetQueue_v1: {
+        version: 1,
+        targets: [due, future],
+      },
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+    vi.mocked(createAlarm).mockRejectedValueOnce(new Error("alarm unavailable"))
+
+    await expect(
+      takeDueChatflowsResetTargets(bounds.nextResetAt),
+    ).rejects.toThrow("alarm unavailable")
+
+    expect(setLocalStorage).not.toHaveBeenCalled()
+    expect(removeLocalStorage).not.toHaveBeenCalled()
+  })
+
+  it("loads accounts before consuming due reset targets", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(afterReset)
+    const due = {
+      accountId: "due-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    }
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      autoCheckin: { globalEnabled: true },
+    } as any)
+    vi.spyOn(accountQueries, "getAllAccounts").mockRejectedValueOnce(
+      new Error("account storage unavailable"),
+    )
+    vi.mocked(getLocalStorageValues).mockImplementation(async (key) => {
+      if (typeof key !== "string") return {}
+      return { [key]: { version: 1, targets: [due] } }
+    })
+
+    await expect(
+      (autoCheckinScheduler as any).runChatflowsResetAlarm(),
+    ).rejects.toThrow("account storage unavailable")
+
+    expect(getLocalStorageValues).not.toHaveBeenCalled()
+    expect(removeLocalStorage).not.toHaveBeenCalled()
+    expect(setLocalStorage).not.toHaveBeenCalled()
+    expect(clearAlarm).not.toHaveBeenCalled()
+  })
+
+  it("requeues due targets when a pre-dispatch step fails", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(afterReset)
+    const due = {
+      accountId: "chatflows-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    }
+    const account = makeAccount(due.accountId)
+    vi.mocked(userPreferences.getPreferences)
+      .mockResolvedValueOnce({ autoCheckin: { globalEnabled: true } } as any)
+      .mockRejectedValueOnce(new Error("pre-dispatch preference read failed"))
+      .mockResolvedValueOnce({ autoCheckin: { globalEnabled: true } } as any)
+    vi.spyOn(accountQueries, "getAllAccounts").mockResolvedValueOnce([account])
+    vi.spyOn(autoCheckinMethodRegistry, "resolveById").mockReturnValue({
+      id: methodId,
+      provider: {
+        getStatus: vi
+          .fn()
+          .mockResolvedValue(
+            knownStatus(CHECK_IN_METHOD_TODAY_STATUSES.NotChecked, afterReset),
+          ),
+      },
+    } as any)
+    vi.mocked(getLocalStorageValues).mockImplementation(async (key) => {
+      if (typeof key !== "string") return {}
+      return { [key]: { version: 1, targets: [due] } }
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+
+    await expect(
+      (autoCheckinScheduler as any).runChatflowsResetAlarm(),
+    ).rejects.toThrow("pre-dispatch preference read failed")
+
+    const queueKey = vi.mocked(getLocalStorageValues).mock.calls[0]?.[0]
+    expect(typeof queueKey).toBe("string")
+    expect(setLocalStorage).toHaveBeenLastCalledWith({
+      [queueKey as string]: { version: 1, targets: [due] },
+    })
+    expect(createAlarm).toHaveBeenCalledWith(CHATFLOWS_RESET_ALARM_NAME, {
+      when: afterReset + 1_000,
+    })
+  })
+
+  it("restores an overdue target during its intended period with a near-term alarm", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(afterReset)
+    const target = {
+      accountId: "chatflows-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    }
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      autoCheckin: { globalEnabled: true },
+    } as any)
+    vi.mocked(getLocalStorageValues).mockResolvedValue({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [target] },
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+
+    await restoreChatflowsResetAlarm()
+
+    expect(setLocalStorage).toHaveBeenCalledWith({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [target] },
+    })
+    expect(createAlarm).toHaveBeenCalledWith(CHATFLOWS_RESET_ALARM_NAME, {
+      when: afterReset + 1_000,
+    })
+    vi.useRealTimers()
+  })
+
+  it("retains a pending reset across a daily scan until its claim period ends", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(afterReset)
+    const target = {
+      accountId: "chatflows-account",
+      methodId,
+      ...getChatflowsCheckInPeriodBounds(beforeReset),
+    }
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      autoCheckin: { globalEnabled: true },
+    } as any)
+    vi.spyOn(accountQueries, "getAllAccounts").mockResolvedValue([
+      makeAccount(target.accountId),
+    ])
+    vi.spyOn(autoCheckinMethodRegistry, "resolveById").mockReturnValue({
+      id: methodId,
+      provider: {
+        getStatus: vi.fn().mockResolvedValue({
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+          reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network,
+          attemptedAt: afterReset,
+        }),
+      },
+    } as any)
+    vi.mocked(getLocalStorageValues).mockResolvedValue({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [target] },
+    })
+    vi.mocked(getAlarm).mockResolvedValue(undefined)
+
+    await scheduleChatflowsResetForCheckedAccounts(afterReset)
+
+    expect(setLocalStorage).toHaveBeenCalledWith({
+      autoCheckin_chatflowsResetQueue_v1: { version: 1, targets: [target] },
+    })
+    vi.useRealTimers()
+  })
+
+  it("keeps a later daily-scan reset when an older due target is requeued", () => {
+    const oldPeriod = getChatflowsCheckInPeriodBounds(beforeReset)
+    const afterResetNextDay = Date.parse("2026-11-26T04:01:00.000Z")
+    const laterPeriod = getChatflowsCheckInPeriodBounds(afterResetNextDay)
+    const oldRetry: ChatflowsResetTarget = {
+      accountId: "chatflows-account",
+      methodId,
+      ...oldPeriod,
+      statusReadAttempts: 1,
+      nextAttemptAt: afterReset + 30_000,
+    }
+    const newerDailyTarget: ChatflowsResetTarget = {
+      accountId: "chatflows-account",
+      methodId,
+      ...laterPeriod,
+    }
+
+    expect(mergeChatflowsResetTargets([newerDailyTarget], [oldRetry])).toEqual([
+      newerDailyTarget,
+    ])
+    expect(
+      mergeChatflowsResetTargets(
+        [
+          {
+            ...oldRetry,
+            nextAttemptAt: afterReset + 60_000,
+          },
+        ],
+        [oldRetry],
+      ),
+    ).toEqual([oldRetry])
+  })
+
+  it("does not clear the queue if the global switch was re-enabled before lock acquisition", async () => {
+    vi.mocked(userPreferences.getPreferences)
+      .mockResolvedValueOnce({ autoCheckin: { globalEnabled: false } } as any)
+      .mockResolvedValueOnce({ autoCheckin: { globalEnabled: true } } as any)
+
+    await scheduleChatflowsResetForCheckedAccounts(beforeReset)
+
+    expect(userPreferences.getPreferences).toHaveBeenCalledTimes(2)
+    expect(removeLocalStorage).not.toHaveBeenCalled()
+    expect(setLocalStorage).not.toHaveBeenCalled()
+    expect(clearAlarm).not.toHaveBeenCalled()
+  })
+})

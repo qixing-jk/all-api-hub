@@ -162,6 +162,7 @@ class AccountCheckinRunWorkflow {
     protectionBypassExecution: ProtectionBypassExecution
     loginProviderOwners: ReadonlyMap<AccountLoginProvider, SiteAccount>
     allowAutomaticDiscovery?: boolean
+    requireAutomaticExecution?: boolean
     selectedConfirmations?: ReadonlyMap<string, CheckInMethodId>
   }): Promise<AccountCheckinExecutionOutcome[]> {
     return Promise.all(
@@ -176,6 +177,7 @@ class AccountCheckinRunWorkflow {
             params.protectionBypassExecution,
             {
               allowAutomaticDiscovery: params.allowAutomaticDiscovery,
+              requireAutomaticExecution: params.requireAutomaticExecution,
               confirmAfterDiscovery: params.selectedConfirmations?.get(
                 account.id,
               ),

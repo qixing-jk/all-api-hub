@@ -3,7 +3,10 @@ import "~~/tests/services/autoCheckin/schedulerTestHarness"
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SITE_TYPES } from "~/constants/siteType"
+import * as chatflowsResetQueue from "~/services/checkin/autoCheckin/scheduling/chatflowsResetAlarm"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -11,6 +14,7 @@ import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
+  mockedAccountStorage,
   mockedBrowserApi,
   mockedUserPreferences,
   pretriggerDailyOnUiOpenForTest,
@@ -18,6 +22,10 @@ import {
   schedulerTestState,
   uiOpenExecution,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import {
+  buildCheckInConfig,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
 
 describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
   beforeEach(() => {
@@ -224,6 +232,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     expect(result.started).toBe(false)
     expect(result.eligible).toBe(true)
     expect(runSpy).not.toHaveBeenCalled()
+    expect(mockedAccountStorage.getAllAccounts).not.toHaveBeenCalled()
     expect(result.debug).toEqual(
       expect.objectContaining({
         today: expect.any(String),
@@ -233,6 +242,77 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     )
 
     vi.useRealTimers()
+  })
+
+  it("rechecks the reset alarm period before requesting status with auth recovery", async () => {
+    vi.useFakeTimers()
+    const now = Date.parse("2026-11-26T04:01:00.000Z")
+    vi.setSystemTime(now)
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: { globalEnabled: true },
+    } as any)
+    const account = buildSiteAccount({
+      id: "chatflows-target",
+      site_url: "https://ai.chatflowsai.com",
+      site_type: SITE_TYPES.SUB2API,
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        selection: {
+          mode: "manual",
+          methodId: AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn,
+        },
+      }),
+    })
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    vi.spyOn(
+      chatflowsResetQueue,
+      "takeDueChatflowsResetTargets",
+    ).mockResolvedValueOnce([
+      {
+        accountId: account.id,
+        methodId: AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn,
+        periodKey: "2026-11-24",
+        nextResetAt: Date.parse("2026-11-25T04:00:00.000Z"),
+      },
+    ])
+    vi.spyOn(
+      chatflowsResetQueue,
+      "requeueChatflowsResetTargets",
+    ).mockResolvedValue()
+    const readStatus = vi.spyOn(
+      chatflowsResetQueue,
+      "readChatflowsResetAccountStatus",
+    )
+
+    await (autoCheckinScheduler as any).runChatflowsResetAlarm()
+
+    expect(readStatus).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it("restores the reset queue after another alarm arrives during an in-flight run", async () => {
+    let finish!: () => void
+    const activeRun = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const runSpy = vi
+      .spyOn(autoCheckinScheduler as any, "runChatflowsResetAlarm")
+      .mockReturnValueOnce(activeRun)
+    const restoreSpy = vi
+      .spyOn(chatflowsResetQueue, "restoreChatflowsResetAlarm")
+      .mockResolvedValue()
+
+    const first = (autoCheckinScheduler as any).handleChatflowsResetAlarm()
+    const deliveredWhileActive = (
+      autoCheckinScheduler as any
+    ).handleChatflowsResetAlarm()
+    expect(deliveredWhileActive).toBe(first)
+
+    finish()
+    await first
+
+    expect(runSpy).toHaveBeenCalledOnce()
+    expect(restoreSpy).toHaveBeenCalledOnce()
   })
 
   it("does not start when today's daily run already executed", async () => {

@@ -55,6 +55,66 @@ import {
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("dailyBatch", () => {
+  it.each([
+    ["2026-11-24T03:59:30Z", false],
+    ["2026-11-24T04:01:00Z", true],
+  ] as const)(
+    "admits cached ChatflowsAI status at %s only after noon (%s)",
+    async (now, runnable) => {
+      vi.useFakeTimers({ toFake: ["Date"] })
+      vi.setSystemTime(new Date(now))
+      onTestFinished(() => {
+        vi.useRealTimers()
+      })
+      const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+      const account = buildSiteAccount({
+        id: "chatflows-noon",
+        site_type: SITE_TYPES.SUB2API,
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "automatic", methodId },
+          methodKnowledge: {
+            methods: {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: 1 },
+                },
+                status: {
+                  outcome: "known",
+                  availability: "enabled",
+                  today: "checked",
+                  evidence: {
+                    source: "probe",
+                    observedAt: Date.parse("2026-11-24T03:59:00Z"),
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+      resolveProviderForTest.mockReturnValue({
+        getReadiness: () => ({ ready: true }),
+      })
+      mockedMethods.executeSelectedCheckIn.mockResolvedValue({
+        kind: "executed",
+        methodId,
+        result: { status: "success" },
+        retryable: false,
+        completedAt: Date.now(),
+      })
+      await runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY })
+      expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledTimes(
+        runnable ? 1 : 0,
+      )
+      expect(
+        schedulerTestState.storedStatus.perAccount[account.id].status,
+      ).toBe(runnable ? "success" : "skipped")
+    },
+  )
+
   it("refreshes a manual retry's shared success exactly once", async () => {
     const account = buildSiteAccount({
       id: "manual-owner",
@@ -1267,6 +1327,30 @@ describe("dailyBatch", () => {
     })
 
     vi.useRealTimers()
+  })
+
+  it("applies the global switch to scoped scheduled runs that use the manual runner", async () => {
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: false,
+        notifyUiOnCompletion: true,
+      },
+    })
+
+    await expect(
+      runCheckinsForTest({
+        runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+        targetAccountIds: ["chatflows-noon"],
+        scheduledAutomaticExecution: true,
+        notifyUiOnCompletion: false,
+      }),
+    ).resolves.toEqual({ persisted: true })
+
+    expect(mockedAccountStorage.getAllAccounts).not.toHaveBeenCalled()
+    expect(mockedMethods.executeSelectedCheckIn).not.toHaveBeenCalled()
+    expect(schedulerTestState.statusWriteCount).toBe(0)
+    expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalled()
   })
 
   it("marks the day as attempted and clears retry scheduling when a daily run fails before execution", async () => {

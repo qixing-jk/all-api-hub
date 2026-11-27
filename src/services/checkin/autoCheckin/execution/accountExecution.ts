@@ -1,5 +1,6 @@
 import { type AccountLoginProvider } from "~/constants/accountLogin"
 import {
+  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_EXECUTION_SKIP_REASONS,
   CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
@@ -39,6 +40,7 @@ import { getErrorMessage } from "~/utils/core/error"
 export interface RunAccountCheckinOptions {
   requireStatusConfirmationBeforeMutation?: boolean
   allowAutomaticDiscovery?: boolean
+  requireAutomaticExecution?: boolean
   confirmAfterDiscovery?: CheckInMethodId
   /**
    * Provider ownership resolved over the full stored account list. Absent means
@@ -62,6 +64,7 @@ export async function executeAccountCheckin(
   {
     requireStatusConfirmationBeforeMutation = false,
     allowAutomaticDiscovery = false,
+    requireAutomaticExecution = false,
     confirmAfterDiscovery,
     loginProviderOwners,
   }: RunAccountCheckinOptions = {},
@@ -108,11 +111,12 @@ export async function executeAccountCheckin(
       executeSelectedCheckIn({
         account,
         globalAutomaticExecutionEnabled:
-          !allowAutomaticDiscovery || (await isAutomaticExecutionEnabled()),
+          !(allowAutomaticDiscovery || requireAutomaticExecution) ||
+          (await isAutomaticExecutionEnabled()),
         loginProviderClaimedByAnother:
           getLoginProviderClaimedByAnother(account, loginProviderOwners) !==
           null,
-        ...(allowAutomaticDiscovery
+        ...(allowAutomaticDiscovery || requireAutomaticExecution
           ? {
               isAutomaticExecutionEnabled: () => isAutomaticExecutionEnabled(),
             }
@@ -199,9 +203,13 @@ export async function executeAccountCheckin(
       reward: providerResult.reward,
       awards: providerResult.awards,
       timestamp:
-        execution.confirmation?.observedAt ??
-        execution.completedAt ??
-        Date.now(),
+        execution.methodId === AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+          ? (execution.completedAt ??
+            execution.confirmation?.observedAt ??
+            Date.now())
+          : (execution.confirmation?.observedAt ??
+            execution.completedAt ??
+            Date.now()),
       ...(providerResult.status === CHECKIN_RESULT_STATUS.FAILED ||
       providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
         ? { retryable: execution.retryable === true }

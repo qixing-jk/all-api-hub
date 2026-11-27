@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -23,6 +23,7 @@ const account = () =>
     }),
   })
 describe("unified check-in presentation", () => {
+  afterEach(() => vi.useRealTimers())
   it("exposes missing configuration when automation was requested without a usable method", () => {
     expect(getSiteCheckInDisplayState(account())).toMatchObject({
       kind: SITE_CHECK_IN_DISPLAY_KINDS.Configuration,
@@ -86,6 +87,84 @@ describe("unified check-in presentation", () => {
     ).toEqual({ kind: ACCOUNT_CHECK_IN_AUTOMATION_KINDS.AccountDisabled })
     expect(getAccountCheckInAutomationState(account(), true)).toMatchObject({
       kind: ACCOUNT_CHECK_IN_AUTOMATION_KINDS.Blocked,
+    })
+  })
+
+  it.each(["probe", "execution"] as const)(
+    "expires ChatflowsAI %s status at noon rather than midnight",
+    (source) => {
+      vi.useFakeTimers()
+      const current = account()
+      current.siteType = SITE_TYPES.SUB2API
+      const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+      current.checkIn = {
+        automaticExecutionEnabled: true,
+        selection: { mode: "automatic", methodId },
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: 1 },
+              },
+              status: {
+                outcome: "known",
+                availability: "enabled",
+                today: "checked",
+                evidence: {
+                  source,
+                  observedAt: Date.parse("2026-11-24T03:59:00Z"),
+                },
+              },
+            },
+          },
+        },
+      }
+      vi.setSystemTime(new Date("2026-11-24T04:01:00Z"))
+      expect(getSiteCheckInDisplayState(current)).toMatchObject({
+        kind: "outdated",
+      })
+      current.checkIn.methodKnowledge.methods[methodId]!.status = {
+        outcome: "known",
+        availability: "enabled",
+        today: "checked",
+        evidence: {
+          source,
+          observedAt: Date.parse("2026-11-24T15:59:00Z"),
+        },
+      }
+      vi.setSystemTime(new Date("2026-11-24T16:01:00Z"))
+      expect(getSiteCheckInDisplayState(current)).toMatchObject({
+        kind: "current",
+        checkedIn: true,
+      })
+    },
+  )
+
+  it("keeps the local-midnight rule for existing methods", () => {
+    vi.useFakeTimers()
+    const current = account()
+    const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    current.checkIn = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: false,
+    })
+    current.checkIn.methodKnowledge.methods[methodId]!.status = {
+      outcome: "known",
+      today: "checked",
+      evidence: {
+        source: "probe",
+        observedAt: new Date(2026, 10, 24, 11, 59).getTime(),
+      },
+    }
+    vi.setSystemTime(new Date(2026, 10, 24, 12, 1))
+    expect(getSiteCheckInDisplayState(current)).toMatchObject({
+      kind: "current",
+    })
+    vi.setSystemTime(new Date(2026, 10, 25, 0, 1))
+    expect(getSiteCheckInDisplayState(current)).toMatchObject({
+      kind: "outdated",
     })
   })
 })

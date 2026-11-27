@@ -3,6 +3,7 @@ import "~~/tests/services/autoCheckin/schedulerTestHarness"
 
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
@@ -11,11 +12,14 @@ import {
   manualExecution,
   mockedAccountStorage,
   mockedBrowserApi,
+  mockedMethods,
   mockedUserPreferences,
   resolveProviderForTest,
   runCheckinsForTest,
   runnableCheckIn,
+  schedulerTestState,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 describe("autoCheckinScheduler run-completed notifications", () => {
   beforeEach(() => {
@@ -266,6 +270,102 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       }),
       expect.anything(),
     )
+
+    vi.useRealTimers()
+  })
+
+  it("keeps an explicit notification override when the first preference read fails", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    mockedUserPreferences.getPreferences.mockRejectedValueOnce(
+      new Error("temporary preferences read failure"),
+    )
+
+    await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      notifyUiOnCompletion: false,
+    })
+
+    expect(mockedUserPreferences.getPreferences).toHaveBeenCalledOnce()
+    expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+      }),
+      expect.anything(),
+    )
+    vi.useRealTimers()
+  })
+
+  it("suppresses manual-shaped completion notifications for a scoped scheduled run", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 13, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: false,
+        notifyUiOnCompletion: true,
+        windowStart: "08:00",
+        windowEnd: "10:00",
+        scheduleMode: "random",
+        deterministicTime: "08:00",
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    const account: any = {
+      id: "chatflows-reset",
+      disabled: false,
+      site_name: "ChatflowsAI",
+      site_type: SITE_TYPES.SUB2API,
+      account_info: { username: "chatflows-user" },
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        selection: {
+          mode: "manual",
+          methodId: AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn,
+        },
+        methodKnowledge: {
+          methods: {
+            [AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn]: {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: Date.now() },
+              },
+            },
+          },
+        },
+      }),
+    }
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([account])
+    mockedAccountStorage.refreshAccount.mockResolvedValue({
+      account,
+      refreshed: true,
+    } as any)
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async () => ({ status: "success" })),
+    })
+
+    await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      targetAccountIds: [account.id],
+      scheduledAutomaticExecution: true,
+      notifyUiOnCompletion: false,
+    })
+
+    expect(mockedAccountStorage.getAllAccounts).toHaveBeenCalledOnce()
+    expect(mockedMethods.executeSelectedCheckIn).toHaveBeenCalledOnce()
+    expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+      }),
+      expect.anything(),
+    )
+    expect(schedulerTestState.storedStatus.lastDailyRunDay).toBeUndefined()
 
     vi.useRealTimers()
   })

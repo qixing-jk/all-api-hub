@@ -2,6 +2,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/discovery/automaticDiscovery"
+import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { isAutomaticExecutionEnabled } from "~/services/checkin/autoCheckin/execution/accountExecution"
 import { isRetryableCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
@@ -83,12 +84,20 @@ export type AutoCheckinRunOutcome = {
 export async function runCheckins(options: {
   runType?: AutoCheckinRunType
   targetAccountIds?: string[]
+  /** A scoped reset may execute only the method selected when its target was built. */
+  expectedMethodIdsByAccount?: Record<string, string>
+  /** A scoped alarm run: honor automatic/global gates without entering the daily ledger. */
+  scheduledAutomaticExecution?: boolean
+  /** Scoped alarms should not look like user-initiated manual runs in the UI. */
+  notifyUiOnCompletion?: boolean
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
 }): Promise<AutoCheckinRunOutcome> {
   // Default to manual runs for UI-triggered or debug entry points.
   const runType = options?.runType ?? AUTO_CHECKIN_RUN_TYPE.MANUAL
   const isDailyRun = runType === AUTO_CHECKIN_RUN_TYPE.DAILY
+  const isScheduledAutomaticExecution =
+    isDailyRun || options.scheduledAutomaticExecution === true
   const targetAccountIds = options?.targetAccountIds
   const tempWindowRequestSource =
     options?.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background
@@ -99,7 +108,10 @@ export async function runCheckins(options: {
     targetAccountIds.length > 0
       ? new Set(targetAccountIds)
       : null
-  let notifyUiOnCompletion: boolean | null = null
+  let notifyUiOnCompletion: boolean | null =
+    options.notifyUiOnCompletion ?? null
+  const preserveGenericRetryLedger =
+    targetAccountIdSet !== null && isScheduledAutomaticExecution
 
   logger.info("Starting check-in execution", {
     runType,
@@ -188,11 +200,11 @@ export async function runCheckins(options: {
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
     // Treat missing values as enabled to preserve backward compatibility with older stored prefs.
-    notifyUiOnCompletion = config.notifyUiOnCompletion !== false
+    notifyUiOnCompletion ??= config.notifyUiOnCompletion !== false
 
     // The global switch controls unattended automatic runs. Explicit manual
     // runs, including an unscoped batch run from the UI, remain available.
-    if (!config.globalEnabled && isDailyRun) {
+    if (!config.globalEnabled && isScheduledAutomaticExecution) {
       logger.info("Global feature disabled; skipping")
       return { persisted: true }
     }
@@ -238,7 +250,7 @@ export async function runCheckins(options: {
       )
     }
     const automaticExecutionEnabled =
-      !isDailyRun || (await isAutomaticExecutionEnabled())
+      !isScheduledAutomaticExecution || (await isAutomaticExecutionEnabled())
     const enabledAccounts = allAccounts.filter(
       (account) => account.disabled !== true,
     )
@@ -256,7 +268,19 @@ export async function runCheckins(options: {
         accountDisplayNameById.get(account.id) ?? account.id,
         loginProviderOwners,
       )
-      if (!automaticExecutionEnabled) {
+      const expectedMethodId = options.expectedMethodIdsByAccount?.[account.id]
+      if (
+        expectedMethodId !== undefined &&
+        resolveSelectedCheckInMethod({
+          config: account.checkIn,
+          siteType: account.site_type,
+          siteUrl: account.site_url,
+        }) !== expectedMethodId
+      ) {
+        // The selected method changed while the reset status was being read;
+        // do not dispatch this one-shot target through another provider.
+        snapshot.skipReason = AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE
+      } else if (!automaticExecutionEnabled) {
         snapshot.skipReason = AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
       } else if (preparationFailedIds.has(account.id)) {
         snapshot.skipReason = AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE
@@ -417,6 +441,7 @@ export async function runCheckins(options: {
       protectionBypassExecution,
       loginProviderOwners,
       allowAutomaticDiscovery: isDailyRun,
+      requireAutomaticExecution: options.scheduledAutomaticExecution === true,
       selectedConfirmations,
     })
 
@@ -490,15 +515,18 @@ export async function runCheckins(options: {
           results,
         )
         const retryStrategy = config.retryStrategy
-        const retryState = mergeRunResults({
-          today,
-          enabled:
-            config.globalEnabled === true && retryStrategy?.enabled === true,
-          maxAttempts: retryStrategy?.maxAttemptsPerDay ?? 0,
-          current: current?.retryState,
-          results: currentResults,
-          replacePendingWithResults: isDailyRun,
-        })
+        const retryState = preserveGenericRetryLedger
+          ? current?.retryState
+          : mergeRunResults({
+              today,
+              enabled:
+                config.globalEnabled === true &&
+                retryStrategy?.enabled === true,
+              maxAttempts: retryStrategy?.maxAttemptsPerDay ?? 0,
+              current: current?.retryState,
+              results: currentResults,
+              replacePendingWithResults: isDailyRun,
+            })
 
         const perAccount = mergePerAccountIfNeeded(current, currentResults)
         const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
@@ -513,22 +541,33 @@ export async function runCheckins(options: {
           results,
           accountSnapshots,
         )
-        const pendingRetry = Boolean(
-          retryState?.day === today && retryState.pendingAccountIds.length > 0,
-        )
+        const pendingRetry = preserveGenericRetryLedger
+          ? (current?.pendingRetry ??
+            Boolean(
+              retryState?.day === today &&
+              retryState.pendingAccountIds.length > 0,
+            ))
+          : Boolean(
+              retryState?.day === today &&
+              retryState.pendingAccountIds.length > 0,
+            )
 
         return {
           result: {
             mergedSummary,
-            retryPendingAfter: retryState?.pendingAccountIds.length ?? 0,
+            retryPendingAfter:
+              retryState?.day === today
+                ? retryState.pendingAccountIds.length
+                : 0,
           },
           patch: {
             lastRunAt: new Date().toISOString(),
             lastRunResult: getAutoCheckinRunResultFromSummary(mergedSummary),
             perAccount,
             summary: mergedSummary,
-            retryState,
-            pendingRetry,
+            ...(!preserveGenericRetryLedger
+              ? { retryState, pendingRetry }
+              : {}),
             accountsSnapshot,
             ...(isDailyRun
               ? {
@@ -602,8 +641,12 @@ export async function runCheckins(options: {
           lastRunAt: new Date().toISOString(),
           lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
           perAccount: mergeHistory ? (current?.perAccount ?? {}) : {},
-          pendingRetry: false,
-          retryState: isDailyRun ? undefined : current?.retryState,
+          ...(!preserveGenericRetryLedger
+            ? {
+                pendingRetry: false,
+                retryState: isDailyRun ? undefined : current?.retryState,
+              }
+            : {}),
           ...(isDailyRun
             ? {
                 lastDailyRunDay: today,

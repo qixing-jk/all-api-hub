@@ -30,6 +30,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   SidruneDailyCheckIn: "sidrune:daily-checkin",
   FreeApiDailyCheckIn: "freeapi:daily-checkin",
   NexaVlinksDailyCheckIn: "nexavlinks:daily-checkin",
+  ChatflowsDailyCheckIn: "chatflows:daily-checkin",
   EmrankDailyCheckIn: "emrank:daily-checkin",
   RelayForDailyCheckIn: "relayfor:daily-checkin",
   DayaDailyCheckIn: "daya:daily-checkin",

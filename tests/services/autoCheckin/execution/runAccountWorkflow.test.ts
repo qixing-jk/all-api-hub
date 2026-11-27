@@ -40,6 +40,7 @@ import {
   runnableCheckIn,
   SCHEDULED_EXECUTION,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("execution/runAccountWorkflow", () => {
@@ -198,6 +199,51 @@ describe("execution/runAccountWorkflow", () => {
       expect(retry?.pendingAccountIds ?? []).toEqual([])
     },
   )
+
+  it("persists a Chatflows grant in the status-proved period across noon", async () => {
+    vi.useFakeTimers()
+    const completedAt = Date.parse("2026-11-24T03:59:59.000Z")
+    const observedAt = Date.parse("2026-11-24T04:00:01.000Z")
+    vi.setSystemTime(observedAt)
+    const methodId = AUTO_CHECKIN_METHOD_IDS.ChatflowsDailyCheckIn
+    const account = buildSiteAccount({
+      site_url: "https://ai.chatflowsai.com",
+      site_type: SITE_TYPES.SUB2API,
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        selection: { mode: "manual", methodId },
+      }),
+    })
+    mockedMethods.executeSelectedCheckIn.mockResolvedValueOnce({
+      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,
+      methodId,
+      result: { status: CHECKIN_RESULT_STATUS.SUCCESS },
+      retryable: false,
+      completedAt,
+      confirmation: {
+        kind: CHECK_IN_CONFIRMATION_KINDS.Response,
+        accountId: account.id,
+        siteUrl: account.site_url,
+        userId: String(account.account_info.id),
+        observedAt,
+        completedAt,
+      },
+    })
+
+    const outcome = await accountCheckinRunWorkflow.runAccountCheckin(
+      account,
+      account.site_name,
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
+    )
+
+    expect(outcome.result.timestamp).toBe(completedAt)
+    expect(
+      mockedAccountStorage.markAccountAsSiteCheckedIn,
+    ).toHaveBeenCalledWith(account.id, completedAt, { account, methodId })
+    vi.useRealTimers()
+  })
+
   it("reuses only valid daily alarms for the current schedule plan", () => {
     const triggerTime = new Date("2026-01-23T08:30:00")
 

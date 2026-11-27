@@ -77,13 +77,10 @@ export const createSub2ApiCheckInReadRequest = (
     ...request,
     ...(context.signal ? { abortSignal: context.signal } : {}),
   }
-  return transportPolicy
+  const recovery = context.authenticationRecovery ?? transportPolicy
+  return recovery
     ? bindApiTransportRequest(
-        {
-          ...readRequest,
-          tempWindowRequestSource: transportPolicy.tempWindowRequestSource,
-          protectionBypassExecution: transportPolicy.protectionBypassExecution,
-        },
+        { ...readRequest, ...recovery },
         API_DIRECT_REQUEST_REASONS.CallerManaged,
       )
     : readRequest
@@ -108,7 +105,7 @@ export const createSub2ApiCheckInMutationRequest = (
   )
 
 export const toSub2ApiCheckInStatus = (
-  status: { enabled: boolean; checkedInToday: boolean },
+  status: { enabled: boolean; checkedInToday: boolean; periodKey?: string },
   observedAt: number,
 ) => {
   return {
@@ -122,6 +119,7 @@ export const toSub2ApiCheckInStatus = (
     evidence: {
       source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
       observedAt,
+      ...(status.periodKey ? { periodKey: status.periodKey } : {}),
     },
   } as const
 }

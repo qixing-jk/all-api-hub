@@ -163,6 +163,7 @@ describe("Sub2API check-in read request", () => {
       expect(recover).not.toHaveBeenCalled()
     },
   )
+
   it("preserves passive reads and their cancellation", () => {
     const signal = new AbortController().signal
     expect(
@@ -179,6 +180,19 @@ describe("Sub2API check-in read request", () => {
       ),
     }
     const signal = new AbortController().signal
+    expect(
+      createSub2ApiCheckInReadRequest({
+        request,
+        signal,
+        authenticationRecovery,
+        observedAt: 1,
+      }),
+    ).toEqual({
+      ...request,
+      ...authenticationRecovery,
+      abortSignal: signal,
+      directRequestReason: undefined,
+    })
     expect(
       createSub2ApiCheckInReadRequest(
         { request, signal, observedAt: 1 },

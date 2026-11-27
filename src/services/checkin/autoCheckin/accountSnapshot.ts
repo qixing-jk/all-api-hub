@@ -57,6 +57,11 @@ export function buildAutoCheckinAccountSnapshot(
         : AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
   }
 
+  const checkInStatusIsCurrent =
+    selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected &&
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+    isCheckInMethodStatusCurrent(selectionState.methodId, selectedStatus)
+
   return {
     accountId: account.id,
     accountName,
@@ -66,10 +71,7 @@ export function buildAutoCheckinAccountSnapshot(
     providerAvailable,
     // Display-only field: DO NOT use this for eligibility decisions (provider outcomes are the source of truth).
     isCheckedInToday:
-      detectionEnabled &&
-      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-      selectedStatus.today !== undefined &&
-      isCheckInMethodStatusCurrent(selectionState.methodId, selectedStatus)
+      checkInStatusIsCurrent && selectedStatus?.today !== undefined
         ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
         : undefined,
     lastCheckInDate:

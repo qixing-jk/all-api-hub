@@ -857,6 +857,18 @@ async function executeSelectedCheckInOnce(
             account,
             observedAt: Date.now(),
             dayBoundaryGuardOwner: CHECK_IN_STATUS_DAY_GUARD_OWNERS.Caller,
+            // Standalone providers (including Chatflows) use this context
+            // directly. Sub2API execution attempts handle renewal themselves.
+            ...(!attempt
+              ? {
+                  authenticationRecovery: {
+                    tempWindowRequestSource:
+                      input.context.tempWindowRequestSource,
+                    protectionBypassExecution:
+                      input.context.protectionBypassExecution,
+                  },
+                }
+              : {}),
           }),
         getCheckInResetTimeZone(registration.id),
       )

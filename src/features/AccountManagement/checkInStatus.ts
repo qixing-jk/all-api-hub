@@ -11,7 +11,9 @@ import {
   resolveSelectedCheckInMethod,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { isCheckInMethodStatusCurrent } from "~/services/checkin/autoCheckin/domain"
-import { supportsCheckInStatusReadback } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  supportsCheckInStatusReadback,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type { DisplaySiteData } from "~/types"
 import type {
   CheckInExecutionSkipReason,
@@ -79,7 +81,7 @@ export function getCheckInObservationTime(
     : status.evidence.observedAt
 }
 
-/** Returns whether the selected method status was observed for the current day. */
+/** Returns whether the selected status belongs to its method's current period. */
 export function isSelectedCheckInStatusCurrent(
   account: StatusAccount,
 ): boolean {
@@ -89,10 +91,10 @@ export function isSelectedCheckInStatusCurrent(
     siteUrl: account.baseUrl,
   })
   if (!methodId) return false
-  return isCheckInMethodStatusCurrent(
-    methodId,
-    account.checkIn.methodKnowledge.methods[methodId]?.status,
-  )
+  const status = account.checkIn.methodKnowledge.methods[methodId]?.status
+  if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) return false
+
+  return isCheckInMethodStatusCurrent(methodId, status)
 }
 
 /** Shared projection for the account icon and filter. Execution preference never changes observed status. */
