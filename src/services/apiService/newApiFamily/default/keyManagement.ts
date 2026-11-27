@@ -10,6 +10,7 @@ import type {
   NewApiToken,
   NewApiTokenWrite,
 } from "~/services/apiService/newApiFamily/tokenTypes"
+import { freeggSelfRequestPolicy } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
@@ -189,6 +190,7 @@ export async function fetchCurrentUserGroup(
   const userData = await newApiFamilyRequests.data<unknown>(request, {
     endpoint: "/api/user/self",
     credentialRecovery: ACCOUNT_CREDENTIAL_RECOVERY_OPERATIONS.Read,
+    ...freeggSelfRequestPolicy(request.baseUrl),
   })
   if (!isRecord(userData) || typeof userData.group !== "string") {
     throw new Error("invalid_current_user_group_payload")

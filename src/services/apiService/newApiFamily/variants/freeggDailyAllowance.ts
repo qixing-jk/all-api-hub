@@ -25,14 +25,6 @@ const requestOptions: Pick<
   options: { credentials: "omit", cache: "no-store" },
 }
 
-/** Public deployment identity, independent of the standard check-in switch. */
-export async function fetchFreeggPublicStatus(request: ApiServiceRequest) {
-  return newApiFamilyRequests.envelope<{ system_name?: string }>(request, {
-    ...requestOptions,
-    endpoint: "/api/status",
-  })
-}
-
 /** Read the newest system logs; never request self or renew a session here. */
 export async function fetchFreeggAllowanceLogs(
   request: ApiServiceRequest,

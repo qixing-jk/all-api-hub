@@ -121,6 +121,7 @@ afterEach(() => vi.useRealTimers())
 
 describe("FreeGG daily allowance", () => {
   it.each([
+    ["2026-11-24T15:59:55Z", "uncertain"],
     ["2026-11-24T15:59:59Z", "success"],
     ["2026-11-24T16:00:01Z", "uncertain"],
   ])(
@@ -155,12 +156,22 @@ describe("FreeGG daily allowance", () => {
       ),
     ).toBe(false)
   })
-  it("does not attribute a grant that arrives while the trigger waits in transport", async () => {
+  it("reports today as already claimed when a grant arrives while the trigger waits in transport", async () => {
     transportDelayMs = 5000
     mockExecution([], [grant()])
-    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
-      status: "uncertain",
+
+    const result = await freeggProvider.checkIn(account(), context)
+
+    expect(result).toMatchObject({
+      status: "already_checked",
+      confirmation: { kind: "observed", status: { today: "checked" } },
     })
+    expect(result.awards).toBeUndefined()
+    expect(
+      envelope.mock.calls.filter(
+        ([, options]) => options.endpoint === "/api/user/self",
+      ),
+    ).toHaveLength(1)
   })
   it("cancels a queued trigger when transport reaches the next business day", async () => {
     vi.setSystemTime("2026-11-24T15:59:59Z")
@@ -289,7 +300,7 @@ describe("FreeGG daily allowance", () => {
     expect(envelope).toHaveBeenCalledTimes(3)
   })
   it.each([1, 5])(
-    "does not attribute a grant at second %i before or indistinguishable from dispatch",
+    "reports already claimed without awarding a grant at second %i before or indistinguishable from dispatch",
     async (grantSecond) => {
       mockExecution([], [log({ created_at: now / 1000 + grantSecond })])
       const result = await freeggProvider.checkIn(account(), {
@@ -299,7 +310,7 @@ describe("FreeGG daily allowance", () => {
           return true
         },
       })
-      expect(result).toMatchObject({ status: "uncertain" })
+      expect(result).toMatchObject({ status: "already_checked" })
       expect(result.awards).toBeUndefined()
       expect(envelope).toHaveBeenCalledTimes(3)
     },
@@ -807,32 +818,22 @@ describe("FreeGG daily allowance", () => {
       ],
     })
   })
-  it("discovers the separate grant without authenticated requests or standard check-in enablement", async () => {
-    envelope.mockResolvedValueOnce({
-      success: true,
-      message: "",
-      data: { system_name: "FreeGG", checkin_enabled: false },
-    })
-    expect(
-      await freeggProvider.detect!({ account: account(), observedAt: now }),
-    ).toMatchObject({ outcome: "matched" })
-    expect(envelope).toHaveBeenCalledTimes(1)
-    expect(envelope).toHaveBeenCalledWith(
-      expect.objectContaining({
-        auth: { authType: AuthTypeEnum.None },
-        directRequestReason: "passive",
-      }),
-      expect.objectContaining({
-        endpoint: "/api/status",
-        currentTabTransport: "disabled",
-        tempWindowFallback: { codes: [], statusCodes: [] },
-        options: expect.objectContaining({ credentials: "omit" }),
-      }),
-    )
+  it("discovers the allowance from the verified origin even when the public status endpoint is unavailable", async () => {
+    envelope.mockRejectedValueOnce(new Error("status unavailable"))
+
+    await expect(
+      freeggProvider.detect!({ account: account(), observedAt: now }),
+    ).resolves.toMatchObject({ outcome: "matched" })
+    expect(envelope).not.toHaveBeenCalled()
   })
 
-  it("does not probe unrelated deployments or trust branding on another origin", async () => {
-    const unrelated = { ...account(), site_url: "https://other.example" }
+  it.each([
+    "https://other.example",
+    "https://freegg.app.example",
+    "http://freegg.app",
+    "https://freegg.app:8443",
+  ])("does not discover the allowance at %s", async (siteUrl) => {
+    const unrelated = { ...account(), site_url: siteUrl }
     expect(
       await freeggProvider.detect!({ account: unrelated, observedAt: now }),
     ).toMatchObject({ outcome: "unsupported" })
@@ -874,7 +875,6 @@ describe("FreeGG daily allowance", () => {
     { content: "Daily allowance credited: $0", quota: 0, other: "" },
     { user_id: 99 },
     { id: undefined },
-    { created_at: now / 1000 - 3600 },
     { created_at: now / 1000 + 3600 },
   ])(
     "keeps unrelated, undated or malformed evidence uncertain: %j",
@@ -943,10 +943,9 @@ describe("FreeGG daily allowance", () => {
     expect(envelope).toHaveBeenCalledTimes(1)
   })
 
-  it("propagates discovery cancellation without falling back to authenticated access", async () => {
+  it("propagates discovery cancellation without a network request", async () => {
     const controller = new AbortController()
     controller.abort()
-    envelope.mockRejectedValueOnce(controller.signal.reason)
     await expect(
       freeggProvider.detect!({
         account: account(),
@@ -954,8 +953,7 @@ describe("FreeGG daily allowance", () => {
         signal: controller.signal,
       }),
     ).rejects.toBe(controller.signal.reason)
-    expect(envelope.mock.calls[0]?.[0].abortSignal).toBe(controller.signal)
-    expect(envelope).toHaveBeenCalledTimes(1)
+    expect(envelope).not.toHaveBeenCalled()
   })
 
   it("does not replay a lost self response or schedule another mutation", async () => {

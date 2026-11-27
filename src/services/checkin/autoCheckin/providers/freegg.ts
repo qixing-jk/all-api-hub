@@ -16,7 +16,6 @@ import {
 } from "~/services/amounts/financialConstants"
 import {
   fetchFreeggAllowanceLogs,
-  fetchFreeggPublicStatus,
   isFreeggAllowanceRecord,
   isValidFreeggLog,
   readFreeggAllowanceUsd,
@@ -39,7 +38,7 @@ import {
   isCheckInObservationCurrent,
   readDayStableCheckInObservation,
 } from "~/services/checkin/statusObservation"
-import { AuthTypeEnum } from "~/types"
+import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
@@ -48,6 +47,30 @@ import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   resolveProviderErrorResult,
 } from "./shared"
+
+/** Report the current-day ledger status without attributing a new award. */
+function alreadyClaimed(account: SiteAccount) {
+  return withCheckInConfirmation(
+    account,
+    {
+      status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+    },
+    {
+      kind: "observed",
+      status: {
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+        resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+        evidence: {
+          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+          observedAt: Date.now(),
+        },
+      },
+    },
+  )
+}
 
 /**
  * FreeGG v1.0.0-rc.49 has a daily allowance separate from checkin_enabled.
@@ -76,20 +99,10 @@ export const freeggProvider: AutoCheckinProvider = {
         }
   },
   async detect(context) {
+    context.signal?.throwIfAborted()
     const baseUrl = context.account?.site_url ?? context.request?.baseUrl
-    let matched = false
-    if (isFreeggUrl(baseUrl)) {
-      const response = await fetchFreeggPublicStatus({
-        baseUrl: baseUrl!,
-        auth: { authType: AuthTypeEnum.None },
-        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
-        abortSignal: context.signal,
-      })
-      matched =
-        response.success === true && response.data?.system_name === "FreeGG"
-    }
     return {
-      outcome: matched
+      outcome: isFreeggUrl(baseUrl)
         ? CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched
         : CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported,
       evidence: {
@@ -244,27 +257,7 @@ export const freeggProvider: AutoCheckinProvider = {
             FREEGG_ALLOWANCE_RESET_TIME_ZONE,
           ) === day,
       )
-      if (already)
-        return withCheckInConfirmation(
-          account,
-          {
-            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-            messageKey:
-              AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
-          },
-          {
-            kind: "observed",
-            status: {
-              outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-              today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
-              resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-              evidence: {
-                source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-                observedAt: Date.now(),
-              },
-            },
-          },
-        )
+      if (already) return alreadyClaimed(account)
       if (
         context.beforeRecoveredMutation &&
         !(await context.beforeRecoveredMutation())
@@ -361,7 +354,6 @@ export const freeggProvider: AutoCheckinProvider = {
             item.created_at as number,
             FREEGG_ALLOWANCE_RESET_TIME_ZONE,
           ) === day &&
-          (item.created_at as number) >= startedAt! &&
           (item.created_at as number) <= completedAt,
       )
       if (!record) return createUnconfirmedCheckInResult(account)
@@ -374,6 +366,15 @@ export const freeggProvider: AutoCheckinProvider = {
           )
       )
         return createUnconfirmedCheckInResult(account)
+      if ((record.created_at as number) < startedAt) {
+        // The ledger confirms today's grant even when its trigger is ambiguous.
+        return isCheckInObservationCurrent(
+          (record.created_at as number) * 1000,
+          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+        )
+          ? alreadyClaimed(account)
+          : createUnconfirmedCheckInResult(account)
+      }
       const usdAmount = readFreeggAllowanceUsd(record)
       return withCheckInResponseConfirmation(
         account,

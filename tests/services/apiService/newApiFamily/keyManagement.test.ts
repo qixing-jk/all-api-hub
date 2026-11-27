@@ -472,6 +472,19 @@ describe("newApiFamily keyManagement", () => {
     }
   })
 
+  it("reads the FreeGG user group without retrying a request that can grant the daily allowance", async () => {
+    const freeggRequest = { ...request, baseUrl: "https://freegg.app" }
+    mockFetchApiData.mockResolvedValueOnce({ group: "default" })
+
+    await expect(fetchCurrentUserGroup(freeggRequest)).resolves.toBe("default")
+    expect(mockFetchApiData).toHaveBeenCalledExactlyOnceWith(freeggRequest, {
+      endpoint: "/api/user/self",
+      operationSemantics: "mutation",
+      credentialRecovery: undefined,
+      tempWindowFallback: { codes: [], statusCodes: [] },
+    })
+  })
+
   it("createApiToken, fetchTokenById, updateApiToken, and deleteApiToken manage token flows", async () => {
     mockFetchApi
       .mockResolvedValueOnce({ success: true })

@@ -15,7 +15,7 @@ Historical sanitized protocol evidence lives in that checkout's
 
 | Scenario | Expected result | Evidence plan / state |
 | --- | --- | --- |
-| Anonymous discovery / unrelated origin | Only verified FreeGG origin gets the method; no authenticated self request | Existing tests plus live public status |
+| Discovery and origin scope | The exact verified HTTPS origin gets the method without a network request | Provider discovery regression tests |
 | Normal add-account detection | Native identity retained; missing scoped token has usable native UI continuation; save/reopen/refresh succeeds | Actual isolated extension CDP |
 | Missing/expired credentials, identity mismatch | No blind claim or unrelated identity acceptance; actionable result | Focused behavior tests; live available variants |
 | Today's grant / older grant | Read-only status uses deployment UTC+8 day; today's grant skips mutation | Real logs plus tests and extension UI |
@@ -161,3 +161,11 @@ accepts same-second native credit only with a baseline lacking that day's grant;
 this does not relax the provider's stricter attribution rule. The focused suite
 passes 89 tests for these final provider and evidence-helper behaviors.
 
+
+## Discovery and concurrent grants follow-up
+
+Discovery matches the verified HTTPS origin even during a public status outage
+or a site rename. The current-user group lookup applies the same FreeGG self
+request policy as account refresh and token validation. When valid same-day
+ledger readback confirms the allowance but cannot tie it to the dispatched
+request, the result is already claimed with no new award.
