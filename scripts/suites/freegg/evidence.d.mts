@@ -4,6 +4,11 @@ export function currentResultStatus(
   clickedAt: number,
 ): string | undefined
 export function assertPreparationWindow(resetAt: number, now: number): void
+export function findNewAllowance<T>(
+  before: { items: T[]; serverTime: number },
+  after: { items: T[]; serverTime: number },
+  scope: { userId: string; dayStart: number },
+): T | undefined
 export function findAllowance<T>(
   items: T[],
   window: { userId: string; from: number; to: number },

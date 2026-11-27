@@ -4,6 +4,7 @@ import {
   assertPreparationWindow,
   currentResultStatus,
   findAllowance,
+  findNewAllowance,
   planReset,
 } from "~~/scripts/suites/freegg/evidence.mjs"
 
@@ -62,5 +63,28 @@ describe("FreeGG live acceptance evidence", () => {
     expect(
       currentResultStatus({ timestamp: 101, status: "skipped" }, 100),
     ).toBe("skipped")
+  })
+  it("records same-second native credit only when the baseline has no allowance that day", () => {
+    const item = {
+      user_id: 17,
+      type: 1,
+      created_at: 120,
+      other: {
+        content_parts: [
+          { key: "Daily allowance {{quota}}", params: { quota: "$20" } },
+        ],
+      },
+    }
+    const before = { items: [], serverTime: 120000 }
+    const after = { items: [item], serverTime: 120000 }
+    const scope = { userId: "17", dayStart: 100 }
+    expect(findNewAllowance(before, after, scope)).toBe(item)
+    expect(
+      findNewAllowance(
+        { ...before, items: [{ ...item, created_at: 110 }] },
+        after,
+        scope,
+      ),
+    ).toBeUndefined()
   })
 })

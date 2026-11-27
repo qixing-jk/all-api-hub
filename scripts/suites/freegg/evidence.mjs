@@ -58,3 +58,20 @@ export function findAllowance(items, { userId, from, to }) {
     )
   })
 }
+
+/** Native credit evidence is independent of the provider's stricter attribution. */
+export function findNewAllowance(before, after, { userId, dayStart }) {
+  if (
+    findAllowance(before.items, {
+      userId,
+      from: dayStart,
+      to: before.serverTime / 1000,
+    })
+  )
+    return
+  return findAllowance(after.items, {
+    userId,
+    from: Math.max(dayStart, before.serverTime / 1000),
+    to: after.serverTime / 1000,
+  })
+}

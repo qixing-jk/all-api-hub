@@ -15,6 +15,7 @@ import {
   assertPreparationWindow,
   currentResultStatus,
   findAllowance,
+  findNewAllowance,
   planReset,
 } from "./suites/freegg/evidence.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
@@ -327,6 +328,14 @@ async function onboardingAndCheckin() {
               setTimeout(resolve, Math.min(30000, resetAt + 3000 - Date.now())),
             )
           const claimBaseline = await ledger()
+          assert(
+            !findAllowance(claimBaseline.items, {
+              userId: expectedUserId,
+              from: resetAt / 1000,
+              to: claimBaseline.serverTime / 1000,
+            }),
+            "The reset allowance was already consumed before the explicit run",
+          )
           const claimStart = requests.length
           const claimAt = Date.now()
           await checkin.getByTestId("auto-checkin-run-now-button").click()
@@ -367,10 +376,9 @@ async function onboardingAndCheckin() {
             "Verified deployment grants USD 20",
           )
           assert.equal(result.awards?.[0]?.asset?.code, "USD")
-          const matched = findAllowance(claimed.items, {
+          const matched = findNewAllowance(claimBaseline, claimed, {
             userId: expectedUserId,
-            from: claimBaseline.serverTime / 1000 + 1,
-            to: claimed.serverTime / 1000,
+            dayStart: resetAt / 1000,
           })
           assert(
             matched,

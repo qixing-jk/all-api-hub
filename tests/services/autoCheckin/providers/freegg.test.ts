@@ -120,6 +120,41 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("FreeGG daily allowance", () => {
+  it.each([
+    ["2026-11-24T15:59:59Z", "success"],
+    ["2026-11-24T16:00:01Z", "uncertain"],
+  ])(
+    "confirms only the baseline day's grant at %s after readback crosses midnight",
+    async (grantAt, status) => {
+      vi.setSystemTime("2026-11-24T15:59:55Z")
+      envelope
+        .mockResolvedValueOnce(logs([]))
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime("2026-11-24T16:00:02Z")
+          return { success: true, message: "", data: { id: 17 } }
+        })
+        .mockResolvedValueOnce(
+          logs([log({ created_at: Date.parse(grantAt) / 1000 })]),
+        )
+      expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+        status,
+      })
+    },
+  )
+  it("does not dispatch when the projected server clock has reached tomorrow", async () => {
+    vi.setSystemTime("2026-11-24T15:59:55Z")
+    serverClockOffsetMs = 3000
+    transportDelayMs = 3000
+    mockExecution([], [grant()])
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "uncertain",
+    })
+    expect(
+      envelope.mock.calls.some(
+        ([, options]) => options.endpoint === "/api/user/self",
+      ),
+    ).toBe(false)
+  })
   it("does not attribute a grant that arrives while the trigger waits in transport", async () => {
     transportDelayMs = 5000
     mockExecution([], [grant()])

@@ -153,3 +153,11 @@ requests. This is separate from earlier automatic onboarding acceptance: the
 isolated native website session had expired. Its report is retained under
 `test-results/freegg-live/aah-cdp-suites-CzYGq6/`.
 
+The subsequent boundary review extends both dispatch checks to the projected
+server day, including HTTP Date precision and elapsed time. Confirmation requires
+the grant's business day to match the baseline; an old-day grant can still be
+confirmed when its readback arrives after reset. The live oracle independently
+accepts same-second native credit only with a baseline lacking that day's grant;
+this does not relax the provider's stricter attribution rule. The focused suite
+passes 89 tests for these final provider and evidence-helper behaviors.
+

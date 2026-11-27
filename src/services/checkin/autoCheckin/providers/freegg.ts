@@ -271,13 +271,19 @@ export const freeggProvider: AutoCheckinProvider = {
       ) {
         return createUnconfirmedCheckInResult(account)
       }
-      if (
-        getDayKeyFromUnixSeconds(
-          Date.now() / 1000,
-          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-        ) !== day
-      )
-        return createUnconfirmedCheckInResult(account)
+      const dispatchUpperBound = () =>
+        baseline.serverTime === undefined
+          ? Date.now()
+          : baseline.serverTime + 1000 + Date.now() - baselineRequestedAt
+      const baselineDayCurrent = () =>
+        [Date.now(), dispatchUpperBound()].every(
+          (time) =>
+            getDayKeyFromUnixSeconds(
+              time / 1000,
+              FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+            ) === day,
+        )
+      if (!baselineDayCurrent()) return createUnconfirmedCheckInResult(account)
       // HTTP Date and ledger events have second precision. Include the entire
       // baseline request interval and elapsed admission time in the server-clock
       // bound. A record in the ambiguous dispatch second cannot prove new income.
@@ -293,12 +299,7 @@ export const freeggProvider: AutoCheckinProvider = {
           observer: {
             ...context.mutationLifecycle,
             onDispatch() {
-              if (
-                getDayKeyFromUnixSeconds(
-                  Date.now() / 1000,
-                  FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-                ) !== day
-              ) {
+              if (!baselineDayCurrent()) {
                 dispatchAbort.abort(
                   new Error("FreeGG baseline day expired before dispatch"),
                 )
@@ -307,13 +308,7 @@ export const freeggProvider: AutoCheckinProvider = {
               startedAt =
                 baseline.serverTime === undefined
                   ? Math.floor(Date.now() / 1000) + 1
-                  : Math.ceil(
-                      (baseline.serverTime +
-                        1000 +
-                        Date.now() -
-                        baselineRequestedAt) /
-                        1000,
-                    )
+                  : Math.ceil(dispatchUpperBound() / 1000)
               context.mutationLifecycle?.onDispatch()
             },
             onResponse() {
@@ -362,6 +357,10 @@ export const freeggProvider: AutoCheckinProvider = {
         (item) =>
           isFreeggAllowanceRecord(item) &&
           (!triggerResponseLost || String(item.user_id) === expectedIdentity) &&
+          getDayKeyFromUnixSeconds(
+            item.created_at as number,
+            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+          ) === day &&
           (item.created_at as number) >= startedAt! &&
           (item.created_at as number) <= completedAt,
       )
