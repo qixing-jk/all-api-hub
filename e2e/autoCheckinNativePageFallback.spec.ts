@@ -212,7 +212,7 @@ async function createNativeCheckinFixture(
   beforeDirectPostResponse?: () => Promise<void>,
   nativePagePath?: string,
   actualUserId = NATIVE_ACCOUNT_USER_ID,
-  discoverySource: "navigation" | "script" = "navigation",
+  discoverySource: "navigation" | "script" | "partial-script" = "navigation",
 ): Promise<NativeCheckinFixture> {
   const counts = {
     directCheckinPostCount: 0,
@@ -242,9 +242,15 @@ async function createNativeCheckinFixture(
       })
       return
     }
-    if (discoverySource === "script" && url.pathname === "/routes.js") {
+    if (discoverySource !== "navigation" && url.pathname === "/routes.js") {
       response.writeHead(200, { "content-type": "application/javascript" })
-      response.end(`window.fixtureRoutes = [{ path: "${nativePagePath}" }]`)
+      response.end(
+        `window.fixtureRoutes = [{ path: "${nativePagePath}" }];${
+          discoverySource === "partial-script"
+            ? 'window.loadUnavailableChunk = () => import("./unavailable-chunk.js");'
+            : ""
+        }`,
+      )
       return
     }
 
@@ -328,7 +334,7 @@ async function createNativeCheckinFixture(
     ) {
       response.writeHead(200, { "content-type": "text/html" })
       response.end(
-        `<html><body>${discoverySource === "script" ? '<script src="/routes.js"></script>' : `<nav><a href="${nativePagePath}">Daily rewards</a><a href="https://elsewhere.invalid/rewards">External rewards</a></nav>`}<script>localStorage.setItem("user", JSON.stringify({id:"${NATIVE_ACCOUNT_USER_ID}", username:"native-page-user"}))</script></body></html>`,
+        `<html><body>${discoverySource !== "navigation" ? '<script src="/routes.js"></script>' : `<nav><a href="${nativePagePath}">Daily rewards</a><a href="https://elsewhere.invalid/rewards">External rewards</a></nav>`}<script>localStorage.setItem("user", JSON.stringify({id:"${NATIVE_ACCOUNT_USER_ID}", username:"native-page-user"}))</script></body></html>`,
       )
       return
     }
@@ -463,7 +469,11 @@ async function createNativeCheckinFixture(
   }
 }
 
-for (const language of ["en", "zh-CN"] as const) {
+for (const { language, partial } of [
+  { language: "en", partial: false },
+  { language: "zh-CN", partial: false },
+  { language: "en", partial: true },
+] as const) {
   const copy = language === "en" ? accountDialogEn : accountDialogZh
   const views =
     language === "zh-CN"
@@ -472,7 +482,7 @@ for (const language of ["en", "zh-CN"] as const) {
           { id: "dark", width: 380, height: 900, theme: "dark" as const },
         ]
       : undefined
-  const suffix = language === "en" ? "" : "-zh"
+  const suffix = partial ? "-partial" : language === "en" ? "" : "-zh"
   test(`configuration finds a script page read-only, adopts it and preserves it after save and reopen${suffix}`, async ({
     context,
     page,
@@ -484,7 +494,7 @@ for (const language of ["en", "zh-CN"] as const) {
       undefined,
       "/rewards/daily",
       "1",
-      "script",
+      partial ? "partial-script" : "script",
     )
     try {
       const worker = await getServiceWorker(context)
@@ -573,6 +583,10 @@ for (const language of ["en", "zh-CN"] as const) {
       await expect(
         candidates.getByText(copy.form.checkInPageActionable, { exact: true }),
       ).toBeVisible()
+      if (partial)
+        await expect(
+          dialog.getByText(copy.form.findCheckInPagePartial, { exact: true }),
+        ).toBeVisible()
       await expect(path).toHaveValue("")
       expect(fixture.counts.statusCheckCount).toBe(statusReads)
       expect(fixture.counts.nativePageClickCount).toBe(0)
