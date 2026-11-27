@@ -120,6 +120,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "sidrune"
   | "nexavlinks"
   | "xingya"
+  | "hogCoinCapture"
   | "apiKeyCasa"
   | "agentRouter"}`
 
@@ -397,6 +398,26 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     feedbackStatusRoutes: newApiFeedbackStatusRoutes,
     legacy: true,
     newAccountCompatibility: true,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.HogCoinCaptureDailyGame]: {
+    presentation: { sourceNameKey: "methods.sources.hogCoinCapture" },
+    accountLogin: CHECK_IN_ACCOUNT_LOGIN_MODES.Session,
+    discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Specific,
+    id: AUTO_CHECKIN_METHOD_IDS.HogCoinCaptureDailyGame,
+    siteTypes: [SITE_TYPES.NEW_API],
+    origins: ["https://fapi.leileihog.top"],
+    resetTimeZone: "Asia/Shanghai",
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Hog Coin Capture",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [
+      { path: "/api/status", public: true },
+      { path: "/api/coin-capture/status" },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn,

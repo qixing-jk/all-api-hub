@@ -36,6 +36,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   BaiApiDailyCheckIn: "bai-api:daily-checkin",
   ApiKeyCasaDailyCheckIn: "apikey-casa:daily-checkin",
   XingyaDailyCheckIn: "xingya:daily-checkin",
+  HogCoinCaptureDailyGame: "hog:coin-capture-daily-game",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

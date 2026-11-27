@@ -9,6 +9,7 @@ import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/api
 import { baiApiProvider } from "~/services/checkin/autoCheckin/providers/baiApi"
 import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
+import { hogCoinCaptureGameProvider } from "~/services/checkin/autoCheckin/providers/hogCoinCaptureGame"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
@@ -20,6 +21,7 @@ import {
   decodePersistedCheckInMethodId,
   getAutoCheckinCandidateMethodIds,
   getAutoCheckinMethodSource,
+  getCheckInDiscoveryPriority,
   getLegacyAutoCheckinMethodIds,
   getNewAccountCompatibilityMethodIds,
   supportsCheckInStatusReadback,
@@ -55,6 +57,26 @@ const getAnyrouterRegistration = () =>
   registrationFor(AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn)
 
 describe("autoCheckinMethodRegistry", () => {
+  it("registers Hog Coin Capture as an origin-specific New API game", () => {
+    const id = AUTO_CHECKIN_METHOD_IDS.HogCoinCaptureDailyGame
+    expect(
+      getAutoCheckinCandidateMethodIds(
+        SITE_TYPES.NEW_API,
+        "https://fapi.leileihog.top",
+      ),
+    ).toContain(id)
+    expect(registrationFor(id)).toMatchObject({
+      id,
+      origins: ["https://fapi.leileihog.top"],
+      provider: hogCoinCaptureGameProvider,
+    })
+    expect(AUTO_CHECKIN_METHOD_DEFINITIONS[id].resetTimeZone).toBe(
+      "Asia/Shanghai",
+    )
+    expect(getCheckInDiscoveryPriority(id)).toBeGreaterThan(
+      getCheckInDiscoveryPriority(AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn),
+    )
+  })
   it.each([
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
@@ -108,7 +130,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(26)
+    expect(registrationContracts).toHaveLength(27)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -190,6 +212,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "xingya:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.NEW_API],
           provider: xingyaProvider,
+        },
+        {
+          id: "hog:coin-capture-daily-game",
+          candidateSiteTypes: [SITE_TYPES.NEW_API],
+          provider: hogCoinCaptureGameProvider,
         },
       ]),
     )
