@@ -15,7 +15,10 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import type { SiteAccount } from "~/types"
 import type { CheckInMethodId } from "~/types/checkIn"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
-import { formatLocalDayKey } from "~/utils/core/dayKey"
+import {
+  formatLocalDayKey,
+  getDayKeyFromUnixSeconds,
+} from "~/utils/core/dayKey"
 import { server as interception } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -183,6 +186,20 @@ const statusProtocols: HttpCheckInProtocol[] = [
       reward_amount: 0.1,
     }),
   },
+  {
+    name: "Linxi",
+    methodId: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+    statusPath: "/api/v1/check-in/status",
+    status: (checked) => ({
+      enabled: true,
+      checked_in_today: checked,
+      check_in_date: getDayKeyFromUnixSeconds(
+        Date.now() / 1000,
+        "Asia/Shanghai",
+      ),
+      turnstile_required: false,
+    }),
+  },
 ]
 
 type Scenario =
@@ -269,23 +286,31 @@ async function withHttpSite<T>(
     const localOrigin = `http://127.0.0.1:${addr.port}`
     const splitOrigin =
       protocol.methodId === AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn
-    const origin = splitOrigin ? "https://ai-router.dev" : localOrigin
+    const linxiOrigin =
+      protocol.methodId === AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn
+        ? "https://sub.100xlabs.space"
+        : undefined
+    const origin = splitOrigin
+      ? "https://ai-router.dev"
+      : (linxiOrigin ?? localOrigin)
     interception.use(http.all(`${localOrigin}/*`, () => passthrough()))
-    // This adapter is registered only on its console origin. Route both test hosts to loopback.
-    if (splitOrigin) {
-      for (const host of [origin, "https://api.ai-router.dev"]) {
-        interception.use(
-          http.all(`${host}/*`, async ({ request }) => {
-            const url = new URL(request.url)
-            return fetch(localOrigin + url.pathname + url.search, {
-              method: request.method,
-              headers: request.headers,
-              body:
-                request.method === "POST" ? await request.text() : undefined,
-            })
-          }),
-        )
-      }
+    // Route constrained-provider and split-origin requests to loopback.
+    const routedHosts = splitOrigin
+      ? [origin, "https://api.ai-router.dev"]
+      : linxiOrigin
+        ? [linxiOrigin]
+        : []
+    for (const host of routedHosts) {
+      interception.use(
+        http.all(`${host}/*`, async ({ request }) => {
+          const url = new URL(request.url)
+          return fetch(localOrigin + url.pathname + url.search, {
+            method: request.method,
+            headers: request.headers,
+            body: request.method === "POST" ? await request.text() : undefined,
+          })
+        }),
+      )
     }
     const { methodId } = protocol
     const account = buildSiteAccount({

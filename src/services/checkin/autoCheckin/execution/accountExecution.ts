@@ -249,9 +249,13 @@ export async function executeAccountCheckin(
           )) !== null
       } else {
         // A dated grant may precede its observation. Preserve its actual reset day.
+        const resetTimeZone =
+          confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Response
+            ? confirmation.resetTimeZone
+            : undefined
         const observedAt = isCheckInObservationCurrent(
           completedAt,
-          getCheckInResetTimeZone(execution.methodId),
+          getCheckInResetTimeZone(execution.methodId, resetTimeZone),
           result.timestamp,
         )
           ? result.timestamp
@@ -259,7 +263,11 @@ export async function executeAccountCheckin(
         persisted = await accountCheckInState.markAccountAsSiteCheckedIn(
           account.id,
           observedAt,
-          { account, methodId: execution.methodId },
+          {
+            account,
+            methodId: execution.methodId,
+            ...(resetTimeZone ? { resetTimeZone } : {}),
+          },
         )
       }
       result.accountStateDurability =

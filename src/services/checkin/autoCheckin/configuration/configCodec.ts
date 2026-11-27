@@ -21,6 +21,7 @@ import {
 import {
   decodePersistedCheckInMethodId,
   isCheckInMethodId,
+  reportsCheckInResetTimeZone,
 } from "~/services/checkin/autoCheckin/providers/registry"
 import type {
   CheckInConfig,
@@ -242,7 +243,10 @@ const normalizeDetection = (
   }
 }
 
-const normalizeStatus = (value: unknown): CheckInMethodStatus | undefined => {
+const normalizeStatus = (
+  value: unknown,
+  reportsResetTimeZone: boolean,
+): CheckInMethodStatus | undefined => {
   if (!isRecord(value)) return undefined
   if (value.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown) {
     const attemptedAt = coerceTimestamp(value.attemptedAt)
@@ -251,7 +255,7 @@ const normalizeStatus = (value: unknown): CheckInMethodStatus | undefined => {
     const lastKnown =
       isRecord(value.lastKnown) &&
       value.lastKnown.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-        ? normalizeStatus(value.lastKnown)
+        ? normalizeStatus(value.lastKnown, reportsResetTimeZone)
         : undefined
     return {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
@@ -282,6 +286,9 @@ const normalizeStatus = (value: unknown): CheckInMethodStatus | undefined => {
   if (!availability && !today) return undefined
   const requiresManualVerification =
     value.requiresManualVerification === true ? true : undefined
+  const resetTimeZone = reportsResetTimeZone
+    ? normalizeResetTimeZone(value.resetTimeZone)
+    : undefined
 
   let evidence: Extract<
     CheckInMethodStatus,
@@ -314,7 +321,19 @@ const normalizeStatus = (value: unknown): CheckInMethodStatus | undefined => {
     ...(availability ? { availability } : {}),
     ...(today ? { today } : {}),
     ...(requiresManualVerification ? { requiresManualVerification } : {}),
+    ...(resetTimeZone ? { resetTimeZone } : {}),
     evidence,
+  }
+}
+
+/** Discard imported timezone values that cannot be used to compare reset days. */
+function normalizeResetTimeZone(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value) return undefined
+  try {
+    return new Intl.DateTimeFormat("en", { timeZone: value }).resolvedOptions()
+      .timeZone
+  } catch {
+    return undefined
   }
 }
 
@@ -399,7 +418,10 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     }
     const detection = normalizeDetection(rawKnowledge.detection)
     if (!detection) continue
-    const status = normalizeStatus(rawKnowledge.status)
+    const status = normalizeStatus(
+      rawKnowledge.status,
+      reportsCheckInResetTimeZone(methodId),
+    )
     methods[methodId] = {
       detection,
       ...(status ? { status } : {}),

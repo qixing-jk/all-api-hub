@@ -108,7 +108,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(27)
+    expect(registrationContracts).toHaveLength(28)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -438,6 +438,32 @@ describe("autoCheckinMethodRegistry", () => {
     ]) {
       expect(candidatesFor(siteUrl)).not.toContain(
         AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn,
+      )
+    }
+  })
+
+  it("gates the Linxi-family method to TLS-verified deployments", () => {
+    const candidatesFor = (siteUrl: string) =>
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.SUB2API, siteUrl)
+        .map(({ id }) => id)
+
+    for (const siteUrl of [
+      "https://sub.100xlabs.space",
+      "https://k40.shengqainbang.cn/home",
+    ]) {
+      expect(candidatesFor(siteUrl)).toContain(
+        AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+      )
+    }
+
+    for (const siteUrl of [
+      "http://k40.linxigzs.top:8080",
+      "https://k40.linxigzs.top:8080",
+      "https://other-sub2api.example",
+    ]) {
+      expect(candidatesFor(siteUrl)).not.toContain(
+        AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
       )
     }
   })
