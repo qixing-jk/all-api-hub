@@ -19,10 +19,16 @@ Identity-only real-site checks must wait for detection to settle and use the com
 
 The financial test replaced the fixture-adjusted deadline with a fixed 60-second deadline. Keep the fixture's startup allowance and add only the optional visual-capture budget, preserving unlimited runs.
 
-Compatibility sharding now consumes the existing duration planner and one profile frozen by the build. Keep the same three shards, two scheduled workers, separate performance phase, flaky-test gate and timeout limits. All 981 collected cases form an exact partition. The downloaded timing profile estimates the old groups at 4193/5090/3217 seconds and the new groups at 4143/4179/4178 seconds; these are historical workload weights, not predicted wall-clock durations or proof of remote success.
+Compatibility sharding now consumes the existing duration planner and one profile frozen by the build. Keep the same three shards, two scheduled workers, separate performance phase, flaky-test gate and timeout limits. The initial 981 collected cases formed an exact partition. The downloaded timing profile estimates the old groups at 4193/5090/3217 seconds and the new groups at 4143/4179/4178 seconds; these are historical workload weights, not predicted wall-clock durations or proof of remote success.
+
+The [first repaired compatibility run](https://github.com/qixing-jk/all-api-hub/actions/runs/45992259305) on `94d9be5c96` exposed additional first-attempt failures. Its HTML step records show Sub2API screenshots consuming 137–172 seconds; the later failing assertion was not the time-consuming operation. Return to the extension surface before interacting or capturing it, including after popup recovery. In the OAuth case, also leave the website tab before opening the add form so active-tab URL prefill does not race the explicit URL fill. Keep all session, credential, identity-mismatch and screenshot assertions.
+
+The same run's financial failure spent approximately 60 seconds inside a single `setViewportSize` call. Separate the existing detail/reload, filtered subtotals at each width, and sharing scenarios, sharing their original seeded facts. Each responsive case starts with its viewport instead of resizing the same headless window. Preserve all assertions and the existing per-test budget.
+
+Chrome 114 locally also reproduced a worker teardown error after all three Sub2API login-recovery cases passed. The test closed every context page before the fixture closed the context. Close auxiliary pages while leaving the fixture-owned primary page for fixture teardown; do not change shared teardown or suppress its errors.
 
 ## Review and retained evidence
 
 The [local acceptance report](artifacts/acceptance.md) records commands, actual results, and remaining limits. Logs, original failures, diagnostic probes, downloaded browsers, timing profiles and real-site artifacts remain local under `artifacts/` for review. They are excluded from Git and must be reviewed/redacted before any publication.
 
-Remote confirmation on the final commit remains outstanding. A broader local Chrome 114 run had two context-teardown timeouts; both cases passed individual reruns. The passing reruns do not establish the cause of those teardown failures. No speculative shared teardown change was made.
+The acceptance report records the current remote results and final partition check. A broader initial local Chrome 114 token-recovery run had two context-teardown timeouts; both cases passed individual reruns. Those reruns do not establish the cause, and the separate Sub2API teardown repair is not evidence that token-recovery teardown is fixed. No speculative shared teardown change was made.

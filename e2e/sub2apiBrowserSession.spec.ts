@@ -44,6 +44,9 @@ test("Sub2API website OAuth session detects, saves and refreshes without a passw
     await site.goto(origin)
     await site.getByRole("button", { name: "Continue with OAuth" }).click()
     await expect(site.locator("#status")).toHaveText("Signed in 17")
+    // Return from the website to the extension before filling or capturing it.
+    // Keeping the website active also lets its URL prefill race our manual fill.
+    await page.bringToFront()
     const saved = await saveAutoDetectedAccountFromApp({
       page,
       extensionId,
@@ -59,10 +62,11 @@ test("Sub2API website OAuth session detects, saves and refreshes without a passw
           { name: "Browser session" },
         )
         await expect(browserSession).toBeChecked()
-        await createUiCapture({ page: page, directory: testInfo.outputDir })(
-          "detected-website-session.png",
-          dialog.dialog,
-        )
+        await createUiCapture({
+          page,
+          directory: testInfo.outputDir,
+          bringToFront: true,
+        })("detected-website-session.png", dialog.dialog)
         await browserSession.press("ArrowDown")
         await expect(
           dialog.sub2apiIndependentSessionOption.getByRole("radio"),
@@ -80,10 +84,11 @@ test("Sub2API website OAuth session detects, saves and refreshes without a passw
         await manual.evaluate((button) =>
           button.scrollIntoView({ block: "center" }),
         )
-        await createUiCapture({ page: page, directory: testInfo.outputDir })(
-          "manual-panel-proof.png",
-          dialog.dialog,
-        )
+        await createUiCapture({
+          page,
+          directory: testInfo.outputDir,
+          bringToFront: true,
+        })("manual-panel-proof.png", dialog.dialog)
         await dialog.sub2apiBrowserSessionOption.click()
       },
     })
@@ -110,6 +115,7 @@ test("Sub2API website OAuth session detects, saves and refreshes without a passw
       getAccountManagementListItemTestId(saved.accountId!),
     )
     const refresh = async () => {
+      await page.bringToFront()
       await row.hover()
       await row.getByTestId(ids.rowMoreActionsButton).click()
       await page.getByTestId(ids.rowRefreshMenuItem).click()
@@ -129,10 +135,11 @@ test("Sub2API website OAuth session detects, saves and refreshes without a passw
       "false",
     )
     await setup.evaluate((button) => button.scrollIntoView({ block: "center" }))
-    await createUiCapture({ page: page, directory: testInfo.outputDir })(
-      "setup-desktop.png",
-      edit,
-    )
+    await createUiCapture({
+      page,
+      directory: testInfo.outputDir,
+      bringToFront: true,
+    })("setup-desktop.png", edit)
     await edit.getByRole("button", { name: "Cancel", exact: true }).click()
     state.balance = 18
     await refresh()
