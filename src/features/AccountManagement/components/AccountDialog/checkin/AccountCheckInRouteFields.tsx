@@ -104,7 +104,7 @@ export function AccountCheckInRouteFields({
     methods.length > 1 ||
     Boolean(
       checkIn.selection.methodId &&
-      !methods.includes(checkIn.selection.methodId),
+      !methods.some((methodId) => methodId === checkIn.selection.methodId),
     )
   return (
     <div className="space-y-density-2">

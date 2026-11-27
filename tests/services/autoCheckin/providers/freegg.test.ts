@@ -203,7 +203,11 @@ describe("FreeGG daily allowance", () => {
   it("does not accept a rejected self envelope as identity evidence", async () => {
     envelope
       .mockResolvedValueOnce(logs([]))
-      .mockResolvedValueOnce({ success: false, message: "denied" })
+      .mockResolvedValueOnce({
+        success: false,
+        message: "denied",
+        data: undefined,
+      })
     expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
       status: "uncertain",
     })
