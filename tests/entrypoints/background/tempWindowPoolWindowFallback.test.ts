@@ -4352,6 +4352,64 @@ describe("tempWindowPool window fallback", () => {
     expect(createTabMock).toHaveBeenCalledTimes(1)
   })
 
+  it("rechecks an interactive lease against its current page before navigating elsewhere", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValue({ id: 619 })
+    const pageUrl = "https://example.com/checkin"
+    tabsGetMock.mockResolvedValue({ url: pageUrl, status: "loading" })
+    let guardNeedsRecheck = false
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentCheckCloudflareGuard: {
+            const passed = !guardNeedsRecheck
+            guardNeedsRecheck = false
+            return { success: true, passed }
+          }
+          case RuntimeActionIds.ContentGetDocumentState:
+            return { url: pageUrl, readyState: "interactive", timeOrigin: 1 }
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { tempWindowBackgroundRuntime } =
+      await import("~/services/browsingContext/tempPage/runtime")
+    const options = { allowInteractive: true }
+    const first = tempWindowBackgroundRuntime.acquire(
+      pageUrl,
+      "first-interactive-lease",
+      false,
+      options,
+    )
+    await vi.advanceTimersByTimeAsync(21_000)
+    const initial = await first
+    await initial.release()
+
+    guardNeedsRecheck = true
+    const second = tempWindowBackgroundRuntime.acquire(
+      "https://example.com/other",
+      "second-interactive-lease",
+      false,
+      options,
+    )
+    await vi.advanceTimersByTimeAsync(21_000)
+    const reused = await second
+    try {
+      expect(reused.tabId).toBe(initial.tabId)
+      expect(createTabMock).toHaveBeenCalledOnce()
+      expect(removeTabMock).not.toHaveBeenCalled()
+    } finally {
+      await reused.release({ forceClose: true })
+    }
+  })
+
   it("re-authorizes queued same-origin work before reusing a pooled context", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 609 })

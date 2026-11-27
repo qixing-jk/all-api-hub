@@ -330,6 +330,9 @@ async function acquireTempContext(
             requestId,
             origin,
             signal: options.signal,
+            interactiveUrl: options.allowInteractive
+              ? acquiredContext.currentUrl
+              : undefined,
           }))
         ) {
           // No operation has been dispatched to this tab. Retire the dead receiver

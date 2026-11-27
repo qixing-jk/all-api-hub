@@ -616,6 +616,7 @@ test("clearing a check-in path saves automatic selection without storing the dep
     name: "Check-in page path (optional)",
   })
   const openCheckInSettings = async () => {
+    await row.hover()
     await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
     await chooseAccountSection(
       page,

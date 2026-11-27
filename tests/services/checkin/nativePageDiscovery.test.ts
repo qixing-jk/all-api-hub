@@ -278,6 +278,79 @@ describe("native check-in page fallback", () => {
     ).toBeNull()
     expect(navigate).not.toHaveBeenCalled()
   })
+
+  it("checks a bounded subset of a larger candidate set for manual review", async () => {
+    const start = "https://site.test/profile"
+    let current = start
+    const navigate = vi.fn(async (url: string) => {
+      current = url
+    })
+    const result = await exploreNativeCheckInPages({
+      pageUrl: start,
+      navigate,
+      inspect: async () => ({
+        success: true,
+        pageUrl: current,
+        hasTarget: current.endsWith("/daily"),
+        candidates:
+          current === start ? ["/daily", "/one", "/two", "/three"] : [],
+      }),
+    })
+    expect(result.complete).toBe(false)
+    expect(result.candidates).toEqual([
+      { path: "/daily", sources: ["navigation", "area"], state: "actionable" },
+      { path: "/one", sources: ["navigation"], state: "unverified" },
+      { path: "/two", sources: ["navigation"], state: "unverified" },
+      { path: "/three", sources: ["navigation"], state: "unverified" },
+    ])
+    expect(navigate.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
+      "/daily",
+      "/one",
+      "/two",
+      "/profile",
+    ])
+  })
+
+  it.each(["failed response", "disconnected"] as const)(
+    "can still verify candidates when the starting-page recheck has a %s",
+    async (failure) => {
+      const start = "https://site.test/profile"
+      let current = start
+      const empty = { success: true, hasTarget: false, candidates: [] }
+      const inspect = vi.fn(async () => ({
+        ...empty,
+        pageUrl: current,
+        hasTarget: current.endsWith("/daily"),
+      }))
+      inspect.mockResolvedValueOnce({ ...empty, pageUrl: start })
+      if (failure === "disconnected") {
+        inspect.mockRejectedValueOnce(new Error("Page receiver disconnected"))
+      } else {
+        inspect.mockResolvedValueOnce({
+          ...empty,
+          pageUrl: start,
+          success: false,
+        })
+      }
+      const result = await exploreNativeCheckInPages({
+        pageUrl: start,
+        navigate: async (url) => {
+          current = url
+        },
+        inspect,
+        scan: async () => ({
+          complete: true,
+          candidates: [{ path: "/daily", sources: ["script"] }],
+        }),
+      })
+      expect(result).toEqual({
+        complete: false,
+        candidates: [
+          { path: "/daily", sources: ["script", "area"], state: "actionable" },
+        ],
+      })
+    },
+  )
   it("retains the existing page when its inspection is unavailable", async () => {
     const navigate = vi.fn()
     const inspect = vi

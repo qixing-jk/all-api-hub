@@ -313,7 +313,12 @@ export async function getTempContextTabSnapshot(
 /** Probe only read-only handlers before reusing a tab; an open tab can have a dead content receiver. */
 export async function isTempContextContentReady(
   tabId: number,
-  meta: { requestId: string; origin: string; signal?: AbortSignal },
+  meta: {
+    requestId: string
+    origin: string
+    signal?: AbortSignal
+    interactiveUrl?: string
+  },
 ): Promise<boolean> {
   try {
     const guards = await startAbortableTask(
@@ -327,7 +332,14 @@ export async function isTempContextContentReady(
       !guards.aliyun?.success
     )
       return false
-    if (!guards.passed) await waitForTabComplete(tabId, meta)
+    if (!guards.passed) {
+      await (meta.interactiveUrl
+        ? waitForTabDocumentReady(tabId, meta.interactiveUrl, {
+            ...meta,
+            allowLoadedRedirect: true,
+          })
+        : waitForTabComplete(tabId, meta))
+    }
     return true
   } catch {
     meta.signal?.throwIfAborted()
