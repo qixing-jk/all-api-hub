@@ -386,8 +386,12 @@ export function waitForTabDocumentReady(
   })
 }
 
-/** Check the actual top-level document before skipping the full load event. */
-async function readInteractiveDocumentTime(tabId: number, url: string) {
+/** Reads the top-level document's identity in the expected readiness state. */
+async function readDocumentTime(
+  tabId: number,
+  url: string,
+  readyState: "complete" | "interactive",
+) {
   try {
     const response = await sendTabMessageWithRetry<{
       url: string
@@ -400,7 +404,7 @@ async function readInteractiveDocumentTime(tabId: number, url: string) {
     )
     if (
       response?.url === url &&
-      response.readyState === "interactive" &&
+      response.readyState === readyState &&
       Number.isFinite(response.timeOrigin)
     )
       return response.timeOrigin
@@ -498,20 +502,37 @@ function waitForProtectedTab(
               (document.allowLoadedRedirect ||
                 (current?.origin === document.target.origin &&
                   current.pathname === document.target.pathname))))
-        const canProbe =
+        const canProbeInteractive =
           document &&
           tab.status === "loading" &&
           !tab.pendingUrl &&
           current?.href === document.target.href &&
           (Date.now() >= fallbackAt || cached?.url === current.href)
-        const documentTime = canProbe
-          ? await readInteractiveDocumentTime(tabId, current.href)
-          : undefined
-        const interactive =
-          documentTime !== undefined &&
-          (Date.now() >= fallbackAt || cached?.timeOrigin === documentTime)
+        const readyState =
+          loaded && current
+            ? "complete"
+            : canProbeInteractive
+              ? "interactive"
+              : undefined
+        const documentTime =
+          current && readyState
+            ? await readDocumentTime(tabId, current.href, readyState)
+            : undefined
         if (settled) return
-        if (loaded || interactive) {
+        const observedDocument =
+          current &&
+          readyState &&
+          documentTime !== undefined &&
+          (readyState === "complete" ||
+            Date.now() >= fallbackAt ||
+            cached?.timeOrigin === documentTime)
+            ? ({
+                url: current.href,
+                readyState,
+                timeOrigin: documentTime,
+              } as const)
+            : undefined
+        if ((loaded && !document) || observedDocument) {
           let capPassed = false
           let cloudflarePassed = false
           let aliyunPassed = false
@@ -555,22 +576,29 @@ function waitForProtectedTab(
             })
           }
           if (passed) {
-            if (interactive && current) {
+            if (observedDocument) {
               retry = setTimeout(async () => {
                 try {
                   const latest: browser.tabs.Tab & { pendingUrl?: string } =
                     await getTab(tabId)
                   if (
-                    latest.url === current.href &&
+                    latest.url === observedDocument.url &&
+                    latest.status === tab.status &&
                     !latest.pendingUrl &&
-                    (await readInteractiveDocumentTime(tabId, current.href)) ===
-                      documentTime
+                    (await readDocumentTime(
+                      tabId,
+                      observedDocument.url,
+                      observedDocument.readyState,
+                    )) === observedDocument.timeOrigin
                   ) {
                     if (settled) return
-                    if (documentKey)
+                    if (
+                      observedDocument.readyState === "interactive" &&
+                      documentKey
+                    )
                       admittedDocuments.remember(documentKey, {
-                        url: current.href,
-                        timeOrigin: documentTime,
+                        url: observedDocument.url,
+                        timeOrigin: observedDocument.timeOrigin,
                       })
                     finish()
                     return

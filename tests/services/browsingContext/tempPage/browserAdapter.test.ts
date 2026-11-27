@@ -89,38 +89,41 @@ describe("browserAdapter", () => {
     ).resolves.toBe(true)
   })
 
-  it("reuses an interactive tab after a guard recovers while a resource stays pending", async () => {
-    vi.useFakeTimers()
-    const origin = "https://gateway.example"
-    const url = `${origin}/checkin`
-    vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
-      url,
-      status: "loading",
-    } as Awaited<ReturnType<typeof browserApi_tabs.getTab>>)
-    vi.spyOn(
-      browserApi_runtimeMessages,
-      "sendTabMessageWithRetry",
-    ).mockResolvedValue({ url, readyState: "interactive", timeOrigin: 5 })
-    vi.mocked(checkTempContextProtectionGuards).mockResolvedValueOnce({
-      passed: false,
-      verificationRequired: true,
-      capPassed: true,
-      cloudflarePassed: false,
-      aliyunPassed: true,
-      cap: { success: true, passed: true },
-      cloudflare: { success: true, passed: false },
-      aliyun: { success: true, passed: true },
-    })
+  it.each([true, false])(
+    "requires the selected readiness when retrying a guard on a reused tab (interactive %s)",
+    async (allowInteractive) => {
+      vi.useFakeTimers()
+      const origin = "https://gateway.example"
+      const url = `${origin}/checkin`
+      vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
+        url,
+        status: "loading",
+      } as Awaited<ReturnType<typeof browserApi_tabs.getTab>>)
+      vi.spyOn(
+        browserApi_runtimeMessages,
+        "sendTabMessageWithRetry",
+      ).mockResolvedValue({ url, readyState: "interactive", timeOrigin: 5 })
+      vi.mocked(checkTempContextProtectionGuards).mockResolvedValueOnce({
+        passed: false,
+        verificationRequired: true,
+        capPassed: true,
+        cloudflarePassed: false,
+        aliyunPassed: true,
+        cap: { success: true, passed: true },
+        cloudflare: { success: true, passed: false },
+        aliyun: { success: true, passed: true },
+      })
 
-    const ready = isTempContextContentReady(1, {
-      requestId: "reused-interactive",
-      origin,
-      interactiveUrl: url,
-    })
+      const ready = isTempContextContentReady(1, {
+        requestId: `reused-interactive-${allowInteractive}`,
+        origin,
+        interactiveUrl: allowInteractive ? url : undefined,
+      })
 
-    await vi.advanceTimersByTimeAsync(21_000)
-    await expect(ready).resolves.toBe(true)
-  })
+      await vi.advanceTimersByTimeAsync(21_000)
+      await expect(ready).resolves.toBe(allowInteractive)
+    },
+  )
 
   describe("waitForTabDocumentReady", () => {
     const url = "https://gateway.example/checkin"
@@ -139,6 +142,10 @@ describe("browserAdapter", () => {
 
     it("waits for the destination after a complete tab reports a pending navigation", async () => {
       vi.useFakeTimers()
+      vi.spyOn(
+        browserApi_runtimeMessages,
+        "sendTabMessageWithRetry",
+      ).mockResolvedValue({ url, readyState: "complete", timeOrigin: 1 })
       const getTab = vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
         ...loading,
         url: "https://gateway.example/old",
@@ -157,6 +164,50 @@ describe("browserAdapter", () => {
       await waiting
       expect(ready).toHaveBeenCalledOnce()
     })
+
+    it.each([
+      "reload",
+      "pending navigation",
+      "loading state",
+      "URL change",
+    ] as const)(
+      "rechecks a loaded document after a %s during stabilization",
+      async (change) => {
+        vi.useFakeTimers()
+        const complete = {
+          ...loading,
+          status: "complete",
+        } as const
+        const getTab = vi
+          .spyOn(browserApi_tabs, "getTab")
+          .mockResolvedValue(complete)
+        const state = { url, readyState: "complete", timeOrigin: 1 }
+        const send = vi
+          .spyOn(browserApi_runtimeMessages, "sendTabMessageWithRetry")
+          .mockResolvedValue(state)
+        const ready = vi.fn()
+        const waiting = waitForTabDocumentReady(1, url).then(ready)
+        await vi.advanceTimersByTimeAsync(250)
+        if (change === "pending navigation") {
+          getTab.mockResolvedValue({
+            ...complete,
+            pendingUrl: url,
+          } as typeof complete)
+        } else if (change === "loading state") {
+          getTab.mockResolvedValue(loading)
+        } else if (change === "URL change") {
+          getTab.mockResolvedValue({ ...complete, url: `${url}/next` })
+        } else {
+          send.mockResolvedValue({ ...state, timeOrigin: 2 })
+        }
+        await vi.advanceTimersByTimeAsync(250)
+        expect(ready).not.toHaveBeenCalled()
+        getTab.mockResolvedValue(complete)
+        await vi.advanceTimersByTimeAsync(600)
+        await waiting
+        expect(ready).toHaveBeenCalledOnce()
+      },
+    )
 
     it("waits through failed or stale probes and confirms the same document twice", async () => {
       vi.useFakeTimers()

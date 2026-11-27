@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest"
 
 import {
   OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
@@ -21,6 +29,8 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+import { createTempPageTabFixture } from "./tempPageTabFixture"
 
 vi.mock("~/services/browsingContext/tempPage/checkinFeedbackScan", () => ({
   executeTempCheckinFeedbackScan: vi.fn(),
@@ -109,10 +119,10 @@ describe("tempWindowPool window fallback", () => {
   let isProtectionBypassFirefoxEnvMock: ReturnType<typeof vi.fn>
   let getSiteTypeMock: ReturnType<typeof vi.fn>
   let getPreferencesMock: ReturnType<typeof vi.fn>
-  let sendMessageMock: ReturnType<typeof vi.fn>
-  let tabsGetMock: ReturnType<typeof vi.fn>
+  let sendMessageMock: Mock
+  let tabsGetMock: Mock
   let tabsQueryMock: ReturnType<typeof vi.fn>
-  let tabsUpdateMock: ReturnType<typeof vi.fn>
+  let tabsUpdateMock: Mock
   let isMobileRuntime: boolean
   let isTabletRuntime: boolean
   let tempContextMode: "auto" | "window" | "composite" | "tab"
@@ -233,10 +243,12 @@ describe("tempWindowPool window fallback", () => {
         },
       },
       tabs: {
-        get: tabsGetMock,
+        ...createTempPageTabFixture(
+          tabsGetMock,
+          tabsUpdateMock,
+          sendMessageMock,
+        ),
         query: tabsQueryMock,
-        update: tabsUpdateMock,
-        sendMessage: sendMessageMock,
       },
       windows: {
         get: vi.fn(),
