@@ -21,9 +21,10 @@ import {
   mergeCheckInRouteOverrides,
   mergeDiscoveredCheckInDraft,
   mergeRefreshedCheckInStatus,
+  replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
 import type { SiteAccount } from "~/types"
-import type { CheckInMethodId } from "~/types/checkIn"
+import type { CheckInMethodId, CheckInMethodStatus } from "~/types/checkIn"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 
@@ -267,7 +268,12 @@ class AccountCheckInState {
 
   async prepareAccountForSelectedCheckIn(
     id: string,
-    refreshedConfig?: SiteAccount["checkIn"],
+    refreshed?:
+      | SiteAccount["checkIn"]
+      | {
+          methodId: CheckInMethodId
+          status: CheckInMethodStatus
+        },
     requestSnapshot?: SiteAccount,
   ): Promise<SiteAccount | null> {
     try {
@@ -280,9 +286,25 @@ class AccountCheckInState {
           ) {
             return { nextAccount: account, result: null, changed: false }
           }
+          const config = account.checkIn
+          let refreshedConfig: SiteAccount["checkIn"] | undefined
+          if (refreshed && "methodId" in refreshed) {
+            // An imported method may gain its first detection during this run.
+            if (
+              account.disabled ||
+              !config.methodKnowledge.methods[refreshed.methodId]
+            )
+              return { nextAccount: account, result: null, changed: false }
+            refreshedConfig = replaceCheckInMethodStatus({
+              config,
+              ...refreshed,
+            })
+          } else {
+            refreshedConfig = refreshed
+          }
           const checkIn = refreshedConfig
             ? mergeRefreshedCheckInStatus({
-                latest: account.checkIn,
+                latest: config,
                 refreshed: refreshedConfig,
               })
             : account.checkIn
@@ -312,17 +334,23 @@ class AccountCheckInState {
   async markAccountAsSiteCheckedIn(
     id: string,
     observedAt?: number,
+    execution?: { account: SiteAccount; methodId: CheckInMethodId },
   ): Promise<boolean> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
-        if (account.disabled) {
+        if (
+          account.disabled ||
+          (execution &&
+            !hasSameAccountRequestIdentity(account, execution.account))
+        ) {
           return { nextAccount: account, result: false, changed: false }
         }
-        const selectedMethodId = account.checkIn.selection.methodId
-        const nextCheckIn = isCheckInMethodId(selectedMethodId)
+        const methodId =
+          execution?.methodId ?? account.checkIn.selection.methodId
+        const nextCheckIn = isCheckInMethodId(methodId)
           ? markCheckInMethodExecuted({
               config: account.checkIn,
-              methodId: selectedMethodId,
+              methodId,
               observedAt: observedAt ?? Date.now(),
             })
           : account.checkIn

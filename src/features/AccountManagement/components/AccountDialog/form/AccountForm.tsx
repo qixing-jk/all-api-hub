@@ -1,84 +1,34 @@
-import {
-  ArrowLeftRight,
-  BadgeCheck,
-  Building2,
-  CalendarDays,
-  Cookie,
-  DollarSign,
-  Download,
-  Hash,
-  KeyRound,
-} from "lucide-react"
-import {
-  useEffect,
-  useId,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type Ref,
-} from "react"
+import { KeyRound } from "lucide-react"
+import { useRef, type ReactNode, type Ref } from "react"
 import { useTranslation } from "react-i18next"
 
-import {
-  AccountSiteTypeIcon,
-  AccountUserIcon,
-  HelpHintIcon,
-} from "~/components/icons/productIcons"
-import Tooltip from "~/components/Tooltip"
-import {
-  Alert,
-  Button,
-  FormField,
-  IconButton,
-  Input,
-  Notice,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-  Textarea,
-} from "~/components/ui"
-import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
+import { Alert, Button, FormField, Input, Notice } from "~/components/ui"
+import { SITE_TYPES } from "~/constants/siteType"
 import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInSection"
-import { AccountCookieVerification } from "~/features/AccountManagement/components/AccountDialog/form/AccountCookieVerification"
 import { AccountFormLayout } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormLayout"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
 import {
   ACCOUNT_FORM_MOBILE_DEFAULT_OPEN,
   ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+  ACCOUNT_FORM_SECTIONS,
+  type AccountFormFeedbackStage,
   type AccountFormSectionId,
 } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
-import { CookieAuthCompatibilityHint } from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthCompatibilityHint"
-import {
-  CookieAuthPermissionRecommendation,
-  type CookieAuthPermissionRecommendationProps,
-} from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthPermissionRecommendation"
+import type { CookieAuthPermissionRecommendationProps } from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthPermissionRecommendation"
 import { NanoGptCredentialGuide } from "~/features/AccountManagement/components/AccountDialog/form/NanoGptCredentialGuide"
 import {
   NovitaCredentialGuide,
   type NovitaCredentialActions,
 } from "~/features/AccountManagement/components/AccountDialog/form/NovitaCredentialGuide"
 import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
-import { VercelTeamSelector } from "~/features/AccountManagement/components/AccountDialog/form/VercelTeamSelector"
-import {
-  ACCOUNT_LOGIN_SECTION_ID,
-  AccountLoginSection,
-} from "~/features/AccountManagement/components/AccountDialog/login/AccountLoginSection"
+import { AccountLoginSection } from "~/features/AccountManagement/components/AccountDialog/login/AccountLoginSection"
 import {
   AUTO_CREATE_ACCESS_TOKEN_STATUSES,
   type AccountCheckInRedetectionFeedback,
   type AccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
-import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { AccountCredentialRecoveryGuidance } from "~/features/AccountManagement/credentialRecovery/AccountCredentialRecoveryGuidance"
-import {
-  ACCOUNT_MANAGEMENT_TEST_IDS,
-  getAccountManagementSiteTypeOptionTestId,
-} from "~/features/AccountManagement/testIds"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
   supportsAccountCookieRecovery,
   supportsAccountCredentialRecovery,
@@ -86,26 +36,36 @@ import {
 import { getAccountLoginMethods } from "~/services/accountLogin/capabilities"
 import { isAccountLoginConfigured } from "~/services/accountLogin/configCodec"
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
-import { isValidExchangeRate } from "~/services/accounts/editing/accountFormValidation"
+import {
+  ACCOUNT_FORM_FIELDS,
+  type AccountFormIssue,
+} from "~/services/accounts/editing/accountFormValidation"
 import type { AccountCookieValidationEvidence } from "~/services/apiAdapters/contracts/accountLogin"
-import {
-  encodeNanoGptCredentials,
-  parseNanoGptCredentials,
-} from "~/services/apiService/nanogpt/credentials"
-import {
-  encodeNovitaCredentials,
-  parseNovitaCredentials,
-} from "~/services/apiService/novita/constants"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getCheckInAccountLoginMode } from "~/services/checkin/autoCheckin/providers/registry"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
-import { formatLocaleDateTime } from "~/utils/core/formatters"
-import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 
-const ACCOUNT_FORM_SITE_TYPE_OPTIONS = ACCOUNT_SITE_TYPES.filter(
-  (siteType) => siteType !== SITE_TYPES.UNKNOWN,
-)
+import {
+  AccountAccessTokenField,
+  getAccountAccessTokenInput,
+  type AccountAccessTokenVerificationAction,
+} from "./AccountAccessTokenField"
+import { AccountAuthMethodField } from "./AccountAuthMethodField"
+import { AccountBalanceSection } from "./AccountBalanceSection"
+import { AccountCookieField } from "./AccountCookieField"
+import { AccountIdentityFields } from "./AccountIdentityFields"
+import { AccountSiteSection } from "./AccountSiteSection"
+import { AccountTagsAndNotesSection } from "./AccountTagsAndNotesSection"
+import { Sub2ApiRefreshTokenFields } from "./Sub2ApiRefreshTokenFields"
+import { useAccountFormFeedback } from "./useAccountFormFeedback"
+import {
+  useAccountFormFocus,
+  type AccountFormHandle,
+} from "./useAccountFormFocus"
+
+export type { AccountFormHandle } from "./useAccountFormFocus"
+
 type AccountFormPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
   | "siteTypeLabel"
@@ -120,15 +80,19 @@ type AccountFormPresentationSitePolicy = Pick<
   | "requireUserId"
 >
 
-export interface AccountFormHandle {
-  focusAccessToken: () => void
-}
-
 interface AccountFormProps {
   continuous?: boolean
   /** Section this form opens on, forwarded from a guidance action. */
   focusSection?: AccountFormSectionId
   guidance?: ReactNode
+  accessTokenSetup?: ReactNode
+  accessTokenFeedback?: ReactNode
+  accessTokenFeedbackVariant?: "success" | "warning"
+  newApiTokenVerification?: AccountAccessTokenVerificationAction
+  compact?: boolean
+  onCompleteCompactToken?: (value: string, focusToken: boolean) => void
+  validationIssues?: readonly AccountFormIssue[]
+  feedbackStage?: AccountFormFeedbackStage
   siteInfoInput?: ReactNode
   feedbackAccountId?: string
   feedbackBaseUrl?: string
@@ -205,6 +169,14 @@ export default function AccountForm({
   continuous = false,
   focusSection,
   guidance,
+  accessTokenSetup,
+  accessTokenFeedback,
+  accessTokenFeedbackVariant,
+  newApiTokenVerification,
+  compact,
+  onCompleteCompactToken,
+  validationIssues,
+  feedbackStage,
   siteInfoInput,
   ref,
   draft,
@@ -266,12 +238,8 @@ export default function AccountForm({
     username,
     userId,
     accessToken,
-    exchangeRate,
-    manualBalanceUsd,
     notes,
     tagIds,
-    excludeFromTotalBalance,
-    excludeFromTodayIncome,
     cookieAuthSessionCookie,
     sub2apiUseRefreshToken,
     sub2apiRefreshToken,
@@ -280,64 +248,14 @@ export default function AccountForm({
     checkIn,
     siteType,
   } = draft
-  const isAuthTypeLocked = sitePolicy.forceAccessTokenAuth
-  const canUseCookieAuth = sitePolicy.allowCookieAuthSession
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
   const canUseAimlApiKey = sitePolicy.allowAimlApiKey
   const credentialPresentation = sitePolicy.accessTokenPresentation
-  const nanoGptCredentials = parseNanoGptCredentials(accessToken)
-  const novitaCredentials = parseNovitaCredentials(accessToken)
-  const accessTokenRequired =
-    siteType === SITE_TYPES.NANOGPT
-      ? !nanoGptCredentials.managementToken
-      : siteType !== SITE_TYPES.NOVITA || !novitaCredentials.consoleToken
-  const accessTokenInputValue =
-    siteType === SITE_TYPES.NOVITA
-      ? novitaCredentials.apiKey
-      : siteType === SITE_TYPES.NANOGPT
-        ? nanoGptCredentials.apiKey
-        : accessToken
-  const accessTokenLabel =
-    siteType === SITE_TYPES.NOVITA
-      ? t("novitaCredentials.apiKey")
-      : t(credentialPresentation.accessTokenLabelKey ?? "form.accessToken")
+  const accessTokenInput = getAccountAccessTokenInput(siteType, accessToken)
+  const accessTokenRequired = accessTokenInput.required
+  const { fieldStatus, fieldStatusProps, rememberField, issueSections } =
+    useAccountFormFeedback(validationIssues, feedbackStage, compact)
   const accessTokenInputRef = useRef<HTMLInputElement>(null)
-  const credentialFeedbackId = useId()
-  const showApiKeyVerification =
-    siteType === SITE_TYPES.NOVITA && Boolean(novitaCredentialActions)
-  const isConsoleOperation = novitaCredentialActions?.operation === "console"
-  const isAccountOperation = novitaCredentialActions?.operation === "account"
-  const verificationStatus =
-    showApiKeyVerification &&
-    Boolean(novitaCredentials.apiKey) &&
-    !isConsoleOperation &&
-    !isAccountOperation
-      ? novitaCredentialActions?.verification?.status
-      : undefined
-  const isVerifyingApiKey =
-    showApiKeyVerification &&
-    Boolean(novitaCredentials.apiKey) &&
-    !isConsoleOperation &&
-    !isAccountOperation &&
-    novitaCredentialActions?.isVerifying
-  const credentialFeedback = isVerifyingApiKey
-    ? t("novitaCredentials.verifying")
-    : verificationStatus === "success"
-      ? t("novitaCredentials.apiKeyVerified", {
-          account:
-            novitaCredentialActions?.verification?.accountLabel || userId,
-        })
-      : verificationStatus === "error"
-        ? novitaCredentialActions?.verification?.message
-        : undefined
-  const loginMethodRef = useRef<HTMLButtonElement>(null)
-  const clearLoginHighlightRef = useRef<(() => void) | undefined>(undefined)
-  const [isLoginSectionOpen, setIsLoginSectionOpen] = useState(true)
-  const [loginFocusRequested, setLoginFocusRequested] = useState(false)
-  const handleConfigureLogin = () => {
-    setIsLoginSectionOpen(true)
-    setLoginFocusRequested(true)
-  }
   const loginTarget = {
     authType,
     site_type: siteType,
@@ -345,159 +263,53 @@ export default function AccountForm({
     account_info: { id: userId },
   }
   const supportsCookieRecovery = supportsAccountCookieRecovery(loginTarget)
+  const loginMethods = getAccountLoginMethods(loginTarget)
   const usesLoginCheckIn = Boolean(
     getCheckInAccountLoginMode(
       resolveSelectedCheckInMethod({ config: checkIn, siteType, siteUrl }),
-    ) && getAccountLoginMethods(loginTarget).length,
+    ) && loginMethods.length,
   )
   const usesAccountLogin =
     usesLoginCheckIn || supportsAccountCredentialRecovery(loginTarget)
-  useEffect(() => {
-    if (focusSection === "account-login" && usesAccountLogin) {
-      setIsLoginSectionOpen(true)
-      setLoginFocusRequested(true)
-    }
-  }, [focusSection, usesAccountLogin])
-  const loginConfigured = isAccountLoginConfigured(
-    draft.login,
-    getAccountLoginMethods(loginTarget),
-  )
-  const [isAuthSectionOpen, setIsAuthSectionOpen] = useState(
-    ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"],
-  )
-  const [accessTokenFocusRequested, setAccessTokenFocusRequested] =
-    useState(false)
-
-  useImperativeHandle(
+  const loginConfigured = isAccountLoginConfigured(draft.login, loginMethods)
+  const {
+    formRootRef,
+    loginMethodRef,
+    isLoginSectionOpen,
+    setIsLoginSectionOpen,
+    isAuthSectionOpen,
+    setIsAuthSectionOpen,
+    handleConfigureLogin,
+  } = useAccountFormFocus({
     ref,
-    () => ({
-      focusAccessToken: () => {
-        setIsAuthSectionOpen(true)
-        setAccessTokenFocusRequested(true)
-      },
-    }),
-    [],
-  )
-
-  useLayoutEffect(() => {
-    if (!accessTokenFocusRequested) return
-
-    const input = accessTokenInputRef.current
-    if (input) revealNavigationTarget(input, { block: "center", focus: true })
-    setAccessTokenFocusRequested(false)
-  }, [accessTokenFocusRequested, isAuthSectionOpen])
-
-  useLayoutEffect(() => {
-    if (!loginFocusRequested) return
-    loginMethodRef.current?.focus({ preventScroll: true })
-    const section = document.getElementById(ACCOUNT_LOGIN_SECTION_ID)
-    if (section) {
-      clearLoginHighlightRef.current = revealNavigationTarget(section, {
-        highlight: true,
-      })
-    }
-    setLoginFocusRequested(false)
-  }, [loginFocusRequested, isLoginSectionOpen])
-
-  useEffect(() => () => clearLoginHighlightRef.current?.(), [usesAccountLogin])
+    focusSection,
+    usesAccountLogin,
+    compact,
+    accessToken,
+    accessTokenRequired,
+  })
 
   const hasFeedbackSiteChanged = Boolean(
     feedbackOriginalBaseUrl && feedbackOriginalBaseUrl !== feedbackBaseUrl,
   )
 
   const identityFields = (
-    <>
-      <FormField
-        label={t("form.username")}
-        required={sitePolicy.requireUsername}
-      >
-        <Input
-          type="text"
-          value={username}
-          onChange={(e) => onUsernameChange(e.target.value)}
-          placeholder={t("form.username")}
-          leftIcon={<AccountUserIcon className="h-5 w-5" />}
-          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput}
-          required={sitePolicy.requireUsername}
-        />
-      </FormField>
-
-      {siteType === SITE_TYPES.VERCEL_AI_GATEWAY ? (
-        <VercelTeamSelector
-          accessToken={accessToken}
-          value={userId}
-          onChange={onUserIdChange}
-        />
-      ) : (
-        <FormField label={t("form.userId")} required={sitePolicy.requireUserId}>
-          <Input
-            // Compatible account sites may expose alphanumeric user IDs. Reference: https://github.com/qixing-jk/all-api-hub/issues/964
-            type="text"
-            autoComplete="off"
-            value={userId}
-            onChange={(e) => onUserIdChange(e.target.value)}
-            placeholder={t("form.userId")}
-            leftIcon={<Hash className="h-5 w-5" aria-hidden="true" />}
-            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput}
-            required={sitePolicy.requireUserId}
-          />
-        </FormField>
-      )}
-    </>
+    <AccountIdentityFields
+      siteType={siteType}
+      username={username}
+      userId={userId}
+      accessToken={accessToken}
+      requireUsername={sitePolicy.requireUsername}
+      requireUserId={sitePolicy.requireUserId}
+      onUsernameChange={onUsernameChange}
+      onUserIdChange={onUserIdChange}
+      usernameValidation={fieldStatusProps(ACCOUNT_FORM_FIELDS.USERNAME)}
+      usernameFeedback={fieldStatus(ACCOUNT_FORM_FIELDS.USERNAME)}
+      userIdValidation={fieldStatusProps(ACCOUNT_FORM_FIELDS.USER_ID)}
+      userIdFeedback={fieldStatus(ACCOUNT_FORM_FIELDS.USER_ID)}
+    />
   )
 
-  const cookieImportButton = (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={onImportCookieAuthSessionCookie}
-      loading={isImportingCookies}
-      disabled={cookieRecovery?.pending}
-      leftIcon={<Download className="h-4 w-4" />}
-      className="shrink-0"
-      aria-label={
-        isImportingCookies
-          ? t("messages.importCookiesLoading")
-          : t("form.importCookieAuthSessionCookie")
-      }
-    >
-      <span className="sm:hidden">{t("common:actions.import")}</span>
-      <span className="hidden sm:inline">
-        {isImportingCookies
-          ? t("messages.importCookiesLoading")
-          : t("form.importCookieAuthSessionCookie")}
-      </span>
-    </Button>
-  )
-  const cookieFieldActions = sitePolicy.supportsCookieValidation ? (
-    <>
-      <Tooltip
-        anchorAsChild
-        positionStrategy="fixed"
-        content={t("form.cookieAuthSessionCookieHelpDesc")}
-        className="max-w-[min(22rem,calc(100vw-2rem))]! text-left leading-relaxed font-normal whitespace-normal"
-      >
-        <button
-          type="button"
-          aria-label={t("form.cookieAuthSessionCookieHelp")}
-          className="mr-auto inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <HelpHintIcon className="size-4" aria-hidden="true" />
-        </button>
-      </Tooltip>
-      <Tooltip
-        anchorAsChild
-        positionStrategy="fixed"
-        content={t("form.importCookieAuthSessionCookieHint")}
-        className="max-w-[min(22rem,calc(100vw-2rem))]! text-left leading-relaxed font-normal whitespace-normal"
-      >
-        {cookieImportButton}
-      </Tooltip>
-    </>
-  ) : (
-    cookieImportButton
-  )
   const cookieRecoveryAction = supportsCookieRecovery ? (
     <AccountCredentialRecoveryGuidance
       compact
@@ -507,295 +319,112 @@ export default function AccountForm({
   ) : null
 
   const tagsAndNotes = (
-    <AccountFormSection
+    <AccountTagsAndNotesSection
       continuous={continuous}
-      id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["tags-notes"]}
-      contentClassName={continuous ? "grid gap-4 sm:grid-cols-2" : undefined}
-      title={t("sections.tagsAndNotes.title")}
-      description={t("sections.tagsAndNotes.description")}
-      defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["tags-notes"]}
-      testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionTagsNotes}
-    >
-      <FormField label={t("form.tags")} description={t("form.tagsDescription")}>
-        <TagPicker
-          tags={tags}
-          tagCountsById={tagCountsById}
-          selectedTagIds={tagIds}
-          onSelectedTagIdsChange={onSelectedTagIdsChange}
-          onCreateTag={createTag}
-          onRenameTag={renameTag}
-          onDeleteTag={deleteTag}
-          placeholder={t("form.tagsPlaceholder")}
-        />
-      </FormField>
-
-      <FormField label={t("form.notes")}>
-        <div className="relative">
-          <Textarea
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            placeholder={t("form.notesPlaceholder")}
-            rows={2}
-          />
-        </div>
-      </FormField>
-    </AccountFormSection>
+      tags={tags}
+      tagCountsById={tagCountsById}
+      tagIds={tagIds}
+      onSelectedTagIdsChange={onSelectedTagIdsChange}
+      createTag={createTag}
+      renameTag={renameTag}
+      deleteTag={deleteTag}
+      notes={notes}
+      onNotesChange={onNotesChange}
+    />
   )
 
   const accessTokenField = (labelAction?: ReactNode) => (
-    <FormField
-      label={accessTokenLabel}
+    <AccountAccessTokenField
+      accessTokenInputRef={accessTokenInputRef}
+      siteType={siteType}
+      userId={userId}
+      labelKey={credentialPresentation.accessTokenLabelKey}
       labelAction={labelAction}
+      value={accessTokenInput.value}
       required={accessTokenRequired}
-    >
-      <Input
-        ref={accessTokenInputRef}
-        type="password"
-        revealable
-        revealed={showAccessToken}
-        onRevealedChange={onShowAccessTokenChange}
-        revealLabels={{
-          show:
-            siteType === SITE_TYPES.NOVITA
-              ? t("novitaCredentials.showApiKey")
-              : t("form.showAccessToken"),
-          hide:
-            siteType === SITE_TYPES.NOVITA
-              ? t("novitaCredentials.hideApiKey")
-              : t("form.hideAccessToken"),
-        }}
-        value={accessTokenInputValue}
-        variant={
-          verificationStatus === "error"
-            ? "error"
-            : verificationStatus === "success"
-              ? "success"
-              : undefined
-        }
-        aria-invalid={verificationStatus === "error" || undefined}
-        aria-busy={isVerifyingApiKey || undefined}
-        aria-describedby={credentialFeedback ? credentialFeedbackId : undefined}
-        rightIcon={
-          showApiKeyVerification && novitaCredentialActions ? (
-            <IconButton
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label={t("novitaCredentials.verifyKey")}
-              onClick={novitaCredentialActions.onVerify}
-              loading={Boolean(isVerifyingApiKey)}
-              disabled={
-                novitaCredentialActions.isVerifying ||
-                !accessTokenInputValue.trim()
-              }
-            >
-              <BadgeCheck className="h-4 w-4" />
-            </IconButton>
-          ) : undefined
-        }
-        onChange={(e) =>
-          onAccessTokenChange(
-            siteType === SITE_TYPES.NOVITA
-              ? encodeNovitaCredentials({
-                  ...novitaCredentials,
-                  apiKey: e.target.value,
-                })
-              : siteType === SITE_TYPES.NANOGPT
-                ? encodeNanoGptCredentials({
-                    ...nanoGptCredentials,
-                    apiKey: e.target.value,
-                  })
-                : e.target.value,
-          )
-        }
-        placeholder={accessTokenLabel}
-        leftIcon={<KeyRound className="h-5 w-5" />}
-        data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
-        required={accessTokenRequired}
-      />
-      {credentialFeedback && (
-        <p
-          id={credentialFeedbackId}
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          className={
-            verificationStatus === "error"
-              ? "text-xs text-destructive-text"
-              : verificationStatus === "success"
-                ? "text-xs text-success-text"
-                : "text-xs text-muted-foreground"
-          }
-        >
-          {credentialFeedback}
-        </p>
-      )}
-    </FormField>
+      showAccessToken={showAccessToken}
+      onShowAccessTokenChange={onShowAccessTokenChange}
+      onValueChange={(value) =>
+        onAccessTokenChange(accessTokenInput.replaceValue(value))
+      }
+      novitaCredentialActions={novitaCredentialActions}
+      newApiTokenVerification={newApiTokenVerification}
+      accessTokenFeedback={accessTokenFeedback}
+      accessTokenFeedbackVariant={accessTokenFeedbackVariant}
+      accessTokenSetup={accessTokenSetup}
+      compact={compact}
+      onCompleteCompactToken={onCompleteCompactToken}
+      containsFocusTarget={(target) =>
+        Boolean(
+          formRootRef.current?.closest('[role="dialog"]')?.contains(target),
+        )
+      }
+      validationAttributes={fieldStatusProps(ACCOUNT_FORM_FIELDS.ACCESS_TOKEN)}
+      validationFeedback={fieldStatus(ACCOUNT_FORM_FIELDS.ACCESS_TOKEN)}
+    />
   )
+
+  if (compact) {
+    return (
+      <div
+        ref={formRootRef}
+        onBlurCapture={(event) => rememberField(event.target)}
+      >
+        {accessTokenField()}
+      </div>
+    )
+  }
 
   return (
     <AccountFormLayout
+      formRef={formRootRef}
+      onBlurField={rememberField}
+      issueSections={issueSections}
       continuous={continuous}
       focusSection={focusSection}
       hasAccountLogin={usesAccountLogin}
       guidance={guidance}
     >
-      <AccountFormSection
+      <AccountSiteSection
         continuous={continuous}
-        id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["site-info"]}
-        contentClassName={
-          continuous ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4" : undefined
-        }
-        title={t("sections.siteInfo.title")}
-        defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["site-info"]}
-        testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionSiteInfo}
+        siteInfoInput={siteInfoInput}
+        siteName={siteName}
+        siteType={siteType}
+        onSiteNameChange={onSiteNameChange}
+        onSiteTypeChange={onSiteTypeChange}
+        validation={fieldStatusProps(ACCOUNT_FORM_FIELDS.SITE_NAME)}
+        feedback={fieldStatus(ACCOUNT_FORM_FIELDS.SITE_NAME)}
       >
-        {siteInfoInput && (
-          <div className="col-span-full space-y-density-2">{siteInfoInput}</div>
-        )}
-        <FormField label={t("form.siteName")} required>
-          <Input
-            type="text"
-            value={siteName}
-            onChange={(e) => onSiteNameChange(e.target.value)}
-            placeholder="example.com"
-            leftIcon={<Building2 className="h-5 w-5" aria-hidden="true" />}
-            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput}
-            required
-          />
-        </FormField>
-
-        <FormField label={t("form.siteType")}>
-          <Select
-            value={siteType ?? SITE_TYPES.UNKNOWN}
-            onValueChange={onSiteTypeChange}
-          >
-            <SelectTrigger
-              className="w-full"
-              aria-label={t("form.siteType")}
-              title={t("form.siteType")}
-              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger}
-              data-site-type={siteType ?? SITE_TYPES.UNKNOWN}
-            >
-              <div className="flex items-center gap-x-2 gap-y-density-2">
-                <AccountSiteTypeIcon
-                  className="h-5 w-5 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <SelectValue placeholder={t("form.siteType")} />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {ACCOUNT_FORM_SITE_TYPE_OPTIONS.map((siteType) => (
-                <SelectItem
-                  key={siteType}
-                  value={siteType}
-                  data-testid={getAccountManagementSiteTypeOptionTestId(
-                    siteType,
-                  )}
-                >
-                  {siteType}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
         {continuous && identityFields}
-      </AccountFormSection>
+      </AccountSiteSection>
 
       <AccountFormSection
         continuous={continuous}
-        id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["account-auth"]}
+        id={ACCOUNT_FORM_SECTION_ELEMENT_IDS[ACCOUNT_FORM_SECTIONS.AUTH]}
         contentClassName={
           continuous
             ? authType === AuthTypeEnum.Cookie
               ? "space-y-density-4"
-              : "grid gap-4 sm:grid-cols-2"
+              : "grid items-start gap-4 sm:grid-cols-2"
             : undefined
         }
         title={t("sections.accountAuth.title")}
-        defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"]}
+        defaultOpen={
+          ACCOUNT_FORM_MOBILE_DEFAULT_OPEN[ACCOUNT_FORM_SECTIONS.AUTH]
+        }
         open={isAuthSectionOpen}
         onOpenChange={setIsAuthSectionOpen}
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionAuth}
       >
-        <FormField
-          label={
-            continuous &&
-            !isAuthTypeLocked &&
-            !sitePolicy.usesBrowserCookieSession ? (
-              <span className="inline-flex items-center gap-1.5">
-                {t("siteInfo.authMethod")}
-                <Tooltip
-                  content={t("siteInfo.cookieWarning")}
-                  wrapperClassName="inline-flex"
-                  positionStrategy="fixed"
-                  className="max-w-[min(22rem,calc(100vw-2rem))]! text-left leading-relaxed font-normal whitespace-normal"
-                >
-                  <button
-                    type="button"
-                    aria-label={t("siteInfo.cookieWarning")}
-                    className="inline-flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  >
-                    <HelpHintIcon className="size-4" aria-hidden="true" />
-                  </button>
-                </Tooltip>
-              </span>
-            ) : (
-              t("siteInfo.authMethod")
-            )
-          }
-          className={
-            continuous && authType === AuthTypeEnum.Cookie
-              ? "sm:max-w-sm"
-              : undefined
-          }
-          description={
-            continuous && authType === AuthTypeEnum.Cookie
-              ? undefined
-              : isAuthTypeLocked
-                ? t("siteInfo.authMethodSelectedForSite", {
-                    siteType: sitePolicy.siteTypeLabel,
-                  })
-                : sitePolicy.usesBrowserCookieSession &&
-                    authType === AuthTypeEnum.Cookie
-                  ? t("siteInfo.browserCookieSession")
-                  : continuous
-                    ? undefined
-                    : t("siteInfo.cookieWarning")
-          }
-        >
-          <Select
-            value={authType}
-            onValueChange={(value) => onAuthTypeChange(value as AuthTypeEnum)}
-            disabled={isDetected || isAuthTypeLocked}
-          >
-            <SelectTrigger
-              className="w-full"
-              aria-label={t("siteInfo.authMethod")}
-              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
-              data-auth-type={authType}
-            >
-              <SelectValue placeholder={t("siteInfo.authMethodPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent align="end" className="min-w-48">
-              <SelectItem value={AuthTypeEnum.AccessToken}>
-                <div className="flex items-center gap-x-2 gap-y-density-2">
-                  <KeyRound className="h-4 w-4" />
-                  <span>{t("siteInfo.authType.accessToken")}</span>
-                </div>
-              </SelectItem>
-              {canUseCookieAuth && (
-                <SelectItem value={AuthTypeEnum.Cookie}>
-                  <div className="flex items-center gap-x-2 gap-y-density-2">
-                    <Cookie className="h-4 w-4" />
-                    <span>{t("siteInfo.authType.cookieAuth")}</span>
-                  </div>
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </FormField>
+        <AccountAuthMethodField
+          continuous={continuous}
+          authType={authType}
+          sitePolicy={sitePolicy}
+          isDetected={isDetected}
+          onAuthTypeChange={onAuthTypeChange}
+          validation={fieldStatusProps(ACCOUNT_FORM_FIELDS.AUTH_TYPE)}
+          feedback={fieldStatus(ACCOUNT_FORM_FIELDS.AUTH_TYPE)}
+        />
 
         {!continuous && identityFields}
 
@@ -819,6 +448,10 @@ export default function AccountForm({
               </NanoGptCredentialGuide>
             ) : (
               accessTokenField()
+            )}
+
+            {accessTokenSetup && (
+              <div className="col-span-full min-w-0">{accessTokenSetup}</div>
             )}
 
             {autoCreateAccessToken?.enabled &&
@@ -899,200 +532,64 @@ export default function AccountForm({
         )}
 
         {canUseSub2ApiRefreshToken && (
-          <div className="col-span-full space-y-density-4">
-            <div className="flex w-full items-center justify-between gap-x-4 gap-y-density-4">
-              <div className="flex-1">
-                <label
-                  htmlFor="sub2api-refresh-token-mode"
-                  className="text-sm font-medium text-secondary-foreground"
-                >
-                  {t("form.sub2apiRefreshTokenMode")}
-                </label>
-                <p className="mt-density-1 text-xs text-muted-foreground">
-                  {t("form.sub2apiRefreshTokenModeDesc")}
-                </p>
-              </div>
-              <Switch
-                checked={sub2apiUseRefreshToken}
-                onChange={onSub2apiUseRefreshTokenChange}
-                id="sub2api-refresh-token-mode"
-                data-testid={
-                  ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenSwitch
-                }
-              />
-            </div>
-
-            {sub2apiUseRefreshToken && (
-              <div className="space-y-density-4">
-                <Alert
-                  variant="warning"
-                  title={t("form.sub2apiRefreshTokenWarningTitle")}
-                  description={t("form.sub2apiRefreshTokenWarningDesc")}
-                />
-
-                <FormField label={t("form.sub2apiRefreshToken")} required>
-                  <div className="space-y-density-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={onImportSub2apiSession}
-                      loading={isImportingSub2apiSession}
-                      className="w-full"
-                      data-testid={
-                        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiImportSessionButton
-                      }
-                      leftIcon={<Download className="h-4 w-4" />}
-                    >
-                      {isImportingSub2apiSession
-                        ? t("common:status.importing")
-                        : t("form.sub2apiImportRefreshToken")}
-                    </Button>
-                    <Input
-                      type="password"
-                      revealable
-                      revealLabels={{
-                        show: t("form.showRefreshToken"),
-                        hide: t("form.hideRefreshToken"),
-                      }}
-                      value={sub2apiRefreshToken}
-                      onChange={(e) =>
-                        onSub2apiRefreshTokenChange(e.target.value)
-                      }
-                      placeholder={t("form.sub2apiRefreshTokenPlaceholder")}
-                      leftIcon={<KeyRound className="h-5 w-5" />}
-                      data-testid={
-                        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenInput
-                      }
-                      required
-                    />
-                  </div>
-                </FormField>
-
-                {typeof sub2apiTokenExpiresAt === "number" && (
-                  <FormField label={t("form.sub2apiTokenExpiresAt")}>
-                    <Input
-                      type="text"
-                      value={formatLocaleDateTime(
-                        sub2apiTokenExpiresAt,
-                        t("common:labels.notAvailable"),
-                      )}
-                      leftIcon={<CalendarDays className="h-5 w-5" />}
-                      disabled
-                    />
-                  </FormField>
-                )}
-              </div>
-            )}
-          </div>
+          <Sub2ApiRefreshTokenFields
+            enabled={sub2apiUseRefreshToken}
+            refreshToken={sub2apiRefreshToken}
+            expiresAt={sub2apiTokenExpiresAt}
+            isImporting={isImportingSub2apiSession}
+            onEnabledChange={onSub2apiUseRefreshTokenChange}
+            onRefreshTokenChange={onSub2apiRefreshTokenChange}
+            onImportSession={onImportSub2apiSession}
+            validation={fieldStatusProps(ACCOUNT_FORM_FIELDS.REFRESH_TOKEN)}
+            feedback={fieldStatus(ACCOUNT_FORM_FIELDS.REFRESH_TOKEN)}
+          />
         )}
 
         {authType === AuthTypeEnum.Cookie && (
-          <FormField
-            className={continuous ? "col-span-full" : undefined}
-            label={t("form.cookieAuthSessionCookie")}
-            labelAction={cookieFieldActions}
-            htmlFor="account-session-cookie"
-            description={
-              sitePolicy.usesBrowserCookieSession
-                ? t("siteInfo.browserCookieSession")
+          <AccountCookieField
+            siteType={siteType}
+            siteUrl={siteUrl}
+            userId={userId}
+            continuous={continuous}
+            usesBrowserCookieSession={sitePolicy.usesBrowserCookieSession}
+            supportsValidation={sitePolicy.supportsCookieValidation}
+            cookieAuthSessionCookie={cookieAuthSessionCookie}
+            onCookieAuthSessionCookieChange={onCookieAuthSessionCookieChange}
+            hasAccessToken={Boolean(accessToken.trim())}
+            isImportingCookies={isImportingCookies}
+            onImportCookieAuthSessionCookie={onImportCookieAuthSessionCookie}
+            permissionProps={{
+              cookieAuthPermissionsGranted,
+              isRequestingCookieAuthPermissions,
+              onRequestCookieAuthPermissions,
+            }}
+            showCookiePermissionWarning={showCookiePermissionWarning}
+            onOpenCookiePermissionSettings={onOpenCookiePermissionSettings}
+            supportsCookieRecovery={supportsCookieRecovery}
+            cookieRecoveryAction={cookieRecoveryAction}
+            recoveryPending={cookieRecovery?.pending}
+            verifiedCookie={cookieRecovery?.verifiedCookie}
+            recovery={
+              supportsCookieRecovery
+                ? {
+                    configured:
+                      loginConfigured &&
+                      supportsAccountCookieRecovery(
+                        loginTarget,
+                        draft.login?.methodId,
+                      ) &&
+                      Boolean(cookieRecovery),
+                    pending: cookieRecovery?.pending === true,
+                    disabled: cookieRecovery?.disabled,
+                    errorMessage: cookieRecovery?.errorMessage,
+                    onRecover: () => cookieRecovery?.onRecover(),
+                    onConfigure: handleConfigureLogin,
+                  }
                 : undefined
             }
-            required={!sitePolicy.usesBrowserCookieSession}
-          >
-            <div className="space-y-density-2">
-              <CookieAuthPermissionRecommendation
-                compact
-                cookieAuthPermissionsGranted={cookieAuthPermissionsGranted}
-                isRequestingCookieAuthPermissions={
-                  isRequestingCookieAuthPermissions
-                }
-                onRequestCookieAuthPermissions={onRequestCookieAuthPermissions}
-              />
-              {showCookiePermissionWarning && (
-                <Alert
-                  variant="warning"
-                  description={t("messages.importCookiesPermissionDenied")}
-                >
-                  <div className="pt-density-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={onOpenCookiePermissionSettings}
-                    >
-                      {t("form.cookiePermissionHelpAction")}
-                    </Button>
-                  </div>
-                </Alert>
-              )}
-              <div
-                role="group"
-                aria-label={t("form.cookieAuthSessionCookie")}
-                className={
-                  sitePolicy.supportsCookieValidation
-                    ? "overflow-hidden rounded-md border border-input bg-card focus-within:ring-2 focus-within:ring-ring"
-                    : undefined
-                }
-              >
-                <Textarea
-                  id="account-session-cookie"
-                  className={
-                    sitePolicy.supportsCookieValidation
-                      ? "rounded-none border-0 font-mono leading-relaxed focus:ring-0"
-                      : "font-mono leading-relaxed"
-                  }
-                  value={cookieAuthSessionCookie}
-                  onChange={(e) =>
-                    onCookieAuthSessionCookieChange(e.target.value)
-                  }
-                  placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
-                  rows={2}
-                  required={!sitePolicy.usesBrowserCookieSession}
-                />
-                {sitePolicy.supportsCookieValidation && (
-                  <AccountCookieVerification
-                    siteType={siteType}
-                    siteUrl={siteUrl ?? ""}
-                    userId={userId}
-                    cookie={cookieAuthSessionCookie}
-                    verifiedCookie={cookieRecovery?.verifiedCookie}
-                    busy={isImportingCookies}
-                    recovery={
-                      supportsCookieRecovery
-                        ? {
-                            configured:
-                              loginConfigured &&
-                              supportsAccountCookieRecovery(
-                                loginTarget,
-                                draft.login?.methodId,
-                              ) &&
-                              Boolean(cookieRecovery),
-                            pending: cookieRecovery?.pending === true,
-                            disabled: cookieRecovery?.disabled,
-                            errorMessage: cookieRecovery?.errorMessage,
-                            onRecover: () => cookieRecovery?.onRecover(),
-                            onConfigure: handleConfigureLogin,
-                          }
-                        : undefined
-                    }
-                  />
-                )}
-              </div>
-              <CookieAuthCompatibilityHint
-                hasAccessToken={Boolean(accessToken.trim())}
-                description={
-                  sitePolicy.usesBrowserCookieSession ||
-                  sitePolicy.supportsCookieValidation
-                    ? undefined
-                    : t("form.cookieAuthSessionCookieDesc")
-                }
-                supportsValidation={sitePolicy.supportsCookieValidation}
-                recovery={supportsCookieRecovery}
-                recoveryAction={cookieRecoveryAction}
-              />
-            </div>
-          </FormField>
+            validationAttributes={fieldStatusProps(ACCOUNT_FORM_FIELDS.COOKIE)}
+            validationFeedback={fieldStatus(ACCOUNT_FORM_FIELDS.COOKIE)}
+          />
         )}
       </AccountFormSection>
 
@@ -1107,6 +604,7 @@ export default function AccountForm({
           accountId: feedbackAccountId,
           snapshot: {
             baseUrl: feedbackBaseUrl,
+            siteName,
             siteType,
             checkIn: hasFeedbackSiteChanged
               ? {
@@ -1160,121 +658,24 @@ export default function AccountForm({
           claimedLoginProviders={claimedLoginProviders}
           onChange={onLoginChange}
           methodRef={loginMethodRef}
+          validationProps={fieldStatusProps(ACCOUNT_FORM_FIELDS.LOGIN)}
+          feedback={fieldStatus(ACCOUNT_FORM_FIELDS.LOGIN)}
           open={isLoginSectionOpen}
           onOpenChange={setIsLoginSectionOpen}
         />
       )}
 
-      <AccountFormSection
+      <AccountBalanceSection
         continuous={continuous}
-        id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["balance"]}
-        contentClassName={continuous ? "grid gap-4 sm:grid-cols-2" : undefined}
-        title={t("sections.balanceAndStats.title")}
-        defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN.balance}
-        testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionBalance}
-      >
-        <FormField
-          label={t("form.exchangeRate")}
-          description={t("form.exchangeRateDesc")}
-          error={
-            !isValidExchangeRate(exchangeRate) && exchangeRate
-              ? t("form.validRateError")
-              : undefined
-          }
-          required
-        >
-          {(control) => (
-            <Input
-              {...control}
-              type="number"
-              step="any"
-              min="0"
-              value={exchangeRate}
-              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.exchangeRateInput}
-              onChange={(e) => onExchangeRateChange(e.target.value)}
-              placeholder={t("form.exchangeRatePlaceholder")}
-              leftIcon={
-                <ArrowLeftRight className="h-5 w-5" aria-hidden="true" />
-              }
-              rightIcon={
-                <span className="text-sm text-muted-foreground dark:text-secondary-foreground">
-                  CNY
-                </span>
-              }
-              variant={
-                !isValidExchangeRate(exchangeRate) && exchangeRate
-                  ? "error"
-                  : "default"
-              }
-              required
-            />
-          )}
-        </FormField>
-
-        <FormField
-          label={t("form.manualBalanceUsd")}
-          description={t("form.manualBalanceUsdDesc")}
-          error={
-            isManualBalanceUsdInvalid
-              ? t("form.manualBalanceUsdError")
-              : undefined
-          }
-        >
-          <Input
-            type="number"
-            step="any"
-            min="0"
-            value={manualBalanceUsd}
-            onChange={(e) => onManualBalanceUsdChange(e.target.value)}
-            placeholder={t("form.manualBalanceUsdPlaceholder")}
-            leftIcon={<DollarSign className="h-5 w-5" />}
-            rightIcon={
-              <span className="text-sm text-muted-foreground dark:text-secondary-foreground">
-                USD
-              </span>
-            }
-            variant={isManualBalanceUsdInvalid ? "error" : "default"}
-          />
-        </FormField>
-
-        <div className="flex w-full items-center justify-between gap-x-4 gap-y-density-4">
-          <div className="flex-1">
-            <label
-              htmlFor="exclude-from-total-balance"
-              className="text-sm font-medium text-secondary-foreground"
-            >
-              {t("form.excludeFromTotalBalance")}
-            </label>
-            <p className="mt-density-1 text-xs text-muted-foreground">
-              {t("form.excludeFromTotalBalanceDesc")}
-            </p>
-          </div>
-          <Switch
-            checked={excludeFromTotalBalance}
-            onChange={onExcludeFromTotalBalanceChange}
-            id="exclude-from-total-balance"
-          />
-        </div>
-
-        <div className="flex w-full items-center justify-between gap-x-4 gap-y-density-4">
-          <div className="flex-1">
-            <label
-              htmlFor="exclude-from-today-income"
-              className="text-sm font-medium text-secondary-foreground"
-            >
-              {t("form.excludeFromTodayIncome")}
-            </label>
-            <p className="mt-density-1 text-xs text-muted-foreground">
-              {t("form.excludeFromTodayIncomeDesc")}
-            </p>
-          </div>
-          <Switch
-            checked={excludeFromTodayIncome}
-            onChange={onExcludeFromTodayIncomeChange}
-            id="exclude-from-today-income"
-          />
-        </div>
-      </AccountFormSection>
+        draft={draft}
+        fieldFeedback={{ fieldStatus, fieldStatusProps }}
+        usesFormValidation={Boolean(validationIssues)}
+        isManualBalanceUsdInvalid={isManualBalanceUsdInvalid}
+        onExchangeRateChange={onExchangeRateChange}
+        onManualBalanceUsdChange={onManualBalanceUsdChange}
+        onExcludeFromTotalBalanceChange={onExcludeFromTotalBalanceChange}
+        onExcludeFromTodayIncomeChange={onExcludeFromTodayIncomeChange}
+      />
       {continuous && tagsAndNotes}
     </AccountFormLayout>
   )

@@ -134,7 +134,12 @@ describe("DaiGua ordinary daily check-in", () => {
       expect.anything(),
       {
         endpoint: "/api/v1/checkin",
-        options: { method: "POST", cache: "no-store", body: "{}" },
+        options: {
+          method: "POST",
+          cache: "no-store",
+          redirect: "error",
+          body: "{}",
+        },
       },
     )
   })
@@ -156,7 +161,7 @@ describe("DaiGua ordinary daily check-in", () => {
     },
   )
 
-  it.each([401, 403, 429, 500])(
+  it.each([403, 429, 500])(
     "preserves HTTP %s and submits only once",
     async (httpStatus) => {
       vi.mocked(fetchApiResponse).mockResolvedValue({

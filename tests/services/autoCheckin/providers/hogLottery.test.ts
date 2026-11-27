@@ -67,7 +67,7 @@ vi.mock(
 const methodId = AUTO_CHECKIN_METHOD_IDS.HogDailyLottery
 const account = () =>
   buildSiteAccount({
-    site_url: "https://mirror.example",
+    site_url: "https://fapi.leileihog.top",
     site_type: SITE_TYPES.NEW_API,
     login: {
       methodId: "password",
@@ -114,7 +114,7 @@ const checked = () =>
     rank: 1,
   }) as const
 const sessionRequest = {
-  baseUrl: "https://mirror.example",
+  baseUrl: "https://fapi.leileihog.top",
   directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -421,7 +421,7 @@ describe("Hog free daily draw integration", () => {
             amount: { status: "known", value: String(quotaAmount) },
             asset: {
               kind: "quota",
-              id: "https://mirror.example:new-api-quota",
+              id: "https://fapi.leileihog.top:new-api-quota",
             },
           },
         ],

@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfile/sub2apiAuthSession"
+import * as browserAuth from "~/services/apiService/sub2api/auth/browserAuth"
+import * as tokenRefresh from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_TRANSPORT_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -83,6 +88,104 @@ const run = () =>
   })
 
 describe("registered DaiGua daily check-in", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("returns a failure if account credentials disappeared before the claim", async () => {
+    const saved = account()
+    saved.account_info.access_token = ""
+    await expect(
+      daiguaProvider.checkIn(saved, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
+        statusProof: {
+          outcome: "known",
+          availability: "enabled",
+          today: "not_checked",
+          evidence: { source: "probe", observedAt: Date.now() },
+        },
+      }),
+    ).resolves.toMatchObject({ status: "failed" })
+    expect(fetchApiResponse).not.toHaveBeenCalled()
+  })
+
+  it("keeps a recovered tab for the ordinary claim and readback and leaves verification to that tab", async () => {
+    const saved = account()
+    let token = saved.account_info.access_token
+    vi.spyOn(accountSub2ApiAuthSession, "getLatestAuth").mockImplementation(
+      async () => ({
+        origin: saved.site_url,
+        userId: "42",
+        accessToken: token,
+        sub2apiAuth: { refreshToken: "fixture-refresh" },
+      }),
+    )
+    vi.spyOn(accountSub2ApiAuthSession, "persistAuthUpdate").mockImplementation(
+      async (_, update) => {
+        token = update.accessToken
+        return { status: "persisted" }
+      },
+    )
+    const tab = {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+      tabId: 7,
+      origin: saved.site_url,
+    }
+    const refresh = vi
+      .spyOn(tokenRefresh, "refreshSub2ApiTokens")
+      .mockRejectedValue(new Error("unexpected rotation"))
+    const recover = vi
+      .spyOn(browserAuth, "recoverSub2ApiBrowserAuth")
+      .mockResolvedValue({
+        accessToken: "renewed",
+        userId: "42",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        fetchContext: tab,
+      })
+    vi.mocked(fetchApiResponse)
+      .mockResolvedValueOnce({
+        ...response(null),
+        ok: false,
+        status: 401,
+        body: { code: "SESSION_BINDING_MISMATCH", message: "session mismatch" },
+      })
+      .mockResolvedValueOnce(response(statusData()))
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        headers: {},
+        body: {
+          code: 400,
+          message: "verification failed",
+          reason: "TURNSTILE_VERIFICATION_FAILED",
+        },
+      })
+      .mockResolvedValue(response(statusData()))
+
+    await expect(run()).resolves.toMatchObject({
+      kind: "executed",
+      result: { status: "failed", reasonCode: "manual_verification_required" },
+    })
+    expect(recover).toHaveBeenCalledTimes(1)
+    expect(refresh).not.toHaveBeenCalled()
+    const calls = vi.mocked(fetchApiResponse).mock.calls
+    expect(calls.map(([, options]) => options.options?.method)).toEqual([
+      "GET",
+      "GET",
+      "POST",
+      "GET",
+    ])
+    for (const [request] of calls.slice(1)) {
+      expect(request).toMatchObject({
+        fetchContext: tab,
+        currentTabFallback: "forbid",
+        auth: { accessToken: "renewed" },
+      })
+    }
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+  })
+
   it("does not replay a verification rejection when both assisted admission reads cross midnight", async () => {
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))

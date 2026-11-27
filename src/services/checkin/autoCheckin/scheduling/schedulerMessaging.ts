@@ -250,11 +250,28 @@ export async function retryAutoCheckinAccount(
 }
 
 /** Verify a selected method's current status without issuing a check-in POST. */
-async function verifyAutoCheckinAccountStatus(accountId?: string) {
+export async function verifyAutoCheckinAccountStatus(
+  accountId?: string,
+  execution?: unknown,
+) {
   if (!accountId) {
     return { success: false as const, error: "Missing accountId" }
   }
-  const result = await autoCheckinScheduler.verifyAccountStatus(accountId)
+  if (
+    execution !== undefined &&
+    !isExpectedCheckinCommandExecution(
+      execution,
+      PROTECTION_BYPASS_USER_COMMANDS.VerifyCheckinStatus,
+    )
+  )
+    return {
+      success: false as const,
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+    }
+  const result = await autoCheckinScheduler.verifyAccountStatus(
+    accountId,
+    execution,
+  )
   if (result.outcome === "verified") {
     if (result.verifiedStatus === "unknown") {
       return {
@@ -433,7 +450,10 @@ export function setupAutoCheckinMessagingListeners() {
       AutoCheckinMessageTypes.VerifyAccountStatus,
       async ({ data }) => {
         try {
-          return await verifyAutoCheckinAccountStatus(data.accountId)
+          return await verifyAutoCheckinAccountStatus(
+            data.accountId,
+            data.protectionBypassExecution,
+          )
         } catch (error) {
           return toAutoCheckinFailure(error)
         }

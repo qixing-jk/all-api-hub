@@ -18,6 +18,7 @@ import { type useOpenRouterAccountOnboarding } from "~/features/AccountManagemen
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
   ACCOUNT_DIALOG_PHASES,
+  ACCOUNT_DIALOG_RECOVERY_ACTIONS,
   createEmptyAccountDialogDraft,
   getInitialFlowState,
   type AccountDialogDraft,
@@ -306,7 +307,7 @@ export function useAccountDialogInitialization({
                   ? refreshToken
                   : "",
                 sub2apiTokenExpiresAt: hasActiveSub2ApiRefreshToken
-                  ? siteAccount.sub2apiAuth?.tokenExpiresAt ?? null
+                  ? (siteAccount.sub2apiAuth?.tokenExpiresAt ?? null)
                   : null,
                 kimiOpenPlatformAuth: siteAccount.kimiOpenPlatformAuth ?? null,
                 aimlApiKey: siteAccount.aimlApiAuth?.apiKey ?? "",
@@ -409,7 +410,12 @@ export function useAccountDialogInitialization({
             ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
             : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
         )
-        if (recoveryState.recoveryAction !== "cookie")
+        const shouldRestoreAccessTokenRecovery =
+          recoveryState.recoveryAction !==
+            ACCOUNT_DIALOG_RECOVERY_ACTIONS.Cookie &&
+          (Boolean(recoveryState.detectionError) ||
+            !recoveredDraft.accessToken.trim())
+        if (shouldRestoreAccessTokenRecovery)
           requireAccessTokenRecovery(recoveryState.detectionError)
       } else if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)

@@ -121,6 +121,7 @@ describe("Hog method choice and period", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-11-24T16:00:01Z"))
     const current = buildSiteAccount({
+      site_url: "https://fapi.leileihog.top",
       site_type: SITE_TYPES.NEW_API,
       checkIn: {
         automaticExecutionEnabled: true,

@@ -66,9 +66,11 @@
       "includeAccountSiteUrlsDesc": "Allow all pages under each account's site URL origin.",
       "includeCheckInAndRedeemUrls": "Include check-in & redeem URLs",
       "includeCheckInAndRedeemUrlsDesc": "Allow the check-in and redeem pages (custom or default) for each account.",
+      "noTabs": "No matching web tabs. You can enter a pattern below.",
       "patterns": "Custom regex patterns",
       "patternsDesc": "One JavaScript RegExp pattern per line. Case-insensitive match is applied.",
-      "patternsPlaceholder": "^https://example\\.com/console/topup"
+      "patternsPlaceholder": "^https://example\\.com/console/topup",
+      "tabPicker": "Choose from open tabs"
     }
   }
 }

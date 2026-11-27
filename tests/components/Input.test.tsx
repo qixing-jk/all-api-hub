@@ -168,6 +168,14 @@ describe("Input", () => {
     expect(await screen.findByText("Saved")).toHaveClass("text-success-text")
   })
 
+  it("uses warning styling without marking the input invalid", async () => {
+    render(<Input aria-label="Access token" variant="warning" />)
+
+    const input = await screen.findByRole("textbox", { name: "Access token" })
+    expect(input).toHaveClass("border-warning-text/65")
+    expect(input).not.toHaveAttribute("aria-invalid")
+  })
+
   it("focuses the input immediately after clearing when animation frames are unavailable", async () => {
     const onClear = vi.fn()
     vi.stubGlobal("requestAnimationFrame", undefined)

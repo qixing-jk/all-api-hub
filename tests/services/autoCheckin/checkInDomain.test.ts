@@ -8,6 +8,7 @@ import {
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   inspectCheckInMethods,
+  isCheckInMethodStatusCurrent,
   mergeCheckInDiscoveryResults,
   resolveCheckInSelectionPolicy,
   setCheckInSelection,
@@ -23,6 +24,7 @@ const NEW_API_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
 const VELOERA_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn
 const ANYROUTER_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn
 const XINGYA_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn
+const HOG_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.HogDailyLottery
 
 describe("check-in selection policy", () => {
   it.each([
@@ -619,6 +621,36 @@ describe("inspectCheckInMethods", () => {
       eligible: false,
       skipReason: testCase.expected,
     })
+  })
+})
+
+describe("method-specific status periods", () => {
+  it("uses Hog's Shanghai business day instead of a caller fallback timezone", () => {
+    const status = {
+      outcome: "known" as const,
+      today: "checked" as const,
+      evidence: {
+        source: "probe" as const,
+        observedAt: Date.parse("2026-08-20T16:30:00.000Z"),
+      },
+    }
+
+    expect(
+      isCheckInMethodStatusCurrent(
+        HOG_METHOD_ID,
+        status,
+        Date.parse("2026-08-21T15:30:00.000Z"),
+        "UTC",
+      ),
+    ).toBe(true)
+    expect(
+      isCheckInMethodStatusCurrent(
+        HOG_METHOD_ID,
+        status,
+        Date.parse("2026-08-21T16:30:00.000Z"),
+        "UTC",
+      ),
+    ).toBe(false)
   })
 })
 

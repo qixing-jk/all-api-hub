@@ -7,20 +7,16 @@ import {
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
 import {
-  getSelectedCheckInStatus,
   inspectAccountCheckIn,
   resolveSelectedCheckInMethod,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
-import {
-  getCheckInMethodStatusPeriodKey,
-  supportsCheckInStatusReadback,
-} from "~/services/checkin/autoCheckin/providers/registry"
+import { isCheckInMethodStatusCurrent } from "~/services/checkin/autoCheckin/domain"
+import { supportsCheckInStatusReadback } from "~/services/checkin/autoCheckin/providers/registry"
 import type { DisplaySiteData } from "~/types"
 import type {
   CheckInExecutionSkipReason,
   CheckInMethodStatus,
 } from "~/types/checkIn"
-import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 export const SITE_CHECK_IN_DISPLAY_KINDS = {
   Current: "current",
@@ -87,45 +83,16 @@ export function getCheckInObservationTime(
 export function isSelectedCheckInStatusCurrent(
   account: StatusAccount,
 ): boolean {
-  const status = getSelectedCheckInStatus({
-    config: account.checkIn,
-    siteType: account.siteType,
-    siteUrl: account.baseUrl,
-  })
-  if (!status || status.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
-    return false
-  }
-
   const methodId = resolveSelectedCheckInMethod({
     config: account.checkIn,
     siteType: account.siteType,
     siteUrl: account.baseUrl,
   })
-  const observedAt = getCheckInObservationTime(status)
-  if (
-    methodId &&
-    typeof observedAt === "number" &&
-    Number.isFinite(observedAt)
-  ) {
-    const periodKey = getCheckInMethodStatusPeriodKey(methodId, observedAt)
-    if (periodKey !== undefined) {
-      return periodKey === getCheckInMethodStatusPeriodKey(methodId, Date.now())
-    }
-  }
-
-  if (
-    status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe ||
-    status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution
-  ) {
-    return isCheckInStatusDetectedToday(status.evidence.observedAt)
-  }
-
-  if (status.evidence.legacyObservedAt !== undefined) {
-    return isCheckInStatusDetectedToday(status.evidence.legacyObservedAt)
-  }
-
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-  return status.evidence.legacyDayKey === todayKey
+  if (!methodId) return false
+  return isCheckInMethodStatusCurrent(
+    methodId,
+    account.checkIn.methodKnowledge.methods[methodId]?.status,
+  )
 }
 
 /** Shared projection for the account icon and filter. Execution preference never changes observed status. */
@@ -152,11 +119,12 @@ export function getSiteCheckInDisplayState(
         : inspection.executionEligibility.skipReason,
     }
   }
-  const status = getSelectedCheckInStatus(input)
+  const status = account.checkIn.methodKnowledge.methods[methodId]?.status
+  const current = isCheckInMethodStatusCurrent(methodId, status)
   if (
     status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
     status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled &&
-    !(status.today !== undefined && isSelectedCheckInStatusCurrent(account))
+    !(status.today !== undefined && current)
   )
     return { kind: SITE_CHECK_IN_DISPLAY_KINDS.SiteDisabled }
   const readable = supportsCheckInStatusReadback(methodId)
@@ -174,7 +142,7 @@ export function getSiteCheckInDisplayState(
     (status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked ||
       status.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked)
   ) {
-    if (isSelectedCheckInStatusCurrent(account))
+    if (current)
       return {
         kind: SITE_CHECK_IN_DISPLAY_KINDS.Current,
         checkedIn: status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked,
@@ -191,17 +159,6 @@ export function getSiteCheckInDisplayState(
       ? SITE_CHECK_IN_DISPLAY_KINDS.Pending
       : SITE_CHECK_IN_DISPLAY_KINDS.Manual,
   }
-}
-
-/** Returns whether a persisted check-in detection belongs to the current local day. */
-function isCheckInStatusDetectedToday(detectedAt?: number): boolean {
-  if (typeof detectedAt !== "number" || !Number.isFinite(detectedAt)) {
-    return false
-  }
-
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-  const detectedKey = getDayKeyFromUnixSeconds(Math.floor(detectedAt / 1000))
-  return detectedKey === todayKey
 }
 
 /** Summarizes saved intent and known execution gates without claiming a provider request will succeed. */

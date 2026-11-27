@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { aiRouterProvider } from "~/services/checkin/autoCheckin/providers/aiRouter"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
+import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/apiKeyCasa"
 import { baiApiProvider } from "~/services/checkin/autoCheckin/providers/baiApi"
 import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
@@ -107,7 +108,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(26)
+    expect(registrationContracts).toHaveLength(27)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -159,6 +160,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "bai-api:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: baiApiProvider,
+        },
+        {
+          id: "apikey-casa:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.SUB2API],
+          provider: apiKeyCasaProvider,
         },
         {
           id: "nexavlinks:daily-checkin",
@@ -244,8 +250,12 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
-      AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
     ])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://fapi.leileihog.top")
+        .map(({ id }) => id),
+    ).toContain(AUTO_CHECKIN_METHOD_IDS.HogDailyLottery)
     expect(
       autoCheckinMethodRegistry
         .getCandidates(SITE_TYPES.UNKNOWN, "https://agentrouter.org")
@@ -267,7 +277,6 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
-      AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
     ])
     expect(
       autoCheckinMethodRegistry
@@ -276,7 +285,6 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
-      AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
     ])
     expect(
       getAutoCheckinCandidateMethodIds(
@@ -287,6 +295,9 @@ describe("autoCheckinMethodRegistry", () => {
     expect(
       getAutoCheckinCandidateMethodIds(SITE_TYPES.NEW_API, undefined),
     ).toContain(AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn)
+    expect(
+      getAutoCheckinCandidateMethodIds(SITE_TYPES.NEW_API, undefined),
+    ).not.toContain(AUTO_CHECKIN_METHOD_IDS.HogDailyLottery)
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.NEW_API)).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     ])
@@ -403,6 +414,7 @@ describe("autoCheckinMethodRegistry", () => {
       AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
     ])
     expect(
       autoCheckinMethodRegistry
@@ -598,7 +610,6 @@ describe("autoCheckinMethodRegistry", () => {
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
-      AUTO_CHECKIN_METHOD_IDS.HogDailyLottery,
     ])
   })
 })

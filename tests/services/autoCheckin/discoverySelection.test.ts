@@ -86,6 +86,86 @@ const peersRegistry = (
     })),
   )
 
+it.each([
+  ["https://mirror.example", "malformed", 200, "sub2api-pro:daily-checkin"],
+  ["https://apikey.casa", 503, 200, "sub2api-pro:daily-checkin"],
+  ["https://apikey.casa/redeem", 200, 503, "unknown"],
+  ["https://apikey.casa", 200, 404, "apikey-casa:daily-checkin"],
+  ["https://apikey.casa", 200, 200, "apikey-casa:daily-checkin"],
+  ["https://mirror.example", 200, 404, "apikey-casa:daily-checkin"],
+  ["https://mirror.example", 200, 200, "ambiguous"],
+  ["https://mirror.example", 503, 503, "unknown"],
+] as const)(
+  "discovers native check-in on %s with Casa %s and Pro %i",
+  async (url, casaStatus, proStatus, expected) => {
+    vi.mocked(fetchApi).mockImplementation(async (_request, options) => {
+      if (options.endpoint === "/api/v1/settings/public")
+        return { code: 0, message: "", data: {} }
+      throw new ApiError("Not found", 404)
+    })
+    vi.mocked(fetchApiResponse).mockImplementation(
+      async (_request, options) => {
+        const path = options.endpoint.split("?")[0]
+        let status = 404
+        let data: unknown
+        if (path === "/api/v1/redeem/checkin") {
+          status = casaStatus === "malformed" ? 200 : casaStatus
+          data =
+            casaStatus === "malformed"
+              ? { reward: 1 }
+              : { checked_in: false, reward: 1 }
+        } else if (path === "/api/v1/redeem/checkin/status") {
+          status = proStatus
+          data = {
+            enabled: true,
+            checked_in_today: false,
+            reward_min: 1,
+            reward_max: 2,
+          }
+        }
+        return {
+          ok: status === 200,
+          status,
+          headers: {},
+          body: status === 200 ? { code: 0, message: "", data } : null,
+        }
+      },
+    )
+    const account = discoveryAccount(url)
+    account.site_type = SITE_TYPES.SUB2API
+    const result = await discoverCheckInMethods({
+      account,
+      config: account.checkIn,
+    })
+    expect(
+      vi
+        .mocked(fetchApiResponse)
+        .mock.calls.some(([, request]) => request.options?.method === "POST"),
+    ).toBe(false)
+    if (casaStatus !== 200)
+      expect(result.detections["apikey-casa:daily-checkin"]?.outcome).toBe(
+        "unknown",
+      )
+    if (expected === "ambiguous" || expected === "unknown") {
+      expect(result.decision.outcome).toBe(expected)
+      expect(result.config.selection.methodId).toBeUndefined()
+    } else {
+      expect(result.decision).toEqual({
+        outcome: "resolved",
+        methodId: expected,
+      })
+      expect(result.config.selection.methodId).toBe(expected)
+    }
+    expect(
+      inspectAccountCheckIn({
+        config: normalizeCheckInConfigV7(result.config),
+        siteType: account.site_type,
+        siteUrl: account.site_url,
+      }).decision,
+    ).toEqual(result.decision)
+  },
+)
+
 it.each(
   [
     "https://user@xingya.site/v1",

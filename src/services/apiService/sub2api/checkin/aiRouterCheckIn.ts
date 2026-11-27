@@ -1,21 +1,26 @@
 import { CHECK_IN_METHOD_DETECTION_OUTCOMES } from "~/constants/checkIn"
 import { compareDecimal, parseDecimal } from "~/services/amounts/decimal"
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
   createAiRouterCheckInStatusEndpoint,
 } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import type { Sub2ApiCheckInStatusAuth } from "./statusAuthentication"
+import {
+  fetchAuthenticatedCheckInStatusText,
+  tryParseCheckInJson,
+} from "./textStatusRequest"
 
 /**
  * AI-ROUTER (`https://ai-router.dev`) is a Sub2API fork that keeps the host's
@@ -87,14 +92,6 @@ const toRecord = (value: unknown): Record<string, unknown> | null =>
     ? (value as Record<string, unknown>)
     : null
 
-const tryParseJson = (body: string): unknown => {
-  try {
-    return JSON.parse(body) as unknown
-  } catch {
-    return undefined
-  }
-}
-
 /** Reads the deployment's decimal amounts, which mix numbers and strings. */
 const toAmount = (value: unknown): number | string | null => {
   if (typeof value === "number") {
@@ -118,7 +115,7 @@ const invalidResponse = (endpoint: string): ApiError =>
   )
 
 const createHttpError = (response: ApiTransportResponse<string>): ApiError => {
-  const envelope = toRecord(tryParseJson(response.body))
+  const envelope = toRecord(tryParseCheckInJson(response.body))
   const message =
     typeof envelope?.message === "string" && envelope.message.trim()
       ? envelope.message.trim()
@@ -139,7 +136,7 @@ const createHttpError = (response: ApiTransportResponse<string>): ApiError => {
 }
 
 const readFailureReason = (body: string): string => {
-  const reason = toRecord(tryParseJson(body))?.reason
+  const reason = toRecord(tryParseCheckInJson(body))?.reason
   return typeof reason === "string" ? reason : ""
 }
 
@@ -168,7 +165,7 @@ const classifyStatusResponse = (
     }
   }
 
-  const parsed = tryParseJson(response.body)
+  const parsed = tryParseCheckInJson(response.body)
   if (parsed === undefined) {
     // A deployment that does not serve this API answers with its own app shell,
     // which identifies the host rather than an instance of this app.
@@ -216,19 +213,14 @@ const classifyStatusResponse = (
  */
 export async function probeAiRouterDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ): Promise<AiRouterStatusProbe> {
-  return executeAuthenticatedSub2ApiRequest(
-    request,
-    AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
-    async (authenticatedRequest) => {
-      const response = await fetchApiResponse<string>(authenticatedRequest, {
-        endpoint: createAiRouterCheckInStatusEndpoint(),
-        options: { method: "GET", cache: "no-store" },
-        responseType: "text",
-      })
-      return classifyStatusResponse(response)
-    },
-    { proactiveRefresh: false, recoverUnauthorized: false },
+  return classifyStatusResponse(
+    await fetchAuthenticatedCheckInStatusText(
+      request,
+      createAiRouterCheckInStatusEndpoint(),
+      auth,
+    ),
   )
 }
 
@@ -246,7 +238,7 @@ const parseClaimResponse = (
     throw createHttpError(response)
   }
 
-  const envelope = toRecord(tryParseJson(response.body))
+  const envelope = toRecord(tryParseCheckInJson(response.body))
   if (envelope?.code !== 0 || typeof envelope.message !== "string") {
     throw invalidResponse(AI_ROUTER_DAILY_CHECK_IN_ENDPOINT)
   }
@@ -292,11 +284,11 @@ export async function performAiRouterDailyCheckIn(
     request,
     AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<string>(authenticatedRequest, {
-        endpoint: AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-        responseType: "text",
-      })
+      const response = await postSub2ApiCheckIn<string>(
+        authenticatedRequest,
+        AI_ROUTER_DAILY_CHECK_IN_ENDPOINT,
+        { responseType: "text" },
+      )
       return parseClaimResponse(response)
     },
     async (recoveredRequest) => {

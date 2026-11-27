@@ -22,6 +22,8 @@ import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
+import { expiredCheckInJwt } from "./checkin/jwtFixture"
+
 const { getLatestAuth, persistAuthUpdate } = vi.hoisted(() => ({
   getLatestAuth: vi.fn(),
   persistAuthUpdate: vi.fn(),
@@ -147,7 +149,7 @@ describe("Denxio daily check-in authenticated transport", () => {
 
   it("does not recover a passive status 401 through browser auth", async () => {
     vi.mocked(fetchApiResponse).mockResolvedValue(
-      response(401, { code: 401, message: "unauthorized" }),
+      response(401, expiredCheckInJwt),
     )
 
     await expect(
@@ -225,6 +227,24 @@ describe("Denxio daily check-in authenticated transport", () => {
     }
   })
 
+  it("does not replay a claim with an unrecognized HTTP 401 after a successful begin", async () => {
+    vi.mocked(fetchApiResponse)
+      .mockResolvedValueOnce(response(200, beginBody))
+      .mockResolvedValueOnce(response(401, null))
+    await expect(
+      performDenxioDailyCheckIn(createRequest(), { wait: async () => {} }),
+    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    expect(
+      vi
+        .mocked(fetchApiResponse)
+        .mock.calls.map(([, call]) => call.endpoint.split("?")[0]),
+    ).toEqual([
+      DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT,
+      DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
+    ])
+    expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
+  })
+
   it("persists recovered auth before status recheck and one recovered begin", async () => {
     const order: string[] = []
     vi.mocked(resyncSub2ApiAuthToken).mockImplementation(async () => {
@@ -248,7 +268,7 @@ describe("Denxio daily check-in authenticated transport", () => {
         endpoint === DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT &&
         token === "example-access-token"
       ) {
-        return response(401, { code: 401, message: "unauthorized" })
+        return response(401, expiredCheckInJwt)
       }
       if (endpoint === DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT) {
         return response(200, statusBody())
@@ -303,7 +323,7 @@ describe("Denxio daily check-in authenticated transport", () => {
         endpoint === DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT &&
         token === "example-access-token"
       ) {
-        return response(401, { code: 401, message: "unauthorized" })
+        return response(401, expiredCheckInJwt)
       }
       if (endpoint === DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT) {
         return response(200, statusBody())
@@ -347,9 +367,7 @@ describe("Denxio daily check-in authenticated transport", () => {
         source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
       })
       vi.mocked(fetchApiResponse)
-        .mockResolvedValueOnce(
-          response(401, { code: 401, message: "unauthorized" }),
-        )
+        .mockResolvedValueOnce(response(401, expiredCheckInJwt))
         .mockResolvedValueOnce(response(200, freshStatus))
 
       await expect(
@@ -378,9 +396,7 @@ describe("Denxio daily check-in authenticated transport", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(
-        response(401, { code: 401, message: "unauthorized" }),
-      )
+      .mockResolvedValueOnce(response(401, expiredCheckInJwt))
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
 
     await expect(
@@ -396,9 +412,7 @@ describe("Denxio daily check-in authenticated transport", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(
-        response(401, { code: 401, message: "unauthorized" }),
-      )
+      .mockResolvedValueOnce(response(401, expiredCheckInJwt))
       .mockResolvedValueOnce(response(200, statusBody()))
 
     await expect(

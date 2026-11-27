@@ -235,7 +235,13 @@ for (const mode of ["cookie", "token", "manual-token"] as const) {
     if (mode === "manual-token") {
       await page.bringToFront()
       await expect(dialog.accessTokenInput).toHaveValue("")
-      await expect(dialog.confirmAddButton).toBeHidden()
+      await expect(dialog.confirmAddButton).toBeEnabled()
+      await dialog.confirmAddButton.click()
+      await expect(dialog.accessTokenInput).toBeFocused()
+      await expect(dialog.accessTokenInput).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      )
       await expect(dialog.dialog).toContainText("Use an existing System token")
       await dialog.dialog.screenshot({
         path: testInfo.outputPath("shell-manual-token-guide.png"),

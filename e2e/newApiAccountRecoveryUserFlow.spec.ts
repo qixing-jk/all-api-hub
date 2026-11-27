@@ -509,7 +509,11 @@ for (const scenario of scenarios) {
         autoProvisionKeyOnAccountAdd: false,
         tempWindowFallback: { enabled: false },
       })
-      const recovery = createNewApiAccountRecovery({ page, config })
+      const recovery = createNewApiAccountRecovery({
+        page,
+        config,
+        tokenChannel: "official",
+      })
 
       const prepareAccount = createCompatibleRealSiteAccountFixturePreparer({
         context,

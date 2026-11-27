@@ -15,7 +15,9 @@ export async function assertAccountDetectionOutcome({
     !expectedType ||
     !fields ||
     !Object.keys(fields).length ||
-    !["absent", "disabled", "enabled"].includes(saveState)
+    !["absent", "disabled", "enabled", "validates-access-token"].includes(
+      saveState,
+    )
   )
     throw new Error(
       "Detection outcome requires type, expected fields and save state",
@@ -46,7 +48,13 @@ export async function assertAccountDetectionOutcome({
   const save = dialog.getByTestId(accounts.confirmAddButton)
   if (saveState === "absent")
     await expect(save).toHaveCount(0, { timeout: timeoutMs })
-  else {
+  else if (saveState === "validates-access-token") {
+    await save.click({ timeout: timeoutMs })
+    await expect(dialog).toBeVisible({ timeout: timeoutMs })
+    await expect(dialog.getByTestId(accounts.accessTokenInput)).toBeFocused({
+      timeout: timeoutMs,
+    })
+  } else {
     await expect(save).toBeVisible({ timeout: timeoutMs })
     if (saveState === "enabled")
       await expect(save).toBeEnabled({ timeout: timeoutMs })

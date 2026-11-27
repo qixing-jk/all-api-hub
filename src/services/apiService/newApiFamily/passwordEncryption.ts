@@ -20,8 +20,12 @@ function base64(buffer: ArrayBuffer): string {
  * RSA-OAEP SHA-256; long UTF-8 passwords use the native v2 AES-GCM envelope.
  * A crypto/key failure never downgrades to a plaintext password request.
  */
-export async function encryptNewApiPassword(password: string) {
-  const response = await passwordLoginRequest("/api/user/login/encryption-key")
+export async function encryptNewApiPassword(
+  password: string,
+  readEncryptionKey: () => Promise<Record<string, unknown>> = () =>
+    passwordLoginRequest("/api/user/login/encryption-key"),
+) {
+  const response = await readEncryptionKey()
   const key = response.data
   if (
     response.success !== true ||
