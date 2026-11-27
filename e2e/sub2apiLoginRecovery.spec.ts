@@ -356,8 +356,13 @@ async function runLoginRecovery(
       "member@example.com",
     )
   } finally {
+    // The fixture owns the primary page and context. Closing every tab here can
+    // make older Chrome exit before Playwright finishes tracing and teardown.
     await Promise.all(
-      context.pages().map((tab) => tab.close().catch(() => undefined)),
+      context
+        .pages()
+        .filter((tab) => tab !== page)
+        .map((tab) => tab.close().catch(() => undefined)),
     )
     server.closeAllConnections()
     await new Promise<void>((resolve) => server.close(() => resolve()))
@@ -378,6 +383,7 @@ async function verifySessionModes({
   testInfo: TestInfo
 }) {
   const openEditor = async (surface: Page) => {
+    await surface.bringToFront()
     const row = surface.getByTestId(
       getAccountManagementListItemTestId("sub2api-recovery"),
     )
@@ -400,6 +406,9 @@ async function verifySessionModes({
     const login = dialog.getByTestId(ids.accountFormSectionLogin)
     const acquire = login.getByTestId(ids.sub2apiLoginSectionAcquireButton)
     const screenshot = async (state: string, anchor?: Locator) => {
+      // Popup recovery can activate a different extension document. Capture the
+      // surface the user returned to, so its renderer is active for screenshots.
+      await surface.bringToFront()
       if (anchor) {
         await expect(anchor).toBeVisible()
         await anchor.evaluate((element) =>
@@ -511,6 +520,7 @@ async function verifySessionModes({
     const worker = await getServiceWorker(context)
     expect((await readStoredAccounts(worker))[0]?.sub2apiAuth).toBeUndefined()
 
+    await page.bringToFront()
     await desktop.acquire.click()
     const ready = desktop.login.getByRole("status").filter({
       hasText: copy.login.sub2apiSessionReady,

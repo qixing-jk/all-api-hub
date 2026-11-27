@@ -234,8 +234,7 @@ export function registerRealSiteAccountDetectionTests<
           pending.push(
             (async () => {
               const details = (await message.args()[1]?.jsonValue()) as
-                | Record<string, unknown>
-                | undefined
+                Record<string, unknown> | undefined
               if (!details) return
               const label = (await message.args()[0]?.jsonValue()) as string
               const safeKeys = [
@@ -272,6 +271,27 @@ export function registerRealSiteAccountDetectionTests<
             config.baseUrl,
             beforeDetect,
           )
+          // Scoped-token sites can finish identification in the compact token
+          // guide. Expand its normal UI before inspecting the identity fields.
+          await expect
+            .poll(
+              () =>
+                dialog.autoDetectButton.evaluateAll((buttons) =>
+                  buttons.every(
+                    (button) => button.getAttribute("aria-busy") !== "true",
+                  ),
+                ),
+              { timeout: 30_000 },
+            )
+            .toBe(true)
+          const openFullForm = dialog.dialog.getByRole("button", {
+            name: "Open full form",
+            exact: true,
+          })
+          await expect(dialog.userIdInput.or(openFullForm)).toBeVisible({
+            timeout: 30_000,
+          })
+          if (await openFullForm.isVisible()) await openFullForm.click()
           await expect(dialog.userIdInput).toHaveValue(expectedId, {
             timeout: 30_000,
           })
@@ -390,8 +410,8 @@ export function registerRealSiteAccountDetectionTests<
                   userId: body.data?.id,
                   identityHeaderRequired: Boolean(
                     identityHeader &&
-                      typeof body.message === "string" &&
-                      body.message.includes(identityHeader),
+                    typeof body.message === "string" &&
+                    body.message.includes(identityHeader),
                   ),
                 }
               },

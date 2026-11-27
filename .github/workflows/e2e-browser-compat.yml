@@ -47,6 +47,8 @@ jobs:
   e2e-build:
     needs: browser-compat-matrix
     uses: ./.github/workflows/e2e-build.yml
+    with:
+      include_duration_profile: true
 
   chrome-compat:
     name: Chrome ${{ matrix.chrome_version }} compatibility (${{ matrix.shard }}/3)
@@ -107,6 +109,13 @@ jobs:
           chrome-version: ${{ matrix.chrome_version }}
           install-dependencies: true
 
+      - name: Restore E2E spec durations
+        # Every version and retry uses the same profile frozen by this run's build.
+        uses: actions/download-artifact@v7
+        with:
+          path: .e2e-durations
+          name: e2e-shard-duration-profile
+
       - name: Run browser compatibility E2E
         timeout-minutes: 40
         env:
@@ -117,12 +126,21 @@ jobs:
           # Scheduled runs use two contexts; manual trials can compare four
           # without changing the scheduled default or shard assignments.
           AAH_E2E_WORKERS: ${{ inputs.workers || '2' }}
+          AAH_E2E_SHARD_INDEX: ${{ matrix.shard }}
+          AAH_E2E_SHARD_TOTAL: "3"
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/compatibility
         # Playwright finishes its report before the step or job is cancelled.
         # The list reporter preserves per-test progress even during a timeout.
-        # Retain the budget for slow versions and retries until the new
-        # concurrency has been measured across every version in CI.
-        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --grep-invert="major pages with" --output=test-results/compatibility --global-timeout=2100000 --fail-on-flaky-tests --reporter=list,github,html
+        run: |
+          set -euo pipefail
+          planned_list="$(node scripts/e2e-shard-plan.mjs --index "${AAH_E2E_SHARD_INDEX}" --total "${AAH_E2E_SHARD_TOTAL}")"
+          if [ -n "${planned_list}" ]; then
+            mapfile -t spec_args <<< "${planned_list}"
+            echo "Duration-balanced shard ${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}: ${#spec_args[@]} specs"
+          else
+            spec_args=("--shard=${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}")
+          fi
+          pnpm run e2e:default "${spec_args[@]}" --grep-invert="major pages with" --output=test-results/compatibility --global-timeout=2100000 --fail-on-flaky-tests --reporter=list,github,html
 
       # Performance measurements need a single browser context on the runner.
       # Execute the complete file once per Chrome version, outside the sharded
