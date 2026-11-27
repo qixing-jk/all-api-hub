@@ -47,6 +47,33 @@ describe("ZIFEIYU daily-game movement planner", () => {
     ).toBe(4)
   })
 
+  it("selects the closest token and maps a lower-left movement vector", () => {
+    expect(
+      chooseZifeiyuGameInput(
+        state({
+          tokens: [
+            { x: 8_000, y: 3_500, value: 10 },
+            { x: 4_000, y: 4_500, value: 10 },
+          ],
+        }),
+      ),
+    ).toBe(6)
+  })
+
+  it("moves into range of the nearest distant living enemy", () => {
+    expect(
+      chooseZifeiyuGameInput(
+        state({
+          enemies: [
+            { id: 1, x: 8_000, y: 3_500, hp: 4, kind: 0 },
+            { id: 2, x: 7_100, y: 3_500, hp: 4, kind: 0 },
+            { id: 3, x: 5_100, y: 3_500, hp: 0, kind: 0 },
+          ],
+        }),
+      ),
+    ).toBe(3)
+  })
+
   it("evades a nearby enemy and dashes only when the server cooldown allows it", () => {
     const threatened = state({
       enemies: [{ id: 1, x: 5_500, y: 3_500, hp: 4, kind: 0 }],

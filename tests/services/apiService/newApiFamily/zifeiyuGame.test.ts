@@ -6,6 +6,7 @@ import {
   createZifeiyuBrowserSessionRequest,
   parseZifeiyuGameStatus,
   readZifeiyuAccountQuota,
+  readZifeiyuGameRewards,
   readZifeiyuGameStatus,
   sendZifeiyuGameInputs,
   startZifeiyuGame,
@@ -135,6 +136,12 @@ describe("ZIFEIYU browser-session game protocol", () => {
     })
   })
 
+  it("parses a decimal quota string for server reward reconciliation", async () => {
+    data.mockResolvedValueOnce({ id: 17, quota: "42000" })
+
+    await expect(readZifeiyuAccountQuota(account)).resolves.toBe(42_000)
+  })
+
   it("rejects an unavailable or mismatched account quota readback", async () => {
     data.mockResolvedValueOnce({ id: 99, quota: 42_000 })
     await expect(readZifeiyuAccountQuota(account)).rejects.toThrow(
@@ -152,6 +159,20 @@ describe("ZIFEIYU browser-session game protocol", () => {
     expect(parseZifeiyuGameStatus(status)).toEqual(status)
     expect(() => parseZifeiyuGameStatus({ ...status, day: "today" })).toThrow(
       "Invalid ZIFEIYU game status",
+    )
+  })
+
+  it("rejects an incomplete read-only rewards response", async () => {
+    data.mockResolvedValueOnce({ id: 17 }).mockResolvedValueOnce({
+      budgets: { can_start: true },
+      week: status.week,
+      enabled: true,
+      rewards_enabled: true,
+      server_time: status.server_time,
+    })
+
+    await expect(readZifeiyuGameRewards(account)).rejects.toThrow(
+      "Invalid ZIFEIYU game rewards status",
     )
   })
 
@@ -202,5 +223,25 @@ describe("ZIFEIYU browser-session game protocol", () => {
       }),
     ).rejects.toThrow("Invalid ZIFEIYU game input batch")
     expect(data).toHaveBeenCalledTimes(2)
+  })
+
+  it("rejects a response for another game run instead of advancing that run", async () => {
+    data.mockResolvedValueOnce({ ...run, id: "different-run" })
+
+    await expect(
+      sendZifeiyuGameInputs(createZifeiyuBrowserSessionRequest(account), {
+        id: "expected-run",
+        from: 0,
+        inputs: [3],
+      }),
+    ).rejects.toThrow("Invalid ZIFEIYU game input response")
+  })
+
+  it("rejects a malformed run returned after starting a game", async () => {
+    data.mockResolvedValueOnce({ ...run, quota_awarded: -1 })
+
+    await expect(
+      startZifeiyuGame(account, createZifeiyuBrowserSessionRequest(account)),
+    ).rejects.toThrow("Invalid ZIFEIYU game run")
   })
 })

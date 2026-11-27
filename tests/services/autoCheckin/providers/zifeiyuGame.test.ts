@@ -112,6 +112,18 @@ describe("ZIFEIYU game check-in provider", () => {
         site_url: "http://ai.112102.xyz/",
       }),
     ).toMatchObject({ ready: false })
+    expect(
+      zifeiyuGameProvider.getReadiness({
+        ...account,
+        account_info: undefined,
+      } as unknown as SiteAccount),
+    ).toMatchObject({ ready: false })
+    expect(
+      zifeiyuGameProvider.getReadiness({
+        ...account,
+        site_url: "not a URL",
+      }),
+    ).toMatchObject({ ready: false })
   })
 
   it("classifies an enabled game with no remaining attempt without starting it", async () => {
@@ -159,6 +171,44 @@ describe("ZIFEIYU game check-in provider", () => {
     if (result && "status" in result && result.status?.outcome === "known") {
       expect(result.status.today).toBeUndefined()
     }
+  })
+
+  it("marks a disabled rewards endpoint as unavailable without starting a game", async () => {
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce({ ...rewards, enabled: false })
+
+    const result = await zifeiyuGameProvider.detect?.({
+      account,
+      observedAt: status.server_time,
+    })
+
+    expect(result).toMatchObject({
+      detection: { outcome: "matched" },
+      status: { outcome: "known", availability: "disabled" },
+    })
+    expect(data.mock.calls.map(([, options]) => options.endpoint)).toEqual([
+      "/api/user/self",
+      "/api/user/game/rewards",
+    ])
+  })
+
+  it("does not start a game when the authoritative settings disable it", async () => {
+    data.mockResolvedValueOnce({ id: 17 }).mockResolvedValueOnce({
+      ...status,
+      settings: { enabled: false, rewards_enabled: true },
+    })
+
+    const result = await zifeiyuGameProvider.checkIn(account, context)
+
+    expect(result).toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+    })
+    expect(data.mock.calls.map(([, options]) => options.endpoint)).toEqual([
+      "/api/user/self",
+      "/api/user/game",
+    ])
   })
 
   it("does not start a second daily game when the authoritative run is complete", async () => {
@@ -329,6 +379,41 @@ describe("ZIFEIYU game check-in provider", () => {
     ).toEqual(["/api/user/game/start"])
   })
 
+  it("does not repeat a dispatched start when authoritative status readback fails", async () => {
+    const eligibleStatus = {
+      ...status,
+      budgets: { ...status.budgets, can_start: true, daily_remaining: 1 },
+    }
+    const mutationLifecycle = createMutationLifecycle()
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce(eligibleStatus)
+      .mockResolvedValueOnce({ id: 17, quota: 1_000 })
+      .mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        throw new TypeError("response lost after start dispatch")
+      })
+      .mockRejectedValueOnce(
+        new ApiError("login required during readback", 401, "/api/user/self"),
+      )
+
+    const result = await zifeiyuGameProvider.checkIn(account, {
+      ...context,
+      mutationLifecycle,
+    })
+
+    expect(result).toMatchObject({
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+    })
+    expect(
+      data.mock.calls
+        .filter(([, options]) => options.endpoint === "/api/user/game/start")
+        .map(([, options]) => options.endpoint),
+    ).toEqual(["/api/user/game/start"])
+    expect(data).toHaveBeenCalledTimes(5)
+  })
+
   it("resumes a running game and reconciles an input response lost after dispatch", async () => {
     const now = Date.now()
     const runningStatus = {
@@ -382,6 +467,84 @@ describe("ZIFEIYU game check-in provider", () => {
     ).toEqual(["/api/user/game/input"])
   })
 
+  it("reports a grant after an input response confirms the final run and quota", async () => {
+    const now = Date.now()
+    const runningStatus = {
+      ...status,
+      server_time: now,
+      run: {
+        ...completedStatus.run,
+        id: "input-success-run",
+        started_at: now - 100_000,
+        server_time: now,
+        status: "running" as const,
+        quota_awarded: 0,
+        state: { ...completedStatus.run.state, tick: 100, clock_tick: 100 },
+      },
+    }
+    const finishedRun = {
+      ...completedStatus.run,
+      id: "input-success-run",
+      quota_awarded: 100,
+    }
+    const mutationLifecycle = Object.assign(createMutationLifecycle(), {
+      onMutationAccepted: vi.fn(),
+      onCookieRecovered: vi.fn(),
+      onPreHandlerUnauthorized: vi.fn(),
+    })
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce(runningStatus)
+      .mockResolvedValueOnce({ id: 17, quota: 1_000 })
+      .mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        request.observer?.onMutationAccepted()
+        request.observer?.onCookieRecovered?.("synthetic-cookie", 1)
+        request.observer?.onPreHandlerUnauthorized?.()
+        vi.setSystemTime(now + 2_500)
+        return finishedRun
+      })
+      .mockResolvedValueOnce({ id: 17, quota: 1_100 })
+
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    try {
+      const pending = zifeiyuGameProvider.checkIn(account, {
+        ...context,
+        mutationLifecycle,
+      })
+      const result = await pending
+
+      expect(result).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+        data: { id: "input-success-run" },
+      })
+      expect(result.awards).toHaveLength(1)
+      expect(
+        data.mock.calls
+          .filter(([, options]) =>
+            ["/api/user/game/start", "/api/user/game/input"].includes(
+              options.endpoint,
+            ),
+          )
+          .map(([, options]) => options.endpoint),
+      ).toEqual(["/api/user/game/input"])
+      expect(mutationLifecycle).toMatchObject({
+        dispatched: true,
+        responseReceived: true,
+      })
+      expect(mutationLifecycle.onMutationAccepted).toHaveBeenCalledOnce()
+      expect(mutationLifecycle.onCookieRecovered).toHaveBeenCalledWith(
+        "synthetic-cookie",
+        1,
+      )
+      expect(mutationLifecycle.onPreHandlerUnauthorized).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("does not retry a dispatched input batch when the game readback is unknown", async () => {
     const now = Date.now()
     const runningStatus = {
@@ -427,6 +590,166 @@ describe("ZIFEIYU game check-in provider", () => {
         )
         .map(([, options]) => options.endpoint),
     ).toEqual(["/api/user/game/input"])
+  })
+
+  it("does not retry input for a different server run after a lost response", async () => {
+    const now = Date.now()
+    const runningStatus = {
+      ...status,
+      server_time: now,
+      run: {
+        ...completedStatus.run,
+        id: "original-run",
+        started_at: now - 100_000,
+        server_time: now,
+        status: "running" as const,
+        quota_awarded: 0,
+        state: { ...completedStatus.run.state, tick: 100, clock_tick: 100 },
+      },
+    }
+    const mutationLifecycle = createMutationLifecycle()
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce(runningStatus)
+      .mockResolvedValueOnce({ id: 17, quota: 1_000 })
+      .mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        throw new TypeError("response lost after input dispatch")
+      })
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce({
+        ...status,
+        run: { ...runningStatus.run, id: "different-run" },
+      })
+
+    const result = await zifeiyuGameProvider.checkIn(account, {
+      ...context,
+      mutationLifecycle,
+    })
+
+    expect(result).toMatchObject({
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+    })
+    expect(
+      data.mock.calls
+        .filter(([, options]) =>
+          ["/api/user/game/start", "/api/user/game/input"].includes(
+            options.endpoint,
+          ),
+        )
+        .map(([, options]) => options.endpoint),
+    ).toEqual(["/api/user/game/input"])
+  })
+
+  it.each([
+    { label: "the health is exhausted", hp: 0, tick: 100 },
+    { label: "the game reached its duration", hp: 20, tick: 900 },
+  ])("does not send input when $label", async ({ hp, tick }) => {
+    const now = Date.now()
+    const runningStatus = {
+      ...status,
+      server_time: now,
+      run: {
+        ...completedStatus.run,
+        id: "server-limited-run",
+        started_at: now - 100_000,
+        server_time: now,
+        status: "running" as const,
+        quota_awarded: 0,
+        state: {
+          ...completedStatus.run.state,
+          tick,
+          clock_tick: tick,
+          hp,
+        },
+      },
+    }
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce(runningStatus)
+      .mockResolvedValueOnce({ id: 17, quota: 1_000 })
+
+    const result = await zifeiyuGameProvider.checkIn(account, context)
+
+    expect(result).toMatchObject({
+      status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+    })
+    expect(data.mock.calls.map(([, options]) => options.endpoint)).toEqual([
+      "/api/user/self",
+      "/api/user/game",
+      "/api/user/self",
+    ])
+  })
+
+  it("stops a stale running game at its bounded runtime without sending input", async () => {
+    const now = Date.now()
+    const runningStatus = {
+      ...status,
+      server_time: now,
+      run: {
+        ...completedStatus.run,
+        id: "bounded-runtime-run",
+        started_at: now,
+        server_time: now,
+        status: "running" as const,
+        quota_awarded: 0,
+        state: { ...completedStatus.run.state, tick: 0, clock_tick: 930 },
+      },
+    }
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce(runningStatus)
+      .mockResolvedValueOnce({ id: 17, quota: 1_000 })
+
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    try {
+      const pending = zifeiyuGameProvider.checkIn(account, context)
+      await vi.advanceTimersByTimeAsync(100_000)
+      const result = await pending
+
+      expect(result).toMatchObject({
+        status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.TIMEOUT,
+      })
+      expect(data.mock.calls.map(([, options]) => options.endpoint)).toEqual([
+        "/api/user/self",
+        "/api/user/game",
+        "/api/user/self",
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not reconcile or repeat a start that failed before dispatch", async () => {
+    const eligibleStatus = {
+      ...status,
+      budgets: { ...status.budgets, can_start: true, daily_remaining: 1 },
+    }
+    data
+      .mockResolvedValueOnce({ id: 17 })
+      .mockResolvedValueOnce(eligibleStatus)
+      .mockResolvedValueOnce({ id: 17, quota: 1_000 })
+      .mockRejectedValueOnce(new TypeError("start was not dispatched"))
+
+    const result = await zifeiyuGameProvider.checkIn(account, {
+      ...context,
+      mutationLifecycle: createMutationLifecycle(),
+    })
+
+    expect(result).toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+    })
+    expect(
+      data.mock.calls
+        .filter(([, options]) => options.endpoint === "/api/user/game/start")
+        .map(([, options]) => options.endpoint),
+    ).toEqual(["/api/user/game/start"])
+    expect(data).toHaveBeenCalledTimes(4)
   })
 
   it("does not start the game when the pre-run quota is unavailable", async () => {
