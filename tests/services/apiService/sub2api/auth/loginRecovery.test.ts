@@ -1,5 +1,5 @@
 import { createHash, webcrypto } from "node:crypto"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
@@ -64,6 +64,7 @@ vi.mock(
 )
 
 describe("Sub2API configured login recovery", () => {
+  afterEach(() => vi.restoreAllMocks())
   it.each(["revoked", "network"])(
     "keeps a missing-access independent account on its own refresh family: %s",
     async (failure) => {
@@ -495,6 +496,10 @@ describe("Sub2API configured login recovery", () => {
   })
 
   it("recovers the adopted browser family after a reactive renewal rejection", async () => {
+    const startedAt = Date.now()
+    const clock = vi.spyOn(Date, "now").mockReturnValue(startedAt)
+    // Re-reading one stored credential must not extend its lifetime.
+    const browserTokenExpiresAt = startedAt + 3600000
     await bindAccountToPanelKey()
     account.sub2apiAuth = {
       refreshToken: "old-managed-refresh",
@@ -510,15 +515,16 @@ describe("Sub2API configured login recovery", () => {
         account.account_info.access_token = "newer-browser-access"
         account.sub2apiAuth = {
           refreshToken: "browser-refresh",
-          tokenExpiresAt: Date.now() + 3600000,
+          tokenExpiresAt: browserTokenExpiresAt,
         }
         return getLatest(...args)
       })
-    deps.refresh.mockRejectedValue(
-      new Sub2ApiTokenRefreshError(
+    deps.refresh.mockImplementation(async () => {
+      clock.mockReturnValue(startedAt + 1000)
+      throw new Sub2ApiTokenRefreshError(
         SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN,
-      ),
-    )
+      )
+    })
     deps.browser.mockResolvedValue({
       accessToken: "resynced-browser-access",
       userId: "17",
@@ -538,6 +544,10 @@ describe("Sub2API configured login recovery", () => {
     )
     expect(deps.browser).toHaveBeenCalledOnce()
     expect(deps.login).not.toHaveBeenCalled()
+    expect(runner.mock.calls.map(([next]) => next.auth.accessToken)).toEqual([
+      "newer-browser-access",
+      "resynced-browser-access",
+    ])
   })
 
   it("does not borrow website auth when an extension-bound refresh token is revoked", async () => {
