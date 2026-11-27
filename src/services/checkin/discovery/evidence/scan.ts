@@ -2,6 +2,7 @@ import PQueue from "p-queue"
 
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
 import { AuthTypeEnum } from "~/types"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
@@ -79,14 +80,15 @@ export async function collectCheckInEvidence(
   const scanIssues = new Set<NonNullable<CheckInEvidence["issues"]>[number]>()
 
   try {
-    const paths =
+    const nativePage =
       input.purpose === CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage
-        ? []
-        : getCheckInFeedbackStatusRoutes(
-            input.siteType,
-            input.baseUrl,
-            input.routePaths,
-          )
+    const paths = nativePage
+      ? []
+      : getCheckInFeedbackStatusRoutes(
+          input.siteType,
+          input.baseUrl,
+          input.routePaths,
+        )
     // Never substitute a browser's ambient session for a selected account's cookie.
     // Cookie isolation/temp-window recovery and token refresh can mutate session state;
     // this optional scan instead discloses the unavailable query and scans public assets.
@@ -138,7 +140,7 @@ export async function collectCheckInEvidence(
         })
         const assets = new Set<string>()
         const scheduled = new Set<string>()
-        let expandReferences = options.loadedAssets === undefined
+        let expandReferences = nativePage || options.loadedAssets === undefined
         const routes = new Set<string>()
         const pageCandidates = new Map<string, NativeCheckInPageCandidate>()
         const addPageCandidate = (
@@ -183,18 +185,18 @@ export async function collectCheckInEvidence(
           KEYWORDS.forEach((keyword) => {
             if (lower.includes(keyword)) keywords.add(keyword)
           })
-          extractCheckInRoutes(decoded).forEach((path) => {
-            if (routes.size < CHECK_IN_EVIDENCE_SCAN_LIMITS.routes)
-              routes.add(path)
-            else if (!routes.has(path)) {
-              partial = true
-              scanIssues.add(FEEDBACK_SCAN_ISSUES.RouteLimit)
-            }
-          })
-          if (input.purpose === CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage)
+          if (nativePage) {
             extractNativeCheckInPageRoutes(decoded).forEach((path) =>
               addPageCandidate(path, NATIVE_CHECK_IN_PAGE_SOURCES.Script),
             )
+          } else {
+            extractCheckInRoutes(decoded).forEach((path) => {
+              if (routes.size < CHECK_IN_EVIDENCE_SCAN_LIMITS.routes)
+                routes.add(path)
+              else if (!routes.has(path))
+                scanIssues.add(FEEDBACK_SCAN_ISSUES.RouteLimit)
+            })
+          }
           discoverAssets(decoded, base, isHtml).forEach((asset) => {
             addAsset(asset, expandReferences)
           })
@@ -228,15 +230,9 @@ export async function collectCheckInEvidence(
         analyze(html.text, options.pageUrl ?? origin, true)
         queue.start()
         await queue.onIdle()
-        // Already loaded sources are the primary search surface. Only expand
-        // into unrequested chunks when they did not reveal a relevant path.
-        if (
-          !expandReferences &&
-          (input.purpose === CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage
-            ? pageCandidates.size === 0
-            : routes.size === 0) &&
-          !exhausted()
-        ) {
+        // A native scan needs all known sources. Public feedback expands beyond
+        // loaded sources only when they supplied no route clues.
+        if (!expandReferences && routes.size === 0 && !exhausted()) {
           expandReferences = true
           for (const asset of assets) addAsset(asset, true)
           await queue.onIdle()
@@ -246,10 +242,14 @@ export async function collectCheckInEvidence(
         // Preserve source/API clues and expansion policy before adding page
         // hints; navigation must not consume their shared return budget first.
         for (const candidate of options.navigation?.candidates ?? []) {
+          if (nativePage) {
+            const path = normalizeCheckInPagePath(candidate)
+            if (path)
+              addPageCandidate(path, NATIVE_CHECK_IN_PAGE_SOURCES.Navigation)
+            continue
+          }
           const path = normalizeCheckInRouteClue(candidate)
           if (!path) continue
-          if (input.purpose === CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage)
-            addPageCandidate(path, NATIVE_CHECK_IN_PAGE_SOURCES.Navigation)
           if (routes.size < CHECK_IN_EVIDENCE_SCAN_LIMITS.routes)
             routes.add(path)
           else if (!routes.has(path))
@@ -260,8 +260,7 @@ export async function collectCheckInEvidence(
         partial ||= scanIssues.has(FEEDBACK_SCAN_ISSUES.RouteLimit)
         result.keywords = [...keywords]
         result.routes = [...routes]
-        if (input.purpose === CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage)
-          result.pageCandidates = [...pageCandidates.values()]
+        if (nativePage) result.pageCandidates = [...pageCandidates.values()]
       } catch {
         partial = true
       }

@@ -311,31 +311,42 @@ describe("registered DaiGua daily check-in", () => {
     )
   })
 
-  it("reports mandatory Turnstile as manual verification without retrying", async () => {
-    vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(response(statusData()))
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        headers: {},
-        body: {
-          code: 400,
-          message: "turnstile verification failed",
-          reason: "TURNSTILE_VERIFICATION_FAILED",
+  it.each([undefined, "https://api.daigua.icu/rewards?tab=daily"])(
+    "reports mandatory verification at the resolved page without retrying (%s)",
+    async (pageUrl) => {
+      if (pageUrl)
+        vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+          success: false,
+          pageUrl,
+          turnstile: { status: "timeout", hasTurnstile: true },
+        })
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(response(statusData()))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "turnstile verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockResolvedValueOnce(response(statusData()))
+      await expect(run()).resolves.toMatchObject({
+        kind: "executed",
+        retryable: false,
+        result: {
+          status: "failed",
+          reasonCode: "manual_verification_required",
+          messageParams: {
+            checkInUrl: pageUrl ?? "https://api.daigua.icu/checkin",
+          },
         },
       })
-      .mockResolvedValueOnce(response(statusData()))
-    await expect(run()).resolves.toMatchObject({
-      kind: "executed",
-      retryable: false,
-      result: {
-        status: "failed",
-        reasonCode: "manual_verification_required",
-        messageParams: { checkInUrl: "https://api.daigua.icu/checkin" },
-      },
-    })
-    expect(fetchApiResponse).toHaveBeenCalledTimes(4)
-  })
+      expect(fetchApiResponse).toHaveBeenCalledTimes(4)
+    },
+  )
 
   it.each(["timeout", "not_present", "rejected"] as const)(
     "confirms native completion after verification %s without another claim",

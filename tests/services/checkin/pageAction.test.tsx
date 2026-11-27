@@ -20,6 +20,91 @@ function createMockElement<K extends keyof HTMLElementTagNameMap>(
 }
 
 describe("native check-in page actions", () => {
+  it("excludes same-page scroll links while retaining distinct and hash-router destinations", () => {
+    const currentPath = location.pathname + location.search
+    document.body.innerHTML = `
+      <a href="#rules">Daily rules</a><h2 id="rules">Rules</h2>
+      <a href="#daily%20history">Daily history</a><h2 id="daily history">History</h2>
+      <a href="#terms">Daily terms</a><a name="terms"></a>
+      <a href="#100%">Daily goals</a><h2 id="100%">Goals</h2>
+      <a href="#/daily">Daily route</a>
+      <a href="#!/rewards">Rewards route</a>
+      <a href="/daily/checkin">Daily check-in</a>
+      <a href="/daily/hidden" hidden>Hidden daily link</a>
+      <a href="/unrelated">Home</a>
+    `
+    expect(
+      inspectCheckinPage({ kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton })
+        .candidates,
+    ).toEqual([
+      currentPath + "#/daily",
+      currentPath + "#!/rewards",
+      "/daily/checkin",
+    ])
+  })
+
+  it.each([
+    { kind: TURNSTILE_PRE_TRIGGER_KINDS.None },
+    { kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector, selector: "" },
+    { kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector, selector: "[" },
+    {
+      kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
+      candidateSelector: "[",
+      positivePattern: "check in",
+    },
+  ])("does not authorize a grant with an unusable trigger: %j", (trigger) => {
+    document.body.innerHTML = "<button>Check in</button>"
+    expect(inspectCheckinPage(trigger)).toMatchObject({ hasTarget: false })
+    expect(
+      triggerCheckinPageAction({ requestId: "unusable-target", trigger }),
+    ).toMatchObject({ status: "target_not_found", clicked: false })
+  })
+
+  it.each([new Error("Native click failed"), "Native click failed"])(
+    "reports a thrown native click and does not retry it (%j)",
+    (error) => {
+      const button = document.createElement("button")
+      button.textContent = "Check in"
+      const click = vi.spyOn(button, "click").mockImplementation(() => {
+        throw error
+      })
+      document.body.append(button)
+      const request = {
+        requestId: `native-click-error-${typeof error}`,
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
+          throttle: { maxAttempts: 1 },
+        },
+      }
+      expect(triggerCheckinPageAction(request)).toMatchObject({
+        status: "error",
+        clicked: false,
+        error: "Native click failed",
+      })
+      expect(triggerCheckinPageAction(request)).toMatchObject({
+        status: "throttled",
+        clicked: false,
+      })
+      expect(click).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("requires a nonblank request identity before dispatching a native action", () => {
+    const button = document.createElement("button")
+    button.textContent = "Check in"
+    const click = vi.spyOn(button, "click")
+    document.body.append(button)
+    const trigger = { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton }
+    for (const requestId of [undefined, "  "]) {
+      expect(triggerCheckinPageAction({ requestId, trigger })).toMatchObject({
+        status: "error",
+        clicked: false,
+        reason: "missingRequestId",
+      })
+    }
+    expect(click).not.toHaveBeenCalled()
+  })
+
   it.each([undefined, "", "[", "x".repeat(201)])(
     "preserves optional versus default negative pattern fallback (%s)",
     (negativePattern) => {

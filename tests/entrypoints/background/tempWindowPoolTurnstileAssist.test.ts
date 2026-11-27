@@ -452,6 +452,98 @@ describe("tempWindowPool Turnstile assist turns", () => {
     )
   })
 
+  it("stops before verification when no candidate exposes a usable check-in control", async () => {
+    const original = sendMessageMock.getMockImplementation()!
+    sendMessageMock.mockImplementation(async (tabId, message) =>
+      message.action === RuntimeActionIds.ContentInspectCheckinPage
+        ? { success: true, hasTarget: false, candidates: [] }
+        : original(tabId, message),
+    )
+    const reply = vi.fn()
+    const pending = fetchFromPool(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/checkin",
+        fetchUrl: "https://example.invalid/api/checkin",
+        fetchOptions: { method: "POST" },
+        requestId: "no-checkin-widget",
+        discoverCheckInPage: true,
+        turnstilePreTrigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
+        },
+      },
+      reply,
+    )
+    await vi.waitFor(() => expect(reply).toHaveBeenCalled(), {
+      timeout: 10_000,
+    })
+    await pending
+    expect(reply).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        success: false,
+        turnstile: expect.objectContaining({ status: "not_present" }),
+      }),
+    )
+    expect(contentWaits.size).toBe(0)
+    expect(sendMessageMock).not.toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentPerformTempWindowFetch,
+      }),
+    )
+  })
+
+  it("returns the discovered page for manual recovery when verification yields no token", async () => {
+    const original = sendMessageMock.getMockImplementation()!
+    let inspections = 0
+    sendMessageMock.mockImplementation(async (tabId, message) =>
+      message.action === RuntimeActionIds.ContentInspectCheckinPage
+        ? {
+            success: true,
+            hasTarget: ++inspections > 1,
+            candidates: ["/rewards?tab=daily"],
+          }
+        : original(tabId, message),
+    )
+    const reply = vi.fn()
+    const pending = fetchFromPool(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/checkin",
+        fetchUrl: "https://example.invalid/api/checkin",
+        fetchOptions: { method: "POST" },
+        requestId: "recover-discovered-page",
+        discoverCheckInPage: true,
+        turnstilePreTrigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
+        },
+      },
+      reply,
+    )
+    await vi.waitFor(() => expect(contentWaits.size).toBe(1), {
+      timeout: 10_000,
+    })
+    contentWaits.get(createdContexts[0]!.tabId)!.resolve({
+      success: true,
+      status: "timeout",
+      detection: { hasTurnstile: true, reasons: [], score: 1 },
+    })
+    await pending
+    expect(reply).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        success: false,
+        pageUrl: "https://example.invalid/rewards?tab=daily",
+        turnstile: expect.objectContaining({ status: "timeout" }),
+      }),
+    )
+    expect(sendMessageMock).not.toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentPerformTempWindowFetch,
+      }),
+    )
+  })
+
   async function startTurnstileFetch(requestId: string, origin: string) {
     const sendResponse = vi.fn()
     const request = fetchFromPool(

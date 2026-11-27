@@ -4,6 +4,20 @@ import { CHECK_IN_EVIDENCE_SCAN_LIMITS } from "~/services/checkin/discovery/evid
 import { createScanReader } from "~/services/checkin/discovery/evidence/scanReader"
 
 describe("feedback response boundaries", () => {
+  it("does not spend a request or report exhausted resources after cancellation", async () => {
+    const controller = new AbortController()
+    const fetcher = vi.fn()
+    const reader = createScanReader(
+      "https://example.com",
+      controller.signal,
+      fetcher,
+    )
+    controller.abort()
+    await expect(reader.read("/app.js")).rejects.toThrow("scan_limit")
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(reader.issues.size).toBe(0)
+  })
+
   it("rejects foreign origins and embedded credentials before dispatch", async () => {
     const fetcher = vi.fn()
     const reader = createScanReader(

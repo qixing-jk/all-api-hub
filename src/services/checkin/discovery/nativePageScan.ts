@@ -24,12 +24,14 @@ export async function scanNativeCheckInPageSources(input: {
         purpose: CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage,
       },
     },
-  })) as { success?: boolean; data?: CheckInEvidence }
+  })) as { success?: boolean; data?: CheckInEvidence } | undefined
+  const data = reply?.success ? reply.data : undefined
   return {
-    candidates: reply?.success ? (reply.data?.pageCandidates ?? []) : [],
+    candidates: data?.pageCandidates ?? [],
     complete:
-      reply?.success === true &&
-      reply.data?.status !== FEEDBACK_SCAN_STATUSES.Partial &&
-      !reply.data?.issues?.length,
+      !!data &&
+      data.status !== FEEDBACK_SCAN_STATUSES.Partial &&
+      !data.issues?.length &&
+      (!data.resources || data.resources.scanned === data.resources.discovered),
   }
 }

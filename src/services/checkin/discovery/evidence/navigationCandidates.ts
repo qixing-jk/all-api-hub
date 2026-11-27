@@ -8,6 +8,30 @@ const MAX_NAVIGATION_LINKS = 300
 const CHECK_IN_NAVIGATION_LABEL =
   /签到|簽到|打卡|福利|check[\s_-]*in|daily|reward|welfare/i
 
+/** Identifies an existing scroll target in this document while preserving router fragments. */
+function linksToDocumentAnchor(document: Document, current: URL, url: URL) {
+  if (
+    url.pathname !== current.pathname ||
+    url.search !== current.search ||
+    !url.hash ||
+    /^#!?\//.test(url.hash)
+  )
+    return false
+  const fragment = url.hash.slice(1)
+  let anchor = fragment
+  try {
+    anchor = decodeURIComponent(fragment)
+  } catch {
+    // A literal percent character can be part of an anchor ID.
+  }
+  return (
+    document.getElementById(anchor) !== null ||
+    Array.from(document.getElementsByName(anchor)).some(
+      (element) => element.localName === "a",
+    )
+  )
+}
+
 /** Read navigable same-site check-in links; never guess URLs or invoke handlers. */
 export function collectNativeCheckInPageCandidates(
   document: Document,
@@ -33,6 +57,7 @@ export function collectNativeCheckInPageCandidates(
         url.username ||
         url.password ||
         url.href === current.href ||
+        linksToDocumentAnchor(document, current, url) ||
         /^\/api(?:\/|$)/i.test(url.pathname) ||
         !normalizeCheckInPagePath(path)
       )

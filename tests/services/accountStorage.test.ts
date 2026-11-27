@@ -917,6 +917,40 @@ describe("accountStorage core behaviors", () => {
     expect(
       (await accountStorage.getAccountById(account.id))?.checkIn.nativePageHint,
     ).toBeUndefined()
+    expect(
+      await accountCheckInState.rememberNativeCheckInPage(
+        account,
+        account.site_url + "/late",
+      ),
+    ).toBe(false)
+    expect(
+      (await accountStorage.getAccountById(account.id))?.checkIn.nativePageHint,
+    ).toBeUndefined()
+  })
+
+  it("stores a same-origin destination without a configured path and refuses cross-origin updates", async () => {
+    const account = createAccount({ site_type: SITE_TYPES.NEW_API })
+    seedStorage([account])
+    expect(
+      await accountCheckInState.rememberNativeCheckInPage(
+        account,
+        account.site_url + "/rewards?tab=daily#/checkin",
+      ),
+    ).toBe(true)
+    for (const invalidUrl of [
+      "/relative",
+      "https://other.example.test/confirm",
+    ])
+      expect(
+        await accountCheckInState.rememberNativeCheckInPage(
+          account,
+          invalidUrl,
+        ),
+      ).toBe(false)
+    const hint = (await accountStorage.getAccountById(account.id))?.checkIn
+      .nativePageHint
+    expect(hint?.path).toBe("/rewards?tab=daily#/checkin")
+    expect(hint).not.toHaveProperty("configuredPath")
   })
   it("preserves newly configured credentials when saving an old check-in draft", async () => {
     const login = {

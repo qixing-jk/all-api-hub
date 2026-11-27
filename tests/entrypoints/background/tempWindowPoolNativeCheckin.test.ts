@@ -266,6 +266,50 @@ describe("tempWindowPool native check-in page action", () => {
     ).toHaveLength(0)
   })
 
+  it("does not dispatch a click when source scanning cannot verify a unique page", async () => {
+    const original = sendMessageMock.getMockImplementation()!
+    sendMessageMock.mockImplementation(async (tabId, message) => {
+      if (message.action === RuntimeActionIds.ContentInspectCheckinPage)
+        return { success: true, hasTarget: false, candidates: [] }
+      if (message.action === RuntimeActionIds.ContentCheckinFeedbackScan)
+        return {
+          success: true,
+          data: {
+            status: "partial",
+            pageCandidates: [{ path: "/daily", sources: ["script"] }],
+          },
+        }
+      return original(tabId, message)
+    })
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
+    const reply = vi.fn()
+    const pending = handleTempWindowCheckinPageAction(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/profile",
+        expectedUserId: "target-user",
+        siteType: SITE_TYPES.NEW_API,
+        requestId: "req-incomplete-scan",
+        discoverCheckInPage: true,
+      },
+      reply,
+    )
+    await vi.waitFor(() => expect(reply).toHaveBeenCalled(), {
+      timeout: 10_000,
+    })
+    await pending
+    expect(reply).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ success: false, reason: "target_not_found" }),
+    )
+    expect(sendMessageMock).not.toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentTriggerCheckinPageAction,
+      }),
+    )
+  })
+
   it("refuses invalid native page action requests before opening a context", async () => {
     const { handleTempWindowCheckinPageAction } =
       await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")

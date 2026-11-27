@@ -33,6 +33,16 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("native page discovery client", () => {
+  it("rejects a non-HTTP site before dispatch", async () => {
+    await expect(
+      findNativeCheckInPagesInBrowser(
+        { ...input, siteUrl: "file:///profile" },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow("page_origin")
+    expect(executeProtectionBypassTask).not.toHaveBeenCalled()
+  })
+
   it("sends only navigation facts and retires cancellation after completion", async () => {
     vi.mocked(executeProtectionBypassTask).mockResolvedValue({
       success: true,
@@ -60,6 +70,32 @@ describe("native page discovery client", () => {
     await vi.advanceTimersByTimeAsync(CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS)
     expect(sendRuntimeMessage).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it("lets a new account discover its default destination with the path unset", async () => {
+    vi.mocked(executeProtectionBypassTask).mockResolvedValue({
+      success: true,
+      data: exploration,
+    })
+    const { siteUrl, siteType } = input
+    await expect(
+      findNativeCheckInPagesInBrowser(
+        { siteUrl, siteType },
+        new AbortController().signal,
+      ),
+    ).resolves.toBe(exploration)
+    expect(executeProtectionBypassTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: {
+          kind: "checkin_page_discovery",
+          params: {
+            originUrl: "https://site.test",
+            siteType,
+            requestId: expect.any(String),
+          },
+        },
+      }),
+    )
   })
 
   it.each([

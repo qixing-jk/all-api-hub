@@ -733,6 +733,35 @@ describe("protection bypass runtime contracts", () => {
   })
 
   it.each([
+    { purpose: "native_page", accepted: true },
+    { purpose: "unknown", accepted: false },
+    { purpose: "native_page", routePaths: ["/api/daily"], accepted: false },
+    {
+      purpose: "native_page",
+      auth: { authType: "access_token", accessToken: "private" },
+      accepted: false,
+    },
+  ])(
+    "enforces read-only native scan authority: %j",
+    ({ accepted, ...input }) => {
+      expect(
+        isTempContextTask({
+          kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+          params: {
+            originUrl: "https://example.invalid",
+            requestId: "native-evidence",
+            input: {
+              baseUrl: "https://example.invalid",
+              siteType: "new-api",
+              ...input,
+            },
+          },
+        }),
+      ).toBe(accepted)
+    },
+  )
+
+  it.each([
     { paths: ["/api/user/daily"], accepted: true },
     { paths: [], accepted: true },
     { paths: "/api/user/daily", accepted: false },

@@ -23,6 +23,14 @@ afterEach(() => {
 })
 
 describe("optional check-in clue scan", () => {
+  it("ignores malformed route literals without losing valid source clues", () => {
+    expect(
+      extractCheckInRoutes(
+        'const routes=["https://[broken/daily", "/daily/(legacy)", "/api/checkin"]',
+      ),
+    ).toEqual(["/api/checkin"])
+  })
+
   it("retains API source clues when navigation fills the route budget", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async (url) =>
       String(url) === baseUrl + "/"

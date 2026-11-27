@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS } from "~/constants/turnstile"
-import { handleTriggerCheckinPageAction } from "~/entrypoints/content/messageHandlers/handlers/checkinPage"
+import {
+  handleInspectCheckinPage,
+  handleTriggerCheckinPageAction,
+} from "~/entrypoints/content/messageHandlers/handlers/checkinPage"
 import { showTurnstileManualAssistToast } from "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
 import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import {
@@ -20,6 +23,85 @@ vi.mock(
 )
 
 describe("native check-in verification", () => {
+  it("waits for a configured grant control during inspection without dispatching it", async () => {
+    document.body.innerHTML = "<main></main>"
+    const reply = vi.fn()
+    handleInspectCheckinPage(
+      {
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#grant",
+          targetWaitMs: 2_000,
+        },
+      },
+      reply,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    expect(reply).not.toHaveBeenCalled()
+
+    const button = document.createElement("button")
+    button.id = "grant"
+    const click = vi.fn()
+    button.addEventListener("click", click)
+    document.querySelector("main")!.append(button)
+    await vi.advanceTimersByTimeAsync(250)
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, hasTarget: true }),
+    )
+    expect(click).not.toHaveBeenCalled()
+  })
+
+  it("returns unusable evidence when the document cannot be inspected", () => {
+    const query = vi
+      .spyOn(document, "querySelectorAll")
+      .mockImplementation(() => {
+        throw new Error("Document was replaced")
+      })
+    const reply = vi.fn()
+    try {
+      handleInspectCheckinPage({}, reply)
+      expect(reply).toHaveBeenCalledWith({
+        success: false,
+        hasTarget: false,
+        candidates: [],
+      })
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it.each(["disabled", "checked", "hidden"])(
+    "leaves a %s verification control to manual completion",
+    async (attribute) => {
+      const activate = vi.fn()
+      document.querySelector("button")!.addEventListener("click", () => {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<altcha-widget><div class="altcha" data-state="unverified"><input type="checkbox" ${attribute}></div></altcha-widget>`,
+        )
+        document.querySelector("input")!.addEventListener("click", activate)
+      })
+      const reply = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: "manual-control",
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
+        },
+        reply,
+      )
+      await vi.advanceTimersByTimeAsync(55_000)
+      expect(activate).not.toHaveBeenCalled()
+      expect(reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification: { status: "required", provider: "altcha" },
+        }),
+      )
+    },
+  )
+
   it("requires manual assistance when a native action reveals multiple ALTCHA widgets", async () => {
     const activate = vi.fn()
     document.querySelector("button")!.addEventListener("click", () => {

@@ -7,6 +7,68 @@ import {
 } from "~/services/checkin/discovery/nativePageDiscovery"
 
 describe("native check-in page fallback", () => {
+  it("restores the original page before scanning after a stale hint and an unverified link", async () => {
+    const pageUrl = "https://site.test/profile"
+    let current = pageUrl
+    const navigate = vi.fn(async (url: string) => {
+      current = url
+      if (url.endsWith("/stale")) throw new Error("Page was removed")
+    })
+    const scan = vi.fn(async () => {
+      expect(current).toBe(pageUrl)
+      return {
+        candidates: [
+          { path: "/daily", sources: [NATIVE_CHECK_IN_PAGE_SOURCES.Script] },
+        ],
+        complete: true,
+      }
+    })
+    expect(
+      await discoverNativeCheckInPage({
+        pageUrl,
+        learnedPath: "/stale",
+        navigate,
+        inspect: async () => ({
+          success: true,
+          pageUrl: current,
+          hasTarget: current.endsWith("/daily"),
+          candidates: current === pageUrl ? ["/invite"] : [],
+        }),
+        scan,
+      }),
+    ).toBe("https://site.test/daily")
+    expect(navigate.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
+      "/stale",
+      "/profile",
+      "/invite",
+      "/profile",
+      "/daily",
+      "/profile",
+      "/daily",
+    ])
+  })
+
+  it("refuses a result when an alternative redirects off-site", async () => {
+    const pageUrl = "https://site.test/profile"
+    let current = pageUrl
+    const found = await discoverNativeCheckInPage({
+      pageUrl,
+      navigate: async (url) => {
+        current = url
+      },
+      inspect: async () => ({
+        success: true,
+        hasTarget: current !== pageUrl,
+        pageUrl: current.endsWith("/external")
+          ? "https://other.test/daily"
+          : current,
+        candidates: ["/external", "/daily"],
+      }),
+    })
+    expect(found).toBeNull()
+    expect(current).toBe(pageUrl)
+  })
+
   it("refuses a unique page when another candidate has ambiguous native actions", async () => {
     let pageUrl = "https://site.test/profile"
     expect(

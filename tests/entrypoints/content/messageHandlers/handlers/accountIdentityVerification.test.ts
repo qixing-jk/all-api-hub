@@ -23,6 +23,46 @@ function verifyIdentity(
 }
 
 describe("current browser account identity verification", () => {
+  it.each(["expired", "origin-changed"])(
+    "refuses a fresh dashboard session when it is %s",
+    async (scenario) => {
+      const fetchMock = vi.fn(async () => {
+        if (scenario === "origin-changed")
+          vi.stubGlobal(
+            "location",
+            new URL("https://other.example.com/dashboard"),
+          )
+        return Response.json({
+          success: true,
+          data: {
+            access_token: "dashboard-fixture-token",
+            token_type: "Bearer",
+            access_expires_at:
+              Date.now() / 1000 + (scenario === "expired" ? -60 : 600),
+            session: { sid: "test-session", current: true },
+            user: { id: 1 },
+          },
+        })
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      const result = await new Promise((resolve) =>
+        handleGetUserFromLocalStorage(
+          {
+            siteType: SITE_TYPES.NEW_API,
+            verifyIdentity: true,
+            requireFreshIdentity: true,
+          },
+          resolve,
+        ),
+      )
+      expect(result).toEqual({ success: false })
+      expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+        "https://site.example.com/api/user/auth/refresh",
+        expect.objectContaining({ method: "POST" }),
+      )
+    },
+  )
+
   it("aborts a stalled fresh session refresh and completes without a retry", async () => {
     vi.useFakeTimers()
     let requestSignal: AbortSignal | undefined

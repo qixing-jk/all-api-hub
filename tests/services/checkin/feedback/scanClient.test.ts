@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { collectCheckInEvidence } from "~/services/checkin/discovery/evidence/scan"
 import { collectCheckInEvidenceInBrowser } from "~/services/checkin/discovery/evidence/scanClient"
 import {
+  CHECK_IN_EVIDENCE_SCAN_PURPOSES,
   CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS,
   FEEDBACK_SCAN_STATUSES,
   type CheckInEvidence,
@@ -44,6 +45,35 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("feedback browser scan", () => {
+  it("keeps native page evidence requests free of account credentials and API routes", async () => {
+    vi.mocked(executeProtectionBypassTask).mockResolvedValue({
+      success: true,
+      data: clues,
+    })
+    await collectCheckInEvidenceInBrowser(
+      {
+        ...input,
+        purpose: CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage,
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "selected" },
+        routePaths: ["/api/user/daily-custom"],
+      },
+      new AbortController().signal,
+    )
+    expect(executeProtectionBypassTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.objectContaining({
+          params: expect.objectContaining({
+            input: {
+              baseUrl: "https://example.com",
+              siteType: SITE_TYPES.NEW_API,
+              purpose: CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage,
+            },
+          }),
+        }),
+      }),
+    )
+  })
+
   it("forwards configured routes to the protected diagnostic scan", async () => {
     vi.mocked(executeProtectionBypassTask).mockResolvedValue({
       success: true,
@@ -102,6 +132,30 @@ describe("feedback browser scan", () => {
       params: { input: { auth: { accessToken: "selected" } } },
     })
     expect(JSON.stringify(auth)).not.toContain("userId")
+  })
+
+  it("preserves an authenticated feedback scan's empty token without inventing credentials", async () => {
+    vi.mocked(executeProtectionBypassTask).mockResolvedValue({
+      success: true,
+      data: clues,
+    })
+    await collectCheckInEvidenceInBrowser(
+      { ...input, auth: { authType: AuthTypeEnum.AccessToken } },
+      new AbortController().signal,
+    )
+    expect(executeProtectionBypassTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.objectContaining({
+          params: expect.objectContaining({
+            input: {
+              baseUrl: "https://example.com",
+              siteType: SITE_TYPES.NEW_API,
+              auth: { authType: AuthTypeEnum.AccessToken, accessToken: "" },
+            },
+          }),
+        }),
+      }),
+    )
   })
 
   it("prefers a protected page with a feedback command and copies only the selected token fields", async () => {

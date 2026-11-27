@@ -1,4 +1,4 @@
-import { within } from "@testing-library/react"
+import { waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { act, useState } from "react"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
@@ -62,6 +62,18 @@ describe("native page configuration exploration", () => {
       true,
     )
   })
+  it("clears the configured draft path using the field action", async () => {
+    const user = userEvent.setup()
+    render(<Field />)
+    const path = await screen.findByRole("textbox", {
+      name: enAccountDialog.form.checkInPagePath,
+    })
+    await user.click(screen.getByRole("button", { name: /^Clear$/ }))
+    expect(path).toHaveValue("")
+    await waitFor(() => expect(path).toHaveFocus())
+    expect(executeProtectionBypassTask).not.toHaveBeenCalled()
+  })
+
   it("keeps detailed path guidance in accessible help without hiding validation errors", async () => {
     const user = userEvent.setup()
     render(<Field />)
@@ -110,6 +122,9 @@ describe("native page configuration exploration", () => {
       await screen.findByRole("button", { name: "Find check-in page" }),
     )
     expect(await screen.findByText("/invite")).toBeInTheDocument()
+    expect(
+      screen.getByText(enAccountDialog.form.checkInPageScriptEvidence),
+    ).toBeVisible()
     expect(
       screen.getByRole("button", { name: "Use this path" }),
     ).toHaveAccessibleDescription("/invite")

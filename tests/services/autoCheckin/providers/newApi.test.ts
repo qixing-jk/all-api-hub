@@ -13,6 +13,7 @@ import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
+import { readNewApiAwards } from "~/services/checkin/autoCheckin/providers/newApiProtocol"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -213,9 +214,36 @@ function prepareAccountSession(
 }
 
 describe("newApiProvider", () => {
-  it.each(["123", "another-user"])(
-    "uses a discovered page with configured login (%s)",
-    async (identity) => {
+  it.each([
+    "flowbee.top",
+    "https://flowbee.top.other.example",
+    "https://other.example/flowbee.top",
+  ])(
+    "keeps ordinary New API award units outside the verified Flowbee host: %s",
+    (siteUrl) => {
+      const awards = readNewApiAwards(
+        { ...mockAccount, site_url: siteUrl },
+        {
+          checkin_date: formatLocalDayKey(),
+          quota_awarded: 500,
+          points_awarded: 214,
+        },
+      )
+      expect(awards?.[0]?.asset).toMatchObject({
+        kind: "currency",
+        code: "USD",
+      })
+    },
+  )
+
+  it.each([
+    { identity: "123", source: "navigation", complete: true },
+    { identity: "another-user", source: "navigation", complete: true },
+    { identity: "123", source: "script", complete: true },
+    { identity: "123", source: "script", complete: false },
+  ])(
+    "uses $source evidence with configured login (complete=$complete, identity=$identity)",
+    async ({ identity, source, complete }) => {
       const { account, clicked, sendSiteAction } =
         prepareAccountSession(identity)
       const navigate = vi.fn()
@@ -227,9 +255,20 @@ describe("newApiProvider", () => {
           return {
             success: true,
             hasTarget: inspections > 1,
-            candidates: inspections === 1 ? ["/rewards/daily"] : [],
+            candidates:
+              inspections === 1 && source === "navigation"
+                ? ["/rewards/daily"]
+                : [],
           } as any
         }
+        if (action === RuntimeActionIds.ContentCheckinFeedbackScan)
+          return {
+            success: true,
+            data: {
+              status: complete ? "completed" : "partial",
+              pageCandidates: [{ path: "/rewards/daily", sources: ["script"] }],
+            },
+          } as any
         return original(action, details)
       })
       login.loginAccount.mockImplementation(async (request) => {
@@ -251,12 +290,32 @@ describe("newApiProvider", () => {
           }) as any,
       )
       const result = await checkInForTest(account)
-      expect(navigate).toHaveBeenCalledWith(
-        "https://site.example.invalid/rewards/daily",
-      )
+      const destination = "https://site.example.invalid/rewards/daily"
+      if (complete) expect(navigate).toHaveBeenCalledWith(destination)
+      else expect(navigate).not.toHaveBeenCalledWith(destination)
+      if (source === "script")
+        expect(sendSiteAction).toHaveBeenCalledWith(
+          RuntimeActionIds.ContentCheckinFeedbackScan,
+          {
+            params: {
+              originUrl: "https://site.example.invalid",
+              requestId: expect.any(String),
+              input: {
+                baseUrl: "https://site.example.invalid",
+                siteType: SITE_TYPES.NEW_API,
+                purpose: "native_page",
+              },
+            },
+          },
+        )
       expect(account.checkIn.nativePagePath).toBeUndefined()
-      expect(clicked).toHaveBeenCalledTimes(identity === "123" ? 1 : 0)
-      expect(result.status).toBe(identity === "123" ? "success" : "failed")
+      const canClick = complete && identity === "123"
+      expect(clicked).toHaveBeenCalledTimes(canClick ? 1 : 0)
+      expect(result.status).toBe(canClick ? "success" : "failed")
+      if (!complete)
+        expect(result.messageKey).toBe(
+          "autoCheckin:providerFallback.nativePageTargetNotFound",
+        )
       if (identity !== "123")
         expect(result.messageParams).toEqual({
           checkInUrl: "https://site.example.invalid/rewards/daily",
@@ -316,54 +375,59 @@ describe("newApiProvider", () => {
     )
     expect(account.checkIn.nativePagePath).toBe("/broken")
   })
-  it.each(["already-checked", "native-readback", "duplicate-response"])(
-    "preserves Flowbee points through %s reconciliation",
-    async (mode) => {
-      const record = {
-        checkin_date: formatLocalDayKey(),
-        quota_awarded: 0,
-        points_awarded: 214,
-      }
-      const status = {
-        enabled: true,
-        stats: { checked_in_today: true, records: [record] },
-      }
-      if (mode === "already-checked") {
-        vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce(status)
-      } else {
-        mockCheckInStatusSequence(false)
-        vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
-          success: false,
-          message:
-            mode === "duplicate-response"
-              ? "今日已签到"
-              : "ALTCHA verification required",
-          data: mode === "duplicate-response" ? record : null,
-        })
-        vi.mocked(newApiFamilyRequests.data).mockResolvedValue(status)
-        vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
-          success: true,
-          reason: "clicked",
-          identity: { userId: "123", user: { id: "123" } },
-        })
-      }
-      const result = await checkInForTest({
-        ...mockAccount,
-        site_url: "https://flowbee.top",
-        ...(mode === "already-checked"
-          ? {
-              login: {
-                methodId: "password",
-                credentials: { username: "target", password: "fixture" },
-              },
-            }
-          : {}),
+  it.each([
+    "already-checked",
+    "native-readback",
+    "duplicate-response",
+    "duplicate-without-record",
+  ])("preserves Flowbee points through %s reconciliation", async (mode) => {
+    const record = {
+      checkin_date: formatLocalDayKey(),
+      quota_awarded: 0,
+      points_awarded: 214,
+    }
+    const status = {
+      enabled: true,
+      stats: { checked_in_today: true, records: [record] },
+    }
+    if (mode === "already-checked") {
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce(status)
+    } else {
+      mockCheckInStatusSequence(false)
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: false,
+        message: mode.startsWith("duplicate")
+          ? "今日已签到"
+          : "ALTCHA verification required",
+        data: mode === "duplicate-response" ? record : null,
       })
-      expect(result.status).toBe(
-        mode === "native-readback"
-          ? CHECKIN_RESULT_STATUS.SUCCESS
-          : CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
-      )
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValue(status)
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+        success: true,
+        reason: "clicked",
+        identity: { userId: "123", user: { id: "123" } },
+      })
+    }
+    const result = await checkInForTest({
+      ...mockAccount,
+      site_url: "https://flowbee.top",
+      ...(mode === "already-checked"
+        ? {
+            login: {
+              methodId: "password",
+              credentials: { username: "target", password: "fixture" },
+            },
+          }
+        : {}),
+    })
+    expect(result.status).toBe(
+      mode === "native-readback"
+        ? CHECKIN_RESULT_STATUS.SUCCESS
+        : CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    )
+    if (mode === "duplicate-without-record")
+      expect(result.awards).toBeUndefined()
+    else
       expect(result.awards).toMatchObject([
         {
           amount: { status: "known", value: "214" },
@@ -371,10 +435,9 @@ describe("newApiProvider", () => {
           event: { namespace: "new-api-checkin-day", id: formatLocalDayKey() },
         },
       ])
-      if (mode === "already-checked")
-        expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
-    },
-  )
+    if (mode === "already-checked")
+      expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+  })
   it("preserves Flowbee's native points from a successful check-in instead of quota", async () => {
     mockCheckInStatusSequence(false)
     vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
@@ -2775,6 +2838,7 @@ describe("newApiProvider", () => {
       vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
         success: false,
         reason: "throttled",
+        pageUrl: "https://site.example.invalid/rewards/daily",
         error: "native action recently attempted",
         identity: { userId: "123", user: { id: "123" } },
       })
@@ -2786,7 +2850,7 @@ describe("newApiProvider", () => {
         "autoCheckin:providerFallback.nativePageTriggerFailed",
       )
       expect(result.messageParams).toEqual({
-        checkInUrl: "https://site.example.invalid/console/personal",
+        checkInUrl: "https://site.example.invalid/rewards/daily",
       })
       expect(result.rawMessage).toBe("native action recently attempted")
       expect(result.rawMessage).not.toBe("missing check-in signature header")

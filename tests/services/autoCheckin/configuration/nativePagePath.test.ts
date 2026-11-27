@@ -43,6 +43,28 @@ describe("native check-in page configuration", () => {
     ).toBeUndefined()
   })
 
+  it.each([
+    { origin: "https://site.test/path" },
+    { origin: 123 },
+    { configuredPath: "//other.test/profile" },
+    { path: "/a/../invite" },
+    { userId: "" },
+    { observedAt: -1 },
+  ])("discards an invalid imported learned destination: %j", (fields) => {
+    const nativePageHint = {
+      path: "/invite",
+      origin: "https://site.test",
+      siteType: "new-api",
+      userId: "42",
+      observedAt: 60,
+      ...fields,
+    }
+    expect(
+      normalizeCheckInConfigV7({ ...buildCheckInConfig(), nativePageHint })
+        .nativePageHint,
+    ).toBeUndefined()
+  })
+
   it("retains the page on credential changes and clears it on a deployment change", () => {
     const config = buildCheckInConfig({ nativePagePath: "/invite" })
     expect(invalidateCheckInDiscovery(config).nativePagePath).toBe("/invite")

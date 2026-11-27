@@ -15,10 +15,10 @@ export async function readNewApiNativeCheckin(page, expectedUserId) {
       new URL(response.url()).pathname === "/api/user/checkin" &&
       response.request().method() === "GET",
   )
-  await page.reload({ waitUntil: "domcontentloaded" })
   const [identityResponse, checkinResponse] = await Promise.all([
     identity,
     checkin,
+    page.reload({ waitUntil: "domcontentloaded" }),
   ])
   const identityBody = await identityResponse.json()
   assert.equal(identityBody.success, true, "Native identity refresh failed")
@@ -55,9 +55,18 @@ export async function runNewApiNativeCheckin({
   const submissions = []
   const identityReads = []
   const pending = []
+  const failures = []
   const requests = new Map()
   const watched = new Set()
   const observedResponses = new Set()
+  const observeJson = (response, record) => {
+    pending.push(
+      response
+        .json()
+        .then(record)
+        .catch((error) => failures.push(error)),
+    )
+  }
   const observeRequest = (request) => {
     const url = new URL(request.url())
     if (
@@ -77,14 +86,12 @@ export async function runNewApiNativeCheckin({
     const url = new URL(response.url())
     if (url.origin !== origin) return
     if (url.pathname === "/api/user/auth/refresh") {
-      pending.push(
-        response.json().then((body) => {
-          identityReads.push({
-            status: response.status(),
-            userId: body.success ? String(body.data?.user?.id) : null,
-          })
-        }),
-      )
+      observeJson(response, (body) => {
+        identityReads.push({
+          status: response.status(),
+          userId: body.success ? String(body.data?.user?.id) : null,
+        })
+      })
     }
     if (
       url.pathname !== "/api/user/checkin" ||
@@ -94,11 +101,9 @@ export async function runNewApiNativeCheckin({
     observeRequest(response.request())
     const entry = requests.get(response.request())
     entry.status = response.status()
-    pending.push(
-      response.json().then((body) => {
-        entry.success = body.success === true
-      }),
-    )
+    observeJson(response, (body) => {
+      entry.success = body.success === true
+    })
   }
   const context = optionsPage.context()
   const watch = (page) => {
@@ -111,6 +116,7 @@ export async function runNewApiNativeCheckin({
   context.on("page", watch)
   context.on("request", observeRequest)
   context.on("response", observe)
+  let after
   try {
     await optionsPage.bringToFront()
     await accountRow.hover()
@@ -125,8 +131,7 @@ export async function runNewApiNativeCheckin({
     ).toHaveAttribute("aria-label", /Checked in|已签到/u, {
       timeout: timeoutMs,
     })
-    const after = await readNewApiNativeCheckin(nativePage, expectedUserId)
-    await Promise.all(pending)
+    after = await readNewApiNativeCheckin(nativePage, expectedUserId)
     assert.equal(
       after?.checked_in_today,
       true,
@@ -144,7 +149,8 @@ export async function runNewApiNativeCheckin({
       1,
       "Expected one new native check-in record",
     )
-    return { before, after, submissions, identityReads }
+  } catch (error) {
+    failures.unshift(error)
   } finally {
     context.off("response", observe)
     context.off("request", observeRequest)
@@ -153,6 +159,12 @@ export async function runNewApiNativeCheckin({
       page.off("request", observeRequest)
       page.off("response", observe)
     }
-    await Promise.allSettled(pending)
+    await Promise.all(pending)
   }
+  if (failures.length === 1) throw failures[0]
+  if (failures.length > 1)
+    throw new AggregateError(failures, "Native check-in acceptance failed", {
+      cause: failures[0],
+    })
+  return { before, after, submissions, identityReads }
 }

@@ -524,9 +524,11 @@ describe("NexaVlinks check-in integration", () => {
   )
 
   it("hands an unfinished verification back to the person on the page", async () => {
-    vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(
-      clickedAction({ status: "required", provider: "interactive" }) as never,
-    )
+    const pageUrl = `${CONSOLE_ORIGIN}/rewards?tab=daily`
+    vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue({
+      ...clickedAction({ status: "required", provider: "interactive" }),
+      pageUrl,
+    } as never)
 
     vi.useFakeTimers()
     try {
@@ -537,7 +539,7 @@ describe("NexaVlinks check-in integration", () => {
         reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
         messageKey:
           "autoCheckin:providerFallback.nativePageVerificationRequired",
-        messageParams: { checkInUrl: CHECK_IN_URL },
+        messageParams: { checkInUrl: pageUrl },
       })
     } finally {
       vi.useRealTimers()

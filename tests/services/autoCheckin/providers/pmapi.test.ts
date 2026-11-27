@@ -471,6 +471,7 @@ describe("pmApiProvider", () => {
     vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue({
       success: true,
       reason: "clicked",
+      pageUrl: `${origin}/#/console/wallet?tab=daily`,
     })
     mockVerificationRefusal()
     await expect(
@@ -478,7 +479,7 @@ describe("pmApiProvider", () => {
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
-      messageParams: { checkInUrl: `${origin}/#/console/wallet` },
+      messageParams: { checkInUrl: `${origin}/#/console/wallet?tab=daily` },
     })
     expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledOnce()
   })

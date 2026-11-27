@@ -14,6 +14,7 @@ import { runCheckInBrowserScan } from "./browserScanTask"
 import { collectCheckInEvidence } from "./scan"
 import {
   CHECK_IN_EVIDENCE_SCAN_ERRORS,
+  CHECK_IN_EVIDENCE_SCAN_PURPOSES,
   CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS,
   FEEDBACK_SCAN_ISSUES,
   FEEDBACK_SCAN_STATUSES,
@@ -30,8 +31,10 @@ export async function collectCheckInEvidenceInBrowser(
   if (!origin || signal.aborted) return collectCheckInEvidence(input, signal)
   const started = Date.now()
   const requestId = safeRandomUUID()
+  const nativePage =
+    input.purpose === CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage
   const auth =
-    input.auth?.authType === AuthTypeEnum.AccessToken
+    !nativePage && input.auth?.authType === AuthTypeEnum.AccessToken
       ? {
           authType: AuthTypeEnum.AccessToken,
           accessToken: input.auth.accessToken ?? "",
@@ -62,8 +65,9 @@ export async function collectCheckInEvidenceInBrowser(
                 ...(input.nativePagePath
                   ? { nativePagePath: input.nativePagePath }
                   : {}),
+                ...(nativePage ? { purpose: input.purpose } : {}),
                 ...(auth ? { auth } : {}),
-                ...(input.routePaths?.length
+                ...(!nativePage && input.routePaths?.length
                   ? { routePaths: input.routePaths }
                   : {}),
               },
