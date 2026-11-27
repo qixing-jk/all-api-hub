@@ -17,8 +17,13 @@ import {
 
 /** Normal website login and extension onboarding; no credential/account injection. */
 export async function runBrowserSessionAcceptance(args) {
-  const target = process.env.AAH_PANEL_PROOF_TEST_BASE_URL?.trim()
-  assert(target, "An explicit AAH_PANEL_PROOF_TEST_BASE_URL is required")
+  const configuredTarget = process.env.AAH_PANEL_PROOF_TEST_BASE_URL?.trim()
+  assert(
+    configuredTarget,
+    "An explicit AAH_PANEL_PROOF_TEST_BASE_URL is required",
+  )
+  // AccountDialog stores protocol//host regardless of the entered URL path.
+  const target = new URL(configuredTarget).origin
   applyIsolateFlag(args)
   assert(
     args.includes("--login"),
@@ -244,8 +249,11 @@ export async function runBrowserSessionAcceptance(args) {
         await page.getByTestId(ids.deleteConfirmButton).click()
         await row.waitFor({ state: "hidden" })
       }
-      result.cleanup =
-        "owned extension account removed; website login retained in dedicated profile"
+      result.cleanup = savedId
+        ? "owned extension account removed; website login retained in dedicated profile"
+        : saveSubmitted
+          ? "failed: submitted account could not be identified for cleanup"
+          : "no owned extension account created; website login retained in dedicated profile"
     } catch (error) {
       result.cleanup = "failed: " + error.message
     }

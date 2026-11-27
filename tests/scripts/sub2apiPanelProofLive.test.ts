@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   close: vi.fn(),
   pageClose: vi.fn(),
   evaluate: vi.fn(),
+  detectionOutcome: vi.fn(),
   requestListener: undefined as undefined | ((request: unknown) => void),
   unsignedEndpoint: undefined as string | undefined,
 }))
@@ -26,9 +27,25 @@ vi.mock("~~/scripts/cdp/client.mjs", () => ({
   connectWorktreeExtension: mocks.connect,
 }))
 vi.mock("~~/scripts/cdp/dev-profile.mjs", () => ({ applyIsolateFlag: vi.fn() }))
-vi.mock("@playwright/test", () => ({
-  expect: () => ({ not: { toBeEmpty: vi.fn() } }),
+vi.mock("~~/scripts/flows/auto-detect.mjs", () => ({
+  openAccountAddDialog: vi.fn(),
+  detectAccountSiteType: vi.fn(),
+  assertAccountDetectionOutcome: mocks.detectionOutcome,
 }))
+vi.mock("@playwright/test", async () => {
+  const { expect: assertResult } = await import("vitest")
+  return {
+    expect: Object.assign(
+      () => ({ not: { toBeEmpty: vi.fn() }, toBeChecked: vi.fn() }),
+      {
+        poll: (read: () => Promise<unknown>) => ({
+          toBe: async (expected: unknown) =>
+            assertResult(await read()).toBe(expected),
+        }),
+      },
+    ),
+  }
+})
 
 const args = ["--login", "--expected-id=17"]
 const target = "https://fixture.example"
@@ -112,7 +129,94 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
+function mockBrowserSession(accounts: unknown[]) {
+  vi.stubGlobal("browser", {
+    storage: {
+      local: {
+        get: vi.fn().mockResolvedValue({ site_accounts: { accounts } }),
+      },
+    },
+  })
+  const button = { or: vi.fn(), first: vi.fn(), waitFor: vi.fn() }
+  button.or.mockReturnValue(button)
+  button.first.mockReturnValue(button)
+  const page = {
+    emulateMedia: vi.fn(),
+    bringToFront: vi.fn(),
+    goto: vi.fn(),
+    getByTestId: vi.fn().mockReturnValue(button),
+    evaluate: vi.fn((fn, params) => fn(params)),
+    screenshot: vi.fn().mockResolvedValue(undefined),
+    close: mocks.pageClose,
+  }
+  const site = {
+    goto: vi.fn(),
+    evaluate: vi
+      .fn()
+      .mockResolvedValueOnce(17)
+      .mockResolvedValueOnce("fixture-user"),
+    waitForFunction: vi.fn(),
+    close: vi.fn().mockResolvedValue(undefined),
+  }
+  mocks.newPage.mockResolvedValueOnce(page).mockResolvedValueOnce(site)
+  mocks.connect.mockResolvedValue({
+    extensionId: "fixture",
+    context: { newPage: mocks.newPage, on: vi.fn(), off: vi.fn() },
+    close: mocks.close,
+  })
+  return { page, site }
+}
+
 describe("signed session live acceptance runner", () => {
+  it.each([target, `${target}/`, `${target}/dashboard?tab=account#profile`])(
+    "preserves an existing account when the configured target is %s",
+    async (configuredTarget) => {
+      vi.stubEnv("AAH_PANEL_PROOF_TEST_BASE_URL", configuredTarget)
+      const storedAccount = {
+        id: "existing",
+        site_url: target,
+        account_info: { id: 17 },
+      }
+      const { page, site } = mockBrowserSession([storedAccount])
+
+      await expect(runBrowserSessionAcceptance(args)).rejects.toThrow(
+        "This profile already contains the target account",
+      )
+      expect(site.goto).toHaveBeenCalledWith(
+        `${target}/login`,
+        expect.any(Object),
+      )
+      expect(page.evaluate).toHaveBeenCalledWith(expect.any(Function), {
+        target,
+        expectedId: "17",
+      })
+      expect(JSON.parse(mocks.writeFile.mock.calls[0]![1])).toMatchObject({
+        target,
+        cleanup:
+          "no owned extension account created; website login retained in dedicated profile",
+      })
+      expect(mocks.close).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("reports uncertain cleanup when a submitted account cannot be found", async () => {
+    mockBrowserSession([])
+    const click = vi.fn()
+    mocks.detectionOutcome.mockResolvedValue({
+      getByTestId: vi.fn().mockReturnValue({ getByRole: vi.fn(), click }),
+      screenshot: vi.fn(),
+      waitFor: vi.fn(),
+    })
+    await expect(runBrowserSessionAcceptance(args)).rejects.toThrow(
+      "Owned account cleanup failed",
+    )
+    expect(click).toHaveBeenCalledOnce()
+    expect(JSON.parse(mocks.writeFile.mock.calls[0]![1])).toMatchObject({
+      cleanup: "failed: submitted account could not be identified for cleanup",
+    })
+    expect(mocks.close).toHaveBeenCalledOnce()
+  })
+
   it("requires an explicit target even when the browser-session helper is invoked directly", async () => {
     vi.stubEnv("AAH_PANEL_PROOF_TEST_BASE_URL", undefined)
     await expect(runBrowserSessionAcceptance(args)).rejects.toThrow(
