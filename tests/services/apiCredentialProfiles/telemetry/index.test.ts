@@ -49,6 +49,15 @@ function knownAmount(value: string) {
   })
 }
 
+/** Compare the wire header regardless of the transport's HeadersInit shape. */
+function authorizationHeader(expected: string | null) {
+  return {
+    asymmetricMatch: (actual: HeadersInit) =>
+      new Headers(actual).get("authorization") === expected,
+    toString: () => "authorizationHeader",
+  }
+}
+
 describe("api credential profile telemetry", () => {
   beforeEach(async () => {
     vi.useFakeTimers()
@@ -97,9 +106,7 @@ describe("api credential profile telemetry", () => {
       "https://api.deepseek.com/user/balance",
       expect.objectContaining({
         method: "GET",
-        headers: expect.objectContaining({
-          Authorization: "Bearer sk-deepseek",
-        }),
+        headers: authorizationHeader("Bearer sk-deepseek"),
       }),
     )
     expect(snapshot).toEqual(
@@ -241,9 +248,7 @@ describe("api credential profile telemetry", () => {
       "https://opencode.ai/zen/go/v1/usage",
       expect.objectContaining({
         method: "GET",
-        headers: expect.objectContaining({
-          Authorization: "Bearer sk-opencode-go",
-        }),
+        headers: authorizationHeader("Bearer sk-opencode-go"),
       }),
     )
     expect(snapshot).toEqual(
@@ -440,9 +445,7 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "glm.example-key",
-        }),
+        headers: authorizationHeader("glm.example-key"),
       }),
     )
   })
@@ -486,9 +489,7 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.z.ai/api/monitor/usage/quota/limit",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "zai.example-key",
-        }),
+        headers: authorizationHeader("zai.example-key"),
       }),
     )
   })
@@ -598,9 +599,7 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.kimi.com/coding/v1/usages",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer kimi.example-key",
-        }),
+        headers: authorizationHeader("Bearer kimi.example-key"),
       }),
     )
   })
@@ -670,9 +669,7 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.moonshot.cn/v1/users/me/balance",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer sk-moonshot-cn",
-        }),
+        headers: authorizationHeader("Bearer sk-moonshot-cn"),
       }),
     )
   })
@@ -733,9 +730,7 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.moonshot.ai/v1/users/me/balance",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer sk-moonshot-intl",
-        }),
+        headers: authorizationHeader("Bearer sk-moonshot-intl"),
       }),
     )
   })
@@ -868,9 +863,7 @@ describe("api credential profile telemetry", () => {
       "https://newapi.example.com/api/usage/token/",
       expect.objectContaining({
         method: "GET",
-        headers: expect.objectContaining({
-          Authorization: "Bearer sk-newapi",
-        }),
+        headers: authorizationHeader("Bearer sk-newapi"),
       }),
     )
     expect(snapshot).toEqual(
@@ -1142,9 +1135,7 @@ describe("api credential profile telemetry", () => {
       "https://newapi-auto.example.com/api/usage/token/",
       expect.objectContaining({
         method: "GET",
-        headers: expect.objectContaining({
-          Authorization: "Bearer sk-newapi-auto",
-        }),
+        headers: authorizationHeader("Bearer sk-newapi-auto"),
       }),
     )
     expect(snapshot.source).toBe("newApiTokenUsage")
@@ -1325,9 +1316,7 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://custom-subpath.example.com/api/telemetry/usage",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer sk-custom-subpath",
-        }),
+        headers: authorizationHeader("Bearer sk-custom-subpath"),
       }),
     )
   })
@@ -1364,9 +1353,7 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://telemetry.example.com/api/telemetry/usage?period=today",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer dedicated-telemetry-token",
-        }),
+        headers: authorizationHeader("Bearer dedicated-telemetry-token"),
       }),
     )
   })
@@ -1395,9 +1382,7 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://telemetry.example.com/usage",
       expect.objectContaining({
-        headers: expect.not.objectContaining({
-          Authorization: expect.any(String),
-        }),
+        headers: authorizationHeader(null),
       }),
     )
   })

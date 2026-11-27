@@ -215,8 +215,6 @@ export function useSub2ApiAccountSession({
       const ownsBearer = previous.accessToken.trim() === issued.accessToken
       const ownsRefresh =
         previous.sub2apiRefreshToken.trim() === issued.refreshToken
-      const ownsExpiry =
-        previous.sub2apiTokenExpiresAt === issued.tokenExpiresAt
       return {
         ...previous,
         ...(ownsBearer
@@ -226,7 +224,7 @@ export function useSub2ApiAccountSession({
             }
           : {}),
         ...(ownsRefresh ? { sub2apiRefreshToken: "" } : {}),
-        ...(ownsRefresh || ownsExpiry ? { sub2apiTokenExpiresAt: null } : {}),
+        ...(ownsRefresh ? { sub2apiTokenExpiresAt: null } : {}),
       }
     })
     if (isOpen) toast.info(t("messages.sub2apiLoginDraftAbandoned"))
@@ -289,6 +287,9 @@ export function useSub2ApiAccountSession({
       updateDraft((previous) => ({
         ...previous,
         sub2apiRefreshToken: value,
+        ...(value.trim() !== previous.sub2apiRefreshToken.trim()
+          ? { sub2apiTokenExpiresAt: null }
+          : {}),
       }))
     },
     [invalidate, updateDraft],

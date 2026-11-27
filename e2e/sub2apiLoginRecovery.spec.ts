@@ -30,6 +30,7 @@ import {
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+import { createUiCapture } from "~~/scripts/cdp/ui-driver.mjs"
 
 const presentations = [
   { locale: "en", theme: "light", copy: en },
@@ -250,10 +251,10 @@ async function runLoginRecovery(
     await disclosure.evaluate((button) =>
       button.scrollIntoView({ block: "center" }),
     )
-    await dialog.screenshot({
-      path: testInfo.outputPath("manual-ordinary.png"),
-      animations: "disabled",
-    })
+    await createUiCapture({ page: page, directory: testInfo.outputDir })(
+      "manual-ordinary.png",
+      dialog,
+    )
     await disclosure.click()
     await save.click()
     const setupLogin = dialog.getByRole("button", { name: "Set up login" })
@@ -267,10 +268,10 @@ async function runLoginRecovery(
     await expect(labeledToken).toHaveAccessibleDescription(
       "Enter a Refresh Token or use the login options above.",
     )
-    await dialog.screenshot({
-      path: testInfo.outputPath("manual-validation.png"),
-      animations: "disabled",
-    })
+    await createUiCapture({ page: page, directory: testInfo.outputDir })(
+      "manual-validation.png",
+      dialog,
+    )
     await dialog.getByTestId(ids.sub2apiBrowserSessionOption).click()
     const login = dialog.getByTestId(ids.accountFormSectionLogin)
     await login.getByRole("combobox", { name: "Login method" }).click()
@@ -282,10 +283,10 @@ async function runLoginRecovery(
     })
     await expect(toggle).not.toBeChecked()
     await toggle.click()
-    await login.screenshot({
-      path: testInfo.outputPath("sub2api-login-settings.png"),
-      animations: "disabled",
-    })
+    await createUiCapture({ page: page, directory: testInfo.outputDir })(
+      "sub2api-login-settings.png",
+      login,
+    )
     await captureVisualViews({
       page,
       ready: login,
@@ -404,10 +405,10 @@ async function verifySessionModes({
         )
       }
       await surface.evaluate(() => document.fonts.ready)
-      await surface.screenshot({
-        path: testInfo.outputPath(`${kind}-${state}.png`),
-        animations: "disabled",
-      })
+      await createUiCapture({ page: surface, directory: testInfo.outputDir })(
+        `${kind}-${state}.png`,
+        surface,
+      )
     }
     await expect(
       browser.getByRole("radio", { name: copy.form.sub2apiBrowserSession }),
@@ -516,10 +517,10 @@ async function verifySessionModes({
     await reacquire.evaluate((button) =>
       button.scrollIntoView({ block: "center" }),
     )
-    await popup.screenshot({
-      path: testInfo.outputPath("popup-acquired.png"),
-      animations: "disabled",
-    })
+    await createUiCapture({ page: page, directory: testInfo.outputDir })(
+      "popup-acquired.png",
+      popup,
+    )
     const popupReady = popupSaved
       .getByTestId(ids.accountFormSectionLogin)
       .getByRole("status")
@@ -527,10 +528,10 @@ async function verifySessionModes({
     await popupReady.evaluate((status) =>
       status.scrollIntoView({ block: "center" }),
     )
-    await popup.screenshot({
-      path: testInfo.outputPath("popup-login-confirmed.png"),
-      animations: "disabled",
-    })
+    await createUiCapture({ page: page, directory: testInfo.outputDir })(
+      "popup-login-confirmed.png",
+      popup,
+    )
   } finally {
     await popup.close()
   }

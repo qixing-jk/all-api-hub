@@ -74,6 +74,73 @@ vi.mock("~/services/accountBrowserSession", async (original) => ({
 }))
 
 describe("Sub2API account draft credential acquisition", () => {
+  it("persists explicit login removal when saving the account", async () => {
+    const { result } = renderAcquisitionWithSave()
+    await waitFor(() => expect(result.current).not.toBeNull())
+    act(() =>
+      result.current.updateDraft((draft) => ({
+        ...draft,
+        accessToken: "manual-token",
+        login: undefined,
+        loginChanged: true,
+      })),
+    )
+    await act(async () => result.current.save.handleSaveAccount())
+    expect(deps.save).toHaveBeenCalledWith(
+      expect.objectContaining({ loginChange: null }),
+    )
+  })
+  it("reports a failed abandoned-credential cleanup without restoring the discarded draft", async () => {
+    const { result } = renderAcquisitionWithSave()
+    await waitFor(() => expect(result.current).not.toBeNull())
+    await act(async () => result.current.session.handleAcquireSub2apiSession())
+    deps.discard.mockRejectedValueOnce(new Error("Logout rejected"))
+    await act(async () =>
+      result.current.session.setSub2apiUseRefreshToken(false),
+    )
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        testI18n.t("messages:errors.api.browserLoginCleanupUnconfirmed"),
+      ),
+    )
+    expect(result.current.draft.accessToken).toBe("")
+    expect(result.current.draft.sub2apiRefreshToken).toBe("")
+  })
+  it.each(["identity", "login"])(
+    "requires valid %s configuration before acquiring a credential",
+    async (missing) => {
+      const { result } = renderAcquisitionWithSave()
+      await waitFor(() => expect(result.current).not.toBeNull())
+      act(() =>
+        result.current.updateDraft((draft) => ({
+          ...draft,
+          ...(missing === "identity" ? { userId: "" } : { login: undefined }),
+        })),
+      )
+      await act(async () =>
+        result.current.session.handleAcquireSub2apiSession(),
+      )
+      expect(deps.login).not.toHaveBeenCalled()
+      expect(toast.error).toHaveBeenCalledWith(
+        testI18n.t("accountDialog:messages.sub2apiLoginSetupRequired"),
+      )
+    },
+  )
+  it("keeps provider failure detail and reports an unsuccessful acquisition cleanup", async () => {
+    const { result } = renderAcquisitionWithSave()
+    await waitFor(() => expect(result.current).not.toBeNull())
+    deps.verify.mockResolvedValueOnce({
+      status: "failed",
+      message: "Provider verification failed",
+    })
+    deps.discard.mockRejectedValueOnce(new Error("Logout rejected"))
+    await act(async () => result.current.session.handleAcquireSub2apiSession())
+    expect(toast.error).toHaveBeenCalledWith("Provider verification failed")
+    expect(toast.error).toHaveBeenCalledWith(
+      testI18n.t("messages:errors.api.browserLoginCleanupUnconfirmed"),
+    )
+    expect(result.current.draft.accessToken).toBe("")
+  })
   it("keeps the original import action reading website state even when login is configured", async () => {
     deps.login.mockResolvedValue({
       status: "authenticated",
@@ -444,6 +511,29 @@ describe("Sub2API account draft credential acquisition", () => {
     })
     act(() => result.current.session.handleSub2apiUseRefreshTokenChange(false))
     expect(result.current.draft.accessToken).toBe("")
+  })
+
+  it("preserves a replacement website refresh token's equal expiry when abandoning the issued credential", async () => {
+    const { result } = renderAcquisitionWithSave()
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      await result.current.session.handleAcquireSub2apiSession()
+    })
+    const expiresAt = result.current.draft.sub2apiTokenExpiresAt
+    deps.readBrowser.mockResolvedValue({
+      accessToken: "website-replacement",
+      userId: "17",
+      sub2apiAuth: {
+        refreshToken: "website-refresh",
+        tokenExpiresAt: expiresAt,
+      },
+    })
+    await act(async () => {
+      await result.current.session.handleImportSub2apiSession()
+    })
+    expect(result.current.draft.sub2apiRefreshToken).toBe("website-refresh")
+    expect(result.current.draft.sub2apiTokenExpiresAt).toBe(expiresAt)
+    expect(deps.discard).toHaveBeenCalledOnce()
   })
 
   it("returns to Independent session without restoring the token revoked by selecting Browser session", async () => {

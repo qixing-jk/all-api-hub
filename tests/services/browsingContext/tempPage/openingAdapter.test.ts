@@ -248,7 +248,7 @@ describe("openingAdapter", () => {
         id: 80,
       } as any)
       vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
-        { id: 81, cookieStoreId: "firefox-private" },
+        { id: 81, incognito: true, cookieStoreId: "firefox-private" },
       ] as any)
 
       const result = await openFallbackAwareTempContext({
@@ -299,6 +299,31 @@ describe("openingAdapter", () => {
         name: "CookieStoreContextUnavailableError",
       })
 
+      expect(removeWindow).toHaveBeenCalledWith(82)
+      expect(createTab).not.toHaveBeenCalled()
+    })
+
+    it("closes a window opened in the wrong privacy context without reading the site", async () => {
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 82,
+      } as browser.windows.Window)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 83, incognito: false },
+      ] as browser.tabs.Tab[])
+      const removeWindow = vi
+        .spyOn(browserApi_windows, "removeWindow")
+        .mockResolvedValue()
+      const createTab = vi.spyOn(browserApi_tabs, "createTab")
+      await expect(
+        openFallbackAwareTempContext({
+          url: "https://example.com",
+          origin: "https://example.com",
+          requestId: "private-context",
+          requestedMode: TEMP_CONTEXT_MODES.Window,
+          allowWindowRollback: false,
+          incognito: true,
+        }),
+      ).rejects.toMatchObject({ name: "CookieStoreContextUnavailableError" })
       expect(removeWindow).toHaveBeenCalledWith(82)
       expect(createTab).not.toHaveBeenCalled()
     })

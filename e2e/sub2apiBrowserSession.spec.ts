@@ -14,6 +14,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { createSub2ApiBrowserSessionFixture } from "~~/e2e/utils/sub2apiBrowserSessionFixture"
+import { createUiCapture } from "~~/scripts/cdp/ui-driver.mjs"
 
 test("Sub2API website OAuth session detects, saves and refreshes without a password, including after closing its page", async ({
   context,
@@ -58,9 +59,10 @@ test("Sub2API website OAuth session detects, saves and refreshes without a passw
           { name: "Browser session" },
         )
         await expect(browserSession).toBeChecked()
-        await dialog.dialog.screenshot({
-          path: testInfo.outputPath("detected-website-session.png"),
-        })
+        await createUiCapture({ page: page, directory: testInfo.outputDir })(
+          "detected-website-session.png",
+          dialog.dialog,
+        )
         await browserSession.press("ArrowDown")
         await expect(
           dialog.sub2apiIndependentSessionOption.getByRole("radio"),
@@ -78,10 +80,10 @@ test("Sub2API website OAuth session detects, saves and refreshes without a passw
         await manual.evaluate((button) =>
           button.scrollIntoView({ block: "center" }),
         )
-        await dialog.dialog.screenshot({
-          path: testInfo.outputPath("manual-panel-proof.png"),
-          animations: "disabled",
-        })
+        await createUiCapture({ page: page, directory: testInfo.outputDir })(
+          "manual-panel-proof.png",
+          dialog.dialog,
+        )
         await dialog.sub2apiBrowserSessionOption.click()
       },
     })
@@ -127,10 +129,10 @@ test("Sub2API website OAuth session detects, saves and refreshes without a passw
       "false",
     )
     await setup.evaluate((button) => button.scrollIntoView({ block: "center" }))
-    await edit.screenshot({
-      path: testInfo.outputPath("setup-desktop.png"),
-      animations: "disabled",
-    })
+    await createUiCapture({ page: page, directory: testInfo.outputDir })(
+      "setup-desktop.png",
+      edit,
+    )
     await edit.getByRole("button", { name: "Cancel", exact: true }).click()
     state.balance = 18
     await refresh()

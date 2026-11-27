@@ -23,6 +23,7 @@ import {
   act,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "~~/tests/test-utils/render"
@@ -75,6 +76,28 @@ const renderGuide = (state: AccountDialogRecoveryState) =>
   })
 
 describe("account dialog recovery continuation", () => {
+  it("retries failed preparation without requiring a draft edit", async () => {
+    vi.mocked(prepareAccountDialogRecovery).mockRejectedValueOnce(
+      new Error("Storage unavailable"),
+    )
+    const state = snapshot()
+    const { result } = renderHook(() =>
+      useAccountDialogRecoveryHandoff({ enabled: true, state }),
+    )
+    await waitFor(() =>
+      expect(result.current?.errorMessage).toBe(message("prepareFailed")),
+    )
+    act(() => result.current?.onRetry?.())
+    await waitFor(() =>
+      expect(prepareAccountDialogRecovery).toHaveBeenCalledTimes(2),
+    )
+    await waitFor(() => expect(result.current?.disabled).toBe(false))
+    expect(result.current?.errorMessage).toBeNull()
+    act(() => result.current?.onContinue("sub2api-login"))
+    expect(openAccountDialogRecovery).toHaveBeenCalledWith(prepared, {
+      recoveryAction: "sub2api-login",
+    })
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(canUseAccountDialogRecoverySidePanel).mockReturnValue(true)

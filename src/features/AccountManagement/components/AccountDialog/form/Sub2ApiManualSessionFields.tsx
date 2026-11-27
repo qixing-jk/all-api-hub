@@ -110,6 +110,11 @@ export function Sub2ApiManualSessionFields({
               hide: t("form.hideRefreshToken"),
             }}
             {...validation}
+            aria-describedby={
+              [feedbackId, isWebsiteSessionBound ? importHelpId : undefined]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
             value={refreshToken}
             onChange={(e) => onRefreshTokenChange(e.target.value)}
             placeholder={t("form.sub2apiRefreshTokenPlaceholder")}

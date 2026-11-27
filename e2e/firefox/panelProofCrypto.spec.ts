@@ -9,9 +9,9 @@ test("Firefox content requests reuse the website's non-exportable panel key", as
 }) => {
   const fixture = await createSub2ApiBrowserSessionFixture()
   const options = firefoxExtension.page("options.html")
-  await options.openInTab()
   let tabId: number | undefined
   try {
+    await options.openInTab()
     tabId = await options.evaluateAsync<number>(
       `browser.tabs.create({url: ${JSON.stringify(fixture.origin)}}).then(tab => tab.id)`,
     )
@@ -49,11 +49,14 @@ test("Firefox content requests reuse the website's non-exportable panel key", as
     expect(fixture.state.identityReads).toBe(1)
     expect(fixture.failures).toEqual([])
   } finally {
-    if (tabId)
-      await options.evaluateAsync(
-        `browser.tabs.remove(${tabId}).then(() => true)`,
-      )
-    await fixture.close()
+    try {
+      if (tabId)
+        await options.evaluateAsync(
+          `browser.tabs.remove(${tabId}).then(() => true)`,
+        )
+    } finally {
+      await fixture.close()
+    }
   }
 })
 

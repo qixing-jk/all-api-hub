@@ -106,6 +106,27 @@ function resolveAccountBrowserSession(
 }
 
 describe("account browser-session reader", () => {
+  it("preserves verified website ownership without exporting refresh credentials", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "17",
+        accessToken: "website-access",
+        sub2apiWebsiteSessionBound: true,
+      },
+    })
+    const session = await readAccountBrowserSessionFromTab({
+      tabId: 12,
+      baseUrl: "https://sub2.example",
+      siteType: SITE_TYPES.SUB2API,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+    })
+    expect(session).toMatchObject({
+      sub2apiWebsiteSessionBound: true,
+      accessToken: "website-access",
+    })
+    expect(session?.sub2apiAuth).toBeUndefined()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsExtensionBackground.mockReturnValue(false)
@@ -885,6 +906,41 @@ describe("account browser-session reader", () => {
     expect(mockSendTabMessage).toHaveBeenCalledWith(3, expect.anything())
     expect(session?.userId).toBe("3")
   })
+
+  it.each([false, true])(
+    "uses only the default store for the requested private mode: %s",
+    async (incognito) => {
+      mockSendTabMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "17" },
+      })
+      const stores = [
+        "firefox-container-1",
+        "firefox-default",
+        "firefox-private",
+      ]
+      const session = await readAccountBrowserSessionFromExistingTabs({
+        baseUrl: "https://sub2.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        browserContext: { incognito, defaultCookieStoreOnly: true },
+        candidateTabs: stores.map((cookieStoreId, index) => ({
+          id: index + 1,
+          index,
+          highlighted: false,
+          active: false,
+          pinned: false,
+          incognito,
+          cookieStoreId,
+          url: "https://sub2.example.com",
+        })),
+      })
+      expect(session?.userId).toBe("17")
+      expect(mockSendTabMessage).toHaveBeenCalledExactlyOnceWith(
+        incognito ? 3 : 2,
+        expect.anything(),
+      )
+    },
+  )
 
   it("does not read a supplied snapshot for an invalid target origin", async () => {
     expect(

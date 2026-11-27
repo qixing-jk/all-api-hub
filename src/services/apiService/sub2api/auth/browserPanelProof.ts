@@ -157,5 +157,7 @@ export async function fetchSub2ApiBrowserSessionIdentity(
     (options) => fetch(identityUrl, options),
     { pair },
   )
+  if (response.url && new URL(response.url).origin !== identityUrl.origin)
+    throw new Error("Sub2API identity response came from another origin")
   return { response, browserOwnsSession: Boolean(pair) }
 }

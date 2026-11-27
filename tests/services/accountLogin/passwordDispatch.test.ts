@@ -7,6 +7,7 @@ import {
   discoverAccountLoginMethods,
   loginAccount,
 } from "~/services/accountLogin"
+import { discardSub2ApiLoginCredential } from "~/services/apiAdapters/sub2api/auth/credentialCleanup"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 
 const deps = vi.hoisted(() => ({
@@ -63,6 +64,278 @@ async function confirmPanelOrigin(origin: string) {
 }
 
 describe("password login public dispatch", () => {
+  it.each([{ accessToken: "" }, { accessToken: "access" }])(
+    "does not dispatch cleanup without a complete issued family: %j",
+    async (credential) => {
+      const fetch = vi.fn()
+      vi.stubGlobal("fetch", fetch)
+      await discardSub2ApiLoginCredential(
+        "https://failure-contract.example",
+        credential,
+      )
+      expect(fetch).not.toHaveBeenCalled()
+    },
+  )
+  it.each([undefined, { tencent_captcha_enabled: true }])(
+    "retains native login when public settings do not enable the background flow: %j",
+    async (settings) => {
+      await confirmPanelOrigin("https://failure-contract.example")
+      deps.settings.mockResolvedValue(settings)
+      await expect(
+        loginAccount(backgroundRequest(true)),
+      ).resolves.toMatchObject({ status: "authenticated" })
+      expect(deps.passwordContext).toHaveBeenCalledOnce()
+    },
+  )
+  const backgroundRequest = (attended = false) => ({
+    account: {
+      site_type: SITE_TYPES.SUB2API,
+      site_url: "https://failure-contract.example",
+      account_info: { id: "17" },
+      login: {
+        methodId: ACCOUNT_LOGIN_METHODS.Password,
+        credentials: { username: "member@example.com", password: "secret" },
+      },
+    },
+    methodId: ACCOUNT_LOGIN_METHODS.Password,
+    requestId: "failure-contract",
+    captureCredential: true,
+    attended,
+  })
+  const issuedData = () => ({
+    access_token: "issued-access",
+    refresh_token: "issued-refresh",
+    expires_in: 3600,
+    user: { id: 17 },
+  })
+
+  it("reports uncertainty after a signed password request loses its response", async () => {
+    await confirmPanelOrigin("https://failure-contract.example")
+    const fetch = vi.fn(async () => {
+      throw new TypeError("Connection lost after dispatch")
+    })
+    vi.stubGlobal("fetch", fetch)
+    await expect(loginAccount(backgroundRequest())).resolves.toMatchObject({
+      status: "uncertain",
+    })
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(deps.passwordContext).not.toHaveBeenCalled()
+  })
+
+  it("stops an attended acquisition when public settings disappear after CAPTCHA", async () => {
+    await confirmPanelOrigin("https://failure-contract.example")
+    deps.settings
+      .mockResolvedValueOnce({ turnstile_enabled: true })
+      .mockResolvedValueOnce(undefined)
+    const fetch = vi.fn(async () =>
+      Response.json({ code: 404 }, { status: 404 }),
+    )
+    vi.stubGlobal("fetch", fetch)
+    deps.verificationContext.mockImplementation((flow) => ({
+      authenticate: async () =>
+        flow.execute({
+          assertOrigin: vi.fn(),
+          sendSiteAction: vi.fn().mockResolvedValue({
+            success: true,
+            status: "token_obtained",
+            token: "captcha",
+          }),
+        }),
+    }))
+    await expect(loginAccount(backgroundRequest(true))).resolves.toMatchObject({
+      status: "failed",
+    })
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(deps.passwordContext).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      name: "server failure",
+      body: { code: 500 },
+      http: 500,
+      status: "uncertain",
+      cleanup: false,
+    },
+    {
+      name: "login rejection",
+      body: { code: 401 },
+      http: 401,
+      status: "failed",
+      cleanup: false,
+    },
+    {
+      name: "invalid envelope",
+      body: null,
+      http: 200,
+      status: "failed",
+      cleanup: false,
+    },
+    {
+      name: "missing access token",
+      data: { access_token: "" },
+      status: "uncertain",
+      cleanup: false,
+    },
+    {
+      name: "missing refresh token",
+      data: { refresh_token: "" },
+      status: "uncertain",
+      cleanup: false,
+    },
+    {
+      name: "invalid expiry",
+      data: { expires_in: "3600" },
+      status: "uncertain",
+      cleanup: true,
+    },
+    {
+      name: "nonpositive expiry",
+      data: { expires_in: 0 },
+      status: "uncertain",
+      cleanup: true,
+    },
+    {
+      name: "missing user",
+      data: { user: null },
+      status: "uncertain",
+      cleanup: true,
+    },
+    {
+      name: "identity endpoint rejected",
+      self: { code: 401 },
+      status: "uncertain",
+      cleanup: true,
+    },
+    {
+      name: "different verified identity",
+      self: { code: 0, data: { id: 18 } },
+      status: "identity_mismatch",
+      cleanup: true,
+    },
+    {
+      name: "second factor after issuance",
+      data: { requires_2fa: true },
+      status: "interaction_required",
+      cleanup: true,
+    },
+  ])(
+    "retains the acquisition outcome and revokes only an issued family: $name",
+    async (scenario) => {
+      await confirmPanelOrigin("https://failure-contract.example")
+      const fetch = vi.fn(async (url: string, _init: RequestInit) => {
+        if (url.endsWith("/auth/login"))
+          return Response.json(
+            "body" in scenario
+              ? scenario.body
+              : { code: 0, data: { ...issuedData(), ...scenario.data } },
+            { status: "http" in scenario ? scenario.http : 200 },
+          )
+        if (url.endsWith("/auth/me"))
+          return Response.json(scenario.self ?? { code: 0, data: { id: 17 } })
+        return Response.json({ code: 0 })
+      })
+      vi.stubGlobal("fetch", fetch)
+      const result = await loginAccount(backgroundRequest())
+      expect(result.status).toBe(scenario.status)
+      expect(result.credential).toBeUndefined()
+      const logout = fetch.mock.calls.filter(([url]) =>
+        url.endsWith("/auth/logout"),
+      )
+      expect(logout).toHaveLength(scenario.cleanup ? 1 : 0)
+      if (scenario.cleanup) {
+        const init = logout[0]![1]
+        expect(init.credentials).toBe("omit")
+        expect(new Headers(init.headers).get("authorization")).toBe(
+          "Bearer issued-access",
+        )
+        expect(JSON.parse(await new Response(init.body).text())).toEqual({
+          refresh_token: "issued-refresh",
+        })
+      }
+      expect(deps.passwordContext).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(["http", "envelope", "malformed"])(
+    "reports uncertainty when issued-family cleanup is rejected: %s",
+    async (failure) => {
+      await confirmPanelOrigin("https://failure-contract.example")
+      const fetch = vi.fn(async (url: string) => {
+        if (url.endsWith("/auth/login"))
+          return Response.json({
+            code: 0,
+            data: { ...issuedData(), user: { id: 18 } },
+          })
+        return Response.json(
+          failure === "malformed"
+            ? null
+            : { code: failure === "envelope" ? 1 : 0 },
+          { status: failure === "http" ? 500 : 200 },
+        )
+      })
+      vi.stubGlobal("fetch", fetch)
+      await expect(loginAccount(backgroundRequest())).resolves.toMatchObject({
+        status: "uncertain",
+        message: expect.any(String),
+      })
+      expect(fetch.mock.calls.map(([url]) => new URL(url).pathname)).toEqual([
+        "/api/v1/auth/login",
+        "/api/v1/auth/logout",
+      ])
+    },
+  )
+
+  it.each(["storage unavailable", "robot challenge"])(
+    "does not fall back to native password dispatch on a confirmed panel when settings fail: %s",
+    async (failure) => {
+      await confirmPanelOrigin("https://failure-contract.example")
+      deps.settings.mockRejectedValue(
+        failure === "robot challenge"
+          ? new ApiError(
+              "Challenge required",
+              403,
+              "/api/v1/settings/public",
+              API_ERROR_CODES.ROBOT_CHALLENGE,
+            )
+          : new Error("Unavailable"),
+      )
+      await expect(loginAccount(backgroundRequest())).resolves.toMatchObject({
+        status:
+          failure === "robot challenge" ? "interaction_required" : "failed",
+      })
+      expect(deps.passwordContext).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([false, true])(
+    "requires attended verification without submitting a password when no CAPTCHA token is available: %s",
+    async (attended) => {
+      await confirmPanelOrigin("https://failure-contract.example")
+      deps.settings.mockResolvedValue({ turnstile_enabled: true })
+      const fetch = vi.fn(async (_url: string) =>
+        Response.json({ code: 404 }, { status: 404 }),
+      )
+      vi.stubGlobal("fetch", fetch)
+      deps.verificationContext.mockImplementation((flow) => ({
+        authenticate: async () =>
+          flow.execute({
+            assertOrigin: vi.fn(),
+            sendSiteAction: vi.fn().mockResolvedValue({
+              success: true,
+              status: "token_obtained",
+              token: "",
+            }),
+          }),
+      }))
+      await expect(
+        loginAccount(backgroundRequest(attended)),
+      ).resolves.toMatchObject({ status: "interaction_required" })
+      expect(fetch).toHaveBeenCalledTimes(1)
+      expect(fetch.mock.calls[0]?.[0]).toContain("/auth/security-challenge")
+      expect(deps.passwordContext).not.toHaveBeenCalled()
+    },
+  )
   it("stops a matched unsigned PoW runtime failure without native login", async () => {
     deps.settings.mockResolvedValue({ turnstile_enabled: true })
     const hashing = vi
@@ -220,10 +493,7 @@ describe("password login public dispatch", () => {
   })
   it("preserves the native credential-capture flow when no extension protocol is matched", async () => {
     deps.settings.mockResolvedValue({})
-    const fetch = vi.fn(async (url: string, options: RequestInit) => {
-      expect(url).toBe("https://ordinary-native.example/api/v1/auth/refresh")
-      expect(JSON.parse(String(options.body))).toEqual({ refresh_token: "" })
-      expect(options.credentials).toBe("omit")
+    const fetch = vi.fn(async (_url: string, _options: RequestInit) => {
       return Response.json({ code: 400 }, { status: 400 })
     })
     vi.stubGlobal("fetch", fetch)
@@ -247,6 +517,13 @@ describe("password login public dispatch", () => {
     expect(deps.passwordContext).toHaveBeenCalledOnce()
     expect(deps.verificationContext).not.toHaveBeenCalled()
     expect(fetch).toHaveBeenCalledOnce()
+    expect(fetch.mock.calls[0]?.[0]).toBe(
+      "https://ordinary-native.example/api/v1/auth/refresh",
+    )
+    expect(JSON.parse(String(fetch.mock.calls[0]?.[1].body))).toEqual({
+      refresh_token: "",
+    })
+    expect(fetch.mock.calls[0]?.[1].credentials).toBe("omit")
   })
   it("rejects a local challenge that expires during acquisition before any password is sent", async () => {
     deps.settings.mockResolvedValue({ turnstile_enabled: true })
@@ -371,7 +648,6 @@ describe("password login public dispatch", () => {
       const fetch = vi.fn(async (url: string) => {
         if (url.endsWith("/auth/refresh"))
           return Response.json({ code: 400 }, { status: 400 })
-        expect(url).toMatch(/\/auth\/security-challenge$/)
         if (kind === "network") throw new TypeError("unavailable")
         if (kind === "missing")
           return Response.json({ code: 404 }, { status: 404 })
@@ -397,6 +673,10 @@ describe("password login public dispatch", () => {
       expect(deps.passwordContext).toHaveBeenCalledOnce()
       expect(deps.verificationContext).not.toHaveBeenCalled()
       expect(deps.keys.size).toBe(0)
+      expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+        "https://native-captcha.example/api/v1/auth/refresh",
+        "https://native-captcha.example/api/v1/auth/security-challenge",
+      ])
     },
   )
   it.each(
@@ -853,9 +1133,17 @@ describe("password login public dispatch", () => {
       status: "token_obtained",
       token: "captcha-proof",
     })
+    let captured: unknown
     deps.verificationContext.mockImplementation((flow) => ({
-      authenticate: async (input: unknown) =>
-        flow.execute({ input, assertOrigin: vi.fn(), sendSiteAction }),
+      authenticate: async (input: unknown) => {
+        const result = await flow.execute({
+          input,
+          assertOrigin: vi.fn(),
+          sendSiteAction,
+        })
+        captured = await flow.captureCredential()
+        return result
+      },
     }))
     const fetch = vi.fn(async (url: string, options: RequestInit) => {
       if (url.endsWith("/auth/security-challenge"))
@@ -899,6 +1187,7 @@ describe("password login public dispatch", () => {
     expect(deps.verificationContext).toHaveBeenCalledTimes(1)
     expect(deps.passwordContext).not.toHaveBeenCalled()
     expect(sendSiteAction).toHaveBeenCalledTimes(1)
+    expect(captured).toEqual(result.credential)
   })
   it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
     "never revives legacy secrets after canonical login was cleared (%s)",

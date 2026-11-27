@@ -2388,7 +2388,7 @@ describe("AccountDialog AccountForm", () => {
     )
     expect(token).toHaveAttribute("aria-invalid", "true")
     expect(token).toHaveAccessibleDescription(
-      "accountDialog:form.sub2apiValidationPaste",
+      "accountDialog:form.sub2apiValidationPaste accountDialog:form.sub2apiImportBoundHelp",
     )
     const feedback = screen.getByText(
       "accountDialog:form.sub2apiValidationPaste",
@@ -2457,6 +2457,11 @@ describe("AccountDialog AccountForm", () => {
     expect(
       screen.getByText("accountDialog:form.sub2apiImportBoundUnavailable"),
     ).toBeVisible()
+    expect(
+      screen.getByLabelText("accountDialog:form.sub2apiRefreshToken"),
+    ).toHaveAccessibleDescription(
+      "accountDialog:form.sub2apiValidationPaste accountDialog:form.sub2apiImportBoundUnavailable",
+    )
     expect(
       screen.queryByText("accountDialog:form.sub2apiImportBoundHelp"),
     ).toBeNull()

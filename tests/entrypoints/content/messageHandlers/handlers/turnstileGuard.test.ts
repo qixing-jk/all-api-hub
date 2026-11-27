@@ -53,6 +53,17 @@ vi.mock("~/entrypoints/content/messageHandlers/utils/turnstileGuard", () => ({
 }))
 
 describe("content turnstile guard handler", () => {
+  it("retains the explicit expectation for a delayed Turnstile widget", async () => {
+    waitForTurnstileTokenMock.mockResolvedValue({ status: "timeout" })
+    await new Promise<void>((resolve) =>
+      handleWaitForTurnstileToken({ expectTurnstile: true } as any, () =>
+        resolve(),
+      ),
+    )
+    expect(waitForTurnstileTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({ expectTurnstile: true }),
+    )
+  })
   it("prepares a delayed native target without clicking", async () => {
     const trigger = {
       kind: "clickSelector",

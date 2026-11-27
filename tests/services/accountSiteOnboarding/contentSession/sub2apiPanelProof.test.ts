@@ -1,15 +1,18 @@
 import { createHash, webcrypto } from "node:crypto"
+import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { handlePerformTempWindowFetch } from "~/entrypoints/content/messageHandlers/handlers/tempWindowFetch"
 import { sub2ApiContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/sub2api"
+import { fetchSub2ApiBrowserPanelRequest } from "~/services/apiService/sub2api/auth/browserPanelProof"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import {
   API_DIRECT_REQUEST_REASONS,
   API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
+import { server } from "~~/tests/msw/server"
 
 vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()),
@@ -104,6 +107,206 @@ beforeEach(async () => {
 })
 
 describe("existing website panel session", () => {
+  it("keeps unsigned browser requests usable after the native key read throws", async () => {
+    vi.stubGlobal("indexedDB", {
+      open: () => {
+        throw new Error("Storage unavailable")
+      },
+    })
+    const handler = vi.fn(({ request }: { request: Request }) =>
+      HttpResponse.json({ proof: request.headers.has("X-Panel-Proof") }),
+    )
+    server.use(http.get(`${origin}/api/v1/auth/me`, handler))
+    const response = await fetchSub2ApiBrowserPanelRequest(
+      `${origin}/api/v1/auth/me`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+    await expect(response.json()).resolves.toEqual({ proof: false })
+    expect(handler).toHaveBeenCalledOnce()
+  })
+  it("uses the default dispatcher without signing an unauthenticated public request", async () => {
+    const handler = vi.fn((_info: { request: Request }) =>
+      HttpResponse.json({ code: 0 }),
+    )
+    server.use(http.get(`${origin}/api/v1/settings/public`, handler))
+    await expect(
+      fetchSub2ApiBrowserPanelRequest(`${origin}/api/v1/settings/public`, {}),
+    ).resolves.toMatchObject({ status: 200 })
+    expect(handler).toHaveBeenCalledOnce()
+    expect(
+      handler.mock.calls[0]?.[0]?.request.headers.has("X-Panel-Proof"),
+    ).toBe(false)
+  })
+  it("does not export a refresh family after middleware discovery loses its connection", async () => {
+    storedPair = undefined
+    localStorage.setItem("auth_token", token)
+    localStorage.setItem("auth_user", JSON.stringify({ id: 17 }))
+    localStorage.setItem("refresh_token", "website-refresh")
+    server.use(
+      http.get(`${origin}/api/v1/auth/me`, () =>
+        HttpResponse.json({ code: 401 }, { status: 401 }),
+      ),
+      http.post(`${origin}/api/v1/auth/refresh`, () => HttpResponse.error()),
+    )
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        siteTypeHint: SITE_TYPES.SUB2API,
+        url: origin,
+      }),
+    ).rejects.toThrow()
+    expect(localStorage.getItem("refresh_token")).toBe("website-refresh")
+  })
+  it.each([
+    "rejected",
+    "envelope",
+    "identity",
+    "token changed",
+    "user changed",
+  ])("rejects stale or unverified browser identity: %s", async (failure) => {
+    localStorage.setItem("auth_token", token)
+    localStorage.setItem("auth_user", JSON.stringify({ id: 17 }))
+    server.use(
+      http.get(`${origin}/api/v1/auth/me`, () => {
+        if (failure === "token changed")
+          localStorage.setItem("auth_token", "replacement")
+        if (failure === "user changed")
+          localStorage.setItem("auth_user", JSON.stringify({ id: 18 }))
+        return HttpResponse.json(
+          {
+            code: failure === "envelope" ? 1 : 0,
+            data: { id: failure === "identity" ? 18 : 17 },
+          },
+          { status: failure === "rejected" ? 403 : 200 },
+        )
+      }),
+    )
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        siteTypeHint: SITE_TYPES.SUB2API,
+        url: origin,
+      }),
+    ).rejects.toThrow()
+  })
+  it.each([
+    "missing API",
+    "absent database",
+    "blocked",
+    "open error",
+    "missing store",
+    "read error",
+    "transaction error",
+  ])(
+    "preserves ordinary token use when the optional native key is unavailable: %s",
+    async (failure) => {
+      const close = vi.fn()
+      const abort = vi.fn()
+      if (failure === "missing API") vi.stubGlobal("indexedDB", undefined)
+      else
+        vi.stubGlobal("indexedDB", {
+          open: vi.fn(() => {
+            const request: any = {
+              transaction: { abort },
+              error: new Error("Storage unavailable"),
+              result: {
+                close,
+                objectStoreNames: {
+                  contains: () => failure !== "missing store",
+                },
+                transaction: () => {
+                  if (failure === "transaction error")
+                    throw new Error("Transaction unavailable")
+                  return {
+                    objectStore: () => ({
+                      get: () => {
+                        const read: any = {
+                          error: new Error("Read unavailable"),
+                        }
+                        queueMicrotask(() => read.onerror())
+                        return read
+                      },
+                    }),
+                  }
+                },
+              },
+            }
+            queueMicrotask(() => {
+              if (failure === "absent database") {
+                request.onupgradeneeded()
+                request.onerror()
+              } else if (failure === "blocked") request.onblocked()
+              else if (failure === "open error") request.onerror()
+              else request.onsuccess()
+            })
+            return request
+          }),
+        })
+      localStorage.setItem("auth_token", token)
+      localStorage.setItem("auth_user", JSON.stringify({ id: 17 }))
+      const proofs: (string | null)[] = []
+      server.use(
+        http.get(`${origin}/api/v1/auth/me`, ({ request }) => {
+          proofs.push(request.headers.get("X-Panel-Proof"))
+          return HttpResponse.json({ code: 0, data: { id: 17 } })
+        }),
+      )
+      const session = await sub2ApiContentSessionExtractor.extract({
+        siteTypeHint: SITE_TYPES.SUB2API,
+        url: origin,
+      })
+      expect(session).toMatchObject({ userId: 17, accessToken: token })
+      expect(session.sub2apiWebsiteSessionBound).toBeUndefined()
+      expect(proofs).toEqual([null])
+      if (
+        ["missing store", "read error", "transaction error"].includes(failure)
+      )
+        expect(close).toHaveBeenCalledOnce()
+      if (failure === "absent database") expect(abort).toHaveBeenCalledOnce()
+    },
+  )
+  it.each(["probe", "extract"] as const)(
+    "rejects a cross-origin identity redirect during %s",
+    async (operation) => {
+      storedPair = undefined
+      localStorage.setItem("auth_token", token)
+      localStorage.setItem("auth_user", JSON.stringify({ id: 17 }))
+      const foreignIdentity = vi.fn(() =>
+        HttpResponse.json({ code: 0, data: { id: 17 } }),
+      )
+      server.use(
+        http.get(`${origin}/api/v1/auth/me`, () =>
+          HttpResponse.redirect("https://foreign.example/identity"),
+        ),
+        http.get("https://foreign.example/identity", foreignIdentity),
+      )
+      await expect(
+        sub2ApiContentSessionExtractor[operation]!({
+          siteTypeHint: SITE_TYPES.SUB2API,
+          url: origin,
+        }),
+      ).rejects.toThrow()
+      expect(foreignIdentity).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("accepts an identity redirect within the configured API origin", async () => {
+    storedPair = undefined
+    localStorage.setItem("auth_token", token)
+    localStorage.setItem("auth_user", JSON.stringify({ id: 17 }))
+    server.use(
+      http.get(`${origin}/api/v1/auth/me`, () =>
+        HttpResponse.redirect(`${origin}/identity`),
+      ),
+      http.get(`${origin}/identity`, () =>
+        HttpResponse.json({ code: 0, data: { id: 17 } }),
+      ),
+    )
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        siteTypeHint: SITE_TYPES.SUB2API,
+        url: origin,
+      }),
+    ).resolves.toMatchObject({ userId: 17 })
+  })
   it("signs for the configured API origin with the dashboard's website key", async () => {
     const dashboard = "https://ai-router.dev"
     vi.stubGlobal("location", new URL(dashboard))

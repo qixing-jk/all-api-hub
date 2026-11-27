@@ -80,6 +80,27 @@ const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
 })
 
 describe("account dialog recovery handoff", () => {
+  it("rejects a Sub2API login handoff for an unsupported account type", async () => {
+    await expect(
+      prepareAccountDialogRecovery({
+        ...recoveryState(SITE_TYPES.UNKNOWN),
+        recoveryAction: "sub2api-login",
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+  })
+  it.each([AuthTypeEnum.Cookie, AuthTypeEnum.None])(
+    "rejects Sub2API login handoff with incompatible auth %s",
+    async (authType) => {
+      const state = {
+        ...recoveryState(SITE_TYPES.SUB2API),
+        recoveryAction: "sub2api-login" as const,
+      }
+      state.draft.authType = authType
+      await expect(prepareAccountDialogRecovery(state)).rejects.toThrow(
+        "Invalid account recovery draft",
+      )
+    },
+  )
   it("rejects an edited invalid URL before opening either recovery surface", async () => {
     const state = recoveryState()
     const prepared = await prepareAccountDialogRecovery(state)

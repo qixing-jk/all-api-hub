@@ -538,6 +538,7 @@ const recoverSub2ApiRequestAuth = async <
         latestRequest.auth.accessToken ?? "",
       )) ||
       (!latestRequest.auth.accessToken &&
+        normalizeSub2ApiRefreshToken(latestRequest.auth.refreshToken) &&
         (await hasSub2ApiPanelProof(latestRequest.baseUrl)))
     ) {
       if (isSub2ApiRefreshTokenContractError(params.refreshError))
@@ -709,6 +710,7 @@ async function executeSub2ApiAuthLifecycle<T>(
     state.request.baseUrl,
     state.request.auth.accessToken ?? "",
   )
+  let rejectedPanelRenewal: ApiError | undefined
   if (
     options.proactiveRefresh !== false &&
     !(options.singleRecovery && state.recoveryStarted) &&
@@ -725,30 +727,36 @@ async function executeSub2ApiAuthLifecycle<T>(
       state.request = refreshed
       refreshToken = normalizeSub2ApiRefreshToken(refreshed.auth.refreshToken)
     } catch (refreshError) {
-      throwIfTerminalSub2ApiRefreshError(
-        refreshError,
-        state.request,
-        endpoint,
-        hasPanelBinding,
-      )
-      if (
-        isUncertainSub2ApiRefreshRotation(refreshError) ||
-        isSub2ApiSessionBindingMismatch(refreshError)
-      ) {
-        state.request = await recoverSub2ApiRequestAuth({
-          request: state.request,
-          endpoint,
-          authSession: hydrated.authSession,
-          refreshError,
-        })
-        refreshToken = normalizeSub2ApiRefreshToken(
-          state.request.auth?.refreshToken,
-        )
+      // A rejected renewal does not invalidate a still-usable access token.
+      // Remember it so an unauthorized request cannot replay the refresh family.
+      if (hasPanelBinding && isSub2ApiRefreshTokenContractError(refreshError)) {
+        rejectedPanelRenewal = createRefreshTokenInvalidError(endpoint)
       } else {
-        logger.warn("Sub2API proactive auth refresh failed", {
+        throwIfTerminalSub2ApiRefreshError(
+          refreshError,
+          state.request,
           endpoint,
-          error: getSafeErrorMessage(refreshError),
-        })
+          hasPanelBinding,
+        )
+        if (
+          isUncertainSub2ApiRefreshRotation(refreshError) ||
+          isSub2ApiSessionBindingMismatch(refreshError)
+        ) {
+          state.request = await recoverSub2ApiRequestAuth({
+            request: state.request,
+            endpoint,
+            authSession: hydrated.authSession,
+            refreshError,
+          })
+          refreshToken = normalizeSub2ApiRefreshToken(
+            state.request.auth?.refreshToken,
+          )
+        } else {
+          logger.warn("Sub2API proactive auth refresh failed", {
+            endpoint,
+            error: getSafeErrorMessage(refreshError),
+          })
+        }
       }
     }
   }
@@ -757,6 +765,7 @@ async function executeSub2ApiAuthLifecycle<T>(
     return await runner(state.request)
   } catch (error) {
     if (!isAuthenticationRequiredError(error)) throw error
+    if (rejectedPanelRenewal) throw rejectedPanelRenewal
     const recoveryLimitReached = options.singleRecovery && state.recoveryStarted
     // A pre-dispatch key mismatch can reuse the original website context.
     // Recovery verifies origin/identity before replacing any saved credential.
@@ -779,7 +788,14 @@ async function executeSub2ApiAuthLifecycle<T>(
         beforeUnauthorizedRetry: options.beforeUnauthorizedRetry,
       })
     }
-    if (hasPanelBinding && isSub2ApiSessionBindingMismatch(error)) throw error
+    if (
+      isSub2ApiSessionBindingMismatch(error) &&
+      (await hasSub2ApiPanelBinding(
+        state.request.baseUrl,
+        state.request.auth.accessToken ?? "",
+      ))
+    )
+      throw error
     notifyApiTransportObserver(
       state.request.observer,
       "onPreHandlerUnauthorized",

@@ -7,7 +7,10 @@ import {
   hasSub2ApiPanelBinding,
   hasSub2ApiPanelProof,
 } from "~/services/apiService/sub2api/auth/panelProofCapability"
-import { getSub2ApiPanelKeyThumbprint } from "~/services/apiService/sub2api/auth/panelProofProtocol"
+import {
+  getSub2ApiPanelKeyThumbprint,
+  readSub2ApiPanelTokenBinding,
+} from "~/services/apiService/sub2api/auth/panelProofProtocol"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -37,6 +40,88 @@ vi.mock("~/services/apiService/sub2api/auth/panelProofStore", () => ({
 }))
 
 describe("Sub2API background panel proof transport", () => {
+  it.each([
+    "",
+    "opaque",
+    "e30.@@.signature",
+    "e30.bnVsbA.signature",
+    "e30.e30.signature",
+  ])(
+    "does not infer panel ownership from invalid token claims: %s",
+    (token) => {
+      expect(readSub2ApiPanelTokenBinding(token)).toBeUndefined()
+    },
+  )
+  it("reports optional capability storage failure as unconfirmed", async () => {
+    storageFailure.active = true
+    await expect(
+      hasSub2ApiPanelProof("https://unavailable.example"),
+    ).resolves.toBe(false)
+  })
+  it("skips discovery for a previously confirmed origin", async () => {
+    storedKeys.set("https://confirmed.example", {})
+    const fetch = vi.fn()
+    vi.stubGlobal("fetch", fetch)
+    await expect(
+      discoverSub2ApiPanelProof("https://confirmed.example"),
+    ).resolves.toBe(true)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+  it("does not replay a malformed unauthorized response", async () => {
+    const fetch = vi.fn(async () => new Response("not JSON", { status: 401 }))
+    vi.stubGlobal("fetch", fetch)
+    await expect(
+      fetchApiResponse(
+        {
+          siteType: SITE_TYPES.SUB2API,
+          baseUrl: "https://malformed.example",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "opaque" },
+          directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
+        },
+        { endpoint: "/api/v1/auth/me" },
+      ),
+    ).resolves.toMatchObject({ status: 401 })
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+  it("calibrates a newly discovered proof key once and uses the admin request marker", async () => {
+    const serverTime = Math.floor(Date.now() / 1000) + 700
+    const fetch = vi
+      .fn<(_url: string, init: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(
+        Response.json(
+          { code: 401, reason: "PANEL_PROOF_INVALID" },
+          { status: 401 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        Response.json(
+          { code: 401, reason: "PANEL_PROOF_TIME" },
+          { status: 401, headers: { "X-Panel-Time": String(serverTime) } },
+        ),
+      )
+      .mockResolvedValueOnce(Response.json({ code: 0 }))
+    vi.stubGlobal("fetch", fetch)
+    await expect(
+      fetchApiResponse(
+        {
+          siteType: SITE_TYPES.SUB2API,
+          baseUrl: "https://new-clock.example",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "opaque" },
+          directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
+        },
+        { endpoint: "/api/v1/admin/users" },
+      ),
+    ).resolves.toMatchObject({ status: 200 })
+    expect(fetch).toHaveBeenCalledTimes(3)
+    const headers = new Headers(fetch.mock.calls[2]![1].headers)
+    expect(headers.get("X-Admin-UI-Request")).toBe("1")
+    expect(headers.has("X-User-UI-Request")).toBe(false)
+    const proof = headers.get("X-Panel-Proof")!
+    expect(
+      JSON.parse(Buffer.from(proof.split(".")[1]!, "base64url").toString()).iat,
+    ).toBeGreaterThanOrEqual(serverTime)
+    expect(fetch.mock.calls[2]![1].redirect).toBe("error")
+  })
   it("discovers and uses the API-origin key for a split-origin dashboard", async () => {
     const baseUrl = "https://ai-router.dev"
     const apiOrigin = "https://api.ai-router.dev"
@@ -422,6 +507,7 @@ describe("Sub2API background panel proof transport", () => {
         Buffer.from(proof.split(".")[1]!, "base64url").toString(),
       )
       expect(payload.ct).toBe("text/plain; charset=utf-8")
+      expect(payload.rm).toBe("rotate")
       expect(payload.ath).toBe(
         createHash("sha256").update("effective-token").digest("base64url"),
       )
@@ -443,6 +529,7 @@ describe("Sub2API background panel proof transport", () => {
         requestHeaders: {
           "content-type": "text/plain; charset=utf-8",
           authorization: "Bearer effective-token",
+          "X-Panel-Refresh-Mode": "rotate",
         },
         directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       },
