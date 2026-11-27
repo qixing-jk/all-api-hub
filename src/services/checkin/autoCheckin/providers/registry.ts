@@ -121,6 +121,7 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "nexavlinks"
   | "xingya"
   | "apiKeyCasa"
+  | "zifeiyu"
   | "agentRouter"}`
 
 export type CheckInMethodPresentationMetadata = {
@@ -166,6 +167,7 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.ZifeiyuDailyGame,
   ])
 
 /**
@@ -388,7 +390,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     // Agent Router uses login check-in instead of this deployment's protocol.
     // A confirmed specific fork protocol outranks this generic candidate,
     // including when the retained upstream check-in route is disabled.
-    excludedOrigins: AGENT_ROUTER_ORIGINS,
+    excludedOrigins: [...AGENT_ROUTER_ORIGINS, "https://ai.112102.xyz"],
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: true,
     // Forks keep the operations but rename the route (ultrarouter.org serves
@@ -728,6 +730,22 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: XINGYA_CHECK_IN_STATUS_ENDPOINT }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.ZifeiyuDailyGame]: {
+    accountLogin: CHECK_IN_ACCOUNT_LOGIN_MODES.Session,
+    discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Specific,
+    id: AUTO_CHECKIN_METHOD_IDS.ZifeiyuDailyGame,
+    siteTypes: [SITE_TYPES.NEW_API],
+    origins: ["https://ai.112102.xyz"],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "ZIFEIYU game center",
+    },
+    presentation: { sourceNameKey: "methods.sources.zifeiyu" },
+    supportsStatusReadback: false,
+    feedbackStatusRoutes: [],
     legacy: false,
     newAccountCompatibility: false,
   },
