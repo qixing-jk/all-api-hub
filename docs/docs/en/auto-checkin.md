@@ -26,12 +26,12 @@
 - Accounts with a built-in provider show:
   - **Check-in Method**: Automatic Selection re-detects as needed when no method is selected or the current method is confirmed unavailable. It selects or switches only when a suitable method can be uniquely determined. A manual choice stays fixed. If it still belongs to the current site but has no detection record, execution confirms only that method and keeps that choice whether the result matches, is unsupported, or is uncertain.
   - **Enable Daily Auto Check-in**: Enabled by default. When disabled, the account does not participate even if the global schedule is enabled.
-  - **Check-in API Path** (optional): Enter it when the site changed its built-in check-in endpoint (some New API forks do). Leave it empty to use the default path; **Re-detect Check-in Methods** tries to read it automatically first, and a successful read lets that same detection finish on the new path. Detection preserves manually entered paths and can relearn an automatically discovered path after it stops working. Clear the field and save to restore the default path.
+  - **Check-in API Path** (optional): Enter it when the site changed its built-in check-in endpoint (some New API forks do). Leave it empty to use the default path; **Detect method** tries to read it automatically first, and a successful read lets that same detection finish on the new path. Detection preserves manually entered paths and can relearn an automatically discovered path after it stops working. Clear the field and save to restore the default path.
   - **External Check-in Site URL** (optional): Enter it when the page is not at the standard path. Every account can configure an external entry point.
   - **Custom Recharge/Redemption Page URL** (optional) and "Open the recharge page when using external check-in".
 - The account form has no "check-in detection" switch. Status is read automatically during account refresh or detection.
 - Automatic re-detection requires both the global and account-level automatic check-in switches. It runs with the daily task, including a daily task triggered early by opening the interface, with at least 24 hours between automatic discovery attempts for an account. Network errors, timeouts, and expired logins do not mean the method is unsupported.
-- **Re-detect Check-in Methods** is available manually during the cooldown. It only finds methods and does not submit a check-in; discovery results in the account editor take effect when saved.
+- **Detect method** is available manually during the cooldown. It only finds methods and does not submit a check-in; discovery results in the account editor take effect when saved.
 
 ### 2. Global Time Window
 
@@ -118,6 +118,7 @@ Sub2API operators may add their own check-in features. Keep the account type as 
 | Situation | What it means for you |
 |-----------|-----------------------|
 | Rewards are separate from the account balance (such as ToolCode) | Points and expiring bonus credit are not shown as a balance reward amount. View their details on the site. |
+| A free daily gift and paid draws coexist (such as BizDecipher) | The extension claims the free daily gift only. Draws that spend points or balance are available on the site. If a claim is uncertain, the extension checks the original claim without automatically submitting another. |
 | Daily and extra rewards coexist (such as Hiyo Free) | The extension handles daily check-in only and does not collect consumption-based extra rewards. Uncertain claims are not retried automatically; confirm the result on the site first. |
 | Ordinary and lucky check-in coexist (such as DaiGua) | The extension performs ordinary check-in only, avoiding lucky bets that can reduce your balance. It attempts to obtain Turnstile verification; if that fails, complete check-in manually on the site. |
 | Check-in is gated behind an image captcha (such as NexaVlinks) | The extension opens the site's check-in page and clicks its button, stopping at the captcha it cannot answer. Once you solve it in that page, the extension reads back the status to confirm; if you do not finish inside the wait, it points you at the site to check in manually. |

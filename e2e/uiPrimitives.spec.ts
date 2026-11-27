@@ -49,6 +49,63 @@ test.afterAll(async () => {
   await server?.close()
 })
 
+test("parallel form fields keep their label and control aligned when help wraps", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 560, height: 900 })
+  await page.goto(baseUrl)
+  const fields = page.getByRole("form", { name: "Parallel fields" })
+  await expect(fields.getByRole("combobox", { name: "Method" })).toBeVisible()
+  for (const density of ["compact", "default", "comfortable"]) {
+    await page
+      .locator("html")
+      .evaluate(
+        (html, value) => html.setAttribute("data-theme-density", value),
+        density,
+      )
+    const positions = await fields.evaluate((container) =>
+      [
+        ...container.querySelectorAll(
+          '[data-slot="field"]:has([data-slot="field-description"])',
+        ),
+      ].map((field) => {
+        const label = field.querySelector("label")!.getBoundingClientRect()
+        const control = field
+          .querySelector('[role="combobox"], input')!
+          .getBoundingClientRect()
+        const description = field
+          .querySelector('[data-slot="field-description"]')!
+          .getBoundingClientRect()
+        return {
+          label: label.top,
+          control: control.top,
+          gap: description.top - control.bottom,
+        }
+      }),
+    )
+    const [select, input] = positions
+    expect.soft(select!.label, `${density} labels`).toBeCloseTo(input!.label, 0)
+    expect
+      .soft(select!.control, `${density} controls`)
+      .toBeCloseTo(input!.control, 0)
+    expect
+      .soft(select!.gap, `${density} description gap`)
+      .toBeCloseTo(input!.gap, 0)
+    const trailingGap = await fields
+      .getByRole("combobox", { name: "Site" })
+      .evaluate(
+        (control) =>
+          control
+            .closest('[data-slot="field-content"]')!
+            .getBoundingClientRect().bottom -
+          control.getBoundingClientRect().bottom,
+      )
+    expect
+      .soft(trailingGap, `${density} gap after the last visible control`)
+      .toBeCloseTo(0, 0)
+  }
+})
+
 test("report feedback and pricing guidance preserve their content and copy action", async ({
   page,
 }, testInfo) => {

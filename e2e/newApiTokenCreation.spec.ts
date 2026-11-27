@@ -11,6 +11,7 @@ import {
   stubNewApiSiteRoutes,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import {
   autoDetectAccountFromAddDialog,
   openAccountManagementPage,
@@ -19,6 +20,8 @@ import {
 import { waitForNewUserFacingCredentialPage } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+
+parallelizeShardableSpec()
 
 const tokenSetupViews = [
   { id: "desktop", width: 1249, height: 900, theme: "light" as const },

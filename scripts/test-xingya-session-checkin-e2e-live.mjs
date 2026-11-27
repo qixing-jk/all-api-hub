@@ -41,7 +41,8 @@ const sites = [
 const labels = {
   account: /^(Account Management|账户管理|账号管理)$/u,
   checkin: /^(Auto Check-in|自动签到)$/u,
-  detect: /^(Detect check-in method|重新检测签到方式|检测签到方式)$/u,
+  detect:
+    /^(Detect method|Detect check-in method|检测方式|重新检测签到方式|检测签到方式)$/u,
   method: /^(Check-in method|签到方式)$/u,
   cancel: /^(Cancel|取消|Close|关闭)$/u,
   tokenPage: /^(Open token page|打开令牌页面)$/u,
