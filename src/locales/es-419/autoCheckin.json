@@ -174,6 +174,10 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "Solo reclama el regalo diario gratis. Participa en el sitio en los sorteos que cuestan puntos o saldo.",
+      "name": "Regalo diario gratis de {{source}}"
+    },
     "daily": {
       "description": "Este método usa el protocolo de check-in de terceros de {{source}} y solo funciona en instalaciones compatibles.",
       "name": "Check-in diario de {{source}}"
@@ -190,6 +194,7 @@
       "aiRouter": "AI-ROUTER",
       "apiKeyCasa": "ApiKey Casa",
       "baiApi": "Bai API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",
       "daigua": "DaiGua",
       "denxio": "Denxio",

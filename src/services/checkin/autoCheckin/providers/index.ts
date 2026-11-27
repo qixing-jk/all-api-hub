@@ -9,6 +9,7 @@ import { aiRouterProvider } from "./aiRouter"
 import { anyrouterProvider } from "./anyrouter"
 import { apiKeyCasaProvider } from "./apiKeyCasa"
 import { baiApiProvider } from "./baiApi"
+import { bizDecipherProvider } from "./bizdecipher"
 import { clawhudProvider } from "./clawhud"
 import type { AutoCheckinProvider } from "./contracts"
 import { daiguaProvider } from "./daigua"
@@ -52,6 +53,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn]: aiRouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn]: toolcodeProvider,
   [AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn]: hiyoProvider,
+  [AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn]: bizDecipherProvider,
   [AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn]: clawhudProvider,
   [AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn]: daiguaProvider,
   [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn]: freeApiProvider,

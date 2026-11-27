@@ -170,6 +170,10 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "Holt nur das tägliche Gratisgeschenk ab. An Ziehungen, die Punkte oder Guthaben kosten, nehmen Sie direkt auf der Website teil.",
+      "name": "Tägliches Gratisgeschenk von {{source}}"
+    },
     "daily": {
       "description": "Diese Methode verwendet das Check-in-Protokoll des Drittanbieters {{source}} und funktioniert nur bei Installationen, die es unterstützen.",
       "name": "Täglicher Check-in über {{source}}"
@@ -186,6 +190,7 @@
       "aiRouter": "AI-ROUTER",
       "apiKeyCasa": "ApiKey Casa",
       "baiApi": "Bai API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",
       "daigua": "DaiGua",
       "denxio": "Denxio",
