@@ -395,6 +395,7 @@ describe("autoCheckinMethodRegistry", () => {
         .map(({ id }) => id),
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
@@ -442,29 +443,19 @@ describe("autoCheckinMethodRegistry", () => {
     }
   })
 
-  it("gates the Linxi-family method to TLS-verified deployments", () => {
-    const candidatesFor = (siteUrl: string) =>
-      autoCheckinMethodRegistry
-        .getCandidates(SITE_TYPES.SUB2API, siteUrl)
-        .map(({ id }) => id)
-
+  it("offers the Linxi method for discovery on any Sub2API origin", () => {
     for (const siteUrl of [
       "https://sub.100xlabs.space",
       "https://k40.shengqainbang.cn/home",
-    ]) {
-      expect(candidatesFor(siteUrl)).toContain(
-        AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
-      )
-    }
-
-    for (const siteUrl of [
       "http://k40.linxigzs.top:8080",
       "https://k40.linxigzs.top:8080",
       "https://other-sub2api.example",
     ]) {
-      expect(candidatesFor(siteUrl)).not.toContain(
-        AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
-      )
+      expect(
+        autoCheckinMethodRegistry
+          .getCandidates(SITE_TYPES.SUB2API, siteUrl)
+          .map(({ id }) => id),
+      ).toContain(AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn)
     }
   })
 
