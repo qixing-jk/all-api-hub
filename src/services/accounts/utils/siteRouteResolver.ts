@@ -5,6 +5,7 @@ import {
 } from "~/constants/siteType"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import { findAccountSiteProfileForHostname } from "~/services/accounts/accountSiteProfile/urls"
+import { getDeploymentCheckInPagePath } from "~/services/accountSiteDefinitions"
 import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import {
   ACCOUNT_BOOTSTRAP_ROUTE_KINDS,
@@ -19,15 +20,15 @@ export const SITE_ROUTE_KINDS = ACCOUNT_BOOTSTRAP_ROUTE_KINDS
 
 type SiteRouteKind = AccountBootstrapRouteKind
 
-/** Account-owned native page paths take precedence over static and probed routes. */
-function getNativeCheckInPageUrl(
+/** Resolve the account path first, then the registered deployment default. */
+function getConfiguredCheckInPageUrl(
   target: AccountBootstrapRouteTarget,
   route: SiteRouteKind,
 ): string | null {
+  if (route !== SITE_ROUTE_KINDS.CheckIn) return null
   const path =
-    route === SITE_ROUTE_KINDS.CheckIn
-      ? normalizeCheckInPagePath(target.checkIn?.nativePagePath)
-      : null
+    normalizeCheckInPagePath(target.checkIn?.nativePagePath) ??
+    getDeploymentCheckInPagePath(target.siteType, target.baseUrl)
   if (!path) return null
   try {
     return new URL(path, target.baseUrl).href
@@ -52,7 +53,7 @@ export function getStaticAccountSiteRouteUrl(
   customUrl?: string,
 ): string | null {
   if (customUrl) return customUrl
-  const nativePageUrl = getNativeCheckInPageUrl(target, route)
+  const nativePageUrl = getConfiguredCheckInPageUrl(target, route)
   if (nativePageUrl) return nativePageUrl
   const path = resolveStaticAccountRoutePath(target, route)
   return path === null ? null : joinUrl(normalizeBaseUrl(target.baseUrl), path)
@@ -122,7 +123,7 @@ export async function resolveAccountSiteRouteUrl(
   customUrl?: string,
 ): Promise<string | null> {
   if (customUrl) return customUrl
-  const nativePageUrl = getNativeCheckInPageUrl(target, route)
+  const nativePageUrl = getConfiguredCheckInPageUrl(target, route)
   if (nativePageUrl) return nativePageUrl
   const baseUrl = normalizeBaseUrl(target.baseUrl)
   const path = await resolveAccountSiteRoutePath(target, route)

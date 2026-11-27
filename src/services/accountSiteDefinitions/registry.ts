@@ -1,4 +1,5 @@
 import type { AccountTodayStatsAvailability } from "~/types"
+import { tryParseHttpUrl } from "~/utils/core/urlParsing"
 
 import {
   ACCOUNT_SITE_DEFINITION_SCOPES,
@@ -154,6 +155,9 @@ function cloneDefinition(
         }
       : undefined,
     onboarding: cloneOnboarding(definition.onboarding),
+    ...(definition.checkInPathsByOrigin && {
+      checkInPathsByOrigin: { ...definition.checkInPathsByOrigin },
+    }),
     productProfile: cloneProductProfile(definition.productProfile),
   }
 }
@@ -199,6 +203,18 @@ export function getAccountSiteDefinition(
   )
 
   return definition ? cloneDefinition(definition) : undefined
+}
+
+/** Reads a registered check-in default for the exact console origin. */
+export function getDeploymentCheckInPagePath(
+  siteType: SiteType | undefined,
+  baseUrl: string,
+) {
+  const origin = tryParseHttpUrl(baseUrl)?.origin
+  if (siteType && origin) {
+    return SITE_TYPE_DEFINITIONS.find((site) => site.siteType === siteType)
+      ?.checkInPathsByOrigin?.[origin]
+  }
 }
 
 /**

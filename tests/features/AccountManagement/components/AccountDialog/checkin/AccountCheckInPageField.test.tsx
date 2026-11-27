@@ -74,6 +74,23 @@ describe("native page configuration exploration", () => {
     expect(executeProtectionBypassTask).not.toHaveBeenCalled()
   })
 
+  it("shows the deployment default as guidance while the path stays empty", async () => {
+    const user = userEvent.setup()
+    render(<Field siteUrl="https://ai.facai.cloudns.org" />)
+    const path = await screen.findByRole("textbox", {
+      name: enAccountDialog.form.checkInPagePath,
+    })
+    await user.click(screen.getByRole("button", { name: /^Clear$/ }))
+    expect(path).toHaveValue("")
+    expect(path).toHaveAccessibleDescription(
+      "Leave empty to use /dashboard, the extension's preset check-in page for this site.",
+    )
+    await user.type(path, "/rewards")
+    expect(path).toHaveValue("/rewards")
+    expect(path).not.toHaveAccessibleDescription()
+    expect(executeProtectionBypassTask).not.toHaveBeenCalled()
+  })
+
   it("keeps detailed path guidance in accessible help without hiding validation errors", async () => {
     const user = userEvent.setup()
     render(<Field />)
