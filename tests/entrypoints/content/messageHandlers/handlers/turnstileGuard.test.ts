@@ -54,12 +54,14 @@ vi.mock("~/entrypoints/content/messageHandlers/utils/turnstileGuard", () => ({
 
 describe("content turnstile guard handler", () => {
   it("retains the explicit expectation for a delayed Turnstile widget", async () => {
-    waitForTurnstileTokenMock.mockResolvedValue({ status: "timeout" })
-    await new Promise<void>((resolve) =>
-      handleWaitForTurnstileToken({ expectTurnstile: true } as any, () =>
-        resolve(),
-      ),
+    waitForTurnstileTokenMock.mockResolvedValue({
+      status: "timeout",
+      detection: { hasTurnstile: false, score: 0, reasons: [] },
+    })
+    const response = await new Promise((resolve) =>
+      handleWaitForTurnstileToken({ expectTurnstile: true }, resolve),
     )
+    expect(response).toMatchObject({ success: true, status: "timeout" })
     expect(waitForTurnstileTokenMock).toHaveBeenCalledWith(
       expect.objectContaining({ expectTurnstile: true }),
     )

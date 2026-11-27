@@ -17,6 +17,8 @@ import {
 
 /** Normal website login and extension onboarding; no credential/account injection. */
 export async function runBrowserSessionAcceptance(args) {
+  const target = process.env.AAH_PANEL_PROOF_TEST_BASE_URL?.trim()
+  assert(target, "An explicit AAH_PANEL_PROOF_TEST_BASE_URL is required")
   applyIsolateFlag(args)
   assert(
     args.includes("--login"),
@@ -26,8 +28,6 @@ export async function runBrowserSessionAcceptance(args) {
     args.find((arg) => arg.startsWith("--expected-id="))?.slice(14) ??
     process.env.AAH_PANEL_PROOF_TEST_USER_ID
   assert(expectedId, "An independently verified --expected-id is required")
-  const target =
-    process.env.AAH_PANEL_PROOF_TEST_BASE_URL ?? "https://sub2api.zquant.site"
   const output = path.resolve(
     ".scratch/sub2api-panel-proof/artifacts",
     `browser-live-${Date.now()}`,

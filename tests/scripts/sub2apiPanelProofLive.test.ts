@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { runBrowserSessionAcceptance } from "~~/scripts/suites/sub2api/browser-session.mjs"
 import { main } from "~~/scripts/test-sub2api-panel-proof-live.mjs"
 
 const mocks = vi.hoisted(() => ({
@@ -112,6 +113,14 @@ afterEach(() => {
 })
 
 describe("signed session live acceptance runner", () => {
+  it("requires an explicit target even when the browser-session helper is invoked directly", async () => {
+    vi.stubEnv("AAH_PANEL_PROOF_TEST_BASE_URL", undefined)
+    await expect(runBrowserSessionAcceptance(args)).rejects.toThrow(
+      "AAH_PANEL_PROOF_TEST_BASE_URL",
+    )
+    expect(mocks.mkdir).not.toHaveBeenCalled()
+    expect(mocks.connect).not.toHaveBeenCalled()
+  })
   it.each([
     "/api/v1/auth/me",
     "/api/v1/keys?page=1&page_size=1",

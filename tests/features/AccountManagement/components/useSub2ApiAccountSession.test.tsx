@@ -74,6 +74,14 @@ vi.mock("~/services/accountBrowserSession", async (original) => ({
 }))
 
 describe("Sub2API account draft credential acquisition", () => {
+  it("preserves expiry when a manual refresh-token edit changes whitespace only", async () => {
+    const { result } = renderAcquisitionWithSave()
+    await waitFor(() => expect(result.current).not.toBeNull())
+    await act(async () => result.current.session.handleAcquireSub2apiSession())
+    act(() => result.current.session.setSub2apiRefreshToken(" new-refresh "))
+    expect(result.current.draft.sub2apiTokenExpiresAt).toBe(2000000000000)
+    expect(deps.discard).not.toHaveBeenCalled()
+  })
   it("persists explicit login removal when saving the account", async () => {
     const { result } = renderAcquisitionWithSave()
     await waitFor(() => expect(result.current).not.toBeNull())

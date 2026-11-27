@@ -6,6 +6,34 @@ import { useDraftCredentialOwnership } from "~/features/AccountManagement/compon
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 describe("draft credential persistence ownership", () => {
+  it.each([false, true])(
+    "allows the same saved credential after closing during persistence (other save failed first: %s)",
+    async (failedFirst) => {
+      const cleanup = vi.fn().mockResolvedValue(undefined)
+      const { result, rerender } = renderIsolatedHook(
+        ({ isOpen }) =>
+          useDraftCredentialOwnership({
+            isOpen,
+            snapshotKey: "A",
+            invalidSnapshot: () => new Error("Draft changed"),
+            onCleanupError: vi.fn(),
+          }),
+        { initialProps: { isOpen: true } },
+      )
+      act(() => result.current.adopt("A", cleanup))
+      const lease = result.current.beginPersistence("A")
+      const failed = result.current.beginPersistence("A")
+      rerender({ isOpen: false })
+      await act(async () => {
+        if (failedFirst) await failed.settle(false)
+        await lease.settle(true)
+        if (!failedFirst) await failed.settle(false)
+      })
+      rerender({ isOpen: true })
+      expect(() => result.current.beginPersistence("A")).not.toThrow()
+      expect(cleanup).not.toHaveBeenCalled()
+    },
+  )
   it("reports failed disposal once and makes lease settlement idempotent", async () => {
     const cleanup = vi.fn().mockRejectedValue(new Error("Logout failed"))
     const onCleanupError = vi.fn()

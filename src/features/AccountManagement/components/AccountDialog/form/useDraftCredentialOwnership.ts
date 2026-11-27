@@ -41,9 +41,10 @@ export function useDraftCredentialOwnership({
     current.current = { isOpen, snapshotKey, invalidSnapshot, onCleanupError }
   })
   const discardOwned = useCallback(async (owned: OwnedCredential) => {
+    if (owned.persisted) return
     owned.abandoned = true
     abandonedKeys.current.add(owned.snapshotKey)
-    if (owned.pendingPersists || owned.discarded || owned.persisted) return
+    if (owned.pendingPersists || owned.discarded) return
     // Retain this snapshot so a delayed save cannot persist a revoked credential.
     owned.discarded = true
     try {
@@ -86,6 +87,7 @@ export function useDraftCredentialOwnership({
           owned.pendingPersists -= 1
           if (success) {
             owned.persisted = true
+            abandonedKeys.current.delete(owned.snapshotKey)
             if (ownedRef.current === owned) ownedRef.current = null
           } else if (owned.abandoned) await discardOwned(owned)
         },

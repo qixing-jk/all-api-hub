@@ -376,6 +376,34 @@ describe("Sub2API configured login recovery", () => {
     account.account_info.access_token = `e30.${Buffer.from(JSON.stringify({ cnf: { jkt: binding } })).toString("base64url")}.signature`
   }
 
+  it.each(["unauthorized", "binding mismatch"])(
+    "requires login for a signed bearer without a renewable family: %s",
+    async (failure) => {
+      await bindAccountToPanelKey()
+      account.login = undefined
+      account.sub2apiAuth = undefined
+      attachStoredSession()
+      const error =
+        failure === "unauthorized"
+          ? unauthorized()
+          : new ApiError(
+              "Session binding mismatch",
+              401,
+              "/api/v1/auth/me",
+              API_ERROR_CODES.HTTP_401,
+              "SESSION_BINDING_MISMATCH",
+            )
+      const runner = vi.fn().mockRejectedValue(error)
+      await expect(
+        executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner),
+      ).rejects.toMatchObject({ statusCode: 401 })
+      expect(runner).toHaveBeenCalledOnce()
+      expect(deps.refresh).not.toHaveBeenCalled()
+      expect(deps.browser).not.toHaveBeenCalled()
+      expect(deps.login).not.toHaveBeenCalled()
+    },
+  )
+
   it.each(["key mismatch", "proof rejected", "network"])(
     "preserves a proactive signed refresh failure without borrowing browser credentials: %s",
     async (failure) => {
@@ -463,6 +491,52 @@ describe("Sub2API configured login recovery", () => {
     )
     expect(deps.browser).toHaveBeenCalledOnce()
     expect(deps.refresh).not.toHaveBeenCalled()
+    expect(deps.login).not.toHaveBeenCalled()
+  })
+
+  it("recovers the adopted browser family after a reactive renewal rejection", async () => {
+    await bindAccountToPanelKey()
+    account.sub2apiAuth = {
+      refreshToken: "old-managed-refresh",
+      tokenExpiresAt: Date.now() - 1,
+    }
+    account.login = undefined
+    attachStoredSession()
+    const getLatest = request.sub2apiAuthSession!.getLatestAuth
+    request.sub2apiAuthSession!.getLatestAuth = vi
+      .fn()
+      .mockImplementationOnce(getLatest)
+      .mockImplementation(async (...args: Parameters<typeof getLatest>) => {
+        account.account_info.access_token = "newer-browser-access"
+        account.sub2apiAuth = {
+          refreshToken: "browser-refresh",
+          tokenExpiresAt: Date.now() + 3600000,
+        }
+        return getLatest(...args)
+      })
+    deps.refresh.mockRejectedValue(
+      new Sub2ApiTokenRefreshError(
+        SUB2API_TOKEN_REFRESH_FAILURE_REASONS.INVALID_REFRESH_TOKEN,
+      ),
+    )
+    deps.browser.mockResolvedValue({
+      accessToken: "resynced-browser-access",
+      userId: "17",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+    const runner = vi
+      .fn()
+      .mockRejectedValueOnce(unauthorized())
+      .mockResolvedValue("done")
+    await expect(
+      executeAuthenticatedSub2ApiRequest(request, "/api/v1/auth/me", runner, {
+        recoverInvalidRefreshTokenViaBrowser: true,
+      }),
+    ).resolves.toBe("done")
+    expect(deps.refresh).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ refreshToken: "browser-refresh" }),
+    )
+    expect(deps.browser).toHaveBeenCalledOnce()
     expect(deps.login).not.toHaveBeenCalled()
   })
 

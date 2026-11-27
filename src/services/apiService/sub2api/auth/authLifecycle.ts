@@ -826,7 +826,10 @@ async function executeSub2ApiAuthLifecycle<T>(
           refreshError,
           state.request,
           endpoint,
-          hasPanelBinding,
+          await hasSub2ApiPanelBinding(
+            state.request.baseUrl,
+            state.request.auth.accessToken ?? "",
+          ),
         )
         logger.warn(
           "Failed to restore Sub2API authenticated request via refresh token",
