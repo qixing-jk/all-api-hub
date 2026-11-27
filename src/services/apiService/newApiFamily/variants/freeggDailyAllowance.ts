@@ -200,7 +200,7 @@ export function readFreeggAllowanceUsd(record: Record<string, unknown>) {
 }
 
 /** IDs are list positions on FreeGG; use them only to validate pagination. */
-export function freeggLogId(value: unknown): string | undefined {
+function freeggLogId(value: unknown): string | undefined {
   return (typeof value === "number" || typeof value === "string") &&
     /^[1-9]\d*$/.test(String(value))
     ? String(value)
