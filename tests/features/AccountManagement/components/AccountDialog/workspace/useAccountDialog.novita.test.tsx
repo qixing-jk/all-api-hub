@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -55,7 +56,9 @@ describe("Novita account dialog", () => {
       result.current.handlers.handleVerifyNovitaCredential(),
     )
     expect(fetchPreparedJsonResponse).toHaveBeenCalledTimes(1)
-    expect(result.current.state.credentialVerification?.status).toBe("success")
+    expect(result.current.state.credentialVerification?.status).toBe(
+      ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success,
+    )
     expect(result.current.state.novitaCredentialOperation).toBe("api-key")
     expect(result.current.state.accessToken).toBe(credential)
   })
@@ -197,7 +200,7 @@ describe("Novita account dialog", () => {
       })
       await act(async () => vi.advanceTimersByTimeAsync(600))
       expect(result.current.state.credentialVerification).toMatchObject({
-        status: "success",
+        status: ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success,
         accessToken: "sk_latest",
         accountLabel: "latest@example.com",
       })
@@ -230,7 +233,7 @@ describe("Novita account dialog", () => {
     })
     await act(async () => result.current.handlers.handleAutoDetect())
     expect(result.current.state.credentialVerification).toMatchObject({
-      status: "success",
+      status: ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success,
       accessToken: "sk_valid",
       userId: "novita-user",
       accountLabel: "user@example.com",
@@ -244,7 +247,7 @@ describe("Novita account dialog", () => {
     })
     await act(async () => result.current.handlers.handleAutoDetect())
     expect(result.current.state.credentialVerification).toMatchObject({
-      status: "error",
+      status: ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Error,
       message: "messages:novita.credentialInvalid",
     })
     await act(async () => result.current.setters.setAccessToken(""))

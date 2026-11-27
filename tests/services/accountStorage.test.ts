@@ -47,6 +47,7 @@ import * as dailyBalanceCapture from "~/services/history/dailyBalanceHistory/cap
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { tagStorage } from "~/services/tags/tagStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -1647,6 +1648,48 @@ describe("accountStorage core behaviors", () => {
       storageHooks.afterGet = async () => {}
     }
   })
+
+  it.each(["config", "tags"])(
+    "keeps readable accounts visible when %s migration cannot be persisted",
+    async (kind) => {
+      const account = createAccount({
+        id: "readable-legacy",
+        ...(kind === "config" ? { configVersion: 5 } : { tags: ["Work"] }),
+      })
+      seedStorage([account])
+      const original = structuredClone(
+        storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS),
+      )
+      storageHooks.beforeSet = async () => {
+        throw new Error("write unavailable")
+      }
+      try {
+        const accounts = await accountStorage.getAllAccounts()
+        expect(accounts).toEqual([
+          expect.objectContaining({ id: account.id, configVersion: 9 }),
+        ])
+        expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)).toEqual(original)
+        expect(await accountStorage.getEnabledAccounts()).toHaveLength(1)
+      } finally {
+        storageHooks.beforeSet = async () => {}
+      }
+      // A later successful read retries the migration without discarding accounts.
+      const recoveredAccounts = await accountStorage.getAllAccounts()
+      expect(recoveredAccounts).toHaveLength(1)
+      const persistedConfig = storageData.get(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ) as AccountStorageConfig
+      const persistedAccount = atIndex(persistedConfig.accounts, 0)
+      expect(persistedAccount.configVersion).toBe(9)
+      if (kind === "tags") {
+        const tags = await tagStorage.listTags()
+        expect(tags.map(({ name }) => name)).toEqual(["Work"])
+        const workTag = atIndex(tags, 0)
+        expect(atIndex(recoveredAccounts, 0).tagIds).toEqual([workTag.id])
+        expect(persistedAccount.tagIds).toEqual([workTag.id])
+      }
+    },
+  )
 
   it("canonicalizes legacy accounts before unrelated storage mutations", async () => {
     const legacyAccount = createAccount({

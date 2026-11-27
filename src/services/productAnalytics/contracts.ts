@@ -61,6 +61,7 @@ type SettingsSnapshotAutomaticFeatureBypassPayload = Partial<
 export const PRODUCT_ANALYTICS_EVENTS = {
   AppOpened: "app_opened",
   PageViewed: "page_viewed",
+  AccountDialogClosed: "account_dialog_closed",
   FeatureActionStarted: "feature_action_started",
   FeatureActionCompleted: "feature_action_completed",
   ShieldBypassSummaryCaptured: "shield_bypass_summary_captured",
@@ -74,6 +75,11 @@ export const PRODUCT_ANALYTICS_EVENTS = {
   SiteEcosystemSnapshot: "site_ecosystem_snapshot",
   SiteTypePresent: "site_type_present",
   StorageWriteFailed: "storage_write_failed",
+} as const
+
+export const PRODUCT_ANALYTICS_ACCOUNT_DIALOG_PHASES = {
+  SiteInput: "site_input",
+  AccountForm: "account_form",
 } as const
 
 export const PRODUCT_ANALYTICS_STORAGE_AREAS = {
@@ -117,6 +123,8 @@ export type ProductAnalyticsEntrypoint =
 export const PRODUCT_ANALYTICS_RESULTS = {
   Success: "success",
   Failure: "failure",
+  /** Expected continuation that requires user input before the task can finish. */
+  ActionRequired: "action_required",
   Cancelled: "cancelled",
   Skipped: "skipped",
 } as const
@@ -572,9 +580,14 @@ export const PRODUCT_ANALYTICS_FEATURE_IDS = {
   StarPromotion: "star_promotion",
 } as const
 
+export const PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_TRIGGER_IDS = {
+  InitialDetection: "initial_detection",
+  Redetect: "redetect",
+} as const
+
 export const PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_TRIGGERS = [
-  "initial_detection",
-  "redetect",
+  PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_TRIGGER_IDS.InitialDetection,
+  PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_TRIGGER_IDS.Redetect,
 ] as const
 export type ProductAnalyticsCheckInDiscoveryTrigger =
   (typeof PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_TRIGGERS)[number]
@@ -588,10 +601,16 @@ export const PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_DECISIONS = [
 export type ProductAnalyticsCheckInDiscoveryDecision =
   (typeof PRODUCT_ANALYTICS_CHECK_IN_DISCOVERY_DECISIONS)[number]
 
+export const PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCE_IDS = {
+  Automatic: "automatic",
+  Manual: "manual",
+  None: "none",
+} as const
+
 export const PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCES = [
-  "automatic",
-  "manual",
-  "none",
+  PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCE_IDS.Automatic,
+  PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCE_IDS.Manual,
+  PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCE_IDS.None,
 ] as const
 export type ProductAnalyticsCheckInSelectionSource =
   (typeof PRODUCT_ANALYTICS_CHECK_IN_SELECTION_SOURCES)[number]
@@ -916,6 +935,7 @@ export type ProductAnalyticsActionId =
 export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   AccountTokenThirdPartyExportDialog: "account_token_third_party_export_dialog",
   BackgroundAutoCheckinScheduler: "background_auto_checkin_scheduler",
+  AutoCheckinUiOpenPretrigger: "auto_checkin_ui_open_pretrigger",
   BackgroundShieldBypassTempContext: "background_shield_bypass_temp_context",
   OptionsAutoCheckinActionBar: "options_auto_checkin_action_bar",
   OptionsAutoCheckinEmptyState: "options_auto_checkin_empty_state",
@@ -1328,6 +1348,16 @@ export type ProductAnalyticsFailureStage =
   (typeof PRODUCT_ANALYTICS_FAILURE_STAGES)[keyof typeof PRODUCT_ANALYTICS_FAILURE_STAGES]
 
 export type ProductAnalyticsEventPayloadMap = {
+  [PRODUCT_ANALYTICS_EVENTS.AccountDialogClosed]: {
+    entrypoint: ProductAnalyticsEntrypoint
+    dialog_phase: (typeof PRODUCT_ANALYTICS_ACCOUNT_DIALOG_PHASES)[keyof typeof PRODUCT_ANALYTICS_ACCOUNT_DIALOG_PHASES]
+    form_valid: boolean
+    submission_blocked: boolean
+    verification_required: boolean
+    validation_issue_count: number
+    detection_pending: boolean
+    save_pending: boolean
+  }
   [PRODUCT_ANALYTICS_EVENTS.AppOpened]: {
     entrypoint: ProductAnalyticsEntrypoint
   }
@@ -1363,6 +1393,7 @@ export type ProductAnalyticsEventPayloadMap = {
     managed_site_batch_import_source?: ProductAnalyticsManagedSiteBatchImportSource
     failure_stage?: ProductAnalyticsFailureStage
     failure_reason?: ProductAnalyticsFailureReason
+    /** Also carries the verification reason for action_required; kept for historical continuity. */
     account_auto_detect_failure_reason?: ProductAnalyticsAccountAutoDetectFailureReason
     account_auto_detect_attempt_outcome?: OpenRouterBootstrapAttemptOutcome
     account_auto_detect_identity_detected?: boolean

@@ -1,3 +1,4 @@
+import { STORAGE_WRITE_FAILURE_REPORT_INTERVAL_MS } from "~/services/productAnalytics/configuration/storageFailurePolicy"
 import {
   PRODUCT_ANALYTICS_EVENTS,
   type ProductAnalyticsStorageArea,
@@ -7,11 +8,9 @@ import {
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 
 /**
- * Reports one failure per operation and stage within this window, so an
- * environment-level storage outage stays visible without flooding events.
+ * Avoid repeat dispatches within this context. The client also enforces the
+ * same cooldown in session storage, surviving background worker restarts.
  */
-const STORAGE_WRITE_FAILURE_REPORT_INTERVAL_MS = 10 * 60 * 1000
-
 const lastReportedAtByOperationStage = new Map<string, number>()
 
 export type StorageWriteFailureParams = {

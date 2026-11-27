@@ -96,6 +96,9 @@ export const STORAGE_LOCKS = {
    * analytics preferences and cadence state.
    */
   PRODUCT_ANALYTICS: "all-api-hub:product-analytics",
+  /** Session-only diagnostic admission; never nest the analytics state lock. */
+  PRODUCT_ANALYTICS_STORAGE_FAILURE_REPORT:
+    "all-api-hub:product-analytics-storage-failure-report",
   /**
    * Best-effort lock used to serialize the WebDAV auto-sync apply/rollback
    * section itself. Individual storage services still enforce their own
@@ -226,6 +229,9 @@ export const AUTO_CHECKIN_STORAGE_KEYS = {
 } as const
 
 export const PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS = {
+  STORAGE_FAILURE_REPORTED_AT: "productAnalytics_storageFailureReportedAt_v1",
+  SETTINGS_SNAPSHOT_AT: "productAnalytics_settingsSnapshotAt_v1",
+  SITE_ECOSYSTEM_SNAPSHOT_AT: "productAnalytics_siteEcosystemSnapshotAt_v1",
   AUTO_CHECKIN_CONFIG_SNAPSHOT_AT:
     "productAnalytics_autoCheckinConfigSnapshotAt_v1",
 } as const

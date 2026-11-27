@@ -97,9 +97,8 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
       type: string,
       data?: Record<string, unknown>,
     ) => {
-      const { sendRuntimeMessage } = await import(
-        "~/utils/browser/runtimeMessages"
-      )
+      const { sendRuntimeMessage } =
+        await import("~/utils/browser/runtimeMessages")
       return sendRuntimeMessage(type, data)
     },
   }
@@ -298,12 +297,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
         ([type]) => type === AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
       ),
     ).toHaveLength(1)
-    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalled()
 
     expect(toast.success).not.toHaveBeenCalled()
     await waitFor(() => {
@@ -312,6 +306,8 @@ describe("AutoCheckinUiOpenPretrigger", () => {
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
           actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
           result: PRODUCT_ANALYTICS_RESULTS.Success,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+          surfaceId: "auto_checkin_ui_open_pretrigger",
         }),
       )
     })
@@ -319,6 +315,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       expect.objectContaining({
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         insights: {
+          sourceKind: "auto",
           itemCount: 5,
           successCount: 2,
           failureCount: 1,
@@ -328,7 +325,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
     )
     expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
       "productAnalytics:trackAutoCheckinConfigSnapshot",
-      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup },
     )
 
     expect(
@@ -343,6 +340,9 @@ describe("AutoCheckinUiOpenPretrigger", () => {
 
   it("pushes the auto-checkin page into history when view details is clicked from options", async () => {
     window.history.replaceState(null, "", "/options.html")
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Options,
+    )
 
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...DEFAULT_PREFERENCES,
@@ -403,6 +403,10 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       "#autoCheckin",
     )
     expect(vi.mocked(openAutoCheckinPage)).not.toHaveBeenCalled()
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      "productAnalytics:trackAutoCheckinConfigSnapshot",
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
+    )
   })
 
   it("tracks failed pretrigger attempts without raw error details", async () => {
@@ -437,7 +441,10 @@ describe("AutoCheckinUiOpenPretrigger", () => {
     }
   })
 
-  it("maps failed run results to failed analytics", async () => {
+  it("reports a failed side panel run through the side panel analytics entrypoint", async () => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Sidepanel,
+    )
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       autoCheckin: {
@@ -469,9 +476,14 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
         expect.objectContaining({
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel,
         }),
       )
     })
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      "productAnalytics:trackAutoCheckinConfigSnapshot",
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel },
+    )
   })
 
   it("maps all-skipped run results to skipped analytics", async () => {
