@@ -58,9 +58,14 @@ async function createScopedTokenOnSecurityPage(
   // All API Hub cannot choose the grant for the user, and the deployment offers
   // these permissions as one catalog the user already holds. Selecting all of
   // them keeps the fixture independent of how the catalog is laid out.
-  await createDialog
-    .getByRole("button", { name: /^(Select all|全选)$/u })
-    .click()
+  const selectAll = createDialog.getByRole("button", {
+    name: /^(Select all|全选)$/u,
+  })
+  await expect(selectAll.first()).toBeVisible()
+  // Admin catalogs have one control per permission group. Work backwards so
+  // a selected group's changed label cannot shift the remaining locators.
+  for (let index = (await selectAll.count()) - 1; index >= 0; index--)
+    await selectAll.nth(index).click()
   if (options.neverExpires)
     await createDialog
       .getByRole("button", { name: /^(Never expires|永不过期)$/u })
@@ -84,7 +89,7 @@ async function createScopedTokenOnSecurityPage(
   // Creation has completed even if a later display/copy assertion fails.
   await options.onScopedTokenCreated?.()
   await expect(tokenDialog).toContainText(
-    /will not be shown again|不会再次显示/u,
+    /will not be shown again|不会再次显示|将不再显示/u,
   )
   // The plaintext is shown once in the deployment's own field; read it directly
   // rather than through the clipboard, whose copy control is icon-only.
@@ -182,11 +187,17 @@ async function regenerateDashboardTokenOnSecurityPage(
  * otherwise use its password challenge. Fail if neither method is available.
  */
 async function completeNewApiSecurityVerification(dialog, config) {
-  await expect(dialog.getByRole("tab").first()).toBeVisible()
+  // A deployment with only password verification renders the field directly.
+  await expect(
+    dialog.getByRole("tab").first().or(dialog.locator("input").first()).first(),
+  ).toBeVisible()
   const totpTab = dialog.getByRole("tab", {
     name: /^(Authenticator code|身份验证器代码)$/u,
   })
   const passwordTab = dialog.getByRole("tab", { name: /^(Password|密码)$/u })
+  const passwordInput = dialog
+    .getByLabel(/^(Password|密码)$/u)
+    .and(dialog.locator("input"))
 
   if (
     config.totpSecret &&
@@ -201,13 +212,12 @@ async function completeNewApiSecurityVerification(dialog, config) {
       generateNewApiTotpCode(config.totpSecret),
       "authenticator code",
     )
-  } else if ((await passwordTab.count()) && (await passwordTab.isEnabled())) {
-    await passwordTab.click()
-    await fillSecret(
-      dialog.getByLabel(/^(Password|密码)$/u).and(dialog.locator("input")),
-      config.password,
-      "password",
-    )
+  } else if (
+    ((await passwordTab.count()) && (await passwordTab.isEnabled())) ||
+    (!(await passwordTab.count()) && (await passwordInput.isVisible()))
+  ) {
+    if (await passwordTab.count()) await passwordTab.click()
+    await fillSecret(passwordInput, config.password, "password")
   } else {
     throw new Error(
       "New API security verification has no supported configured method. Enable password verification or configure AAH_E2E_NEW_API_TOTP_SECRET for the test account.",
