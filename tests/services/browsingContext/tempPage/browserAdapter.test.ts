@@ -237,6 +237,44 @@ describe("browserAdapter", () => {
       expect(ready).toHaveBeenCalledOnce()
     })
 
+    it("admits a complete top-level document after the tab load fallback begins", async () => {
+      vi.useFakeTimers()
+      vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue(loading)
+      const probe = vi
+        .spyOn(browserApi_runtimeMessages, "sendTabMessageWithRetry")
+        .mockResolvedValue({ url, readyState: "complete", timeOrigin: 1 })
+      const ready = vi.fn()
+      const result = waitForTabDocumentReady(1, url, { timeoutMs: 1_000 }).then(
+        ready,
+        (error: unknown) => error,
+      )
+      await vi.advanceTimersByTimeAsync(999)
+      expect(probe).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(3_100)
+      expect(await result).toBeUndefined()
+      expect(ready).toHaveBeenCalledOnce()
+    })
+
+    it("waits when a complete tab snapshot still exposes an interactive document", async () => {
+      vi.useFakeTimers()
+      vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
+        ...loading,
+        status: "complete",
+      })
+      const state = { url, readyState: "interactive", timeOrigin: 1 }
+      const send = vi
+        .spyOn(browserApi_runtimeMessages, "sendTabMessageWithRetry")
+        .mockResolvedValue(state)
+      const ready = vi.fn()
+      const waiting = waitForTabDocumentReady(1, url).then(ready)
+      await vi.advanceTimersByTimeAsync(600)
+      expect(ready).not.toHaveBeenCalled()
+      send.mockResolvedValue({ ...state, readyState: "complete" })
+      await vi.advanceTimersByTimeAsync(600)
+      await waiting
+      expect(ready).toHaveBeenCalledOnce()
+    })
+
     it("does not use an in-flight readiness reply after cancellation", async () => {
       vi.useFakeTimers()
       vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue(loading)

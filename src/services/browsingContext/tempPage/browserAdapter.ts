@@ -386,11 +386,11 @@ export function waitForTabDocumentReady(
   })
 }
 
-/** Reads the top-level document's identity in the expected readiness state. */
+/** Reads the top-level document's identity after it reaches the required state. */
 async function readDocumentTime(
   tabId: number,
   url: string,
-  readyState: "complete" | "interactive",
+  minimumReadyState: "complete" | "interactive",
 ) {
   try {
     const response = await sendTabMessageWithRetry<{
@@ -404,7 +404,9 @@ async function readDocumentTime(
     )
     if (
       response?.url === url &&
-      response.readyState === readyState &&
+      (response.readyState === "complete" ||
+        (minimumReadyState === "interactive" &&
+          response.readyState === "interactive")) &&
       Number.isFinite(response.timeOrigin)
     )
       return response.timeOrigin
