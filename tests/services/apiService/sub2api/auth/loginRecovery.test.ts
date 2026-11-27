@@ -430,10 +430,10 @@ describe("Sub2API configured login recovery", () => {
     request.sub2apiAuthSession!.getLatestAuth = vi
       .fn()
       .mockImplementationOnce(getLatest)
-      .mockImplementation(async () => {
+      .mockImplementation(async (...args: Parameters<typeof getLatest>) => {
         account.account_info.access_token = "newer-browser-access"
         account.sub2apiAuth = undefined
-        return getLatest()
+        return getLatest(...args)
       })
     deps.browser.mockResolvedValue({
       accessToken: "resynced-browser-access",

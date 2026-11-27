@@ -238,7 +238,7 @@ describe("password login public dispatch", () => {
       vi.stubGlobal("fetch", fetch)
       const result = await loginAccount(backgroundRequest())
       expect(result.status).toBe(scenario.status)
-      expect(result.credential).toBeUndefined()
+      expect(result).not.toHaveProperty("credential")
       const logout = fetch.mock.calls.filter(([url]) =>
         url.endsWith("/auth/logout"),
       )
@@ -1187,7 +1187,7 @@ describe("password login public dispatch", () => {
     expect(deps.verificationContext).toHaveBeenCalledTimes(1)
     expect(deps.passwordContext).not.toHaveBeenCalled()
     expect(sendSiteAction).toHaveBeenCalledTimes(1)
-    expect(captured).toEqual(result.credential)
+    expect(result).toMatchObject({ credential: captured })
   })
   it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
     "never revives legacy secrets after canonical login was cleared (%s)",

@@ -1,3 +1,4 @@
+import { renderHook as renderIsolatedHook } from "@testing-library/react"
 import { startTransition, Suspense } from "react"
 import { describe, expect, it, vi } from "vitest"
 
@@ -81,7 +82,7 @@ describe("draft credential persistence ownership", () => {
   })
   it("keeps the committed draft eligible while a replacement render is suspended", () => {
     const pending = new Promise<never>(() => {})
-    const { result, rerender } = renderHook(
+    const { result, rerender } = renderIsolatedHook(
       ({ snapshotKey, suspended }) => {
         const ownership = useDraftCredentialOwnership({
           isOpen: true,

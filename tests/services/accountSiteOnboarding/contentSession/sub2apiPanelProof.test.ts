@@ -254,7 +254,7 @@ describe("existing website panel session", () => {
         url: origin,
       })
       expect(session).toMatchObject({ userId: 17, accessToken: token })
-      expect(session.sub2apiWebsiteSessionBound).toBeUndefined()
+      expect(session).not.toHaveProperty("sub2apiWebsiteSessionBound")
       expect(proofs).toEqual([null])
       if (
         ["missing store", "read error", "transaction error"].includes(failure)
