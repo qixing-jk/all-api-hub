@@ -19,6 +19,10 @@ import {
 import { openSiteFaviconFixture } from "~~/e2e/utils/siteFaviconFixture"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
+// Discard creates a dormant replacement target. Viewport emulation on that
+// target disconnects older Chromium builds; size only the live extension page.
+test.use({ viewport: null })
+
 test("uses a sleeping tab's cached icon across site pickers and saves the right URLs", async ({
   page,
   context,

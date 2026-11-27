@@ -231,7 +231,10 @@ test("keeps expiry, archived components and provider-day figures usable through 
   extensionId,
   extensionDir,
 }, testInfo) => {
-  test.setTimeout(process.env.AAH_VISUAL_CAPTURE_DIR ? 120000 : 60000)
+  const { timeout } = test.info()
+  if (process.env.AAH_VISUAL_CAPTURE_DIR && timeout > 0) {
+    test.setTimeout(timeout + 60_000)
+  }
   await stubLlmMetadataIndex(context)
   const worker = await getServiceWorker(context)
   await forceExtensionLanguage(page, "en")
@@ -687,7 +690,10 @@ const testInUtc = test.extend({ timezoneId: "UTC" })
 testInUtc(
   "keeps native income and consumption units and periods through reload and sharing",
   async ({ page, context, extensionId, extensionDir }, testInfo) => {
-    test.setTimeout(process.env.AAH_VISUAL_CAPTURE_DIR ? 120_000 : 60_000)
+    const { timeout } = test.info()
+    if (process.env.AAH_VISUAL_CAPTURE_DIR && timeout > 0) {
+      test.setTimeout(timeout + 60_000)
+    }
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
     await page.emulateMedia({ reducedMotion: "reduce" })
@@ -1279,7 +1285,10 @@ test("keeps the three core totals visible and opens precision and coverage on re
   extensionId,
   extensionDir,
 }) => {
-  test.setTimeout(process.env.AAH_VISUAL_CAPTURE_DIR ? 120_000 : 60_000)
+  const { timeout } = test.info()
+  if (process.env.AAH_VISUAL_CAPTURE_DIR && timeout > 0) {
+    test.setTimeout(timeout + 60_000)
+  }
   await forceExtensionLanguage(page, "zh-CN")
   await stubLlmMetadataIndex(context)
   await page.emulateMedia({ reducedMotion: "reduce" })

@@ -19,7 +19,7 @@ Scheduled browser compatibility runs cover every supported Chrome version and al
 gh workflow run e2e-browser-compat.yml -f chrome_versions=114,stable -f shards=2
 ```
 
-Shard numbers still refer to the original three-way split. The isolated performance suite runs for each selected browser when shard 2 is included.
+Shard numbers select one of three groups balanced by measured spec duration. The build freezes one duration profile for all selected browsers and failed-job reruns; without usable timings, each job falls back to Playwright's test-count split. The isolated performance suite runs for each selected browser when shard 2 is included.
 
 The default E2E suite uses six runners and balances specs by measured duration. Each shard records a JSON report, and a follow-up job caches `.e2e-durations/spec-durations.json` built from those reports. Pull requests restore the base branch's copy. Without a duration manifest, the jobs fall back to Playwright's `--shard`. Use `node scripts/write-e2e-spec-durations.mjs` and `node scripts/e2e-shard-plan.mjs --index 1 --total 6` to reproduce the pipeline locally.
 
