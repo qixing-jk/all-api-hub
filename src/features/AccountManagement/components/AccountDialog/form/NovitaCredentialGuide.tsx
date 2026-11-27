@@ -11,13 +11,18 @@ import {
 } from "~/services/apiService/novita/constants"
 import { createTab } from "~/utils/browser/tabs"
 
+import {
+  ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES,
+  type AccountCredentialVerificationStatus,
+} from "../models"
+
 export interface NovitaCredentialActions {
   onAcquireConsole: () => void
   onVerify: () => void
   isVerifying: boolean
   operation?: "console" | "api-key" | "account"
   verification?: {
-    status: "success" | "error"
+    status: AccountCredentialVerificationStatus
     message?: string
     accountLabel?: string
   }
@@ -48,10 +53,12 @@ export function NovitaCredentialGuide({
   const isAcquiring = actions.isVerifying && isConsoleOperation
   const verification = isConsoleOperation ? actions.verification : undefined
   const consoleError =
-    verification?.status === "error" ? verification.message : undefined
+    verification?.status === ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Error
+      ? verification.message
+      : undefined
   const consoleFeedback =
     consoleError ||
-    (verification?.status === "success"
+    (verification?.status === ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success
       ? t("novitaCredentials.consoleVerified", {
           account: verification.accountLabel,
         })
@@ -109,7 +116,8 @@ export function NovitaCredentialGuide({
           variant={
             consoleError
               ? "error"
-              : verification?.status === "success"
+              : verification?.status ===
+                  ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success
                 ? "success"
                 : undefined
           }

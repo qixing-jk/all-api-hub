@@ -44,10 +44,12 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
+  type ProductAnalyticsFailureStage,
 } from "~/services/productAnalytics/contracts"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -208,13 +210,15 @@ export function useAccountRowActions({
 
     if (!canSmartCopyKey) {
       onCopyKey(site)
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.ActionRequired, {
         insights: { fallbackUsed: true },
       })
       return
     }
 
     setIsCheckingTokens(true)
+    let failureStage: ProductAnalyticsFailureStage =
+      PRODUCT_ANALYTICS_FAILURE_STAGES.Request
     const secretsToRedact = new Set<string>()
     addRedactionSecrets(secretsToRedact, [
       site.baseUrl,
@@ -229,17 +233,20 @@ export function useAccountRowActions({
       const [runtimeKey] = runtimeKeys
       if (runtimeKeys.length !== 1 || !runtimeKey) {
         onCopyKey(site)
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.ActionRequired, {
           insights: {
+            fallbackUsed: true,
             itemCount: runtimeKeys.length,
           },
         })
       } else {
+        failureStage = PRODUCT_ANALYTICS_FAILURE_STAGES.Response
         const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
           site,
           runtimeKey,
         )
         addRuntimeKeyRedactionSecrets(secretsToRedact, [resolvedRuntimeKey])
+        failureStage = PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
         await navigator.clipboard.writeText(resolvedRuntimeKey.secret)
         toast.success(t("actions.keyCopied"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
@@ -260,6 +267,7 @@ export function useAccountRowActions({
       onCopyKey(site)
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
+        insights: { failureStage, fallbackUsed: true },
       })
     } finally {
       setIsCheckingTokens(false)

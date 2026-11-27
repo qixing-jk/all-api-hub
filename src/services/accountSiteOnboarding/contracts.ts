@@ -9,6 +9,8 @@ import type { KimiOpenPlatformAuthConfig } from "~/types"
 import type { AccountDetectionDiagnostics } from "./diagnostics"
 
 export type ContentSessionExtractionContext = {
+  /** Local request cancellation; never serialized into content messages. */
+  abortSignal?: AbortSignal
   url?: string
   siteTypeHint?: AccountSiteType
   /** Allows explicit onboarding to try registered session probes for unknown sites. */

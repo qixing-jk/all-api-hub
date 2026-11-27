@@ -9,8 +9,9 @@ export { handleCheckCloudflareGuard } from "./cloudflareGuard"
 export { handlePerformTempWindowFetch } from "./tempWindowFetch"
 export {
   handleTriggerCheckinPageAction,
-  handleWaitForTurnstileToken,
-} from "./turnstileGuard"
+  handleInspectCheckinPage,
+} from "./checkinPage"
+export { handleWaitForTurnstileToken } from "./turnstileGuard"
 export { handleGetLocalStorage, handleGetUserFromLocalStorage } from "./storage"
 export { handleWaitAndGetUserInfo } from "./waitUserInfo"
 export { handleGetRenderedTitle } from "./tempWindowTitle"

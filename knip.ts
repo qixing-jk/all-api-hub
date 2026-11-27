@@ -47,6 +47,9 @@ const config: KnipConfig = {
     "scripts/sign-crx.mjs",
     // Invoked by the documentation updater as a subprocess.
     "scripts/generate-doc-screenshots.mjs",
+    // Imported by task-local hosted New API acceptance drivers; login and
+    // eligible-account setup remain with those explicit manual runs.
+    "scripts/flows/new-api-native-checkin.mjs",
   ],
   project: [
     "src/**/*.{ts,tsx}!",

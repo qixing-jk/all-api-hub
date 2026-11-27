@@ -560,10 +560,11 @@ describe("AccountActionButtons", () => {
       "account:actions.noKeyFound",
     )
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      PRODUCT_ANALYTICS_RESULTS.ActionRequired,
       {
         insights: {
           itemCount: 0,
+          fallbackUsed: true,
         },
       },
     )
@@ -609,7 +610,7 @@ describe("AccountActionButtons", () => {
       // The row action is one operation regardless of how it resolves, so the
       // dialog fallback is reported as an insight instead of a second id.
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Success,
+        PRODUCT_ANALYTICS_RESULTS.ActionRequired,
         { insights: { fallbackUsed: true } },
       )
     },

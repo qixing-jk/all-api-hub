@@ -32,6 +32,21 @@ function describeEntry(overrides: Partial<ProtectionBypassHistoryEntry>) {
 }
 
 describe("protection bypass history presentation", () => {
+  it("names read-only page exploration independently of check-in submission", () => {
+    expect(
+      describeEntry({
+        execution: {
+          version: 2,
+          kind: "user_command",
+          command: "find_checkin_page",
+          surface: "options",
+        },
+        taskKind: "checkin_page_discovery",
+      }),
+    ).toMatchObject({
+      operation: "shieldBypass:history.commands.find_checkin_page",
+    })
+  })
   it("describes a directly requested page fetch without implying an earlier API failure", () => {
     expect(describeEntry({ taskKind: "explicit_page_fetch" })).toMatchObject({
       cause: "shieldBypass:history.causes.explicit_context",

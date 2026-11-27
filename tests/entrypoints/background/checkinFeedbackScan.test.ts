@@ -6,7 +6,7 @@ import {
   executeTempCheckinFeedbackScan,
 } from "~/services/browsingContext/tempPage/checkinFeedbackScan"
 import { tempWindowBackgroundRuntime } from "~/services/browsingContext/tempPage/runtime"
-import { FEEDBACK_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/feedback/scanTypes"
+import { CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/discovery/evidence/scanTypes"
 import { removeTempWindowCookieRule } from "~/utils/browser/dnrCookieInjector"
 import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 
@@ -130,7 +130,7 @@ describe("temporary feedback scan ownership", () => {
       authorize,
       reply,
     )
-    await vi.advanceTimersByTimeAsync(FEEDBACK_SCAN_SESSION_TIMEOUT_MS)
+    await vi.advanceTimersByTimeAsync(CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS)
     await pending
     expect(reply).toHaveBeenCalledWith({ success: false })
     expect(removeTempWindowCookieRule).toHaveBeenCalledWith(17)

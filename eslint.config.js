@@ -149,7 +149,7 @@ const dynamicImportAllowlist = [
   },
   // Turnstile waits load content UI only when the user is asked to assist.
   {
-    file: "src/entrypoints/content/messageHandlers/handlers/turnstileGuard.ts",
+    file: "src/entrypoints/content/messageHandlers/utils/turnstileUserAssist.ts",
     imports: [
       "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts",
     ],

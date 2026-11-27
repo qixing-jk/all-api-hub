@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { createRef, useState, type ComponentProps, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
+import { AUTO_DETECT_RECOVERY_ACTIONS } from "~/constants/autoDetect"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountDialog, {
@@ -68,14 +69,15 @@ const verifyEnteredToken = vi.mocked(validateNewApiAccessToken)
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: { getStatus: vi.fn().mockResolvedValue(null) },
 }))
-vi.mock("~/services/checkin/feedback/scan", async (original) => ({
-  ...(await original<typeof import("~/services/checkin/feedback/scan")>()),
-  collectCheckInFeedbackClues: vi
-    .fn()
-    .mockRejectedValue(new Error("unavailable")),
+vi.mock("~/services/checkin/discovery/evidence/scan", async (original) => ({
+  ...(await original<
+    typeof import("~/services/checkin/discovery/evidence/scan")
+  >()),
+  collectCheckInEvidence: vi.fn().mockRejectedValue(new Error("unavailable")),
 }))
 
 const {
+  mockTrackEvent,
   mockState,
   mockSetters,
   mockHandlers,
@@ -92,6 +94,7 @@ const {
   mockCaptureApiCredentialProfile,
   mockLoggerError,
 } = vi.hoisted(() => ({
+  mockTrackEvent: vi.fn(),
   mockSponsorRecommendationItems: [
     {
       id: "anyrouter",
@@ -468,7 +471,155 @@ vi.mock("~/utils/navigation/feedbackPages", () => ({
   openSiteSupportRequestPage: mockOpenSiteSupportRequestPage,
 }))
 
+vi.mock("~/services/productAnalytics/runtime/dispatch", () => ({
+  trackProductAnalyticsEvent: (...args: unknown[]) => mockTrackEvent(...args),
+}))
+
 describe("AccountDialog", () => {
+  it.each([
+    {
+      label: "expected verification in popup",
+      errorType: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+      popup: true,
+      sidepanel: true,
+      url: "https://api.example.com",
+      expectedEntrypoint: "popup",
+      expectedVerification: true,
+      expectedBlocked: false,
+    },
+    {
+      label: "other access-token recovery in sidepanel",
+      errorType: AutoDetectErrorType.UNAUTHORIZED,
+      popup: false,
+      sidepanel: true,
+      url: "https://api.example.com",
+      expectedEntrypoint: "sidepanel",
+      expectedVerification: false,
+      expectedBlocked: false,
+    },
+    {
+      label: "unverified AIMLAPI credentials in options",
+      errorType: AutoDetectErrorType.UNAUTHORIZED,
+      popup: false,
+      sidepanel: false,
+      url: "https://aimlapi.com",
+      expectedEntrypoint: "options",
+      expectedVerification: true,
+      expectedBlocked: true,
+    },
+  ])("records the current close state for $label", async (scenario) => {
+    const previousAccessToken = mockState.accessToken
+    onTestFinished(() => {
+      mockState.accessToken = previousAccessToken
+    })
+    const popup = vi
+      .spyOn(browserUtils, "isExtensionPopup")
+      .mockReturnValue(scenario.popup)
+    const sidepanel = vi
+      .spyOn(browserUtils, "isExtensionSidePanel")
+      .mockReturnValue(scenario.sidepanel)
+    onTestFinished(() => {
+      popup.mockRestore()
+      sidepanel.mockRestore()
+    })
+    const ref = createRef<AccountDialogHandle>()
+    const props = {
+      ref,
+      isOpen: true,
+      mode: DIALOG_MODES.ADD,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      onError: vi.fn(),
+    }
+    const { rerender } = render(<AccountDialog {...props} />)
+    Object.assign(mockState, {
+      url: scenario.url,
+      accessToken: "",
+      phase: ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM,
+      isFormValid: false,
+      validationIssues: [{ field: "siteName", kind: "missing" }],
+      isDetecting: true,
+      isAutoConfiguring: true,
+      detectionError: {
+        type: scenario.errorType,
+        message: "private detail",
+        recoveryAction: AUTO_DETECT_RECOVERY_ACTIONS.AccessToken,
+      },
+    })
+    rerender(<AccountDialog {...props} />)
+    mockTrackEvent.mockClear()
+    await act(async () => {
+      await ref.current!.close()
+    })
+    expect(mockTrackEvent).toHaveBeenCalledExactlyOnceWith(
+      "account_dialog_closed",
+      {
+        entrypoint: scenario.expectedEntrypoint,
+        dialog_phase: "account_form",
+        form_valid: false,
+        submission_blocked: scenario.expectedBlocked,
+        verification_required: scenario.expectedVerification,
+        validation_issue_count: 1,
+        detection_pending: true,
+        save_pending: true,
+      },
+    )
+  })
+
+  it("records one safe close-state observation per add-dialog opening", async () => {
+    const ref = createRef<AccountDialogHandle>()
+    const props = {
+      ref,
+      mode: DIALOG_MODES.ADD,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      onError: vi.fn(),
+    }
+    const { rerender } = render(<AccountDialog {...props} isOpen />)
+    mockTrackEvent.mockClear()
+    await act(async () => {
+      await ref.current!.close()
+      await ref.current!.close()
+    })
+    expect(mockTrackEvent).toHaveBeenCalledTimes(1)
+    expect(mockTrackEvent).toHaveBeenCalledWith("account_dialog_closed", {
+      entrypoint: "options",
+      dialog_phase: "site_input",
+      form_valid: true,
+      submission_blocked: true,
+      verification_required: false,
+      validation_issue_count: 0,
+      detection_pending: false,
+      save_pending: false,
+    })
+    rerender(<AccountDialog {...props} isOpen={false} />)
+    rerender(<AccountDialog {...props} isOpen />)
+    await act(async () => {
+      await ref.current!.close()
+    })
+    expect(mockTrackEvent).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not infer a close when an add dialog unmounts or an editor closes", async () => {
+    const ref = createRef<AccountDialogHandle>()
+    const props = {
+      ref,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+      onError: vi.fn(),
+    }
+    const { rerender, unmount } = render(
+      <AccountDialog {...props} mode={DIALOG_MODES.ADD} isOpen />,
+    )
+    mockTrackEvent.mockClear()
+    rerender(<AccountDialog {...props} mode={DIALOG_MODES.EDIT} isOpen />)
+    await act(async () => {
+      await ref.current!.close()
+    })
+    unmount()
+    expect(mockTrackEvent).not.toHaveBeenCalled()
+  })
+
   it("hands the popup Cookie recovery draft to a persistent editor before starting login", async () => {
     const continueRecovery = vi.fn()
     const popup = vi
@@ -2009,6 +2160,38 @@ describe("AccountDialog", () => {
       screen.queryByText("accountDialog:accessTokenValidation.valid"),
     ).not.toBeInTheDocument()
     expect(verifyEnteredToken).toHaveBeenCalledOnce()
+  })
+
+  it("blocks Save and configure while the native page path is invalid", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.siteType = SITE_TYPES.NEW_API
+    mockState.draft.siteType = SITE_TYPES.NEW_API
+    mockState.userId = mockState.draft.userId
+    mockState.accessToken = mockState.draft.accessToken
+    const user = userEvent.setup()
+    render(
+      <AccountDialog
+        isOpen
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    const path = await screen.findByLabelText(
+      "accountDialog:form.checkInPagePath",
+    )
+    await user.type(path, "https://other.example/welfare")
+    expect(path).toBeInvalid()
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton),
+    )
+    expect(mockHandlers.handleAutoConfig).not.toHaveBeenCalled()
+    await user.clear(path)
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton),
+    )
+    expect(mockHandlers.handleAutoConfig).toHaveBeenCalledOnce()
   })
 
   it("aborts verification when Save and configure starts", async () => {

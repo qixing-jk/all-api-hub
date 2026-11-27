@@ -41,6 +41,7 @@ export function getProtectionBypassHistoryLabels(t: TFunction) {
       account_onboarding: t("shieldBypass:history.accountOnboarding"),
     },
     commands: {
+      find_checkin_page: t("shieldBypass:history.commands.find_checkin_page"),
       checkin_feedback: t("shieldBypass:history.commands.checkin_feedback"),
       refresh_account: t("shieldBypass:history.commands.refresh_account"),
       refresh_all_accounts: t(

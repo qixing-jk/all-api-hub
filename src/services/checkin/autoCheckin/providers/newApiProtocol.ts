@@ -10,6 +10,7 @@ import {
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
 import {
+  ASSET_KINDS,
   AWARD_FULFILLMENT,
   AWARD_TARGETS,
 } from "~/services/amounts/financialConstants"
@@ -21,6 +22,10 @@ import type {
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { newApiFinancialAmount } from "~/services/apiService/newApiFamily/quotaAsset"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import {
+  FLOWBEE_CHECK_IN_POINT_ASSET,
+  isFlowbeeDeployment,
+} from "~/services/apiService/newApiFamily/variants/flowbeeCheckInProtocol"
 import { ApiError } from "~/services/apiTransport/errors"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -48,7 +53,10 @@ import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import type { CheckInMethodStatus } from "~/types/checkIn"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
-import type { TurnstilePreTrigger } from "~/types/turnstile"
+import {
+  TURNSTILE_PRE_TRIGGER_KINDS,
+  type TurnstilePreTrigger,
+} from "~/types/turnstile"
 import {
   formatLocalDayKey,
   formatLocalMonthKey,
@@ -58,6 +66,11 @@ import {
 export const NEW_API_MESSAGE_KEYS = {
   turnstileIncognitoAccessRequired:
     "autoCheckin:providerFallback.turnstileIncognitoAccessRequired",
+} as const
+
+export const NEW_API_AWARD_SOURCES = {
+  Mutation: "mutation",
+  Status: "status",
 } as const
 
 type CheckinResult = AutoCheckinProviderOutcome
@@ -105,7 +118,7 @@ export function createCheckInRequest(
 }
 
 /**
- * Resolve the quota today's check-in awarded from a month's record set.
+ * Resolve today's native check-in record from a month's record set.
  *
  * The comparison uses the local calendar day, the same boundary the rest of the
  * extension keys days by. A deployment that resolves its own day differently
@@ -130,11 +143,15 @@ function resolveTodayCheckinRecord(
 /** Daily records identify one grant; a missing date never becomes an invented event ID. */
 export function readNewApiAwards(
   account: SiteAccount,
-  value: unknown,
-  date?: string,
-  field: "quota_awarded" | "stats.records[].quota_awarded" = "quota_awarded",
+  record: NewApiCheckInRecord | undefined,
+  source: (typeof NEW_API_AWARD_SOURCES)[keyof typeof NEW_API_AWARD_SOURCES] = NEW_API_AWARD_SOURCES.Mutation,
 ) {
-  const day = date?.trim()
+  const day = record?.checkin_date?.trim()
+  const usesPoints =
+    isFlowbeeDeployment(account.site_url) &&
+    record?.points_awarded !== undefined
+  const field = usesPoints ? "points_awarded" : "quota_awarded"
+  const value = record?.[field]
   if (value === undefined) return undefined
   const amount = newApiFinancialAmount(
     value,
@@ -145,13 +162,24 @@ export function readNewApiAwards(
     accountAward(account, {
       id: "daily-checkin",
       operation: resolveCheckInEndpoint(account),
-      field,
+      field:
+        source === NEW_API_AWARD_SOURCES.Status
+          ? `stats.records[].${field}`
+          : field,
       value,
-      nativeUnitsPerAsset: amount.nativeUnitsPerAsset,
-      amountInputs: amount.amountInputs,
-      asset: amount.asset,
-      contractVersion: amount.contractVersion,
-      target: AWARD_TARGETS.Wallet,
+      ...(usesPoints
+        ? {
+            asset: { kind: ASSET_KINDS.Quota, ...FLOWBEE_CHECK_IN_POINT_ASSET },
+            contractVersion: "flowbee-points:1",
+            target: AWARD_TARGETS.Unknown,
+          }
+        : {
+            nativeUnitsPerAsset: amount.nativeUnitsPerAsset,
+            amountInputs: amount.amountInputs,
+            asset: amount.asset,
+            contractVersion: amount.contractVersion,
+            target: AWARD_TARGETS.Wallet,
+          }),
       fulfillment: AWARD_FULFILLMENT.Credited,
       ...(day && parseDayKey(day)
         ? { event: { namespace: "new-api-checkin-day", id: day } }
@@ -175,7 +203,11 @@ export function resolveCheckInUrl(
   account: SiteAccount,
 ): Promise<string | null> {
   return resolveAccountSiteRouteUrl(
-    { baseUrl: account.site_url, siteType: account.site_type },
+    {
+      baseUrl: account.site_url,
+      siteType: account.site_type,
+      checkIn: account.checkIn,
+    },
     SITE_ROUTE_KINDS.CheckIn,
   )
 }
@@ -209,9 +241,7 @@ export function resolveStandardCheckinResult(params: {
       // any other day's record from being shown as today's award.
       awards: readNewApiAwards(
         params.account,
-        resolveTodayCheckinRecord(payload.data ? [payload.data] : undefined)
-          ?.quota_awarded,
-        payload.data?.checkin_date,
+        resolveTodayCheckinRecord(payload.data ? [payload.data] : undefined),
       ),
       data: payload.data,
     })
@@ -224,13 +254,8 @@ export function resolveStandardCheckinResult(params: {
       messageKey: message
         ? undefined
         : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-      // The mutation answers with the day's record, whose `quota_awarded` is
-      // already an internal quota amount.
-      awards: readNewApiAwards(
-        params.account,
-        payload.data?.quota_awarded,
-        payload.data?.checkin_date,
-      ),
+      // Preserve the deployment's native asset from the granted day's record.
+      awards: readNewApiAwards(params.account, payload.data ?? undefined),
       data: payload.data ?? undefined,
     })
   }
@@ -296,12 +321,11 @@ export async function fetchSingleNewApiCheckInStatus(
       /** Absent when neither the body nor the public switch answers. */
       enabled?: boolean
       /**
-       * The quota this day's check-in awarded, read from the same month record
+       * The day's native award fields, read from the same month record
        * set this call already fetched. Absent when the deployment returns no
        * records or none of them is the caller's local day.
        */
-      todayQuotaAwarded?: number | string
-      todayCheckinDate?: string
+      todayRecord?: NewApiCheckInRecord
     }
   | undefined
 > {
@@ -339,7 +363,6 @@ export async function fetchSingleNewApiCheckInStatus(
         usesRouteOverride)
     ) {
       const todayRecord = resolveTodayCheckinRecord(checkInData.stats.records)
-      const todayQuotaAwarded = todayRecord?.quota_awarded
       const enabled = await resolveAvailability(
         checkInData.enabled,
         request,
@@ -349,12 +372,7 @@ export async function fetchSingleNewApiCheckInStatus(
       return {
         ...(enabled !== undefined ? { enabled } : {}),
         checkedInToday: checkInData.stats.checked_in_today,
-        ...(todayQuotaAwarded !== undefined
-          ? {
-              todayQuotaAwarded,
-              todayCheckinDate: todayRecord!.checkin_date.trim(),
-            }
-          : {}),
+        ...(todayRecord ? { todayRecord } : {}),
       }
     }
 
@@ -400,9 +418,8 @@ export function resolveNewApiCheckInReadback(
     status: input.status ?? CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
     awards: readNewApiAwards(
       input.account,
-      observation.todayQuotaAwarded,
-      observation.todayCheckinDate,
-      "stats.records[].quota_awarded",
+      observation.todayRecord,
+      NEW_API_AWARD_SOURCES.Status,
     ),
     data: input.data,
   })
@@ -429,9 +446,8 @@ export function withNewApiStatusConfirmation<
           awards: observation?.checkedInToday
             ? readNewApiAwards(
                 account,
-                observation.todayQuotaAwarded,
-                observation.todayCheckinDate,
-                "stats.records[].quota_awarded",
+                observation.todayRecord,
+                NEW_API_AWARD_SOURCES.Status,
               )
             : undefined,
         }
@@ -548,7 +564,7 @@ export function resolveTurnstilePreTrigger(
 ): TurnstilePreTrigger {
   return (
     account.checkIn?.customCheckIn?.turnstilePreTrigger ?? {
-      kind: "checkinButton",
+      kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
     }
   )
 }

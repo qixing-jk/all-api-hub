@@ -152,6 +152,15 @@ export interface CheckInRouteOverride {
 }
 
 export interface CheckInConfig {
+  /** Execution-owned verified destination, kept separate from the user's page path. */
+  nativePageHint?: {
+    path: string
+    configuredPath?: string
+    origin: string
+    siteType: import("~/constants/siteType").AccountSiteType
+    userId: string
+    observedAt: number
+  }
   /** @deprecated Legacy read/migration only. New configuration belongs to SiteAccount.login. */
   loginCheckIn?: {
     provider: AccountLoginProvider | typeof ACCOUNT_LOGIN_METHODS.Password
@@ -173,6 +182,8 @@ export interface CheckInConfig {
   }
   selection: CheckInMethodSelection
   customCheckIn?: CustomCheckInConfig
+  /** Same-origin native check-in page, optionally including query/hash routing. */
+  nativePagePath?: string
   /** Per-method route paths for deployments whose own console renamed them. */
   routeOverrides?: Partial<Record<CheckInMethodId, CheckInRouteOverride>>
 }

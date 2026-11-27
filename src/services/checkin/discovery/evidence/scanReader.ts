@@ -1,6 +1,14 @@
-import { FEEDBACK_SCAN_LIMITS } from "./scanLimits"
+import { CHECK_IN_EVIDENCE_SCAN_LIMITS } from "./scanLimits"
+import { CHECK_IN_EVIDENCE_SCAN_ERRORS } from "./scanTypes"
 
-export type ScanReadIssue = "timeout" | "limit" | "unavailable"
+export const SCAN_READ_ISSUES = {
+  Timeout: "timeout",
+  Limit: "limit",
+  Unavailable: "unavailable",
+} as const
+
+export type ScanReadIssue =
+  (typeof SCAN_READ_ISSUES)[keyof typeof SCAN_READ_ISSUES]
 
 /** Shares request and streamed-byte limits across the reads of one scan. */
 export function createScanReader(
@@ -14,8 +22,8 @@ export function createScanReader(
   const issues = new Set<ScanReadIssue>()
 
   const exhausted = () =>
-    requests >= FEEDBACK_SCAN_LIMITS.requests ||
-    bytes >= FEEDBACK_SCAN_LIMITS.bytes ||
+    requests >= CHECK_IN_EVIDENCE_SCAN_LIMITS.requests ||
+    bytes >= CHECK_IN_EVIDENCE_SCAN_LIMITS.bytes ||
     signal.aborted
 
   const readFromOrigin = async (
@@ -24,20 +32,20 @@ export function createScanReader(
     headers?: HeadersInit,
   ) => {
     if (exhausted()) {
-      if (!signal.aborted) issues.add("limit")
-      throw new Error("scan_limit")
+      if (!signal.aborted) issues.add(SCAN_READ_ISSUES.Limit)
+      throw new Error(CHECK_IN_EVIDENCE_SCAN_ERRORS.Limit)
     }
     const parsed = new URL(url, allowedOrigin)
     if (parsed.origin !== allowedOrigin || parsed.username || parsed.password)
-      throw new Error("scan_origin")
+      throw new Error(CHECK_IN_EVIDENCE_SCAN_ERRORS.Origin)
     requests++
     const request = new AbortController()
     const abort = () => request.abort()
     signal.addEventListener("abort", abort, { once: true })
     const timeout = setTimeout(() => {
-      issues.add("timeout")
+      issues.add(SCAN_READ_ISSUES.Timeout)
       abort()
-    }, FEEDBACK_SCAN_LIMITS.requestTimeoutMs)
+    }, CHECK_IN_EVIDENCE_SCAN_LIMITS.requestTimeoutMs)
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
     let responseBytes = 0
     try {
@@ -64,11 +72,11 @@ export function createScanReader(
         bytes += chunk.value.byteLength
         responseBytes += chunk.value.byteLength
         if (
-          bytes > FEEDBACK_SCAN_LIMITS.bytes ||
-          responseBytes > FEEDBACK_SCAN_LIMITS.responseBytes
+          bytes > CHECK_IN_EVIDENCE_SCAN_LIMITS.bytes ||
+          responseBytes > CHECK_IN_EVIDENCE_SCAN_LIMITS.responseBytes
         ) {
-          issues.add("limit")
-          throw new Error("scan_limit")
+          issues.add(SCAN_READ_ISSUES.Limit)
+          throw new Error(CHECK_IN_EVIDENCE_SCAN_ERRORS.Limit)
         }
         text += decoder.decode(chunk.value, { stream: true })
       }
@@ -80,10 +88,10 @@ export function createScanReader(
     } catch (error) {
       if (
         !request.signal.aborted &&
-        bytes <= FEEDBACK_SCAN_LIMITS.bytes &&
-        responseBytes <= FEEDBACK_SCAN_LIMITS.responseBytes
+        bytes <= CHECK_IN_EVIDENCE_SCAN_LIMITS.bytes &&
+        responseBytes <= CHECK_IN_EVIDENCE_SCAN_LIMITS.responseBytes
       )
-        issues.add("unavailable")
+        issues.add(SCAN_READ_ISSUES.Unavailable)
       throw error
     } finally {
       await reader?.cancel().catch(() => undefined)

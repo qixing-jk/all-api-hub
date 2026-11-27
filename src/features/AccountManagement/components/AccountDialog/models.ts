@@ -27,6 +27,14 @@ export const AUTO_CREATE_ACCESS_TOKEN_STATUSES = {
   Failed: "failed",
 } as const
 
+export const ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES = {
+  Success: "success",
+  Error: "error",
+} as const
+
+export type AccountCredentialVerificationStatus =
+  (typeof ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES)[keyof typeof ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES]
+
 export const ACCOUNT_DIALOG_PHASES = {
   SITE_INPUT: "site-input",
   ACCOUNT_FORM: "account-form",

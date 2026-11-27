@@ -628,6 +628,7 @@ export default function AccountForm({
       {!continuous && tagsAndNotes}
 
       <AccountCheckInSection
+        nativePageDiscoveryIdentity={draft}
         continuous={continuous}
         loginMethodId={draft.login?.methodId}
         loginConfigured={loginConfigured}

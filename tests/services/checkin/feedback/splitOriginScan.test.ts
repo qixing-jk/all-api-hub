@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
-import { collectCheckInFeedbackClues } from "~/services/checkin/feedback/scan"
+import { collectCheckInEvidence } from "~/services/checkin/discovery/evidence/scan"
 import { AuthTypeEnum } from "~/types"
 
 describe("split-origin feedback status queries", () => {
@@ -27,7 +27,7 @@ describe("split-origin feedback status queries", () => {
           },
         ),
     )
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       {
         baseUrl: "https://ai-router.dev",
         siteType: SITE_TYPES.SUB2API,

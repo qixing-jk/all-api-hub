@@ -11,6 +11,7 @@ import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { getInternalTabIds } from "~/services/browsingContext/internalTabsBackground"
 import { PAGE_CONTEXT } from "~/services/browsingContext/pageContext"
 import { cancelTempCheckinFeedbackScan } from "~/services/browsingContext/tempPage/checkinFeedbackScan"
+import { cancelTempCheckinPageDiscovery } from "~/services/browsingContext/tempPage/checkinPageDiscovery"
 import {
   cancelTempWindowOpenRouterManagementKeyAction,
   markTempWindowOpenRouterManagementKeyDispatched,
@@ -274,6 +275,13 @@ export function setupRuntimeMessageListeners() {
 
       if (request.action === RuntimeActionIds.CancelCheckinFeedbackScan) {
         cancelTempCheckinFeedbackScan(
+          typeof request.requestId === "string" ? request.requestId : "",
+        )
+        sendResponse({ success: true })
+        return true
+      }
+      if (request.action === RuntimeActionIds.CancelCheckinPageDiscovery) {
+        cancelTempCheckinPageDiscovery(
           typeof request.requestId === "string" ? request.requestId : "",
         )
         sendResponse({ success: true })

@@ -231,6 +231,11 @@ export function mergeUserOwnedCheckInDraft(input: {
       ? input.draft.selection
       : input.latest.selection,
     routeOverrides,
+    nativePagePath: input.draft.nativePagePath,
+    nativePageHint:
+      input.draft.nativePagePath === input.latest.nativePagePath
+        ? input.latest.nativePageHint
+        : undefined,
     ...(customCheckIn ? { customCheckIn } : { customCheckIn: undefined }),
   }
 }
@@ -282,6 +287,8 @@ export function invalidateCheckInDiscovery(
   return {
     ...config,
     // Manual paths belong to the deployment; learned paths require fresh evidence.
+    nativePagePath: options.siteUrlChanged ? undefined : config.nativePagePath,
+    nativePageHint: undefined,
     routeOverrides:
       !options.siteUrlChanged && Object.keys(manualRoutes).length
         ? manualRoutes

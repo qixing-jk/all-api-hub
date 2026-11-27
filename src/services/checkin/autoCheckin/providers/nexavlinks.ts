@@ -6,6 +6,7 @@ import { normalizeAccountIdentity } from "~/services/accounts/identity/accountId
 import { fetchNexaVlinksDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/nexavlinksCheckIn"
 import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
   withCheckInConfirmation,
@@ -21,7 +22,12 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
-import type { TurnstilePreTrigger } from "~/types/turnstile"
+import { TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS } from "~/types/tempWindowFetch"
+import {
+  PAGE_VERIFICATION_STATUSES,
+  TURNSTILE_PRE_TRIGGER_KINDS,
+  type TurnstilePreTrigger,
+} from "~/types/turnstile"
 import { tempWindowTriggerCheckinPageAction } from "~/utils/browser/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -52,14 +58,18 @@ const NATIVE_PAGE_STATUS_POLL_INTERVAL_MS = 1_000
  * https://asia.nexavlinks.com/check-in, 2026-10-17.
  */
 const NEXAVLINKS_CHECK_IN_TRIGGER: TurnstilePreTrigger = {
-  kind: "clickText",
+  kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
   candidateSelector: "main button",
   positivePattern: "check\\s*in|签到",
 }
 
 const resolveCheckInUrl = (account: SiteAccount): string | null => {
   try {
-    return new URL(NEXAVLINKS_CHECK_IN_PATH, account.site_url).href
+    return new URL(
+      normalizeCheckInPagePath(account.checkIn.nativePagePath) ??
+        NEXAVLINKS_CHECK_IN_PATH,
+      account.site_url,
+    ).href
   } catch {
     return null
   }
@@ -137,7 +147,7 @@ export const nexavlinksProvider = withSub2ApiCheckInExecution({
       return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE)
     }
 
-    const checkInUrl = resolveCheckInUrl(siteAccount)
+    let checkInUrl = resolveCheckInUrl(siteAccount)
     if (!checkInUrl) {
       return failedSub2ApiCheckIn(
         AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
@@ -164,6 +174,9 @@ export const nexavlinksProvider = withSub2ApiCheckInExecution({
       action = await tempWindowTriggerCheckinPageAction({
         originUrl: siteAccount.site_url,
         pageUrl: checkInUrl,
+        discoverCheckInPage: !normalizeCheckInPagePath(
+          siteAccount.checkIn.nativePagePath,
+        ),
         requestId: safeRandomUUID(`nexavlinks-checkin-${siteAccount.id}`),
         accountId: siteAccount.id,
         authType: getEffectiveAuthType(siteAccount),
@@ -185,7 +198,11 @@ export const nexavlinksProvider = withSub2ApiCheckInExecution({
       }
     }
 
-    if (!action.success || action.reason !== "clicked") {
+    if (action.pageUrl) checkInUrl = action.pageUrl
+    if (
+      !action.success ||
+      action.reason !== TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.Clicked
+    ) {
       return resolveNativePageFailureResult({ action, checkInUrl })
     }
 
@@ -234,7 +251,8 @@ export const nexavlinksProvider = withSub2ApiCheckInExecution({
     }
 
     const verificationRequired =
-      action.trigger?.verification?.status === "required"
+      action.trigger?.verification?.status ===
+      PAGE_VERIFICATION_STATUSES.Required
     const result = {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: verificationRequired

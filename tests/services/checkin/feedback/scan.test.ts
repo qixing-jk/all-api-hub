@@ -3,12 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
 import {
-  collectCheckInFeedbackClues,
+  collectCheckInEvidence,
   extractCheckInRoutes,
-  formatCheckInFeedbackClues,
-} from "~/services/checkin/feedback/scan"
-import { FEEDBACK_SCAN_LIMITS } from "~/services/checkin/feedback/scanLimits"
-import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/feedback/scanTypes"
+} from "~/services/checkin/discovery/evidence/scan"
+import { CHECK_IN_EVIDENCE_SCAN_LIMITS } from "~/services/checkin/discovery/evidence/scanLimits"
+import { FEEDBACK_SCAN_STATUSES } from "~/services/checkin/discovery/evidence/scanTypes"
+import { formatCheckInFeedbackClues } from "~/services/checkin/feedback/scan"
 import { AuthTypeEnum } from "~/types"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -23,13 +23,68 @@ afterEach(() => {
 })
 
 describe("optional check-in clue scan", () => {
+  it("ignores malformed route literals without losing valid source clues", () => {
+    expect(
+      extractCheckInRoutes(
+        'const routes=["https://[broken/daily", "/daily/(legacy)", "/api/checkin"]',
+      ),
+    ).toEqual(["/api/checkin"])
+  })
+
+  it("retains API source clues when navigation fills the route budget", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async (url) =>
+      String(url) === baseUrl + "/"
+        ? response('<script src="/app.js"></script>', "text/html")
+        : response('"/api/user/check-in-renamed"', "text/javascript"),
+    )
+    const clues = await collectCheckInEvidence(
+      { baseUrl, siteType: SITE_TYPES.UNKNOWN },
+      new AbortController().signal,
+      {
+        fetch,
+        navigation: {
+          candidates: Array.from({ length: 30 }, (_, i) => `/daily/${i}`),
+        },
+      },
+    )
+    expect(clues.routes).toContain("/api/user/check-in-renamed")
+    expect(clues.routes).toHaveLength(30)
+    expect(clues.issues).toContain("route_limit")
+  })
+  it("includes navigation evidence without exporting query values or requesting candidate pages", async () => {
+    const fetch = vi.fn(async () => response("<html></html>", "text/html"))
+    const clues = await collectCheckInEvidence(
+      { baseUrl, siteType: SITE_TYPES.NEW_API },
+      new AbortController().signal,
+      {
+        fetch,
+        navigation: {
+          candidates: [
+            "/invite?token=private#daily",
+            "/daily/sk-abcdefghijklmnopqrstuvwxyz123456",
+          ],
+          candidatesComplete: false,
+        },
+      },
+    )
+    expect(clues.routes).toEqual(["/invite"])
+    expect(clues.issues).toContain("route_limit")
+    expect(fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining("/invite"),
+      expect.anything(),
+    )
+    expect(fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining("/daily/"),
+      expect.anything(),
+    )
+  })
   it("completes public-only Agent Router scans without account credentials", async () => {
     const fetch = vi.fn(async (url: string) =>
       url.endsWith("/api/status")
         ? response('{"success":true,"data":{}}')
         : response("<html></html>", "text/html"),
     )
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl: "https://agentrouter.org", siteType: SITE_TYPES.NEW_API },
       new AbortController().signal,
       { fetch: fetch as typeof globalThis.fetch },
@@ -71,7 +126,7 @@ describe("optional check-in clue scan", () => {
       return response('{"success":true}')
     })
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       {
         baseUrl,
         siteType: SITE_TYPES.NEW_API,
@@ -124,11 +179,11 @@ describe("optional check-in clue scan", () => {
         )
       }),
     )
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
-    expect(clues.routes).toHaveLength(FEEDBACK_SCAN_LIMITS.routes)
+    expect(clues.routes).toHaveLength(CHECK_IN_EVIDENCE_SCAN_LIMITS.routes)
     expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
     expect(clues.issues).toEqual(
       expect.arrayContaining(["route_limit", "resource_response"]),
@@ -147,7 +202,7 @@ describe("optional check-in clue scan", () => {
           ),
     )
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
       {
@@ -172,36 +227,42 @@ describe("optional check-in clue scan", () => {
     )
   })
 
-  it("finishes searching loaded resources before expanding references when no path was found", async () => {
-    const loaded = createDeferred<Response>()
-    const fetch = vi.fn(async (url: string) =>
-      url === baseUrl + "/"
-        ? response(
-            '<script src="/app.js"></script><link rel="preload" href="/unused.js">',
-            "text/html",
-          )
-        : url.endsWith("app.js")
-          ? loaded.promise
-          : response("'/api/checkin'", "text/javascript"),
-    )
-    vi.stubGlobal("fetch", fetch)
-    const pending = collectCheckInFeedbackClues(
-      { baseUrl, siteType: SITE_TYPES.UNKNOWN },
-      new AbortController().signal,
-      { loadedAssets: [baseUrl + "/app.js"] },
-    )
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
-    loaded.resolve(response("import './deep.js'", "text/javascript"))
-    const clues = await pending
-    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
-      baseUrl + "/",
-      baseUrl + "/app.js",
-      baseUrl + "/unused.js",
-      baseUrl + "/deep.js",
-    ])
-    expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
-    expect(clues.resources).toEqual({ discovered: 4, scanned: 4 })
-  })
+  it.each([false, true])(
+    "finishes searching loaded resources before expanding references (navigation clues: %s)",
+    async (navigation) => {
+      const loaded = createDeferred<Response>()
+      const fetch = vi.fn(async (url: string) =>
+        url === baseUrl + "/"
+          ? response(
+              '<script src="/app.js"></script><link rel="preload" href="/unused.js">',
+              "text/html",
+            )
+          : url.endsWith("app.js")
+            ? loaded.promise
+            : response("'/api/checkin'", "text/javascript"),
+      )
+      vi.stubGlobal("fetch", fetch)
+      const pending = collectCheckInEvidence(
+        { baseUrl, siteType: SITE_TYPES.UNKNOWN },
+        new AbortController().signal,
+        {
+          loadedAssets: [baseUrl + "/app.js"],
+          navigation: navigation ? { candidates: ["/invite"] } : undefined,
+        },
+      )
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+      loaded.resolve(response("import './deep.js'", "text/javascript"))
+      const clues = await pending
+      expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+        baseUrl + "/",
+        baseUrl + "/app.js",
+        baseUrl + "/unused.js",
+        baseUrl + "/deep.js",
+      ])
+      expect(clues.status).toBe("completed")
+      expect(clues.resources).toEqual({ discovered: 4, scanned: 4 })
+    },
+  )
 
   it("loads public scripts while status queries wait, then cancels at the overall deadline", async () => {
     vi.useFakeTimers()
@@ -224,7 +285,7 @@ describe("optional check-in clue scan", () => {
       })
     })
     vi.stubGlobal("fetch", fetch)
-    const pending = collectCheckInFeedbackClues(
+    const pending = collectCheckInEvidence(
       {
         baseUrl,
         siteType: SITE_TYPES.NEW_API,
@@ -236,7 +297,9 @@ describe("optional check-in clue scan", () => {
     expect(fetch.mock.calls.map(([url]) => new URL(url).pathname)).toContain(
       "/app.js",
     )
-    await vi.advanceTimersByTimeAsync(FEEDBACK_SCAN_LIMITS.taskTimeoutMs)
+    await vi.advanceTimersByTimeAsync(
+      CHECK_IN_EVIDENCE_SCAN_LIMITS.taskTimeoutMs,
+    )
     const clues = await pending
     expect(clues.routes).toEqual(["/api/checkin"])
     expect(clues.issues).toEqual(["task_timeout", "timeout"])
@@ -269,15 +332,19 @@ describe("optional check-in clue scan", () => {
       }),
     )
     const controller = new AbortController()
-    const pending = collectCheckInFeedbackClues(
+    const pending = collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       controller.signal,
     )
     await vi.advanceTimersByTimeAsync(0)
-    expect(signals).toHaveLength(FEEDBACK_SCAN_LIMITS.resourceConcurrency)
+    expect(signals).toHaveLength(
+      CHECK_IN_EVIDENCE_SCAN_LIMITS.resourceConcurrency,
+    )
     controller.abort()
     await pending
-    expect(signals).toHaveLength(FEEDBACK_SCAN_LIMITS.resourceConcurrency)
+    expect(signals).toHaveLength(
+      CHECK_IN_EVIDENCE_SCAN_LIMITS.resourceConcurrency,
+    )
     expect(signals.every((signal) => signal.aborted)).toBe(true)
     expect(vi.getTimerCount()).toBe(0)
   })
@@ -306,7 +373,7 @@ describe("optional check-in clue scan", () => {
         return response("'/api/checkin'", "text/javascript")
       }),
     )
-    const pending = collectCheckInFeedbackClues(
+    const pending = collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
@@ -318,7 +385,7 @@ describe("optional check-in clue scan", () => {
       "/locale.json",
       "/style.css",
     ])
-    expect(peak).toBe(FEEDBACK_SCAN_LIMITS.resourceConcurrency)
+    expect(peak).toBe(CHECK_IN_EVIDENCE_SCAN_LIMITS.resourceConcurrency)
     await vi.advanceTimersByTimeAsync(6000)
     const clues = await pending
     expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Completed)
@@ -343,7 +410,7 @@ describe("optional check-in clue scan", () => {
       ),
     )
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
@@ -370,7 +437,7 @@ describe("optional check-in clue scan", () => {
       return response('{"label":"簽到", "action":"attendance"}')
     })
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
@@ -398,7 +465,7 @@ describe("optional check-in clue scan", () => {
       )
     })
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
@@ -444,7 +511,7 @@ describe("optional check-in clue scan", () => {
         )
       })
       vi.stubGlobal("fetch", fetch)
-      const clues = await collectCheckInFeedbackClues(
+      const clues = await collectCheckInEvidence(
         {
           baseUrl,
           siteType: SITE_TYPES.NEW_API,
@@ -495,7 +562,7 @@ describe("optional check-in clue scan", () => {
           : response("not found", "text/plain", 404),
       ),
     )
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       {
         baseUrl,
         siteType: SITE_TYPES.VO_API_V2,
@@ -512,7 +579,7 @@ describe("optional check-in clue scan", () => {
   it("does not use an ambient cookie session for a selected account", async () => {
     const fetch = vi.fn(async () => response("<html></html>", "text/html"))
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       {
         baseUrl,
         siteType: SITE_TYPES.SUB2API,
@@ -537,7 +604,7 @@ describe("optional check-in clue scan", () => {
       url === baseUrl + "/"
         ? response(
             Array.from(
-              { length: FEEDBACK_SCAN_LIMITS.requests + 16 },
+              { length: CHECK_IN_EVIDENCE_SCAN_LIMITS.requests + 16 },
               (_, i) => `<script src="/${i}.js"></script>`,
             ).join(""),
             "text/html",
@@ -545,11 +612,11 @@ describe("optional check-in clue scan", () => {
         : response("'/api/checkin'", "text/javascript"),
     )
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
-    expect(fetch).toHaveBeenCalledTimes(FEEDBACK_SCAN_LIMITS.requests)
+    expect(fetch).toHaveBeenCalledTimes(CHECK_IN_EVIDENCE_SCAN_LIMITS.requests)
     expect(clues.status).toBe(FEEDBACK_SCAN_STATUSES.Partial)
     expect(clues.issues).toContain("limit")
   })
@@ -567,7 +634,7 @@ describe("optional check-in clue scan", () => {
           new ReadableStream({
             start(controller) {
               controller.enqueue(
-                new Uint8Array(FEEDBACK_SCAN_LIMITS.responseBytes + 1),
+                new Uint8Array(CHECK_IN_EVIDENCE_SCAN_LIMITS.responseBytes + 1),
               )
               controller.enqueue(
                 new TextEncoder().encode("'/api/checkin/omitted'"),
@@ -581,7 +648,7 @@ describe("optional check-in clue scan", () => {
       return response("'/api/checkin'", "text/javascript")
     })
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
@@ -600,7 +667,9 @@ describe("optional check-in clue scan", () => {
         new Response(
           new ReadableStream({
             start(controller) {
-              controller.enqueue(new Uint8Array(FEEDBACK_SCAN_LIMITS.bytes + 1))
+              controller.enqueue(
+                new Uint8Array(CHECK_IN_EVIDENCE_SCAN_LIMITS.bytes + 1),
+              )
             },
             cancel,
           }),
@@ -608,7 +677,7 @@ describe("optional check-in clue scan", () => {
         ),
     )
     vi.stubGlobal("fetch", fetch)
-    const clues = await collectCheckInFeedbackClues(
+    const clues = await collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
@@ -636,18 +705,20 @@ describe("optional check-in clue scan", () => {
       ),
     )
     const controller = new AbortController()
-    const first = collectCheckInFeedbackClues(
+    const first = collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       controller.signal,
     )
     controller.abort()
     await first
     expect(atIndex(signals, 0).aborted).toBe(true)
-    const second = collectCheckInFeedbackClues(
+    const second = collectCheckInEvidence(
       { baseUrl, siteType: SITE_TYPES.UNKNOWN },
       new AbortController().signal,
     )
-    await vi.advanceTimersByTimeAsync(FEEDBACK_SCAN_LIMITS.requestTimeoutMs)
+    await vi.advanceTimersByTimeAsync(
+      CHECK_IN_EVIDENCE_SCAN_LIMITS.requestTimeoutMs,
+    )
     const timedOut = await second
     expect(timedOut.status).toBe(FEEDBACK_SCAN_STATUSES.Empty)
     expect(timedOut.issues).toContain("timeout")

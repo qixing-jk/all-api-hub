@@ -15,6 +15,10 @@ import {
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import {
+  normalizeCheckInPagePath,
+  normalizeNativeCheckInPageHint,
+} from "~/services/checkin/autoCheckin/configuration/nativePagePath"
+import {
   CHECK_IN_ROUTE_OVERRIDE_SOURCES,
   normalizeCheckInRoutePath,
 } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
@@ -456,6 +460,8 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     rawMethodKnowledge.lastAutomaticDiscoveryAttemptAt,
   )
   const customCheckIn = normalizeCustomCheckIn(raw.customCheckIn)
+  const nativePagePath = normalizeCheckInPagePath(raw.nativePagePath)
+  const nativePageHint = normalizeNativeCheckInPageHint(raw.nativePageHint)
   const routeOverrides = normalizeRouteOverrides(raw.routeOverrides)
   const provider = isRecord(raw.loginCheckIn)
     ? raw.loginCheckIn.provider
@@ -484,6 +490,8 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     },
     selection,
     ...(customCheckIn ? { customCheckIn } : {}),
+    ...(nativePagePath ? { nativePagePath } : {}),
+    ...(nativePageHint ? { nativePageHint } : {}),
     ...(routeOverrides ? { routeOverrides } : {}),
     ...(loginCheckIn ? { loginCheckIn } : {}),
   }

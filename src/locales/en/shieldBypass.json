@@ -19,6 +19,7 @@
       "add_account": "Add account",
       "checkin_feedback": "Collect check-in feedback information",
       "detect_account": "Detect account",
+      "find_checkin_page": "Find check-in page",
       "manage_api_keys": "Manage API keys",
       "manage_site_channels": "Manage site channels",
       "manual_checkin": "Manual check-in",

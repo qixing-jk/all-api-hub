@@ -2742,6 +2742,40 @@ describe("AccountDialog AccountForm", () => {
     )
   })
 
+  it("edits a native page path independently and blocks invalid destinations", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn.customCheckIn = { url: "https://welfare.example/" }
+    render(
+      <form aria-label="Account editor">
+        <AccountForm {...withSitePolicy(props)} />
+      </form>,
+    )
+    const field = await screen.findByLabelText(
+      "accountDialog:form.checkInPagePath",
+    )
+    fireEvent.change(field, { target: { value: "//elsewhere.example/invite" } })
+    expect(field).toBeInvalid()
+    expect(field).toHaveValue("//elsewhere.example/invite")
+    expect(props.onCheckInChange).not.toHaveBeenCalled()
+    fireEvent.change(field, { target: { value: "/invite?tab=daily#/claim" } })
+    expect(field).toBeValid()
+    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        nativePagePath: "/invite?tab=daily#/claim",
+        customCheckIn: { url: "https://welfare.example/" },
+      }),
+    )
+    fireEvent.change(field, { target: { value: "" } })
+    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ nativePagePath: undefined }),
+    )
+  })
+
   it("retains invalid route text and blocks form submission until corrected", async () => {
     const user = userEvent.setup()
     const props = createProps()

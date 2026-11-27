@@ -7,7 +7,13 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import accountDialogEn from "~/locales/en/accountDialog.json" with { type: "json" }
+import accountDialogZh from "~/locales/zh-CN/accountDialog.json" with { type: "json" }
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
@@ -17,6 +23,7 @@ import {
   type AutoCheckinStatus,
 } from "~/types/autoCheckin"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { readStoredAccounts } from "~~/e2e/scenarios/accountManualAdd"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -47,6 +54,7 @@ type NativeCheckinFixture = {
     nativePageClickCount: number
     nativePageRequestCount: number
     statusCheckCount: number
+    nativePowStartCount: number
   }
   close: () => Promise<void>
 }
@@ -154,8 +162,7 @@ async function installUiOpenPretriggerObservation(page: Page) {
 
     patchRuntime(globalThis.chrome?.runtime)
     const browserRuntime = globalThis.browser?.runtime as
-      | RuntimeLike
-      | undefined
+      RuntimeLike | undefined
     if (browserRuntime && browserRuntime !== globalThis.chrome?.runtime) {
       patchRuntime(browserRuntime)
     }
@@ -194,18 +201,60 @@ function fulfillHtml(response: ServerResponse, body: string) {
 }
 
 async function createNativeCheckinFixture(
-  captcha: false | "turnstile" | "image" | "interactive" = false,
+  captcha:
+    | false
+    | "turnstile"
+    | "turnstile-auto"
+    | "image"
+    | "interactive"
+    | "altcha"
+    | "altcha-shadow" = false,
   beforeDirectPostResponse?: () => Promise<void>,
+  nativePagePath?: string,
+  actualUserId = NATIVE_ACCOUNT_USER_ID,
+  discoverySource: "navigation" | "script" = "navigation",
 ): Promise<NativeCheckinFixture> {
   const counts = {
     directCheckinPostCount: 0,
     nativePageClickCount: 0,
     nativePageRequestCount: 0,
     statusCheckCount: 0,
+    nativePowStartCount: 0,
   }
 
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1")
+    if (url.pathname === "/api/log/self/stat") {
+      fulfillJson(response, 200, {
+        success: true,
+        data: { quota: 0, token: 0, rpm: 0, tpm: 0 },
+      })
+      return
+    }
+    if (
+      url.pathname === "/api/log/self" ||
+      url.pathname === "/api/token/" ||
+      url.pathname === "/api/user/groups"
+    ) {
+      fulfillJson(response, 200, {
+        success: true,
+        data: { items: [], total: 0 },
+      })
+      return
+    }
+    if (discoverySource === "script" && url.pathname === "/routes.js") {
+      response.writeHead(200, { "content-type": "application/javascript" })
+      response.end(`window.fixtureRoutes = [{ path: "${nativePagePath}" }]`)
+      return
+    }
+
+    if (url.pathname === "/api/user/self") {
+      fulfillJson(response, 200, {
+        success: true,
+        data: { id: actualUserId, username: "native-page-user" },
+      })
+      return
+    }
 
     if (url.pathname === "/api/status") {
       fulfillJson(response, 200, {
@@ -218,11 +267,26 @@ async function createNativeCheckinFixture(
 
     if (url.pathname === "/api/user/checkin") {
       if (request.method === "POST") {
+        if (captcha === "turnstile-auto" && url.searchParams.has("turnstile")) {
+          counts.nativePageClickCount += 1
+          fulfillJson(response, 200, {
+            success: counts.nativePageClickCount === 1,
+            message:
+              counts.nativePageClickCount === 1
+                ? "Check-in successful"
+                : "Check-in failed",
+            data: null,
+          })
+          return
+        }
         counts.directCheckinPostCount += 1
         await beforeDirectPostResponse?.()
         fulfillJson(response, 200, {
           success: false,
-          message: "dynamic check-in requires page action",
+          message:
+            captcha === "turnstile-auto"
+              ? "Turnstile token is empty"
+              : "dynamic check-in requires page action",
           data: null,
         })
         return
@@ -242,6 +306,13 @@ async function createNativeCheckinFixture(
       return
     }
 
+    if (url.pathname === "/native-pow-started") {
+      counts.nativePowStartCount += 1
+      response.writeHead(204)
+      response.end()
+      return
+    }
+
     if (url.pathname === "/native-clicked") {
       counts.nativePageClickCount += 1
       response.writeHead(204)
@@ -249,7 +320,24 @@ async function createNativeCheckinFixture(
       return
     }
 
-    if (url.pathname === "/profile" || url.pathname === "/console/personal") {
+    if (
+      nativePagePath &&
+      (url.pathname === "/profile" ||
+        url.pathname === "/console/personal" ||
+        url.pathname === "/")
+    ) {
+      response.writeHead(200, { "content-type": "text/html" })
+      response.end(
+        `<html><body>${discoverySource === "script" ? '<script src="/routes.js"></script>' : `<nav><a href="${nativePagePath}">Daily rewards</a><a href="https://elsewhere.invalid/rewards">External rewards</a></nav>`}<script>localStorage.setItem("user", JSON.stringify({id:"${NATIVE_ACCOUNT_USER_ID}", username:"native-page-user"}))</script></body></html>`,
+      )
+      return
+    }
+
+    if (
+      nativePagePath
+        ? url.pathname === nativePagePath
+        : url.pathname === "/profile" || url.pathname === "/console/personal"
+    ) {
       counts.nativePageRequestCount += 1
       fulfillHtml(
         response,
@@ -257,6 +345,13 @@ async function createNativeCheckinFixture(
 <html>
   <head><title>Native check-in fixture</title></head>
   <body>
+    ${
+      captcha === "altcha-shadow"
+        ? '<h3><button type="button" id="check-in-section" aria-expanded="true">Daily Check in</button></h3>'
+        : `<button type="button" id="check-in-section">
+      <h3>Daily Check-in</h3><p>Check in daily to receive points</p>
+    </button>`
+    }
     <button type="button" id="check-in">Check in</button>
     <script>
       window.localStorage.setItem(
@@ -267,7 +362,38 @@ async function createNativeCheckinFixture(
         })
       )
 
+      document.getElementById("check-in-section").addEventListener("click", () => {
+        const action = document.getElementById("check-in")
+        action.hidden = !action.hidden
+      })
+
       document.getElementById("check-in").addEventListener("click", () => {
+        if (${captcha === "turnstile-auto"}) {
+          const widget = document.createElement('div')
+          widget.className = 'cf-turnstile'
+          widget.innerHTML = '<input type="hidden" name="cf-turnstile-response">'
+          document.body.append(widget)
+          setTimeout(async () => {
+            await fetch('/native-pow-started', {method: 'POST'})
+            widget.querySelector('input').value = 'fixture-token'
+            await fetch('/api/user/checkin?turnstile=fixture-token', {method: 'POST'})
+            widget.remove()
+          }, 200)
+          return
+        }
+        if (${captcha === "altcha" || captcha === "altcha-shadow"}) {
+          const widget = document.createElement('altcha-widget')
+          const root = ${captcha === "altcha-shadow"} ? widget.attachShadow({mode: 'open'}) : widget
+          root.innerHTML = '<div class="altcha" data-state="unverified"><label><input type="checkbox">Start native proof of work</label><input name="altcha" type="hidden"></div>'
+          root.querySelector('input[type="checkbox"]').addEventListener('click', async () => {
+            root.querySelector('.altcha').dataset.state = 'verifying'
+            await fetch('/native-pow-started', {method: 'POST'})
+            await fetch('/native-clicked', {method: 'POST'})
+            root.querySelector('.altcha').dataset.state = 'verified'
+          })
+          document.body.append(widget)
+          return
+        }
         if (${!!captcha}) {
           setTimeout(() => {
             if (document.querySelector('[data-fixture-captcha]')) return
@@ -337,8 +463,243 @@ async function createNativeCheckinFixture(
   }
 }
 
-for (const order of ["daily-first", "manual-first"] as const) {
-  test(`${order}: overlapping automatic and manual runs perform one native check-in`, async ({
+for (const language of ["en", "zh-CN"] as const) {
+  const copy = language === "en" ? accountDialogEn : accountDialogZh
+  const views =
+    language === "zh-CN"
+      ? [
+          { id: "light", width: 380, height: 900, theme: "light" as const },
+          { id: "dark", width: 380, height: 900, theme: "dark" as const },
+        ]
+      : undefined
+  const suffix = language === "en" ? "" : "-zh"
+  test(`configuration finds a script page read-only, adopts it and preserves it after save and reopen${suffix}`, async ({
+    context,
+    page,
+    extensionId,
+    extensionDir,
+  }) => {
+    const fixture = await createNativeCheckinFixture(
+      false,
+      undefined,
+      "/rewards/daily",
+      "1",
+      "script",
+    )
+    try {
+      const worker = await getServiceWorker(context)
+      await stubLlmMetadataIndex(context)
+      await seedUserPreferences(worker, {
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin!,
+          globalEnabled: false,
+          pretriggerDailyOnUiOpen: false,
+        },
+        tempWindowFallback: {
+          ...DEFAULT_PREFERENCES.tempWindowFallback!,
+          enabled: true,
+          tempContextMode: TEMP_CONTEXT_MODES.Tab,
+        },
+      })
+      await seedStoredAccounts(worker, [
+        createStoredAccount({
+          id: NATIVE_ACCOUNT_ID,
+          site_name: NATIVE_ACCOUNT_NAME,
+          site_url: fixture.siteUrl,
+          site_type: SITE_TYPES.NEW_API,
+          account_info: {
+            id: "1",
+            username: "native-page-user",
+            access_token: "fixture-token",
+          },
+          checkIn: createCompatibilityCheckInConfig({
+            siteType: SITE_TYPES.NEW_API,
+            supported: true,
+            automaticExecutionEnabled: false,
+          }),
+        }),
+      ])
+      await forceExtensionLanguage(page, language)
+      if (language === "zh-CN")
+        await page.setViewportSize({ width: 380, height: 900 })
+      installExtensionPageGuards(page, {
+        // This ordinary New API fixture intentionally rejects the optional fork probe.
+        ignoreConsoleError: (message) =>
+          message.text().includes("status of 404") &&
+          message.location().url ===
+            `${fixture.siteUrl}/api/user/xingya-checkin`,
+      })
+      await page.goto(
+        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+      )
+      await waitForExtensionRoot(page)
+      await page.emulateMedia({ reducedMotion: "reduce" })
+      const row = page.getByTestId(
+        getAccountManagementListItemTestId(NATIVE_ACCOUNT_ID),
+      )
+      const openEditor = async () => {
+        await row.hover()
+        await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+        await expect(page.getByRole("dialog")).toBeVisible()
+      }
+      await openEditor()
+      const dialog = page.getByRole("dialog")
+      const path = dialog.getByLabel(copy.form.checkInPagePath, {
+        exact: true,
+      })
+      await expect(path).toHaveValue("")
+      await captureVisualViews({
+        page,
+        ready: path,
+        id: `native-page-discovery-idle${suffix}`,
+        extensionDir,
+        views,
+      })
+      const statusReads = fixture.counts.statusCheckCount
+      await dialog
+        .getByRole("button", { name: copy.form.findCheckInPage, exact: true })
+        .click()
+      const candidates = dialog.getByRole("list", {
+        name: copy.form.findCheckInPageCandidates,
+      })
+      await expect(
+        candidates.getByText("/rewards/daily", { exact: true }),
+      ).toBeVisible({ timeout: 30_000 })
+      await expect(
+        candidates.getByText(copy.form.checkInPageScriptEvidence, {
+          exact: false,
+        }),
+      ).toBeVisible()
+      await expect(
+        candidates.getByText(copy.form.checkInPageActionable, { exact: true }),
+      ).toBeVisible()
+      await expect(path).toHaveValue("")
+      expect(fixture.counts.statusCheckCount).toBe(statusReads)
+      expect(fixture.counts.nativePageClickCount).toBe(0)
+      expect(fixture.counts.nativePowStartCount).toBe(0)
+      await captureVisualViews({
+        page,
+        ready: candidates,
+        id: `native-page-discovery-candidates${suffix}`,
+        extensionDir,
+        views,
+      })
+      const openedPage = context.waitForEvent("page")
+      await candidates
+        .getByRole("button", { name: copy.form.checkInPageOpen, exact: true })
+        .click()
+      const reviewPage = await openedPage
+      await expect(reviewPage).toHaveURL(`${fixture.siteUrl}/rewards/daily`)
+      await reviewPage.close()
+      await expect(path).toHaveValue("")
+      expect(fixture.counts.nativePageClickCount).toBe(0)
+      expect(fixture.counts.nativePowStartCount).toBe(0)
+      await candidates
+        .getByRole("button", { name: copy.form.checkInPageUse, exact: true })
+        .click()
+      await expect(path).toHaveValue("/rewards/daily")
+      await dialog
+        .getByRole("button", { name: copy.actions.saveChanges, exact: true })
+        .click()
+      await expect(dialog).toBeHidden()
+      await openEditor()
+      await expect(path).toHaveValue("/rewards/daily")
+      await captureVisualViews({
+        page,
+        ready: path,
+        id: `native-page-discovery-saved${suffix}`,
+        extensionDir,
+        views,
+      })
+    } finally {
+      // Stop editor subscriptions before retiring the HTTP fixture they read.
+      await page.close()
+      await fixture.close()
+    }
+  })
+}
+
+test("refuses a native grant when stored target identity differs from the server login", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const worker = await getServiceWorker(context)
+  const fixture = await createNativeCheckinFixture(
+    false,
+    undefined,
+    undefined,
+    "other-user",
+  )
+  try {
+    await stubLlmMetadataIndex(context)
+    await seedUserPreferences(worker, {
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: false,
+      },
+      tempWindowFallback: {
+        ...DEFAULT_PREFERENCES.tempWindowFallback!,
+        enabled: true,
+        tempContextMode: TEMP_CONTEXT_MODES.Tab,
+      },
+    })
+    await seedStoredAccounts(worker, [
+      createStoredAccount({
+        id: NATIVE_ACCOUNT_ID,
+        site_name: NATIVE_ACCOUNT_NAME,
+        site_url: fixture.siteUrl,
+        site_type: SITE_TYPES.NEW_API,
+        account_info: {
+          id: NATIVE_ACCOUNT_USER_ID,
+          username: "native-page-user",
+          access_token: "fixture-token",
+        },
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: true,
+          automaticExecutionEnabled: true,
+        }),
+      }),
+    ])
+    await forceExtensionLanguage(page, "en")
+    installExtensionPageGuards(page)
+    await page.goto(autoCheckinOptionsUrl(extensionId))
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    await page
+      .getByTestId(BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton)
+      .click()
+    await expect
+      .poll(
+        async () =>
+          (await readAutoCheckinStatus(worker))?.perAccount?.[NATIVE_ACCOUNT_ID]
+            ?.messageKey,
+        { timeout: 30_000 },
+      )
+      .toBe("autoCheckin:providerFallback.nativePageIdentityMismatch")
+    expect(
+      (await readAutoCheckinStatus(worker))?.perAccount?.[NATIVE_ACCOUNT_ID]
+        ?.reasonCode,
+    ).toBe("authentication_required")
+    expect(fixture.counts.nativePageRequestCount).toBeGreaterThan(0)
+    expect(fixture.counts.nativePageClickCount).toBe(0)
+    expect(fixture.counts.nativePowStartCount).toBe(0)
+  } finally {
+    await fixture.close()
+  }
+})
+
+for (const { order, captcha, discover } of [
+  { order: "daily-first", captcha: false, discover: false },
+  { order: "manual-first", captcha: false, discover: false },
+  { order: "daily-first", captcha: "altcha", discover: false },
+  { order: "daily-first", captcha: "altcha", discover: true },
+  { order: "daily-first", captcha: "altcha-shadow", discover: false },
+  { order: "daily-first", captcha: "turnstile-auto", discover: false },
+] as const) {
+  test(`${discover ? "discovered: " : ""}${captcha ? `${captcha}: ` : ""}${order}: overlapping automatic and manual runs perform one native check-in`, async ({
     context,
     extensionId,
     page,
@@ -348,9 +709,11 @@ for (const order of ["daily-first", "manual-first"] as const) {
     const postResponse = new Promise<void>((resolve) => {
       releasePost = resolve
     })
+    const nativePagePath = captcha ? "/rewards/daily" : undefined
     const nativeFixture = await createNativeCheckinFixture(
-      false,
+      captcha,
       () => postResponse,
+      nativePagePath,
     )
     const runs: Promise<unknown>[] = []
     let markManualPending!: () => void
@@ -393,11 +756,14 @@ for (const order of ["daily-first", "manual-first"] as const) {
             username: "native-page-user",
             access_token: "native-page-token",
           },
-          checkIn: createCompatibilityCheckInConfig({
-            siteType: SITE_TYPES.NEW_API,
-            supported: true,
-            automaticExecutionEnabled: true,
-          }),
+          checkIn: {
+            ...createCompatibilityCheckInConfig({
+              siteType: SITE_TYPES.NEW_API,
+              supported: true,
+              automaticExecutionEnabled: true,
+            }),
+            nativePagePath: discover ? undefined : nativePagePath,
+          },
         }),
       ])
       await forceExtensionLanguage(page, "en")
@@ -464,11 +830,18 @@ for (const order of ["daily-first", "manual-first"] as const) {
       await Promise.all(runs)
       expect(nativeFixture.counts.directCheckinPostCount).toBe(1)
       expect(nativeFixture.counts.nativePageClickCount).toBe(1)
+      expect(nativeFixture.counts.nativePowStartCount).toBe(captcha ? 1 : 0)
       const status = await readAutoCheckinStatus(serviceWorker)
       const result = status?.perAccount?.[NATIVE_ACCOUNT_ID]
       expect(result).toBeDefined()
       expect(["success", "already_checked"]).toContain(result?.status)
       expect(status?.pendingRetry).toBe(false)
+      const stored = (await readStoredAccounts(serviceWorker)).find(
+        (account) => account.id === NATIVE_ACCOUNT_ID,
+      )
+      expect(stored?.checkIn.nativePagePath).toBe(
+        discover ? undefined : nativePagePath,
+      )
     } finally {
       releasePost()
       await Promise.allSettled(runs)
@@ -707,7 +1080,7 @@ for (const nearMidnight of [false, true]) {
                 [NATIVE_ACCOUNT_ID]: {
                   accountId: NATIVE_ACCOUNT_ID,
                   accountName: NATIVE_ACCOUNT_NAME,
-                  status: "already_checked",
+                  status: "success",
                 },
               },
             })
@@ -906,7 +1279,7 @@ for (const { captcha, completeVerification } of [
         await expect
           .poll(() => readAutoCheckinStatus(serviceWorker), { timeout: 20_000 })
           .toMatchObject({
-            perAccount: { [NATIVE_ACCOUNT_ID]: { status: "already_checked" } },
+            perAccount: { [NATIVE_ACCOUNT_ID]: { status: "success" } },
           })
         expect(nativeFixture.counts.directCheckinPostCount).toBe(1)
         expect(nativeFixture.counts.nativePageClickCount).toBe(1)

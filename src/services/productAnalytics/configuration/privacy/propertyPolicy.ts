@@ -5,6 +5,7 @@ import {
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FETCH_CONTEXT_KINDS,
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_STRATEGIES,
+  PRODUCT_ANALYTICS_ACCOUNT_DIALOG_PHASES,
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES,
@@ -75,6 +76,7 @@ const FORBIDDEN_KEY_PATTERN =
   /(url|uri|origin|host|hostname|domain|path|token|key|cookie|authorization|auth|email|balance|quota|cost|prompt|response|content|stack|trace|name|note|user|account)/i
 
 const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
+  dialog_phase: Object.values(PRODUCT_ANALYTICS_ACCOUNT_DIALOG_PHASES),
   active_tab: DASHBOARD_TAB_TYPES,
   action_id: Object.values(PRODUCT_ANALYTICS_ACTION_IDS),
   auto_checkin_schedule_mode: Object.values(
@@ -252,6 +254,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
 ])
 
 const RAW_NUMBER_ALLOWED_KEYS = new Set([
+  "validation_issue_count",
   "account_count",
   "auto_checkin_enabled_accounts",
   "account_auto_refresh_interval_minutes",
@@ -360,6 +363,14 @@ const FEATURE_ACTION_COMPLETED_BOOLEAN_FIELDS = new Set([
   "usage_data_present",
 ])
 
+const ACCOUNT_DIALOG_CLOSED_BOOLEAN_FIELDS = new Set([
+  "form_valid",
+  "submission_blocked",
+  "verification_required",
+  "detection_pending",
+  "save_pending",
+])
+
 /**
  * Accepts only scalar property values supported by PostHog product analytics.
  */
@@ -382,6 +393,15 @@ function isAllowedFieldValue(
   key: string,
   value: string | boolean | number,
 ): boolean {
+  if (eventName === PRODUCT_ANALYTICS_EVENTS.AccountDialogClosed) {
+    if (ACCOUNT_DIALOG_CLOSED_BOOLEAN_FIELDS.has(key)) {
+      return typeof value === "boolean"
+    }
+    if (key === "validation_issue_count")
+      return (
+        typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+      )
+  }
   if (typeof value === "number") {
     if (
       eventName === PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted &&

@@ -16,6 +16,7 @@ import {
 } from "~/services/apiService/pmapi/identity"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
   withCheckInConfirmation,
@@ -29,6 +30,7 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
+import { TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS } from "~/types/tempWindowFetch"
 import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { tempWindowTriggerCheckinPageAction } from "~/utils/browser/tempWindowFetch"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -48,8 +50,12 @@ export async function clickNativeCheckInPage(
   account: SiteAccount,
   context: AutoCheckinProviderContext,
 ): Promise<AutoCheckinProviderOutcome> {
-  const checkInUrl = await resolveAccountSiteRouteUrl(
-    { baseUrl: account.site_url, siteType: account.site_type },
+  let checkInUrl = await resolveAccountSiteRouteUrl(
+    {
+      baseUrl: account.site_url,
+      siteType: account.site_type,
+      checkIn: account.checkIn,
+    },
     SITE_ROUTE_KINDS.CheckIn,
   )
   if (!checkInUrl)
@@ -77,6 +83,9 @@ export async function clickNativeCheckInPage(
     action = await tempWindowTriggerCheckinPageAction({
       originUrl: account.site_url,
       pageUrl: checkInUrl,
+      discoverCheckInPage: !normalizeCheckInPagePath(
+        account.checkIn.nativePagePath,
+      ),
       requestId: safeRandomUUID(`pmapi-checkin-${account.id}`),
       accountId: account.id,
       authType: account.authType,
@@ -101,7 +110,11 @@ export async function clickNativeCheckInPage(
       messageParams: { checkInUrl },
     }
   }
-  if (!action.success || action.reason !== "clicked")
+  if (action.pageUrl) checkInUrl = action.pageUrl
+  if (
+    !action.success ||
+    action.reason !== TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.Clicked
+  )
     return resolveNativePageFailureResult({ action, checkInUrl })
   const request = bindApiTransportRequest(
     {

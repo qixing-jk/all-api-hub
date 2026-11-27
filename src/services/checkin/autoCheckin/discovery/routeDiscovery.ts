@@ -9,7 +9,7 @@ import {
   withCheckInRouteOverride,
 } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
-import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
+import { collectCheckInEvidenceInBrowser } from "~/services/checkin/discovery/evidence/scanClient"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import type { SiteAccount } from "~/types"
@@ -163,7 +163,7 @@ async function collectSiteRoutes(
   account: SiteAccount,
   context: RouteDiscoveryContext,
 ): Promise<string[]> {
-  const clues = await collectFeedbackCluesInBrowser(
+  const clues = await collectCheckInEvidenceInBrowser(
     {
       baseUrl: account.site_url,
       siteType: account.site_type,

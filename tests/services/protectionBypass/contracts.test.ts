@@ -26,6 +26,15 @@ import { AuthTypeEnum } from "~/types"
 
 const canonicalTasks = [
   {
+    kind: "checkin_page_discovery",
+    params: {
+      originUrl: "https://example.invalid",
+      requestId: "page-scan-1",
+      siteType: "new-api",
+      nativePagePath: "/broken",
+    },
+  },
+  {
     kind: TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect,
     params: { originUrl: "https://example.invalid" },
   },
@@ -361,6 +370,7 @@ describe("protection bypass runtime contracts", () => {
         "credential_page_inspect",
         "rendered_title",
         "checkin_feedback_scan",
+        "checkin_page_discovery",
         "session_read",
         "new_api_session_read",
         "octopus_api_fetch",
@@ -723,6 +733,35 @@ describe("protection bypass runtime contracts", () => {
   })
 
   it.each([
+    { purpose: "native_page", accepted: true },
+    { purpose: "unknown", accepted: false },
+    { purpose: "native_page", routePaths: ["/api/daily"], accepted: false },
+    {
+      purpose: "native_page",
+      auth: { authType: "access_token", accessToken: "private" },
+      accepted: false,
+    },
+  ])(
+    "enforces read-only native scan authority: %j",
+    ({ accepted, ...input }) => {
+      expect(
+        isTempContextTask({
+          kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+          params: {
+            originUrl: "https://example.invalid",
+            requestId: "native-evidence",
+            input: {
+              baseUrl: "https://example.invalid",
+              siteType: "new-api",
+              ...input,
+            },
+          },
+        }),
+      ).toBe(accepted)
+    },
+  )
+
+  it.each([
     { paths: ["/api/user/daily"], accepted: true },
     { paths: [], accepted: true },
     { paths: "/api/user/daily", accepted: false },
@@ -746,6 +785,28 @@ describe("protection bypass runtime contracts", () => {
             baseUrl: "https://example.invalid",
             siteType: "new-api",
             routePaths: paths,
+          },
+        },
+      }),
+    ).toBe(accepted)
+  })
+
+  it.each([
+    ["/invite?tab=daily#/claim", true],
+    ["//other.invalid/", false],
+    ["https://other.invalid/", false],
+    ["/a/../invite", false],
+  ])("validates diagnostic page authority: %s", (nativePagePath, accepted) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+        params: {
+          originUrl: "https://example.invalid",
+          requestId: "page",
+          input: {
+            baseUrl: "https://example.invalid",
+            siteType: "new-api",
+            nativePagePath,
           },
         },
       }),
