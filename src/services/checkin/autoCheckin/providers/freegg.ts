@@ -209,6 +209,7 @@ export const freeggProvider: AutoCheckinProvider = {
         auth: storedRequest.auth,
         directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       }
+      const baselineRequestedAt = Date.now()
       const baseline = await fetchFreeggAllowanceLogs(request)
       if (
         !baseline.complete ||
@@ -270,20 +271,63 @@ export const freeggProvider: AutoCheckinProvider = {
       ) {
         return createUnconfirmedCheckInResult(account)
       }
-      const startedAt = Math.floor((baseline.serverTime ?? Date.now()) / 1000)
+      if (
+        getDayKeyFromUnixSeconds(
+          Date.now() / 1000,
+          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+        ) !== day
+      )
+        return createUnconfirmedCheckInResult(account)
+      // HTTP Date and ledger events have second precision. Include the entire
+      // baseline request interval and elapsed admission time in the server-clock
+      // bound. A record in the ambiguous dispatch second cannot prove new income.
+      let startedAt: number | undefined
+      const dispatchAbort = new AbortController()
       triggerAttempted = true
       let response: Awaited<ReturnType<typeof triggerFreeggDailyAllowance>>
       let triggerResponseLost = false
       try {
         response = await triggerFreeggDailyAllowance({
           ...request,
-          observer: context.mutationLifecycle,
+          abortSignal: dispatchAbort.signal,
+          observer: {
+            ...context.mutationLifecycle,
+            onDispatch() {
+              if (
+                getDayKeyFromUnixSeconds(
+                  Date.now() / 1000,
+                  FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+                ) !== day
+              ) {
+                dispatchAbort.abort(
+                  new Error("FreeGG baseline day expired before dispatch"),
+                )
+                return
+              }
+              startedAt =
+                baseline.serverTime === undefined
+                  ? Math.floor(Date.now() / 1000) + 1
+                  : Math.ceil(
+                      (baseline.serverTime +
+                        1000 +
+                        Date.now() -
+                        baselineRequestedAt) /
+                        1000,
+                    )
+              context.mutationLifecycle?.onDispatch()
+            },
+            onResponse() {
+              context.mutationLifecycle?.onResponse()
+            },
+          },
         })
       } catch {
         // A lost response may have credited the grant. Read logs once below;
         // never replay self and never assume its missing identity matched.
         triggerResponseLost = true
       }
+      if (startedAt === undefined)
+        return createUnconfirmedCheckInResult(account)
       const expectedIdentity = String(account.account_info.id)
       if (
         !triggerResponseLost &&
@@ -293,11 +337,12 @@ export const freeggProvider: AutoCheckinProvider = {
       }
       const readback = await fetchFreeggAllowanceLogs(request)
       if (
-        readback.serverTime !== undefined &&
-        !isCheckInObservationCurrent(
-          readback.serverTime,
-          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-        )
+        !readback.complete ||
+        (readback.serverTime !== undefined &&
+          !isCheckInObservationCurrent(
+            readback.serverTime,
+            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+          ))
       )
         return createUnconfirmedCheckInResult(account)
       const after = readback.records
@@ -317,7 +362,7 @@ export const freeggProvider: AutoCheckinProvider = {
         (item) =>
           isFreeggAllowanceRecord(item) &&
           (!triggerResponseLost || String(item.user_id) === expectedIdentity) &&
-          (item.created_at as number) >= startedAt &&
+          (item.created_at as number) >= startedAt! &&
           (item.created_at as number) <= completedAt,
       )
       if (!record) return createUnconfirmedCheckInResult(account)
@@ -356,9 +401,9 @@ export const freeggProvider: AutoCheckinProvider = {
         },
       )
     } catch (error) {
+      if (triggerAttempted) return createUnconfirmedCheckInResult(account)
       return resolveProviderErrorResult({
         error,
-        mutationDispatched: triggerAttempted,
       })
     }
   },

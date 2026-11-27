@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
-import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import { type newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { freeggProvider } from "~/services/checkin/autoCheckin/providers/freegg"
@@ -17,7 +17,21 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/apiService/newApiFamily/request", () => ({
-  newApiFamilyRequests: { envelope: vi.fn() },
+  newApiFamilyRequests: {
+    envelope: async (
+      ...args: Parameters<typeof newApiFamilyRequests.envelope>
+    ) => {
+      const [request, options] = args
+      if (options.endpoint === "/api/user/self") {
+        vi.setSystemTime(Date.now() + transportDelayMs)
+        request.observer?.onDispatch()
+        request.abortSignal?.throwIfAborted()
+      }
+      const response = await envelope(...args)
+      if (options.endpoint === "/api/user/self") request.observer?.onResponse()
+      return response
+    },
+  },
 }))
 
 vi.mock("~/services/apiTransport/request", () => ({
@@ -33,7 +47,8 @@ vi.mock("~/services/apiTransport/request", () => ({
 let serverClockOffsetMs = 0
 let serverHttpStatus = 200
 let serverDateMissing = false
-const envelope = vi.mocked(newApiFamilyRequests.envelope)
+let transportDelayMs = 0
+const envelope = vi.fn<typeof newApiFamilyRequests.envelope>()
 const now = Date.parse("2026-11-24T00:00:00.000Z")
 const account = () =>
   buildSiteAccount({
@@ -66,6 +81,10 @@ const log = (extra: Record<string, unknown> = {}) => ({
   }),
   ...extra,
 })
+// Successful execution fixtures model a grant two seconds after dispatch.
+// A grant in the dispatch second has insufficient timestamp precision.
+const grant = (extra: Record<string, unknown> = {}) =>
+  log({ created_at: now / 1000 + 2, ...extra })
 const logs = (items: unknown[]) => ({
   success: true,
   message: "",
@@ -78,10 +97,13 @@ const mockExecution = (
 ) => {
   envelope
     .mockResolvedValueOnce(logs(before))
-    .mockResolvedValueOnce({
-      success: true,
-      message: "",
-      data: { id: selfId, quota: 100000 },
+    .mockImplementationOnce(async () => {
+      vi.setSystemTime(Date.now() + 2000)
+      return {
+        success: true,
+        message: "",
+        data: { id: selfId, quota: 100000 },
+      }
     })
     .mockResolvedValueOnce(logs(after))
 }
@@ -90,6 +112,7 @@ beforeEach(() => {
   serverClockOffsetMs = 0
   serverHttpStatus = 200
   serverDateMissing = false
+  transportDelayMs = 0
   vi.resetAllMocks()
   vi.useFakeTimers()
   vi.setSystemTime(now)
@@ -97,6 +120,26 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("FreeGG daily allowance", () => {
+  it("does not attribute a grant that arrives while the trigger waits in transport", async () => {
+    transportDelayMs = 5000
+    mockExecution([], [grant()])
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "uncertain",
+    })
+  })
+  it("cancels a queued trigger when transport reaches the next business day", async () => {
+    vi.setSystemTime("2026-11-24T15:59:59Z")
+    transportDelayMs = 2000
+    mockExecution([], [grant()])
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "uncertain",
+    })
+    expect(
+      envelope.mock.calls.some(
+        ([, options]) => options.endpoint === "/api/user/self",
+      ),
+    ).toBe(false)
+  })
   it.each([401, 429])(
     "does not claim or renew credentials when ledger reads return HTTP %i",
     async (status) => {
@@ -110,7 +153,7 @@ describe("FreeGG daily allowance", () => {
   )
   it("uses local time conservatively when the server omits Date", async () => {
     serverDateMissing = true
-    mockExecution([], [log()])
+    mockExecution([log({ created_at: now / 1000 - 86400 })], [grant()])
     expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
       status: "success",
     })
@@ -127,6 +170,126 @@ describe("FreeGG daily allowance", () => {
     expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
     expect(envelope).toHaveBeenCalledTimes(1)
   })
+  it("does not claim with yesterday's baseline after admission crosses midnight", async () => {
+    vi.setSystemTime("2026-11-24T15:59:59Z")
+    mockExecution([], [log()])
+    expect(
+      await freeggProvider.checkIn(account(), {
+        ...context,
+        beforeRecoveredMutation: async () => {
+          vi.setSystemTime("2026-11-24T16:00:01Z")
+          return true
+        },
+      }),
+    ).toMatchObject({ status: "uncertain" })
+    expect(envelope).toHaveBeenCalledTimes(1)
+  })
+  it("keeps a readback on the server's next business day uncertain", async () => {
+    vi.setSystemTime("2026-11-24T15:59:50Z")
+    envelope
+      .mockResolvedValueOnce(logs([]))
+      .mockImplementationOnce(async () => {
+        serverClockOffsetMs = 15000
+        return { success: true, message: "", data: { id: 17 } }
+      })
+      .mockResolvedValueOnce(
+        logs([log({ created_at: Date.now() / 1000 + 15 })]),
+      )
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "uncertain",
+    })
+    expect(envelope).toHaveBeenCalledTimes(3)
+  })
+  it("does not probe without a site or status identity", async () => {
+    expect(await freeggProvider.detect?.({ observedAt: now })).toMatchObject({
+      outcome: "unsupported",
+    })
+    expect(
+      await freeggProvider.getStatus?.({ observedAt: now }),
+    ).toBeUndefined()
+    expect(envelope).not.toHaveBeenCalled()
+  })
+  it("rejects legacy cookie-only execution input without dispatching", async () => {
+    expect(
+      await freeggProvider.checkIn(
+        { site_url: "https://freegg.app", account_info: { id: 17 } },
+        context,
+      ),
+    ).toMatchObject({ status: "failed" })
+    expect(envelope).not.toHaveBeenCalled()
+  })
+  it("reads a saved grant conservatively without a server Date header", async () => {
+    serverDateMissing = true
+    envelope.mockResolvedValueOnce(logs([log()]))
+    expect(
+      await freeggProvider.getStatus?.({ account: account(), observedAt: now }),
+    ).toMatchObject({ today: "checked" })
+  })
+  it("rejects a non-object ledger envelope before dispatch", async () => {
+    envelope.mockResolvedValueOnce(null as never)
+    expect((await freeggProvider.checkIn(account(), context)).status).not.toBe(
+      "success",
+    )
+    expect(envelope).toHaveBeenCalledTimes(1)
+  })
+  it("preserves confirmed status when structured allowance parameters are absent", async () => {
+    mockExecution(
+      [],
+      [
+        grant({
+          other: { content_parts: [{ key: "Daily allowance {{quota}}" }] },
+        }),
+      ],
+    )
+    expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+      status: "success",
+      awards: [{ amount: { status: "unknown" } }],
+    })
+  })
+  it("does not confirm an award from a contradictory readback page", async () => {
+    mockExecution([], [grant(), grant()])
+    const result = await freeggProvider.checkIn(account(), context)
+    expect(result).toMatchObject({ status: "uncertain" })
+    expect(result.awards).toBeUndefined()
+    expect(envelope).toHaveBeenCalledTimes(3)
+  })
+  it.each([1, 5])(
+    "does not attribute a grant at second %i before or indistinguishable from dispatch",
+    async (grantSecond) => {
+      mockExecution([], [log({ created_at: now / 1000 + grantSecond })])
+      const result = await freeggProvider.checkIn(account(), {
+        ...context,
+        beforeRecoveredMutation: async () => {
+          vi.setSystemTime(now + 5000)
+          return true
+        },
+      })
+      expect(result).toMatchObject({ status: "uncertain" })
+      expect(result.awards).toBeUndefined()
+      expect(envelope).toHaveBeenCalledTimes(3)
+    },
+  )
+  it.each([401, 429])(
+    "keeps the claim uncertain when readback returns HTTP %i",
+    async (status) => {
+      envelope
+        .mockResolvedValueOnce(logs([]))
+        .mockImplementationOnce(async () => {
+          serverHttpStatus = status
+          return { success: true, message: "", data: { id: 17 } }
+        })
+        .mockResolvedValueOnce(logs([log()]))
+      const result = await freeggProvider.checkIn(account(), context)
+      expect(result).toMatchObject({ status: "uncertain" })
+      expect(
+        canAutomaticallyRetryCheckinResult(
+          result,
+          AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
+        ),
+      ).toBe(false)
+      expect(envelope).toHaveBeenCalledTimes(3)
+    },
+  )
   it("does not assign a grant to the wrong day when server and browser straddle midnight", async () => {
     vi.setSystemTime("2026-11-24T15:59:59Z")
     serverClockOffsetMs = 3000
@@ -145,16 +308,16 @@ describe("FreeGG daily allowance", () => {
     })
     expect(envelope).toHaveBeenCalledTimes(1)
   })
-  it("confirms the live grant when the server clock is three seconds ahead", async () => {
+  it("confirms a later grant with the observed three-second server clock offset", async () => {
     serverClockOffsetMs = 3000
-    mockExecution([], [log({ created_at: now / 1000 + 3 })])
+    mockExecution([], [grant({ created_at: now / 1000 + 5 })])
     expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
       status: "success",
       awards: [{ amount: { value: "20" } }],
     })
     envelope
       .mockReset()
-      .mockResolvedValueOnce(logs([log({ created_at: now / 1000 + 3 })]))
+      .mockResolvedValueOnce(logs([grant({ created_at: now / 1000 + 5 })]))
     expect(
       await freeggProvider.getStatus?.({ account: account(), observedAt: now }),
     ).toMatchObject({ today: "checked" })
@@ -165,7 +328,7 @@ describe("FreeGG daily allowance", () => {
       mockExecution(
         [],
         [
-          log({
+          grant({
             other: {
               content_parts: [
                 { key: "Daily allowance {{quota}}", params: { quota: amount } },
@@ -189,25 +352,22 @@ describe("FreeGG daily allowance", () => {
     async (setting) => {
       envelope
         .mockResolvedValueOnce(logs([]))
-        .mockResolvedValueOnce({
-          success: true,
-          message: "",
-          data: { id: 17, setting },
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime(now + 2000)
+          return { success: true, message: "", data: { id: 17, setting } }
         })
-        .mockResolvedValueOnce(logs([log()]))
+        .mockResolvedValueOnce(logs([grant()]))
       expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
         status: "success",
       })
     },
   )
   it("does not accept a rejected self envelope as identity evidence", async () => {
-    envelope
-      .mockResolvedValueOnce(logs([]))
-      .mockResolvedValueOnce({
-        success: false,
-        message: "denied",
-        data: undefined,
-      })
+    envelope.mockResolvedValueOnce(logs([])).mockResolvedValueOnce({
+      success: false,
+      message: "denied",
+      data: undefined,
+    })
     expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
       status: "uncertain",
     })
@@ -431,7 +591,7 @@ describe("FreeGG daily allowance", () => {
     mockExecution(
       [],
       [
-        log({
+        grant({
           quota: 9000000,
           other: JSON.stringify({
             content_parts: [
@@ -472,15 +632,18 @@ describe("FreeGG daily allowance", () => {
   it("does not confirm a grant when the returned allowance date contradicts its log", async () => {
     envelope
       .mockResolvedValueOnce(logs([]))
-      .mockResolvedValueOnce({
-        success: true,
-        message: "",
-        data: {
-          id: 17,
-          setting: JSON.stringify({ allowance_date: "2026-11-23" }),
-        },
+      .mockImplementationOnce(async () => {
+        vi.setSystemTime(now + 2000)
+        return {
+          success: true,
+          message: "",
+          data: {
+            id: 17,
+            setting: JSON.stringify({ allowance_date: "2026-11-23" }),
+          },
+        }
       })
-      .mockResolvedValueOnce(logs([log()]))
+      .mockResolvedValueOnce(logs([grant()]))
     expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
       status: "uncertain",
     })
@@ -520,7 +683,7 @@ describe("FreeGG daily allowance", () => {
   it("confirms a new grant even when the server renumbers the newest log to the same list ID", async () => {
     mockExecution(
       [log({ id: 1, created_at: now / 1000 - 86400 })],
-      [log({ id: 1 }), log({ id: 2, created_at: now / 1000 - 86400 })],
+      [grant({ id: 1 }), log({ id: 2, created_at: now / 1000 - 86400 })],
     )
     expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
       status: "success",
@@ -583,7 +746,7 @@ describe("FreeGG daily allowance", () => {
     mockExecution(
       [],
       [
-        log({
+        grant({
           type: 1,
           content: "Daily allowance ＄20.000000",
           quota: 0,
@@ -648,7 +811,7 @@ describe("FreeGG daily allowance", () => {
   })
 
   it("confirms only a new account-matched allowance record and dispatches self once as a mutation", async () => {
-    mockExecution([], [log()])
+    mockExecution([], [grant()])
     const result = await freeggProvider.checkIn(account(), context)
     expect(result.status).toBe("success")
     expect(result.awards).toHaveLength(1)
@@ -779,8 +942,11 @@ describe("FreeGG daily allowance", () => {
   it("confirms a lost trigger response using one account-matched new allowance log", async () => {
     envelope
       .mockResolvedValueOnce(logs([]))
-      .mockRejectedValueOnce(new Error("response lost"))
-      .mockResolvedValueOnce(logs([log()]))
+      .mockImplementationOnce(async () => {
+        vi.setSystemTime(now + 2000)
+        throw new Error("response lost")
+      })
+      .mockResolvedValueOnce(logs([grant()]))
     expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
       status: "success",
       awards: [expect.any(Object)],

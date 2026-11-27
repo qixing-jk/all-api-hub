@@ -28,8 +28,9 @@ Historical sanitized protocol evidence lives in that checkout's
 
 ## Local evidence
 
-Generated diagnostics, screenshots, and acceptance report are retained under
-`test-results/freegg-pr1933/` (ignored). Secret transfer artifacts must be removed
+Live reports and screenshots are retained under `test-results/freegg-live/`;
+protocol diagnostics and regression evidence live under
+`test-results/freegg-pr1933/` (both ignored). Secret transfer artifacts must be removed
 after use; sanitized protocol observations are preserved here when verified.
 Browser setup/session transfer is separate from extension onboarding acceptance.
 
@@ -124,4 +125,31 @@ successful final-build claim. Its retained evidence is `after-midnight.json` and
 `live-reset-2.log` under the local task results directory. The runner's optional
 `--await-reset` prepares normal onboarding within 30 minutes before UTC+8 midnight
 and asserts one mutation, one additional ledger entry and the USD 20 award.
+
+## Current-head review corrections
+
+The dispatch observer now rechecks the baseline's UTC+8 day after transport
+queueing and cancels an expired request before native fetch. Award attribution
+uses actual dispatch and a conservative server-clock bound that includes the
+baseline request interval and timestamp precision. A grant indistinguishable
+from a pre-dispatch event remains uncertain. Passing success fixtures model a
+two-second processing interval; they do not prove the site grants slowly enough
+for the final build to confirm every new credit.
+
+Incomplete or contradictory readback cannot confirm an award. A readback
+401/429 after a dispatched mutation remains uncertain and cannot be retried.
+Regression tests reproduced these findings before the fixes. Focused validation
+now passes 185 tests; the selected provider/protocol/config coverage is 100% lines
+and 99.54% branches. The sole missing protocol branch checks type after validated
+type-1 records and is not reachable through the provider contract.
+
+The live runner pins its intended reset before onboarding, stops preparation
+within two minutes of that reset, takes its skip baseline after account refresh,
+accepts only post-click results, independently matches the structured USD grant,
+and retains read-only ledger/result evidence on failure without replaying.
+The final Chrome production build also passed manual existing-token entry,
+save/reopen, discovery, refresh and already-claimed execution with zero claim
+requests. This is separate from earlier automatic onboarding acceptance: the
+isolated native website session had expired. Its report is retained under
+`test-results/freegg-live/aah-cdp-suites-CzYGq6/`.
 

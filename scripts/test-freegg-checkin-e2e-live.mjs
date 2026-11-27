@@ -11,6 +11,12 @@ import { runLiveSuites } from "./cdp/live-suites.mjs"
 import { getAccounts, withUiCreatedAccount } from "./cdp/sandbox.mjs"
 import { dismissModals, openExtensionPage } from "./cdp/ui-driver.mjs"
 import { openAccountAddDialog } from "./flows/auto-detect.mjs"
+import {
+  assertPreparationWindow,
+  currentResultStatus,
+  findAllowance,
+  planReset,
+} from "./suites/freegg/evidence.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 loadLocalEnv()
@@ -44,13 +50,24 @@ async function ledger() {
     body.data.items.every((item) => String(item.user_id) === expectedUserId),
     "Ledger identity must match the native account",
   )
-  return body.data
+  const serverTime = Date.parse(response.headers.get("date") ?? "")
+  assert(
+    Number.isFinite(serverTime),
+    "Native HTTP Date required for live evidence",
+  )
+  return { ...body.data, serverTime }
 }
 
 /** Complete ordinary detection and existing-token continuation, then daily operation. */
 async function onboardingAndCheckin() {
+  const resetAt = process.argv.includes("--await-reset")
+    ? planReset(Date.now())
+    : undefined
+  const checkPreparation = () => {
+    if (resetAt !== undefined) assertPreparationWindow(resetAt, Date.now())
+  }
   const evidenceDir = await fs.mkdtemp(path.join(evidenceRoot, "workflow-"))
-  const before = await ledger()
+  await ledger()
   const dev = await connectWorktreeExtension({ extensionPath })
   const requests = []
   const observe = (request) => {
@@ -65,6 +82,7 @@ async function onboardingAndCheckin() {
   dev.context.on("request", observe)
   let page
   let checkin
+  let accountId
   let executionError
   const cleanupErrors = []
   try {
@@ -83,6 +101,7 @@ async function onboardingAndCheckin() {
       dev.serviceWorker,
       async (name) => {
         const dialog = await openAccountAddDialog({ page, targetUrl: origin })
+        checkPreparation()
         await dialog.getByTestId(ids.autoDetectButton).click()
         await expect(
           page.getByRole("button", { name: "Open full form", exact: true }),
@@ -111,11 +130,13 @@ async function onboardingAndCheckin() {
         ).toBeVisible()
         await dialog.getByTestId(ids.siteNameInput).fill(name)
         await dialog.getByTestId(ids.accessTokenInput).fill(token)
+        checkPreparation()
         await dialog.getByTestId(ids.confirmAddButton).click()
         await expect(dialog).toBeHidden({ timeout: 90_000 })
         await dismissModals(page)
       },
       async (account) => {
+        accountId = account.id
         assert.equal(account.site_type, "new-api")
         assert.equal(String(account.account_info.id), expectedUserId)
         assert(
@@ -154,6 +175,7 @@ async function onboardingAndCheckin() {
         )
         if ((await automatic.getAttribute("aria-checked")) !== "true")
           await automatic.click()
+        checkPreparation()
         await dialog.getByTestId(ids.confirmAddButton).click()
         await expect(dialog).toBeHidden({ timeout: 60_000 })
         await dismissModals(page)
@@ -179,13 +201,16 @@ async function onboardingAndCheckin() {
         const syncBefore = (await getAccounts(dev.serviceWorker)).find(
           (item) => item.id === account.id,
         ).last_sync_time
-        const refreshed = page.waitForResponse(
-          (response) =>
-            response.url() === `${origin}/api/user/self` &&
-            response.status() === 200,
-        )
-        await page.getByTestId(ids.rowRefreshMenuItem).click()
-        const nativeReadback = (await (await refreshed).json()).data
+        checkPreparation()
+        const [refreshed] = await Promise.all([
+          page.waitForResponse(
+            (response) =>
+              response.url() === `${origin}/api/user/self` &&
+              response.status() === 200,
+          ),
+          page.getByTestId(ids.rowRefreshMenuItem).click(),
+        ])
+        const nativeReadback = (await refreshed.json()).data
         assert.equal(String(nativeReadback.id), expectedUserId)
         await expect
           .poll(
@@ -217,7 +242,20 @@ async function onboardingAndCheckin() {
           ),
           "Run now must only target the test account",
         )
+        const before = await ledger()
+        const nativeDayStart =
+          Math.floor((before.serverTime + 8 * 3600000) / 86400000) * 86400000 -
+          8 * 3600000
+        assert(
+          findAllowance(before.items, {
+            userId: expectedUserId,
+            from: nativeDayStart / 1000,
+            to: before.serverTime / 1000,
+          }),
+          "Onboarding or refresh must have credited today's native allowance",
+        )
         const start = requests.length
+        const clickedAt = Date.now()
         await checkin.getByTestId("auto-checkin-run-now-button").click()
         let result
         await expect
@@ -230,7 +268,7 @@ async function onboardingAndCheckin() {
                 const status = typeof raw === "string" ? JSON.parse(raw) : raw
                 return status?.perAccount?.[id]
               }, account.id)
-              return result?.status
+              return currentResultStatus(result, clickedAt)
             },
             { timeout: 90_000 },
           )
@@ -276,25 +314,19 @@ async function onboardingAndCheckin() {
         )
         // Optional actual mutation coverage: prepare the account before midnight,
         // then leave the site idle until the real deployment day changes.
-        if (process.argv.includes("--await-reset")) {
-          const resetAt =
-            (Math.floor((Date.now() + 8 * 3600000) / 86400000) + 1) * 86400000 -
-            8 * 3600000 +
-            3000
-          assert(
-            resetAt - Date.now() < 30 * 60000,
-            "Start reset acceptance within 30 minutes of midnight UTC+8",
-          )
+        if (resetAt !== undefined) {
+          checkPreparation()
           for (const nativePage of dev.context.pages()) {
             if (nativePage.url().startsWith(origin)) await nativePage.close()
           }
           console.log(
             "Existing-token workflow passed; prepared account is idle until the actual UTC+8 reset.",
           )
-          while (Date.now() < resetAt)
+          while (Date.now() < resetAt + 3000)
             await new Promise((resolve) =>
-              setTimeout(resolve, Math.min(30000, resetAt - Date.now())),
+              setTimeout(resolve, Math.min(30000, resetAt + 3000 - Date.now())),
             )
+          const claimBaseline = await ledger()
           const claimStart = requests.length
           const claimAt = Date.now()
           await checkin.getByTestId("auto-checkin-run-now-button").click()
@@ -308,7 +340,7 @@ async function onboardingAndCheckin() {
                   return (typeof raw === "string" ? JSON.parse(raw) : raw)
                     ?.perAccount?.[id]
                 }, account.id)
-                return result?.timestamp >= claimAt ? result.status : undefined
+                return currentResultStatus(result, claimAt)
               },
               { timeout: 90_000 },
             )
@@ -326,7 +358,7 @@ async function onboardingAndCheckin() {
           const claimed = await ledger()
           assert.equal(
             claimed.total,
-            after.total + 1,
+            claimBaseline.total + 1,
             "Exactly one allowance must be credited",
           )
           assert.equal(
@@ -335,6 +367,15 @@ async function onboardingAndCheckin() {
             "Verified deployment grants USD 20",
           )
           assert.equal(result.awards?.[0]?.asset?.code, "USD")
+          const matched = findAllowance(claimed.items, {
+            userId: expectedUserId,
+            from: claimBaseline.serverTime / 1000 + 1,
+            to: claimed.serverTime / 1000,
+          })
+          assert(
+            matched,
+            "Native ledger must independently prove a matching USD 20 allowance",
+          )
           await checkin.screenshot({
             path: path.join(evidenceDir, "actual-claim.png"),
             fullPage: true,
@@ -344,13 +385,13 @@ async function onboardingAndCheckin() {
             JSON.stringify(
               {
                 result,
-                previousTotal: after.total,
+                previousTotal: claimBaseline.total,
                 total: claimed.total,
                 record: {
-                  type: claimed.items[0].type,
-                  created_at: claimed.items[0].created_at,
-                  quota: claimed.items[0].quota,
-                  other: claimed.items[0].other,
+                  type: matched.type,
+                  created_at: matched.created_at,
+                  quota: matched.quota,
+                  other: matched.other,
                 },
                 requests: requests.slice(claimStart),
               },
@@ -363,6 +404,38 @@ async function onboardingAndCheckin() {
     )
   } catch (error) {
     executionError = error
+    // Read-only evidence survives uncertain results and cleanup; never replay.
+    if (checkin) {
+      await checkin
+        .screenshot({
+          path: path.join(evidenceDir, "checkin-failure.png"),
+          fullPage: true,
+        })
+        .catch((error) => cleanupErrors.push(error))
+      const evidence = await Promise.allSettled([
+        ledger(),
+        dev.serviceWorker.evaluate(async (id) => {
+          const raw = (await chrome.storage.local.get("autoCheckin_status"))
+            .autoCheckin_status
+          return (typeof raw === "string" ? JSON.parse(raw) : raw)
+            ?.perAccount?.[id]
+        }, accountId),
+      ])
+      await fs
+        .writeFile(
+          path.join(evidenceDir, "failure-readback.json"),
+          JSON.stringify(
+            evidence.map((result) =>
+              result.status === "fulfilled"
+                ? result
+                : { status: result.status, reason: result.reason?.message },
+            ),
+            null,
+            2,
+          ),
+        )
+        .catch((error) => cleanupErrors.push(error))
+    }
     if (page)
       await page
         .screenshot({
