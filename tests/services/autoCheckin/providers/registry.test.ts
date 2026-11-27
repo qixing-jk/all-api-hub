@@ -20,8 +20,10 @@ import {
   decodePersistedCheckInMethodId,
   getAutoCheckinCandidateMethodIds,
   getAutoCheckinMethodSource,
+  getCheckInMethodPresentationMetadata,
   getLegacyAutoCheckinMethodIds,
   getNewAccountCompatibilityMethodIds,
+  NON_REPEAT_SAFE_CHECKIN_METHOD_IDS,
   supportsCheckInStatusReadback,
 } from "~/services/checkin/autoCheckin/providers/registry"
 import type {
@@ -30,6 +32,7 @@ import type {
 } from "~/services/checkin/autoCheckin/providers/registry"
 import { relayForProvider } from "~/services/checkin/autoCheckin/providers/relayfor"
 import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub2apiPro"
+import { ultraRouterGameProvider } from "~/services/checkin/autoCheckin/providers/ultrarouterGame"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
@@ -99,6 +102,32 @@ describe("autoCheckinMethodRegistry", () => {
         .map(({ id }) => id),
     ).not.toContain(AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn)
   })
+  it("limits UltraRouter's game provider to its authenticated game origin", () => {
+    const methodId = AUTO_CHECKIN_METHOD_IDS.UltraRouterDailyGame
+    expect(registrationFor(methodId).provider).toBe(ultraRouterGameProvider)
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://ultrarouter.org")
+        .map(({ id }) => id),
+    ).toContain(methodId)
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.NEW_API, "https://other-new-api.example")
+        .map(({ id }) => id),
+    ).not.toContain(methodId)
+    expect(supportsCheckInStatusReadback(methodId)).toBe(true)
+    expect(getCheckInMethodPresentationMetadata(methodId)).toMatchObject({
+      kind: "daily",
+    })
+    expect(getAutoCheckinMethodSource(methodId)).toEqual(OFFICIAL_METHOD_SOURCE)
+    expect(NON_REPEAT_SAFE_CHECKIN_METHOD_IDS.has(methodId)).toBe(true)
+    expect(
+      getNewAccountCompatibilityMethodIds(SITE_TYPES.NEW_API),
+    ).not.toContain(methodId)
+    expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.NEW_API)).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+    ])
+  })
   it("registers stable identities without changing legacy method mapping", () => {
     const registrationContracts = autoCheckinMethodRegistry.registrations.map(
       ({ id, siteTypes, provider }) => ({
@@ -108,7 +137,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(26)
+    expect(registrationContracts).toHaveLength(27)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -190,6 +219,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "xingya:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.NEW_API],
           provider: xingyaProvider,
+        },
+        {
+          id: "ultrarouter:daily-game",
+          candidateSiteTypes: [SITE_TYPES.NEW_API],
+          provider: ultraRouterGameProvider,
         },
       ]),
     )

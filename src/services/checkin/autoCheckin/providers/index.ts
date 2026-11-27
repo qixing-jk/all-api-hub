@@ -27,6 +27,7 @@ import {
 import { relayForProvider } from "./relayfor"
 import { sidruneProvider } from "./sidrune"
 import { toolcodeProvider } from "./toolcode"
+import { ultraRouterGameProvider } from "./ultrarouterGame"
 import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 import { xiaobaiCodeProvider } from "./xiaobaiCode"
@@ -61,6 +62,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: baiApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: apiKeyCasaProvider,
   [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: xingyaProvider,
+  [AUTO_CHECKIN_METHOD_IDS.UltraRouterDailyGame]: ultraRouterGameProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

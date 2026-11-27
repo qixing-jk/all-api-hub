@@ -49,6 +49,7 @@ import {
   createUserCheckInStatusEndpoint,
   resolveUserCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
+import { ULTRAROUTER_GAME_ENDPOINTS } from "~/services/checkin/autoCheckin/providers/ultrarouterGameProtocol"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"
@@ -166,6 +167,7 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.UltraRouterDailyGame,
   ])
 
 /**
@@ -728,6 +730,20 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: XINGYA_CHECK_IN_STATUS_ENDPOINT }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.UltraRouterDailyGame]: {
+    presentation: { kind: "daily" },
+    id: AUTO_CHECKIN_METHOD_IDS.UltraRouterDailyGame,
+    siteTypes: [SITE_TYPES.NEW_API],
+    origins: ["https://ultrarouter.org"],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [
+      { path: ULTRAROUTER_GAME_ENDPOINTS.Status },
+      { path: ULTRAROUTER_GAME_ENDPOINTS.Rewards },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },

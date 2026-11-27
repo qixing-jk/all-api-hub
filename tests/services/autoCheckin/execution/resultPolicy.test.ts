@@ -239,6 +239,15 @@ describe("canAutomaticallyRetryCheckinResult", () => {
           AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
         ),
       ).toBe(true)
+      expect(
+        canAutomaticallyRetryCheckinResult(
+          {
+            status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+          },
+          AUTO_CHECKIN_METHOD_IDS.UltraRouterDailyGame,
+        ),
+      ).toBe(false)
     } finally {
       notRepeatSafe.delete(blockedMethodId)
     }
