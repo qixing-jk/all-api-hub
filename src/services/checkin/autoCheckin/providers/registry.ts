@@ -442,18 +442,16 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
   [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: {
     resetTimeZone: LINXI_DEFAULT_RESET_TIME_ZONE,
     reportsResetTimeZone: true,
-    // Public frontend bundles for both K40 hosts use the same `/api/v1`
-    // check-in status and claim contract as 100xLabs. The HTTP-only K40
-    // origin is intentionally excluded because authenticated calls would
-    // expose the account bearer token without TLS.
+    // Public frontends for the K40 hosts and 100xLabs use this protocol.
     discoveryOrigins: [
       "https://sub.100xlabs.space",
       "https://k40.shengqainbang.cn",
     ],
+    // An inconclusive probe on a different deployment must not block a verified method.
+    unknownDiscoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Generic,
     presentation: { sourceNameKey: "methods.sources.linxi" },
     id: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
     siteTypes: [SITE_TYPES.SUB2API],
-    origins: ["https://sub.100xlabs.space", "https://k40.shengqainbang.cn"],
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "Linxi / 100xLabs",

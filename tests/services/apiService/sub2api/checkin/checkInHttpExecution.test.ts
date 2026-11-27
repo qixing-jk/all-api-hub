@@ -8,6 +8,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfile/sub2apiAuthSession"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
 import * as browserAuth from "~/services/apiService/sub2api/auth/browserAuth"
+import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { AUTO_CHECKIN_METHOD_DEFINITIONS } from "~/services/checkin/autoCheckin/providers/registry"
 import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
@@ -21,6 +22,7 @@ import {
 } from "~/utils/core/dayKey"
 import { server as interception } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 type HttpCheckInProtocol = {
@@ -31,6 +33,26 @@ type HttpCheckInProtocol = {
   claimPath?: string
   receipt?: () => unknown
 }
+
+const linxiProtocol = {
+  name: "Linxi",
+  methodId: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+  statusPath: "/api/v1/check-in/status",
+  claimPath: "/api/v1/check-in",
+  status: (checked: boolean) => ({
+    enabled: true,
+    checked_in_today: checked,
+    check_in_date: getDayKeyFromUnixSeconds(Date.now() / 1000, "Asia/Shanghai"),
+    turnstile_required: false,
+  }),
+  receipt: () => ({
+    checked_in_today: true,
+    check_in_date: getDayKeyFromUnixSeconds(Date.now() / 1000, "Asia/Shanghai"),
+    already_checked_in: false,
+    reward_amount: 1,
+    today_pool: "paid",
+  }),
+} satisfies HttpCheckInProtocol
 
 const protocols = [
   {
@@ -92,6 +114,7 @@ const protocols = [
       checked_in_at: new Date().toISOString(),
     }),
   },
+  linxiProtocol,
 ]
 
 const statusProtocols: HttpCheckInProtocol[] = [
@@ -186,20 +209,6 @@ const statusProtocols: HttpCheckInProtocol[] = [
       reward_amount: 0.1,
     }),
   },
-  {
-    name: "Linxi",
-    methodId: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
-    statusPath: "/api/v1/check-in/status",
-    status: (checked) => ({
-      enabled: true,
-      checked_in_today: checked,
-      check_in_date: getDayKeyFromUnixSeconds(
-        Date.now() / 1000,
-        "Asia/Shanghai",
-      ),
-      turnstile_required: false,
-    }),
-  },
 ]
 
 type Scenario =
@@ -212,6 +221,7 @@ type Scenario =
   | "persistenceFailure"
   | "rejectedAfterRotation"
   | "healthy"
+  | "unrelatedLinxiStatus"
   | "expiresAtClaim"
   | "alreadyChecked"
 const refresh = "POST /api/v1/auth/refresh"
@@ -267,6 +277,12 @@ async function withHttpSite<T>(
     if (req.method === "GET" && path === protocol.statusPath)
       return void ok(protocol.status(checked))
     if (
+      scenario === "unrelatedLinxiStatus" &&
+      req.method === "GET" &&
+      path === linxiProtocol.statusPath
+    )
+      return void ok({ enabled: true, checked_in_today: false })
+    if (
       req.method === "POST" &&
       path === protocol.claimPath &&
       protocol.receipt
@@ -286,20 +302,10 @@ async function withHttpSite<T>(
     const localOrigin = `http://127.0.0.1:${addr.port}`
     const splitOrigin =
       protocol.methodId === AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn
-    const linxiOrigin =
-      protocol.methodId === AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn
-        ? "https://sub.100xlabs.space"
-        : undefined
-    const origin = splitOrigin
-      ? "https://ai-router.dev"
-      : (linxiOrigin ?? localOrigin)
+    const origin = splitOrigin ? "https://ai-router.dev" : localOrigin
     interception.use(http.all(`${localOrigin}/*`, () => passthrough()))
-    // Route constrained-provider and split-origin requests to loopback.
-    const routedHosts = splitOrigin
-      ? [origin, "https://api.ai-router.dev"]
-      : linxiOrigin
-        ? [linxiOrigin]
-        : []
+    // Route split-origin requests to loopback.
+    const routedHosts = splitOrigin ? [origin, "https://api.ai-router.dev"] : []
     for (const host of routedHosts) {
       interception.use(
         http.all(`${host}/*`, async ({ request }) => {
@@ -333,7 +339,10 @@ async function withHttpSite<T>(
       },
     })
     account.account_info.id = "42"
-    let accessToken = scenario === "healthy" ? "renewed" : "expired"
+    let accessToken =
+      scenario === "healthy" || scenario === "unrelatedLinxiStatus"
+        ? "renewed"
+        : "expired"
     account.account_info.access_token = accessToken
     let refreshToken = "fixture-refresh"
     let tokenExpiresAt =
@@ -390,6 +399,50 @@ function executeHttpScenario(
 }
 
 afterEach(() => vi.restoreAllMocks())
+
+describe("Linxi protocol discovery over HTTP", () => {
+  const discover = (account: SiteAccount) =>
+    discoverCheckInMethods({ account, config: buildCheckInConfig() })
+
+  it("selects Linxi by its status response on a new origin", async () => {
+    const { trace, result } = await withHttpSite(
+      linxiProtocol,
+      "healthy",
+      discover,
+    )
+
+    expect(trace).toContain("GET /api/v1/check-in/status")
+    expect(trace.every((request) => request.startsWith("GET "))).toBe(true)
+    expect(result.decision).toEqual({
+      outcome: "resolved",
+      methodId: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+    })
+  })
+
+  it("keeps a verified existing method selectable when the Linxi probe is inconclusive", async () => {
+    const pro = protocols.find(
+      ({ methodId }) =>
+        methodId === AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+    )!
+    const { trace, result } = await withHttpSite(
+      pro,
+      "unrelatedLinxiStatus",
+      discover,
+    )
+
+    expect(trace).toContain("GET /api/v1/check-in/status")
+    expect(
+      result.detections[AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn],
+    ).toMatchObject({
+      outcome: "unknown",
+      reason: "invalid_response",
+    })
+    expect(result.decision).toEqual({
+      outcome: "resolved",
+      methodId: AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+    })
+  })
+})
 
 it("exercises first-request authentication for every registered Sub2API method", () => {
   const registered = Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS)
