@@ -9,6 +9,7 @@ import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/api
 import { baiApiProvider } from "~/services/checkin/autoCheckin/providers/baiApi"
 import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
+import { hogLotteryProvider } from "~/services/checkin/autoCheckin/providers/hogLottery"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
@@ -108,7 +109,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(27)
+    expect(registrationContracts).toHaveLength(28)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -190,6 +191,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "xingya:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.NEW_API],
           provider: xingyaProvider,
+        },
+        {
+          id: "hog:free-daily-draw",
+          candidateSiteTypes: [SITE_TYPES.NEW_API],
+          provider: hogLotteryProvider,
         },
       ]),
     )
@@ -407,6 +413,7 @@ describe("autoCheckinMethodRegistry", () => {
       AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,

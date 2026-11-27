@@ -110,10 +110,12 @@ type CheckInMethodLabelKey =
   | "methods.generic.name"
   | "methods.daily.name"
   | "methods.login.name"
+  | "methods.bizDecipherFreeGift.name"
   | "methods.freeDailyDraw.name"
 type CheckInMethodDisclosureKey =
   | "methods.daily.description"
   | "methods.login.description"
+  | "methods.bizDecipherFreeGift.description"
   | "methods.freeDailyDraw.description"
 type CheckInMethodSourceNameKey = `methods.sources.${
   | "geniusProgrammer"
@@ -125,6 +127,8 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "sub2apiPro"
   | "toolcode"
   | "hiyo"
+  | "hog"
+  | "bizDecipher"
   | "aiRouter"
   | "daigua"
   | "sidrune"
@@ -175,6 +179,7 @@ interface AutoCheckinMethodDefinitionBase {
 /** These methods can award again or lack a verified duplicate guarantee. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
+    AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
@@ -520,6 +525,26 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn]: {
+    presentation: {
+      labelKey: "methods.bizDecipherFreeGift.name",
+      disclosureKey: "methods.bizDecipherFreeGift.description",
+      sourceNameKey: "methods.sources.bizDecipher",
+    },
+    discoveryOrigins: ["https://bizdecipher.com"],
+    id: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "BizDecipher",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createUserCheckInStatusEndpoint(resolveUserCheckInTimezone()) },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn]: {
     // #1575/#1581 and public settings, including the image API (2026-11-15).
     discoveryOrigins: [
@@ -756,6 +781,7 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     presentation: {
       labelKey: "methods.freeDailyDraw.name",
       disclosureKey: "methods.freeDailyDraw.description",
+      sourceNameKey: "methods.sources.hog",
     },
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,

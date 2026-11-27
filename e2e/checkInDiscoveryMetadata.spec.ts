@@ -143,12 +143,12 @@ for (const scenario of [
     await openEditor()
     const dialog = page.getByRole("dialog")
     await dialog
-      .getByRole("button", { name: "Detect check-in method", exact: true })
+      .getByRole("button", { name: "Detect method", exact: true })
       .click()
     // The selection updates before the discovery promise clears its running state.
     await expect(
       dialog.getByRole("button", {
-        name: "Detect check-in method",
+        name: "Detect method",
         exact: true,
       }),
     ).toBeEnabled()

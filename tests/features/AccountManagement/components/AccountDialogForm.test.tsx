@@ -2228,7 +2228,7 @@ describe("AccountDialog AccountForm", () => {
         ),
       ).toBeInTheDocument()
       expect(
-        screen.getByText("accountDialog:form.checkInStatusPending"),
+        screen.getByText("accountDialog:form.checkInSelectionAutomaticPending"),
       ).toBeInTheDocument()
       expect(
         screen.queryByText("accountDialog:form.checkInStatusDesc"),
@@ -2850,8 +2850,49 @@ describe("AccountDialog AccountForm", () => {
     render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
-      await screen.findByText("accountDialog:form.checkInStatusUnknown"),
+      await screen.findByText("accountDialog:form.checkInSelectionUnconfirmed"),
     ).toBeVisible()
+  })
+
+  it("keeps the manually selected method when detection of another method failed", async () => {
+    const props = createProps()
+    const selectedMethod = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    props.draft.siteType = SITE_TYPES.NEW_API
+    const checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn = {
+      ...checkIn,
+      selection: { mode: "manual", methodId: selectedMethod },
+      methodKnowledge: {
+        methods: {
+          ...checkIn.methodKnowledge.methods,
+          [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
+            detection: {
+              outcome: "unknown",
+              reason: "timeout",
+              attemptedAt: 200,
+            },
+          },
+        },
+      },
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const selection = await screen.findByRole("combobox", {
+      name: "accountDialog:form.checkInMethod",
+    })
+    expect(selection).toHaveAccessibleDescription(
+      expect.stringContaining("accountDialog:form.checkInStatusUnknown"),
+    )
+    expect(selection).toHaveAccessibleDescription(
+      expect.stringContaining("accountDialog:form.checkInSelectionManual"),
+    )
+    expect(
+      screen.queryByText("accountDialog:form.checkInSelectionUnconfirmed"),
+    ).not.toBeInTheDocument()
   })
 
   it("shows retained detection failures consistently and recovers after a confirmed probe", async () => {
@@ -2881,11 +2922,11 @@ describe("AccountDialog AccountForm", () => {
     const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
-      await screen.findByText("accountDialog:form.checkInStatusUnknown"),
+      await screen.findByText("accountDialog:form.checkInSelectionUnconfirmed"),
     ).toBeVisible()
     expect(
-      screen.getByText("accountDialog:form.checkInSelectionUnconfirmed"),
-    ).toBeVisible()
+      screen.queryByText("accountDialog:form.checkInStatusUnknown"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("accountDialog:form.checkInStatusDesc"),
     ).not.toBeInTheDocument()
@@ -2944,7 +2985,7 @@ describe("AccountDialog AccountForm", () => {
     ).toBeChecked()
   })
 
-  it("shows the automatic result in the trigger and explains it below", async () => {
+  it("shows the automatic result in the trigger with a concise redetection hint", async () => {
     testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
     testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
     const props = createProps()
@@ -2965,7 +3006,7 @@ describe("AccountDialog AccountForm", () => {
       )
       expect(methodSelect).not.toHaveTextContent("New API")
       expect(methodSelect).toHaveAccessibleDescription(
-        "Automatically selected: Daily check-in. When automatic check-in is enabled, discovery runs again if this method becomes unsupported.",
+        "When auto check-in is on, unsupported methods trigger re-detection.",
       )
     } finally {
       testI18n.removeResourceBundle("en", "accountDialog")
@@ -3019,7 +3060,87 @@ describe("AccountDialog AccountForm", () => {
     }
   })
 
-  it("names the fixed method in the manual selection helper", async () => {
+  it.each([
+    { mode: "automatic", outcome: "matched", status: null },
+    {
+      mode: "automatic",
+      outcome: "unknown",
+      status:
+        "Site support for the selected method is unconfirmed. Select “Detect method” to verify.",
+    },
+    {
+      mode: "manual",
+      outcome: "unsupported",
+      status:
+        "Select “Detect method” to check whether this method is still available.",
+    },
+    { mode: "manual", outcome: "matched", status: null },
+  ] as const)(
+    "keeps the BizDecipher scope distinct when a $mode method is $outcome",
+    async ({ mode, outcome, status }) => {
+      testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
+      testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
+      const props = createProps()
+      const methodId = AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn
+      props.draft.siteType = SITE_TYPES.SUB2API
+      props.draft.checkIn = {
+        automaticExecutionEnabled: true,
+        selection: { mode, methodId },
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection:
+                outcome === "unknown"
+                  ? { outcome, reason: "network", attemptedAt: 200 }
+                  : { outcome, evidence: { source: "probe", observedAt: 200 } },
+            },
+          },
+        },
+      }
+
+      try {
+        render(<AccountForm {...withSitePolicy(props)} />)
+        const method = await screen.findByRole("combobox", {
+          name: enAccountDialog.form.checkInMethod,
+        })
+        const section = within(
+          screen.getByTestId(
+            ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+          ),
+        )
+        const scope =
+          "Only claims the daily free gift. Draws that cost points or balance are available on the site."
+        const redetection =
+          "When auto check-in is on, unsupported methods trigger re-detection."
+
+        expect(method).toHaveTextContent("BizDecipher daily free gift")
+        if (status) {
+          expect(section.getByRole("status")).toHaveTextContent(status)
+          expect(method).toHaveAccessibleDescription(
+            `${status} Scope: ${scope}`,
+          )
+          expect(section.queryByText(redetection)).not.toBeInTheDocument()
+        } else {
+          expect(section.queryByRole("status")).not.toBeInTheDocument()
+          expect(method).toHaveAccessibleDescription(
+            mode === "automatic" ? `${redetection} ${scope}` : scope,
+          )
+        }
+        if (mode === "manual") {
+          expect(
+            section.getByRole("button", {
+              name: "Restore automatic selection",
+            }),
+          ).toBeVisible()
+        }
+      } finally {
+        testI18n.removeResourceBundle("en", "accountDialog")
+        testI18n.removeResourceBundle("en", "autoCheckin")
+      }
+    },
+  )
+
+  it("explains that a manual selection stays fixed", async () => {
     testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
     testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
     const props = createProps()
@@ -3045,7 +3166,7 @@ describe("AccountDialog AccountForm", () => {
       ).toHaveTextContent("Daily check-in")
       expect(
         screen.getByText(
-          "You manually selected Daily check-in. The system will not replace it automatically.",
+          "This method is fixed and will not switch automatically.",
         ),
       ).toBeVisible()
     } finally {
@@ -3181,7 +3302,7 @@ describe("AccountDialog AccountForm", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "accountDialog:form.redetectCheckInMethods",
+        name: "accountDialog:form.detectCheckInMethod",
       }),
     )
     expect(props.onRedetectCheckInMethods).toHaveBeenCalledOnce()
@@ -3215,7 +3336,7 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
     await user.click(
       screen.getByRole("button", {
-        name: "accountDialog:form.redetectCheckInMethods",
+        name: "accountDialog:form.detectCheckInMethod",
       }),
     )
     expect(props.onRedetectCheckInMethods).toHaveBeenCalledOnce()
@@ -3393,7 +3514,7 @@ describe("AccountDialog AccountForm", () => {
     }
   })
 
-  it("does not show built-in auto check-in controls for AIHubMix accounts", async () => {
+  it("offers support without a detector when an unsupported account retains a previous method", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.AIHUBMIX
     props.draft.checkIn = createCheckIn({
@@ -3401,6 +3522,10 @@ describe("AccountDialog AccountForm", () => {
       supported: false,
       automaticExecutionEnabled: true,
     })
+    props.draft.checkIn.selection = {
+      mode: "manual",
+      methodId: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    }
 
     render(<AccountForm {...withSitePolicy(props)} />)
 
@@ -3409,6 +3534,16 @@ describe("AccountDialog AccountForm", () => {
         exact: false,
       }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:checkInFeedback.request",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:form.detectCheckInMethod",
+      }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("accountDialog:form.checkInStatusDesc"),
     ).not.toBeInTheDocument()

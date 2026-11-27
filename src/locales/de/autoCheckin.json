@@ -170,13 +170,17 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "Holt nur das tägliche Gratisgeschenk ab. An Ziehungen, die Punkte oder Guthaben kosten, nehmen Sie direkt auf der Website teil.",
+      "name": "Tägliches Gratisgeschenk von {{source}}"
+    },
     "daily": {
       "description": "Diese Methode verwendet das Check-in-Protokoll des Drittanbieters {{source}} und funktioniert nur bei Installationen, die es unterstützen.",
       "name": "Täglicher Check-in über {{source}}"
     },
     "freeDailyDraw": {
       "description": "Beansprucht verfügbare kostenlose Tagesziehungen und Wohlfahrts-Airdrops bei {{source}}. Eine konfigurierte Dashboard-Anmeldung ist erforderlich.",
-      "name": "Kostenlose Tagesprämien"
+      "name": "{{source}} – kostenlose Tagesprämien"
     },
     "generic": {
       "name": "Täglicher Check-in"
@@ -190,12 +194,14 @@
       "aiRouter": "AI-ROUTER",
       "apiKeyCasa": "ApiKey Casa",
       "baiApi": "Bai API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",
       "daigua": "DaiGua",
       "denxio": "Denxio",
       "freeApi": "Luna",
       "geniusProgrammer": "Genius Programmer Relay",
       "hiyo": "Hiyo Free",
+      "hog": "Hog API Gateway",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",
