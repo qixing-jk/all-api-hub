@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest"
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { runInNewContext } from "node:vm"
+import { describe, expect, it, vi } from "vitest"
 
 import {
   assertPreparationWindow,
@@ -9,6 +12,60 @@ import {
 } from "~~/scripts/suites/freegg/evidence.mjs"
 
 describe("FreeGG live acceptance evidence", () => {
+  it("reserves the reset run when the preparation ledger read finishes after midnight", async () => {
+    const source = readFileSync(
+      "scripts/test-freegg-checkin-e2e-live.mjs",
+      "utf8",
+    )
+    const start = source.indexOf("        const before = await ledger()")
+    const end = source.indexOf(
+      "        // Optional actual mutation coverage:",
+      start,
+    )
+    assert(start >= 0 && end > start, "Locate the real preparation branch")
+    const resetAt = Date.parse("2026-11-24T16:00:00Z")
+    let clock = resetAt - 1000
+    const click = vi.fn(async () => {
+      throw new Error("pre-reset run clicked")
+    })
+    const ledger = async () => {
+      const serverTime = clock
+      clock = resetAt + 1000
+      return {
+        serverTime,
+        items: [
+          {
+            user_id: 17,
+            type: 1,
+            created_at: serverTime / 1000,
+            other: {
+              content_parts: [
+                { key: "Daily allowance {{quota}}", params: { quota: "$20" } },
+              ],
+            },
+          },
+        ],
+      }
+    }
+    const run = (target: number | undefined) =>
+      runInNewContext(`(async () => { ${source.slice(start, end)} })()`, {
+        assert,
+        ledger,
+        findAllowance,
+        expectedUserId: "17",
+        resetAt: target,
+        requests: [],
+        Date: { now: () => clock },
+        checkin: { getByTestId: () => ({ click }) },
+      })
+    await run(resetAt)
+    expect(clock).toBeGreaterThan(resetAt)
+    expect(click).not.toHaveBeenCalled()
+    // The ordinary run still exercises its explicit already-claimed action.
+    clock = resetAt - 1000
+    await expect(run(undefined)).rejects.toThrow("pre-reset run clicked")
+    expect(click).toHaveBeenCalledOnce()
+  })
   it("pins the upcoming UTC+8 reset before preparing an account", () => {
     const start = Date.parse("2026-11-24T15:40:00Z")
     const reset = planReset(start)
