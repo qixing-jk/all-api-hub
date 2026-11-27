@@ -170,10 +170,38 @@ describe("scheduled E2E build reuse", () => {
     expect(tests).toContain(
       "matrix: ${{ fromJSON(needs.browser-compat-matrix.outputs.matrix) }}",
     )
-    expect(tests).toContain("--shard=${{ matrix.shard }}/3")
+    expect(tests).toContain("AAH_E2E_SHARD_INDEX: ${{ matrix.shard }}")
+    expect(tests).toContain('AAH_E2E_SHARD_TOTAL: "3"')
+    expect(tests).toContain(
+      "--shard=${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}",
+    )
     expect(readFileSync("playwright.config.ts", "utf8")).not.toMatch(
       /fullyParallel:\s*true/,
     )
+  })
+
+  it("balances compatibility shards using one frozen duration profile", () => {
+    const source = workflow("e2e-browser-compat")
+    const build = job(source, "e2e-build")
+    expect(build).toContain("include_duration_profile: true")
+    const tests = job(source, "chrome-compat")
+    const restore = tests.indexOf("name: e2e-shard-duration-profile")
+    const run = tests.indexOf("- name: Run browser compatibility E2E")
+    expect(restore).toBeGreaterThan(-1)
+    expect(restore).toBeLessThan(run)
+    expect(tests).toContain("node scripts/e2e-shard-plan.mjs")
+    expect(tests).not.toContain("actions/cache/restore@")
+    const producer = workflow("e2e-build")
+    for (const name of [
+      "Restore E2E shard duration profile",
+      "Preserve an empty profile on a cache miss",
+      "Upload E2E shard duration profile",
+    ]) {
+      const step = producer.split(`- name: ${name}`)[1]?.split("- name:")[0]
+      expect(step).toContain(
+        "if: inputs.derive_variants || inputs.include_duration_profile",
+      )
+    }
   })
 
   it.each([

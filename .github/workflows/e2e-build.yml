@@ -15,6 +15,10 @@ on:
         description: Produce the manifest variants from this build instead of building each one
         type: boolean
         default: false
+      include_duration_profile:
+        description: Freeze the spec duration profile for this run's test shards
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -108,7 +112,7 @@ jobs:
       # One snapshot serves every default shard, including reruns. Reading the
       # latest cache separately in rerun shards can change their test membership.
       - name: Restore E2E shard duration profile
-        if: inputs.derive_variants
+        if: inputs.derive_variants || inputs.include_duration_profile
         uses: actions/cache/restore@v5
         with:
           path: .e2e-durations
@@ -117,12 +121,12 @@ jobs:
             e2e-spec-durations-
 
       - name: Preserve an empty profile on a cache miss
-        if: inputs.derive_variants
+        if: inputs.derive_variants || inputs.include_duration_profile
         run: |
           node --input-type=module -e 'import fs from "node:fs"; fs.mkdirSync(".e2e-durations", { recursive: true }); if (!fs.existsSync(".e2e-durations/spec-durations.json")) fs.writeFileSync(".e2e-durations/spec-durations.json", JSON.stringify({ version: 1, durations: {} }));'
 
       - name: Upload E2E shard duration profile
-        if: inputs.derive_variants
+        if: inputs.derive_variants || inputs.include_duration_profile
         uses: actions/upload-artifact@v7
         with:
           name: e2e-shard-duration-profile

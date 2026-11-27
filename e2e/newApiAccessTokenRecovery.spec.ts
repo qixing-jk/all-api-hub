@@ -576,7 +576,14 @@ for (const scenario of [
         typeof chrome.sidePanel?.open === "function" &&
         typeof navigator.locks?.request === "function",
     )
-    let bridge: Page
+    // Opening a Playwright page activates its tab. Prepare the message bridge
+    // before recovery opens the user's credential tab so it cannot steal focus
+    // from the page that waitForNewUserFacingCredentialPage must identify.
+    const bridge = await context.newPage()
+    await bridge.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
+    )
+    await page.bringToFront()
     let recoveryView: JSHandle<Window & typeof globalThis>
     let securityPagePromise: ReturnType<
       typeof waitForNewUserFacingCredentialPage
@@ -636,10 +643,6 @@ for (const scenario of [
       })
       if (supportsNativeSidePanel) {
         await openSiteButton.click()
-        bridge = await context.newPage()
-        await bridge.goto(
-          `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
-        )
         recoveryView = await getNativeSidePanel(bridge)
       } else {
         const [fullPage] = await Promise.all([
@@ -662,11 +665,6 @@ for (const scenario of [
         )
         await waitForExtensionRoot(fullPage)
         recoveryView = await fullPage.evaluateHandle(() => window)
-        // Runtime messages do not echo back to the view that sends them.
-        bridge = await context.newPage()
-        await bridge.goto(
-          `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
-        )
       }
       await expect.poll(() => page.isClosed()).toBe(true)
     } else {
@@ -709,10 +707,6 @@ for (const scenario of [
         await popupDialog
           .getByRole("button", { name: "Continue in side panel", exact: true })
           .click()
-        bridge = await context.newPage()
-        await bridge.goto(
-          `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
-        )
         recoveryView = await getNativeSidePanel(bridge)
       } else {
         const [fullPage] = await Promise.all([
@@ -733,11 +727,6 @@ for (const scenario of [
         )
         await waitForExtensionRoot(fullPage)
         recoveryView = await fullPage.evaluateHandle(() => window)
-        // Runtime messages do not echo back to the view that sends them.
-        bridge = await context.newPage()
-        await bridge.goto(
-          `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#about`,
-        )
       }
       await expect.poll(() => page.isClosed()).toBe(true)
 
