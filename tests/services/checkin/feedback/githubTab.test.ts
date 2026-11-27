@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   CHECKIN_FEEDBACK_ISSUE_LIMITS,
+  CHECKIN_FEEDBACK_ISSUE_TEMPLATE,
   CHECKIN_FEEDBACK_ISSUE_URL,
 } from "~/services/checkin/feedback/githubIssue"
 import {
@@ -10,7 +11,7 @@ import {
   setupCheckInFeedbackTabHints,
 } from "~/services/checkin/feedback/githubTab"
 
-const url = `${CHECKIN_FEEDBACK_ISSUE_URL}?template=checkin_adaptation.yml`
+const url = `${CHECKIN_FEEDBACK_ISSUE_URL}?template=${CHECKIN_FEEDBACK_ISSUE_TEMPLATE}`
 const hint = {
   title: "Report copied",
   description: "Paste the full report before submitting",

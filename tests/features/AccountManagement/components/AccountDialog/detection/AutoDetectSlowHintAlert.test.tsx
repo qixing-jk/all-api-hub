@@ -10,17 +10,16 @@ vi.mock("~/utils/navigation/docsLinks", () => ({
 describe("AutoDetectSlowHintAlert", () => {
   afterEach(() => {
     vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   it("opens auto-detect troubleshooting doc", async () => {
-    const { getDocsAutoDetectUrl } = await import(
-      "~/utils/navigation/docsLinks"
-    )
+    const { getDocsAutoDetectUrl } =
+      await import("~/utils/navigation/docsLinks")
     const expectedUrl = "https://example.com/auto-detect"
     vi.mocked(getDocsAutoDetectUrl).mockReturnValue(expectedUrl)
 
-    const createSpy = vi.fn()
-    ;(browser.tabs as any).create = createSpy
+    const createSpy = vi.spyOn(browser.tabs, "create")
 
     render(<AutoDetectSlowHintAlert />)
 
@@ -35,22 +34,34 @@ describe("AutoDetectSlowHintAlert", () => {
     })
   })
 
-  it("keeps troubleshooting available without suggesting a permission-triggered runtime restart", async () => {
-    render(<AutoDetectSlowHintAlert />)
-    expect(
-      await screen.findByText("accountDialog:messages.autoDetectTakingTooLong"),
-    ).toBeVisible()
+  it("shows an info notice with a troubleshooting action while detection is pending", async () => {
+    const onHelpClick = vi.fn()
+    const createSpy = vi.spyOn(browser.tabs, "create")
+
+    render(<AutoDetectSlowHintAlert onHelpClick={onHelpClick} />)
+
+    const status = await screen.findByRole("status")
+    expect(status).toHaveAttribute("data-tone", "info")
+    expect(status).toHaveClass("bg-info-soft")
+    expect(status).toHaveTextContent(
+      "accountDialog:messages.autoDetectTakingTooLong",
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(
       screen.queryByText(
         "accountDialog:messages.autoDetectCookiePermissionReloadHint",
       ),
     ).toBeNull()
     expect(screen.getAllByRole("button")).toHaveLength(1)
-    expect(
-      screen.getByRole("button", {
-        name: "accountDialog:actions.helpDocument",
-      }),
-    ).toBeVisible()
+    const helpButton = screen.getByRole("button", {
+      name: "accountDialog:actions.helpDocument",
+    })
+    expect(helpButton).toBeVisible()
+    expect(status).toContainElement(helpButton)
+    fireEvent.click(helpButton)
+
+    expect(onHelpClick).toHaveBeenCalledOnce()
+    expect(createSpy).not.toHaveBeenCalled()
     expect(screen.queryByRole("dialog")).toBeNull()
   })
 })

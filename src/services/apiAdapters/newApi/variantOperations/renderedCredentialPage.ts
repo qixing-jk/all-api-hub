@@ -1,5 +1,7 @@
 import {
+  CREDENTIAL_PAGE_STATES,
   TEMP_CONTEXT_TASK_KINDS,
+  type CredentialPageState,
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
@@ -8,7 +10,7 @@ import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 export async function inspectRenderedCredentialPage(
   originUrl: string,
   execution: ProtectionBypassExecution,
-): Promise<"credential" | "not_found" | "unknown"> {
+): Promise<CredentialPageState> {
   try {
     const result = await executeProtectionBypassTask({
       execution,
@@ -18,10 +20,11 @@ export async function inspectRenderedCredentialPage(
       },
     })
     return result?.success &&
-      (result.state === "credential" || result.state === "not_found")
+      (result.state === CREDENTIAL_PAGE_STATES.Credential ||
+        result.state === CREDENTIAL_PAGE_STATES.NotFound)
       ? result.state
-      : "unknown"
+      : CREDENTIAL_PAGE_STATES.Unknown
   } catch {
-    return "unknown"
+    return CREDENTIAL_PAGE_STATES.Unknown
   }
 }

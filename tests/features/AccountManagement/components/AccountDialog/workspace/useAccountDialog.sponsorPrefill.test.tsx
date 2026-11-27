@@ -210,7 +210,7 @@ describe("useAccountDialog sponsor prefill", () => {
   })
 
   it.each([DIALOG_MODES.ADD, DIALOG_MODES.EDIT])(
-    "resumes %s token recovery without replacing the carried form with the active tab",
+    "resumes %s token recovery with the carried token and no synthetic detection error",
     async (mode) => {
       const account =
         mode === DIALOG_MODES.EDIT
@@ -250,10 +250,7 @@ describe("useAccountDialog sponsor prefill", () => {
         )
         expect(result.current.state.url).toBe(recoveryState.url)
         expect(result.current.state.draft).toEqual(recoveryState.draft)
-        expect(result.current.state.detectionError).toMatchObject({
-          type: "unknown",
-          recoveryAction: "access_token",
-        })
+        expect(result.current.state.detectionError).toBeNull()
       })
       expect(result.current.state.showAccessToken).toBe(false)
       expect(result.current.state.formSource).toBe(

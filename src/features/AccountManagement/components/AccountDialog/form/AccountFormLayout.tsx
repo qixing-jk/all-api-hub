@@ -1,23 +1,25 @@
-import { ChevronDown } from "lucide-react"
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { useTranslation } from "react-i18next"
-
-import { Button } from "~/components/ui"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu"
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react"
+
+import { MODAL_BODY_SELECTOR } from "~/components/ui/Dialog/Modal"
 import {
   ACCOUNT_EDIT_SECTIONS,
   ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+  ACCOUNT_FORM_SECTIONS,
   type AccountFormSectionId,
 } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import { useMediaQuery } from "~/hooks/useMediaQuery"
-import { cn } from "~/lib/utils"
+import type { AccountFormIssue } from "~/services/accounts/editing/accountFormValidation"
 import { resolveNavigationScrollBehavior } from "~/utils/dom/scrollBehavior"
 import { temporarilyHighlight } from "~/utils/dom/temporaryHighlight"
+
+import { AccountFormNavigation } from "./AccountFormNavigation"
 
 /** Leave space below the horizontal directory, which meets the modal header. */
 function getTopInset(navigation: HTMLElement | null) {
@@ -32,6 +34,9 @@ export function AccountFormLayout({
   children,
   guidance,
   focusSection,
+  formRef,
+  onBlurField,
+  issueSections,
   hasAccountLogin = false,
 }: {
   continuous: boolean
@@ -44,13 +49,15 @@ export function AccountFormLayout({
    */
   focusSection?: AccountFormSectionId
   hasAccountLogin?: boolean
+  formRef?: React.RefObject<HTMLDivElement | null>
+  onBlurField?: (element: HTMLElement) => void
+  issueSections?: Partial<Record<string, AccountFormIssue["kind"]>>
 }) {
-  const { t } = useTranslation("accountDialog")
-  const isCompact = useMediaQuery("(max-width: 639px)")
   const showGuidanceInDirectory = useMediaQuery(
     "(min-width: 1024px) and (min-height: 800px)",
   )
-  const rootRef = useRef<HTMLDivElement>(null)
+  const internalRootRef = useRef<HTMLDivElement>(null)
+  const rootRef = formRef ?? internalRootRef
   const navigationRef = useRef<HTMLElement>(null)
   const directoryRef = useRef<HTMLDivElement>(null)
   const sections = useMemo(
@@ -58,7 +65,7 @@ export function AccountFormLayout({
       ACCOUNT_EDIT_SECTIONS.filter(
         ({ id }) =>
           hasAccountLogin ||
-          id !== ACCOUNT_FORM_SECTION_ELEMENT_IDS["account-login"],
+          id !== ACCOUNT_FORM_SECTION_ELEMENT_IDS[ACCOUNT_FORM_SECTIONS.LOGIN],
       ),
     [hasAccountLogin],
   )
@@ -68,7 +75,6 @@ export function AccountFormLayout({
   const [activeId, setActiveId] = useState<string>(
     requestedSectionId ?? sections[0]!.id,
   )
-  const activeSection = sections.find(({ id }) => id === activeId)
   const navigationSelection = useRef<string | null>(null)
   const pendingMenuDestination = useRef<string | null>(null)
   const destinationAnimation = useRef<Animation | null>(null)
@@ -105,7 +111,7 @@ export function AccountFormLayout({
   useEffect(() => {
     if (!continuous) return
     const root = rootRef.current
-    const scroller = root?.closest<HTMLElement>('[data-slot="modal-body"]')
+    const scroller = root?.closest<HTMLElement>(MODAL_BODY_SELECTOR)
     if (!root || !scroller) return
     const update = () => {
       // An explicit destination stays selected through animation and resize.
@@ -146,43 +152,49 @@ export function AccountFormLayout({
       scroller.removeEventListener("keydown", interrupt)
       window.removeEventListener("resize", update)
     }
-  }, [continuous, sections])
+  }, [continuous, rootRef, sections])
 
-  const navigate = (id: string) => {
-    const root = rootRef.current
-    const target = root?.querySelector<HTMLElement>(`#${id}`)
-    const scroller = root?.closest<HTMLElement>('[data-slot="modal-body"]')
-    if (!target) return
-    navigationSelection.current = id
-    if (scroller) {
-      const destination =
-        scroller.scrollTop +
-        target.getBoundingClientRect().top -
-        scroller.getBoundingClientRect().top -
-        getTopInset(directoryRef.current)
-      scroller.scrollTo({
-        top: Math.max(
-          0,
-          Math.min(destination, scroller.scrollHeight - scroller.clientHeight),
-        ),
-        behavior: resolveNavigationScrollBehavior(),
-      })
-    }
-    setActiveId(id)
-    target.querySelector<HTMLElement>("h3")?.focus({ preventScroll: true })
-    destinationAnimation.current?.cancel()
-    destinationAnimation.current =
-      target
-        .querySelector<HTMLElement>("[data-navigation-feedback]")
-        ?.animate?.(
-          [
-            { opacity: 1, offset: 0 },
-            { opacity: 1, offset: 0.3 },
-            { opacity: 0, offset: 1 },
-          ],
-          { duration: 1800, easing: "ease-out" },
-        ) ?? null
-  }
+  const navigate = useCallback(
+    (id: string) => {
+      const root = rootRef.current
+      const target = root?.querySelector<HTMLElement>(`#${id}`)
+      const scroller = root?.closest<HTMLElement>(MODAL_BODY_SELECTOR)
+      if (!target) return
+      navigationSelection.current = id
+      if (scroller) {
+        const destination =
+          scroller.scrollTop +
+          target.getBoundingClientRect().top -
+          scroller.getBoundingClientRect().top -
+          getTopInset(directoryRef.current)
+        scroller.scrollTo({
+          top: Math.max(
+            0,
+            Math.min(
+              destination,
+              scroller.scrollHeight - scroller.clientHeight,
+            ),
+          ),
+          behavior: resolveNavigationScrollBehavior(),
+        })
+      }
+      setActiveId(id)
+      target.querySelector<HTMLElement>("h3")?.focus({ preventScroll: true })
+      destinationAnimation.current?.cancel()
+      destinationAnimation.current =
+        target
+          .querySelector<HTMLElement>("[data-navigation-feedback]")
+          ?.animate?.(
+            [
+              { opacity: 1, offset: 0 },
+              { opacity: 1, offset: 0.3 },
+              { opacity: 0, offset: 1 },
+            ],
+            { duration: 1800, easing: "ease-out" },
+          ) ?? null
+    },
+    [rootRef],
+  )
 
   /**
    * Land on the section the dialog was opened for.
@@ -200,13 +212,24 @@ export function AccountFormLayout({
     if (!target) return
     navigate(requestedSectionId)
     return temporarilyHighlight(target)
-  }, [requestedSectionId])
+  }, [navigate, requestedSectionId, rootRef])
 
-  if (!continuous) return <div className="space-y-density-3">{children}</div>
+  if (!continuous) {
+    return (
+      <div
+        ref={rootRef}
+        className="space-y-density-3"
+        onBlurCapture={(event) => onBlurField?.(event.target)}
+      >
+        {children}
+      </div>
+    )
+  }
 
   return (
     <div
       ref={rootRef}
+      onBlurCapture={(event) => onBlurField?.(event.target)}
       className="relative grid min-w-0 gap-4 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-6"
       onFocusCapture={(event) => {
         const section = event.target.closest<HTMLElement>(
@@ -220,86 +243,21 @@ export function AccountFormLayout({
         }
       }}
     >
-      <aside className="bg-popover border-border -top-density-4 -mt-density-4 sm:-top-density-6 sm:-mt-density-6 sticky z-10 -mx-4 min-w-0 border-b px-4 sm:-mx-6 sm:px-6 lg:static lg:top-0 lg:mx-0 lg:mt-0 lg:border-r lg:border-b-0 lg:px-0 lg:pr-4">
+      <aside className="sticky -top-density-4 z-10 -mx-4 -mt-density-4 min-w-0 border-b border-border bg-popover px-4 sm:-top-density-6 sm:-mx-6 sm:-mt-density-6 sm:px-6 lg:static lg:top-0 lg:mx-0 lg:mt-0 lg:border-r lg:border-b-0 lg:px-0 lg:pr-4">
         <div
           ref={directoryRef}
-          className="bg-popover flex min-w-0 items-center lg:sticky lg:top-0 lg:flex-col lg:items-stretch"
+          className="flex min-w-0 items-center bg-popover lg:sticky lg:top-0 lg:flex-col lg:items-stretch"
         >
-          <nav
-            ref={navigationRef}
-            aria-label={t("sections.navigation")}
-            className="py-density-2 flex min-w-0 flex-1 gap-1 overflow-x-auto lg:flex-col lg:overflow-visible lg:py-0"
-          >
-            {isCompact ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                    aria-label={`${activeSection ? t(activeSection.title) : ""}, ${t("sections.navigation")}`}
-                    rightIcon={<ChevronDown className="size-4" />}
-                  >
-                    {sections
-                      .filter(({ id }) => id === activeId)
-                      .map(({ id, title, icon: Icon }) => (
-                        <span key={id} className="flex items-center gap-2.5">
-                          <Icon
-                            aria-hidden="true"
-                            className="size-4 shrink-0"
-                          />
-                          {t(title)}
-                        </span>
-                      ))}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-(--radix-dropdown-menu-trigger-width)"
-                  onCloseAutoFocus={(event) => {
-                    const destination = pendingMenuDestination.current
-                    if (!destination) return
-                    event.preventDefault()
-                    pendingMenuDestination.current = null
-                    navigate(destination)
-                  }}
-                >
-                  {sections.map(({ id, title, icon: Icon }) => (
-                    <DropdownMenuItem
-                      key={id}
-                      aria-current={activeId === id ? "location" : undefined}
-                      onSelect={() => {
-                        pendingMenuDestination.current = id
-                      }}
-                    >
-                      <Icon aria-hidden="true" className="size-4 shrink-0" />
-                      {t(title)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              sections.map(({ id, title, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-controls={id}
-                  aria-current={activeId === id ? "location" : undefined}
-                  onClick={() => navigate(id)}
-                  className={cn(
-                    "focus-visible:ring-ring py-density-2 active:bg-primary-soft flex min-h-10 shrink-0 items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset motion-reduce:transition-none lg:shrink lg:break-words",
-                    activeId === id
-                      ? "bg-primary-soft text-primary-soft-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  )}
-                >
-                  <Icon aria-hidden="true" className="size-4 shrink-0" />
-                  {t(title)}
-                </button>
-              ))
-            )}
-          </nav>
+          <AccountFormNavigation
+            navigationRef={navigationRef}
+            sections={sections}
+            activeId={activeId}
+            issueSections={issueSections}
+            pendingMenuDestination={pendingMenuDestination}
+            navigate={navigate}
+          />
           {guidance && showGuidanceInDirectory && (
-            <div className="border-border mt-density-4 pt-density-3 border-t">
+            <div className="mt-density-4 border-t border-border pt-density-3">
               {guidance}
             </div>
           )}
@@ -308,7 +266,7 @@ export function AccountFormLayout({
       <div className="min-w-0">
         {children}
         {guidance && !showGuidanceInDirectory && (
-          <div className="border-border pt-density-4 border-t">{guidance}</div>
+          <div className="border-t border-border pt-density-4">{guidance}</div>
         )}
       </div>
     </div>

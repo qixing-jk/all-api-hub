@@ -49,6 +49,17 @@ export function createUiHandoffChannel<T>(config: {
     const state = config.normalize(envelope.state)
     return state === null ? null : { windowId: envelope.windowId, state }
   }
+  const writeDraft = async (key: string, windowId: number, state: T) => {
+    const written = await setSessionStorageValues({
+      [key]: {
+        version: UI_HANDOFF_VERSION,
+        createdAt: Date.now(),
+        windowId,
+        state,
+      },
+    })
+    if (!written) throw new Error("UI handoff session storage unavailable")
+  }
 
   return {
     /** Stages validated data before navigation; an existing ID updates its draft. */
@@ -62,21 +73,20 @@ export function createUiHandoffChannel<T>(config: {
         throw new Error("Invalid UI handoff")
       const id = previousId ?? crypto.randomUUID()
       if (!VALID_ID.test(id)) throw new Error("Invalid UI handoff ID")
-      await locked(async () => {
-        if (
-          !(await setSessionStorageValues({
-            [draftKey(id)]: {
-              version: UI_HANDOFF_VERSION,
-              createdAt: Date.now(),
-              windowId,
-              state: normalized,
-            },
-          }))
-        ) {
-          throw new Error("UI handoff session storage unavailable")
-        }
-      })
+      await locked(() => writeDraft(draftKey(id), windowId, normalized))
       return id
+    },
+    /** Updates an already-staged draft in place under the channel lock. */
+    async update(id: string, mutate: (state: T) => T): Promise<void> {
+      if (!VALID_ID.test(id)) throw new Error("Invalid UI handoff ID")
+      await locked(async () => {
+        const key = draftKey(id)
+        const envelope = normalizeEnvelope(await read(key))
+        if (envelope === null) throw new Error("UI handoff unavailable")
+        const normalized = config.normalize(mutate(envelope.state))
+        if (normalized === null) throw new Error("Invalid UI handoff")
+        await writeDraft(key, envelope.windowId, normalized)
+      })
     },
     /** Publishes without replacing an unclaimed request belonging to this window. */
     publish(id: string, windowId: number): Promise<boolean> {

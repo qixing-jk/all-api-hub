@@ -7,7 +7,10 @@ import {
   type AccountRuntimeKeyResolution,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { decodeTokenId } from "~/services/apiAdapters/newApi/keys/accountKeyIdentity"
+import {
+  ACCOUNT_KEY_IDENTITY_ERRORS,
+  decodeTokenId,
+} from "~/services/apiAdapters/newApi/keys/accountKeyIdentity"
 import { type NewApiAccountKeyResourceConfig } from "~/services/apiAdapters/newApi/keys/accountKeyResourceConfig"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -51,7 +54,7 @@ export const resolveRuntimeKey = async (
       tokenId,
     )
     if (token && token.id !== tokenId)
-      throw new Error("token_identity_mismatch")
+      throw new Error(ACCOUNT_KEY_IDENTITY_ERRORS.TokenIdentityMismatch)
   } catch (error) {
     return {
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,

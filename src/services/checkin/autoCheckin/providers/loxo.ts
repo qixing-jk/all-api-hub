@@ -6,6 +6,7 @@ import {
   fetchLoxoCheckInStatus,
   performLoxoCheckIn,
 } from "~/services/apiService/sub2api/checkin/loxoCheckIn"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { SiteAccount } from "~/types"
 import {
@@ -17,7 +18,7 @@ import type {
   AutoCheckinProvider,
   AutoCheckinProviderReadContext,
 } from "./contracts"
-import { detectWithStatusReadback } from "./detection"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS as messages } from "./shared"
 import {
   createSub2ApiCheckInMutationRequest,
@@ -28,10 +29,13 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) => {
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth: Sub2ApiCheckInStatusAuth = { allowAuthenticationRecovery: false },
+) => {
   const status = await fetchLoxoCheckInStatus(
     createSub2ApiCheckInReadRequest(context),
-    { allowAuthenticationRecovery: !!context.authenticationRecovery },
+    auth,
   )
   return {
     ...toSub2ApiCheckInStatus(status, context.observedAt),
@@ -46,16 +50,11 @@ const manualVerification = (account: SiteAccount) => ({
   messageParams: { checkInUrl: new URL("/check-in", account.site_url).href },
 })
 
-export const loxoProvider: AutoCheckinProvider = {
+export const loxoProvider: AutoCheckinProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
   getReadiness: getSub2ApiCheckInReadiness,
   getStatus: readStatus,
-  detect: (context) =>
-    detectWithStatusReadback(
-      { ...context, authenticationRecovery: undefined },
-      readStatus,
-    ),
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -74,7 +73,7 @@ export const loxoProvider: AutoCheckinProvider = {
           AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE,
         )
       const data = await performLoxoCheckIn(
-        createSub2ApiCheckInMutationRequest(site, context),
+        attempt?.request ?? createSub2ApiCheckInMutationRequest(site, context),
       )
       // The native success response confirms the grant but supplies no claim date.
       // Preserve its amount without inventing an asset or wallet conversion.
@@ -102,4 +101,4 @@ export const loxoProvider: AutoCheckinProvider = {
       return mapSub2ApiCheckInMutationError(error, context, site)
     }
   },
-}
+})

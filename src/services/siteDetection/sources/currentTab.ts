@@ -11,12 +11,14 @@ import {
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
 import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"
+import { SITE_TAB_REINJECT_RETRY_OPTIONS } from "~/services/browsingContext/siteTabRecovery"
 import {
   PROTECTION_BYPASS_EXECUTION_KINDS,
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import { isMessageReceiverUnavailableError } from "~/utils/browser/runtimeMessages"
 import { injectContentScript } from "~/utils/browser/scripting"
+import { sleep } from "~/utils/core/async"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -115,10 +117,14 @@ async function getUserDataFromCurrentTab({
         PROTECTION_BYPASS_USER_COMMANDS.DetectAccount &&
       (await injectContentScript(tabId, url))
     ) {
-      // Retry only the read, once. A responsive script with no session needs
-      // authentication guidance, not another stale-page warning.
-      contentScriptUnavailable = false
-      session = await readSession(true)
+      const { maxAttempts, delayMs } = SITE_TAB_REINJECT_RETRY_OPTIONS
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        if (attempt > 0) await sleep(delayMs)
+        // A responsive content script with no session needs sign-in guidance.
+        contentScriptUnavailable = false
+        session = await readSession(true)
+        if (session || !contentScriptUnavailable) break
+      }
     }
 
     if (session) {

@@ -73,5 +73,6 @@ it("keeps an earlier native grant separate from the new day's confirmed check-in
   expect(mockedAccountStorage.markAccountAsSiteCheckedIn).toHaveBeenCalledWith(
     account.id,
     observedAt,
+    expect.objectContaining({ account }),
   )
 })

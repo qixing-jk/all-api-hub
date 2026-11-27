@@ -50,6 +50,7 @@ export function getProtectionBypassHistoryLabels(t: TFunction) {
         "shieldBypass:history.commands.refresh_disabled_accounts",
       ),
       manual_checkin: t("shieldBypass:history.commands.manual_checkin"),
+      verify_checkin_status: t("autoCheckin:execution.actions.verifyStatus"),
       retry_checkin_account: t(
         "shieldBypass:history.commands.retry_checkin_account",
       ),
@@ -185,7 +186,7 @@ export function describeProtectionBypassHistory(
       .join(" · "),
     summaryEvidence: entry.fallbackDiagnostic?.statusCode
       ? `HTTP ${entry.fallbackDiagnostic.statusCode}`
-      : entry.fallbackDiagnostic?.code ?? "",
+      : (entry.fallbackDiagnostic?.code ?? ""),
     result: [
       entry.httpStatus ? `HTTP ${entry.httpStatus}` : undefined,
       entry.errorCode,

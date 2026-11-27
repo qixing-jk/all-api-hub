@@ -5,17 +5,18 @@ import {
 } from "~/services/accountBrowserSession/newApiStoredUserHint"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
-  ACCOUNT_SITE_ADAPTER_FAMILIES,
   getAccountSiteDefinition,
+  isCompatibleAccountFamily,
 } from "~/services/accountSiteDefinitions"
 import type { AccountBrowserIdentityCapability } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { isRecord } from "~/utils/core/object"
 
 export const newApiBrowserIdentity: AccountBrowserIdentityCapability = {
-  canObserve: ({ siteType }) =>
-    getAccountSiteDefinition(siteType)?.adapterFamily ===
-    ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+  canObserve({ siteType }) {
+    const family = getAccountSiteDefinition(siteType)?.adapterFamily
+    return isCompatibleAccountFamily(family)
+  },
   observe({ origin, siteType, candidateUserIds }) {
     const primaryHint = resolveNewApiStoredUserHint(siteType)
     const user =

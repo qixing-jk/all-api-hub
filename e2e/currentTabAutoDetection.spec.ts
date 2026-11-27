@@ -113,7 +113,7 @@ for (const signedIn of [true, false]) {
               userIdInput: "nano_reload_fixture",
               accessTokenInput: "",
             },
-            saveState: "absent",
+            saveState: "validates-access-token",
             guidance: "Complete NanoGPT credentials",
             timeoutMs: 45000,
           })

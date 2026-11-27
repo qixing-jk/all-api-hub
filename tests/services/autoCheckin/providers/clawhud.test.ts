@@ -154,10 +154,10 @@ describe("Clawhud check-in integration", () => {
       signal,
       observedAt: 200,
     })
-    expect(fetchClawhudDailyCheckInStatus).toHaveBeenCalledWith({
-      ...request,
-      abortSignal: signal,
-    })
+    expect(fetchClawhudDailyCheckInStatus).toHaveBeenCalledWith(
+      { ...request, abortSignal: signal },
+      undefined,
+    )
     expect(request.abortSignal).toBe(originalSignal)
   })
 

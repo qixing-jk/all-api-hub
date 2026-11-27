@@ -91,6 +91,34 @@ describe("content entrypoint", () => {
     vi.clearAllMocks()
   })
 
+  it("detaches the existing runtime listener when reinjected into the same document", async () => {
+    const { default: script } = await import("~/entrypoints/content/index")
+    const liveListeners = new Set<symbol>()
+    setupRedemptionAssistContentMock.mockReturnValue(vi.fn())
+    setupWebAiApiCheckContentMock.mockReturnValue(vi.fn())
+    setupContentMessageHandlersMock.mockImplementation(() => {
+      expect(liveListeners.size).toBe(0)
+      const listener = Symbol()
+      liveListeners.add(listener)
+      return () => {
+        liveListeners.delete(listener)
+      }
+    })
+    const original = vi.fn()
+    const reinjected = vi.fn()
+    await script.main({ onInvalidated: original } as any)
+    try {
+      await script.main({ onInvalidated: reinjected } as any)
+      expect(setupContentMessageHandlersMock).toHaveBeenCalledTimes(2)
+      expect(liveListeners.size).toBe(1)
+      original.mock.calls[0]?.[0]()
+      expect(liveListeners.size).toBe(1)
+    } finally {
+      reinjected.mock.calls[0]?.[0]()
+    }
+    expect(liveListeners.size).toBe(0)
+  })
+
   it("syncs content feature listeners with stored preferences and storage updates", async () => {
     const initialPreferences = {
       redemptionAssist: {
@@ -470,8 +498,7 @@ describe("content entrypoint", () => {
   it("does not apply preferences after cleanup when a pending read resolves late", async () => {
     const onInvalidated = vi.fn()
     let resolveStorageRead:
-      | ((value: Record<string, unknown>) => void)
-      | undefined
+      ((value: Record<string, unknown>) => void) | undefined
 
     storageGetMock.mockImplementationOnce(
       () =>
@@ -555,8 +582,7 @@ describe("content entrypoint", () => {
     const secondApiCheckCleanup = vi.fn()
     let resolveStaleRead: ((value: Record<string, unknown>) => void) | undefined
     let resolveLatestRead:
-      | ((value: Record<string, unknown>) => void)
-      | undefined
+      ((value: Record<string, unknown>) => void) | undefined
 
     setupRedemptionAssistContentMock
       .mockReturnValueOnce(firstRedemptionCleanup)

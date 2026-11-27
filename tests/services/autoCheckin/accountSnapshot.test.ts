@@ -8,6 +8,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { refreshAutoCheckinAccountSnapshots } from "~/services/checkin/autoCheckin/accountSnapshot"
 import { AuthTypeEnum } from "~/types"
 import type { AutoCheckinAccountSnapshot } from "~/types/autoCheckin"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
   buildCheckInConfig,
   buildSiteAccount,
@@ -129,15 +130,37 @@ describe("current check-in readiness", () => {
       evidence:
         source === "probe"
           ? { source, observedAt: Date.now() }
-          : { source, legacyDayKey: "2026-10-05" },
+          : { source, legacyDayKey: formatLocalDayKey() },
     }
     const [snapshot] = refreshAutoCheckinAccountSnapshots([old], [checked])
     expect(snapshot?.isCheckedInToday).toBe(true)
     expect(snapshot?.lastCheckInDate).toBe(
       source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
-        ? "2026-10-05"
+        ? formatLocalDayKey()
         : undefined,
     )
     expect(snapshot?.lastResult).toEqual(old.lastResult)
   })
+
+  it.each([
+    { source: "probe", observedAt: 1000 },
+    { source: "execution", observedAt: 1000 },
+    { source: "legacy_migration", legacyObservedAt: 1000 },
+    { source: "legacy_migration", legacyDayKey: "1970-01-01" },
+  ] as const)(
+    "keeps stale $source evidence out of today's snapshot",
+    (evidence) => {
+      const stale = structuredClone(account)
+      stale.checkIn.methodKnowledge.methods[
+        AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+      ]!.status = {
+        outcome: "known",
+        today: "checked",
+        evidence,
+      }
+      const [snapshot] = refreshAutoCheckinAccountSnapshots([old], [stale])
+      expect(snapshot?.isCheckedInToday).toBeUndefined()
+      expect(snapshot?.lastResult).toEqual(old.lastResult)
+    },
+  )
 })

@@ -10,12 +10,11 @@ import { cn } from "~/lib/utils"
 import type { ConsumptionProjection } from "~/services/accounts/metrics/consumptionProjection"
 import type { DisplaySiteData } from "~/types"
 
+import {
+  FILTERED_SUMMARY_METRIC_ROWS,
+  useFilteredSummaryLabelHeight,
+} from "./filteredSummaryLayout"
 import { FilteredTodayMetric } from "./FilteredTodayMetric"
-
-// Share the tallest label row below the desktop layout. Older engines use
-// the label minimum heights and keep the same grid columns.
-const compactMetricRows =
-  "[@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:row-span-2 [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:grid-rows-subgrid [@container(max-width:55.999rem)]:supports-[grid-template-rows:subgrid]:space-y-0"
 
 interface AccountListFilteredSummaryProps {
   sites: DisplaySiteData[]
@@ -31,7 +30,11 @@ export function AccountListFilteredSummary({
   income,
   showTodayCashflow,
 }: AccountListFilteredSummaryProps) {
-  const { t } = useTranslation(["account", "common"])
+  const { t, i18n } = useTranslation(["account", "common"])
+  const metricGridRef = useFilteredSummaryLabelHeight(
+    showTodayCashflow,
+    i18n.resolvedLanguage,
+  )
   return (
     <div
       role="region"
@@ -46,6 +49,7 @@ export function AccountListFilteredSummary({
         })}
       </span>
       <div
+        ref={metricGridRef}
         className={cn(
           "col-span-full col-start-1 row-start-2 grid min-w-0 gap-x-3 gap-y-1 [@container(min-width:40rem)]:col-span-1 [@container(min-width:40rem)]:col-start-2 [@container(min-width:40rem)]:row-start-1",
           showTodayCashflow
@@ -57,7 +61,7 @@ export function AccountListFilteredSummary({
           role="group"
           aria-label={t("account:financial.availableTotal")}
           className={cn(
-            compactMetricRows,
+            FILTERED_SUMMARY_METRIC_ROWS,
             "min-w-0 [@container(min-width:56rem)]:border-l [@container(min-width:56rem)]:border-border/70 [@container(min-width:56rem)]:pl-2",
           )}
         >
@@ -69,11 +73,14 @@ export function AccountListFilteredSummary({
               role="group"
               aria-label={t("account:filteredTotals.consumption")}
               className={cn(
-                compactMetricRows,
+                FILTERED_SUMMARY_METRIC_ROWS,
                 "min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2",
               )}
             >
-              <Caption className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4">
+              <Caption
+                data-filtered-summary-label=""
+                className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4"
+              >
                 <FinancialMetricLabel
                   kind={FINANCIAL_METRIC_KINDS.Consumption}
                   className="pl-0 [@container(min-width:56rem)]:pl-5"
@@ -97,11 +104,14 @@ export function AccountListFilteredSummary({
               role="group"
               aria-label={t("account:filteredTotals.income")}
               className={cn(
-                compactMetricRows,
+                FILTERED_SUMMARY_METRIC_ROWS,
                 "min-w-0 space-y-1 [@container(min-width:56rem)]:flex [@container(min-width:56rem)]:flex-wrap [@container(min-width:56rem)]:items-baseline [@container(min-width:56rem)]:gap-2 [@container(min-width:56rem)]:space-y-0 [@container(min-width:56rem)]:pl-2",
               )}
             >
-              <Caption className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4">
+              <Caption
+                data-filtered-summary-label=""
+                className="block min-h-8 font-medium [@container(min-width:30rem)]:min-h-4"
+              >
                 <FinancialMetricLabel
                   kind={FINANCIAL_METRIC_KINDS.Income}
                   className="pl-0 [@container(min-width:56rem)]:pl-5"

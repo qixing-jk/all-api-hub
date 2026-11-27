@@ -151,28 +151,35 @@ describe("Loxo check-in", () => {
       kind: "executed",
       result: { status: "success" },
     })
-    expect(executeAuthenticatedSub2ApiRequest).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        tempWindowRequestSource: context.tempWindowRequestSource,
-        protectionBypassExecution: context.protectionBypassExecution,
-        directRequestReason: undefined,
-      }),
-      endpoint,
-      expect.any(Function),
-      {},
-    )
-    expect(executeAuthenticatedSub2ApiRequest).toHaveBeenNthCalledWith(
-      2,
-      expect.anything(),
-      endpoint,
-      expect.any(Function),
-      {
-        proactiveRefresh: false,
-        recoverMissingAccessToken: false,
-        recoverUnauthorized: false,
-      },
-    )
+    const [admissionRequest, admissionEndpoint, , admissionOptions] =
+      vi.mocked(executeAuthenticatedSub2ApiRequest).mock.calls[0]!
+    expect(admissionEndpoint).toBe(endpoint)
+    expect(admissionOptions).toMatchObject({
+      singleRecovery: true,
+      prepareRecoveryRequest: expect.any(Function),
+    })
+    const prepareRecoveryRequest = admissionOptions?.prepareRecoveryRequest
+    if (!prepareRecoveryRequest)
+      throw new Error("Expected the admitted status read to prepare recovery")
+    const recoveryRequest = prepareRecoveryRequest(admissionRequest)
+    expect(recoveryRequest).toMatchObject({
+      tempWindowRequestSource: context.tempWindowRequestSource,
+      protectionBypassExecution: context.protectionBypassExecution,
+      directRequestReason: undefined,
+    })
+
+    const [mutationRequest, , , mutationOptions] =
+      vi.mocked(executeAuthenticatedSub2ApiRequest).mock.calls[1]!
+    expect(mutationRequest).toMatchObject({
+      tempWindowRequestSource: context.tempWindowRequestSource,
+      protectionBypassExecution: context.protectionBypassExecution,
+      directRequestReason: undefined,
+    })
+    expect(mutationOptions).toEqual({
+      proactiveRefresh: false,
+      recoverMissingAccessToken: false,
+      recoverUnauthorized: false,
+    })
   })
 
   it("keeps discovery and ordinary refresh passive even with execution context", async () => {

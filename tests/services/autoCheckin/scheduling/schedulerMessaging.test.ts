@@ -15,6 +15,7 @@ import {
   triggerAutoCheckinDailyAlarmNow,
   triggerAutoCheckinRetryAlarmNow,
   updateAutoCheckinSettings,
+  verifyAutoCheckinAccountStatus,
 } from "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
 import {
   INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
@@ -34,6 +35,22 @@ import {
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 describe("scheduling/schedulerMessaging", () => {
+  it("only forwards the explicit verification command for an authenticated status read", async () => {
+    const verify = vi
+      .spyOn(autoCheckinScheduler, "verifyAccountStatus")
+      .mockResolvedValue({ outcome: "verified", verifiedStatus: "checked" })
+    const execution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.VerifyCheckinStatus,
+    )
+    await expect(
+      verifyAutoCheckinAccountStatus("account", OPTIONS_MANUAL_EXECUTION),
+    ).resolves.toMatchObject({ success: false })
+    expect(verify).not.toHaveBeenCalled()
+    await expect(
+      verifyAutoCheckinAccountStatus("account", execution),
+    ).resolves.toMatchObject({ success: true, verifiedStatus: "checked" })
+    expect(verify).toHaveBeenCalledWith("account", execution)
+  })
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.clearAllMocks()

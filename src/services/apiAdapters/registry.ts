@@ -49,6 +49,7 @@ import { relayForCapabilities } from "./relayfor"
 import { requestyCapabilities } from "./requesty"
 import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"
+import { createShellApiCapabilities } from "./shellApi"
 import { sub2ApiCapabilities } from "./sub2api"
 import { vercelAiGatewayCapabilities } from "./vercelAiGateway"
 import { voApiV2Capabilities } from "./voapiV2"
@@ -94,6 +95,8 @@ const isManagedSiteCapabilityType = (
 const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily]: (siteType) =>
     createNewApiCapabilities(siteType as AccountSiteType),
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily]: (siteType) =>
+    createShellApiCapabilities(siteType as AccountSiteType),
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api]: () => sub2ApiCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.VoApiV2]: () => voApiV2Capabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix]: () => aihubmixCapabilities,

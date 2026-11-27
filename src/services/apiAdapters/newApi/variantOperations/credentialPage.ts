@@ -5,7 +5,10 @@ import {
   createDeploymentProbeMemory,
   normalizeDeploymentScope,
 } from "~/services/core/deploymentProbeMemory"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
+import {
+  CREDENTIAL_PAGE_STATES,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { joinUrl } from "~/utils/core/url"
 
@@ -111,11 +114,11 @@ export async function resolveNewApiCredentialPage(
       joinUrl(baseUrl, path),
       execution,
     )
-    if (state === "credential") {
+    if (state === CREDENTIAL_PAGE_STATES.Credential) {
       pageMemory.remember(baseUrl, path)
       return path
     }
-    if (state !== "not_found") break
+    if (state !== CREDENTIAL_PAGE_STATES.NotFound) break
   }
   return fallback
 }

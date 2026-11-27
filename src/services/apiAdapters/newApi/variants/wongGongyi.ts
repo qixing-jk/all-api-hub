@@ -1,9 +1,9 @@
 import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
+import type { CompatibleAccountVariant } from "../../compatibleAccountVariantContract"
 import { compatibleTokenInventoryOverrides } from "../variantOperations/key"
-import type { NewApiVariantRegistration } from "../variantRegistration"
 
-export const wongGongyiVariant: NewApiVariantRegistration = {
+export const wongGongyiVariant: CompatibleAccountVariant = {
   key: {
     transport: {
       ...compatibleTokenInventoryOverrides,

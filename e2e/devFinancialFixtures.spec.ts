@@ -1718,7 +1718,7 @@ for (const phase of [
             })
             .fill("Dev Balance:")
           const filteredSummary = page.getByRole("region", {
-            name: "40 accounts",
+            name: `${ACCOUNT_SITE_TYPE_VALUES.length} accounts`,
             exact: true,
           })
           await expect(filteredSummary).toBeVisible()
@@ -1739,7 +1739,7 @@ for (const phase of [
               exact: true,
             })
           : page.getByRole("region", { name: "Financial totals", exact: true })
-        await expect(summary).toContainText("¥2,853.94")
+        await expect(summary).toContainText("¥2,925.94")
         await captureVisualViews({
           page,
           ready: summary,
@@ -1822,7 +1822,7 @@ for (const phase of [
         })
         await search.fill("Dev Balance:")
         const summary = page.getByRole("region", {
-          name: "40 accounts",
+          name: `${ACCOUNT_SITE_TYPE_VALUES.length} accounts`,
           exact: true,
         })
         await expect(summary).toBeVisible()
@@ -1833,7 +1833,7 @@ for (const phase of [
           "Filtered summary stays within the account panel",
         ).toBe(true)
         await expect(summary.getByRole("combobox")).toHaveCount(0)
-        await expect(summary).toContainText("¥2,853.94")
+        await expect(summary).toContainText("¥2,925.94")
         await captureVisualViews({
           page,
           ready: summary,
@@ -1849,7 +1849,7 @@ for (const phase of [
           name: "Filtered subtotals",
           exact: true,
         })
-        const amount = totals.getByText("¥2,853.94", { exact: true })
+        const amount = totals.getByText("¥2,925.94", { exact: true })
         await expect(amount).toBeVisible()
         expect(
           await amount.evaluate(
@@ -2005,21 +2005,18 @@ test("dev balance scenarios keep hover feedback aligned and free of extra blocks
   const worker = await getServiceWorker(context)
   const walletAccount = buildBalanceUiAccounts()[0]!
   await seedStoredAccounts(worker, [walletAccount])
-  await seedUserPreferences(worker, {
-    themeMode: "light",
-    showTodayCashflow: true,
-    autoRefresh: false,
-  })
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
-  await waitForExtensionRoot(page)
   const row = () =>
     page.getByTestId(getAccountManagementListItemTestId(walletAccount.id))
   // Hovering financial text must not paint a second block or move its aligned edge.
   for (const theme of ["light", "dark"] as const) {
-    await page.evaluate((value) => {
-      document.documentElement.classList.toggle("dark", value === "dark")
-    }, theme)
+    await seedUserPreferences(worker, {
+      themeMode: theme,
+      showTodayCashflow: true,
+      autoRefresh: false,
+    })
+    await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+    await waitForExtensionRoot(page)
     const wallet = row()
     await wallet.scrollIntoViewIfNeeded()
     for (const button of [
@@ -2333,7 +2330,8 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
 })
 
 for (const phase of [
-  "native units and periods",
+  "native balance rows",
+  "native balance details",
   "currency switching",
 ] as const) {
   test(`dev site balance scenarios cover every account type with ${phase}`, async ({
@@ -2342,6 +2340,11 @@ for (const phase of [
     extensionId,
     extensionDir,
   }) => {
+    if (process.env.AAH_VISUAL_CAPTURE_DIR && phase !== "currency switching") {
+      const { timeout } = test.info()
+      if (timeout > 0) test.setTimeout(timeout + 60_000)
+    }
+
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
     await page.addInitScript(() =>
@@ -2374,20 +2377,25 @@ for (const phase of [
       })
       .click()
     await expect(
-      panel.getByRole("button", { name: "Dev: Clear fixture accounts (40)" }),
+      panel.getByRole("button", {
+        name: `Dev: Clear fixture accounts (${ACCOUNT_SITE_TYPE_VALUES.length})`,
+      }),
     ).toBeEnabled()
     const config = await getPlasmoStorageJsonValue<AccountStorageConfig>(
       worker,
       STORAGE_KEYS.ACCOUNTS,
     )
     if (!config) throw new Error("Missing native scenarios")
-    if (process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR) {
+    if (
+      process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR &&
+      phase !== "native balance details"
+    ) {
       const directory = process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR
       await mkdir(directory, { recursive: true })
       await writeFile(
         path.join(
           directory,
-          phase === "native units and periods"
+          phase === "native balance rows"
             ? "native-scenarios.json"
             : "currency-scenarios.json",
         ),
@@ -2422,16 +2430,15 @@ for (const phase of [
       .click()
     await waitForExtensionRoot(page)
     // The normal list virtualizes large collections; use its search control to inspect each row.
+    const search = page.getByRole("textbox", {
+      name: "Enter site information or account information to search",
+    })
     const show = async (type: string) => {
-      await page
-        .getByRole("textbox", {
-          name: "Enter site information or account information to search",
-        })
-        .fill(`Dev Balance: ${type}`)
+      await search.fill(`Dev Balance: ${type}`)
       await expect(row(type)).toBeVisible()
       return row(type)
     }
-    if (phase === "native units and periods") {
+    if (phase === "native balance rows") {
       for (const account of config.accounts) {
         const visibleRow = await show(account.site_type)
         const expected =
@@ -2458,210 +2465,151 @@ for (const phase of [
           extensionDir,
           views: [{ id: "light", width: 1440, height: 1000, theme: "light" }],
         })
-        const detailTexts: Record<string, readonly string[]> = {
-          [SITE_TYPES.FREEMODEL]: ["5 hours", "Weekly"],
-          [SITE_TYPES.KRILL]: ["Daily"],
-          [SITE_TYPES.NANOGPT]: ["Daily", "Weekly", "XNO", "Image"],
-          [SITE_TYPES.FOXCODE]: [
-            "Daily",
-            "Weekly",
-            "Monthly",
-            "Yearly",
-            "All time",
-          ],
-          [SITE_TYPES.SHAREDCHAT]: ["USD", "Daily"],
-          [SITE_TYPES.RIGHT_CODE]: ["USD", "Daily"],
-          [SITE_TYPES.XIAOEN]: ["Permanent credit", "Daily credit"],
-        }
-        {
-          await visibleRow
-            .getByRole("button", { name: "Balance details", exact: true })
-            .click()
-          const details = page.getByRole("dialog", {
-            name: "Balance details",
-            exact: true,
-          })
-          await expect(details).toBeVisible()
-          expect(await details.innerText()).not.toMatch(
-            /Credit type unverified|Funding source unverified|Usage scope unverified|Validity unverified|@standard-usd/,
-          )
-          for (const text of detailTexts[account.site_type] ?? [])
-            await expect(details).toContainText(text)
-          if (detailTexts[account.site_type])
-            await captureVisualViews({
-              page,
-              ready: details,
-              captureTarget: details,
-              id: `all-native-${account.site_type.toLowerCase()}-details`,
-              extensionDir,
-              views: [
-                { id: "light", width: 1440, height: 1000, theme: "light" },
-              ],
-            })
-          if (account.site_type === SITE_TYPES.NEW_API) {
-            const technical = details.getByText("Technical details (debug)", {
-              exact: true,
-            })
-            await technical.click()
-            await expect(
-              details.getByText(
-                /new-api\/dev-fixture\/balance@standard-usd\/v1/,
-              ),
-            ).toBeVisible()
-            await captureVisualViews({
-              page,
-              ready: details.getByText(
-                /new-api\/dev-fixture\/balance@standard-usd\/v1/,
-              ),
-              captureTarget: details,
-              id: "new-api-debug-details",
-              extensionDir,
-            })
-            await technical.click()
-          }
-          if (account.site_type === SITE_TYPES.FOXCODE) {
-            await details
-              .getByText("All time", { exact: true })
-              .scrollIntoViewIfNeeded()
-            await captureVisualViews({
-              page,
-              ready: details,
-              captureTarget: details,
-              id: "native-foxcode-yearly-lifetime",
-              extensionDir,
-            })
-          }
-          await details
-            .getByRole("button", { name: "Close", exact: true })
-            .click()
-          // A newly filtered row can appear beneath the old cursor and open its hover preview.
-          await page.mouse.move(0, 0)
-          await page
-            .getByRole("textbox", {
-              name: "Enter site information or account information to search",
-            })
-            .focus()
-          await expect(details).not.toBeVisible()
-        }
       }
-      for (const [type, texts] of [
-        [SITE_TYPES.NEW_API, ["$10.00"]],
-        [SITE_TYPES.SUB2API, ["$12.34"]],
-        [
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        for (const type of [
+          SITE_TYPES.NEW_API,
+          SITE_TYPES.SUB2API,
           SITE_TYPES.RELAYFOR,
-          ["$1.88", "$3.76", "Permanent credit", "Timed credit"],
-        ],
-        [SITE_TYPES.CUBENCE, ["Normal balance", "Charity balance"]],
-        [SITE_TYPES.VO_API_V2, ["Bound balance"]],
-        [SITE_TYPES.KIMI, ["¥8.00"]],
-        [SITE_TYPES.DAHL, ["2.5 M Token"]],
-        [SITE_TYPES.EMRANK, ["2.5 M Token"]],
-        [SITE_TYPES.FREEMODEL, ["$17.34"]],
-        [SITE_TYPES.NANOGPT, ["1.25 XNO"]],
-      ] as const) {
-        const visibleRow = await show(type)
-        for (const text of texts) await expect(visibleRow).toContainText(text)
+          SITE_TYPES.KIMI,
+          SITE_TYPES.DAHL,
+          SITE_TYPES.CUBENCE,
+          SITE_TYPES.FREEMODEL,
+        ]) {
+          const visibleRow = await show(type)
+          await captureVisualViews({
+            page,
+            ready: visibleRow,
+            captureTarget: visibleRow,
+            id: `native-${type.toLowerCase()}`,
+            extensionDir,
+            views: [
+              { id: "light", width: 1440, height: 1000, theme: "light" },
+              { id: "dark", width: 390, height: 1000, theme: "dark" },
+            ],
+          })
+        }
       }
-      await show(SITE_TYPES.FREEMODEL)
-      await row(SITE_TYPES.FREEMODEL)
-        .getByRole("button", { name: "Balance details", exact: true })
-        .click()
-      await expect(
-        page.getByRole("dialog", { name: "Balance details", exact: true }),
-      ).toContainText("Weekly")
-      await page.keyboard.press("Escape")
-      await show(SITE_TYPES.NANOGPT)
-      await row(SITE_TYPES.NANOGPT)
-        .getByRole("button", { name: "Balance details", exact: true })
-        .click()
+    } else if (phase === "native balance details") {
+      const detailTexts: Record<string, readonly string[]> = {
+        [SITE_TYPES.FREEMODEL]: ["5 hours", "Weekly"],
+        [SITE_TYPES.KRILL]: ["Daily"],
+        [SITE_TYPES.NANOGPT]: ["Daily", "Weekly", "XNO", "Image"],
+        [SITE_TYPES.FOXCODE]: [
+          "Daily",
+          "Weekly",
+          "Monthly",
+          "Yearly",
+          "All time",
+        ],
+        [SITE_TYPES.SHAREDCHAT]: ["USD", "Daily"],
+        [SITE_TYPES.RIGHT_CODE]: ["USD", "Daily"],
+        [SITE_TYPES.XIAOEN]: ["Permanent credit", "Daily credit"],
+      }
+      const supplementalTexts: Record<string, readonly string[]> = {
+        [SITE_TYPES.DAHL]: [
+          "Token pool",
+          "Tokens on keys",
+          "1.5 M Token",
+          "1 M Token",
+        ],
+        [SITE_TYPES.NOVITA]: ["Pending charges", "Debt", "3.7"],
+      }
       const details = page.getByRole("dialog", {
         name: "Balance details",
         exact: true,
       })
-      await expect(details).toContainText("Daily")
-      await expect(details).toContainText("Weekly")
-      await expect(details).toContainText("Image")
-      await captureVisualViews({
-        page,
-        ready: details,
-        captureTarget: details,
-        id: "native-nanogpt-details",
-        extensionDir,
-      })
-      await details
-        .getByText("8 Image", { exact: true })
-        .scrollIntoViewIfNeeded()
-      await expect(details.getByText("8 Image", { exact: true })).toBeVisible()
-      await captureVisualViews({
-        page,
-        ready: details,
-        captureTarget: details,
-        id: "native-nanogpt-images",
-        extensionDir,
-      })
-      await page.keyboard.press("Escape")
-      for (const [type, texts] of [
-        [
-          SITE_TYPES.DAHL,
-          ["Token pool", "Tokens on keys", "1.5 M Token", "1 M Token"],
-        ],
-        [SITE_TYPES.NOVITA, ["Pending charges", "Debt", "3.7"]],
-      ] as const) {
-        await show(type)
-        await row(type)
+      for (const { site_type: type } of config.accounts) {
+        const visibleRow = await show(type)
+        await visibleRow
           .getByRole("button", { name: "Balance details", exact: true })
           .click()
-        const nativeDetails = page.getByRole("dialog", {
-          name: "Balance details",
-          exact: true,
-        })
-        for (const text of texts)
-          await expect(nativeDetails).toContainText(text)
-        await captureVisualViews({
-          page,
-          ready: nativeDetails,
-          captureTarget: nativeDetails,
-          id: `native-${type.toLowerCase()}-details`,
-          extensionDir,
-        })
-        if (type === SITE_TYPES.NOVITA) {
-          await nativeDetails
-            .getByText("Debt", { exact: true })
-            .scrollIntoViewIfNeeded()
-          await expect(
-            nativeDetails.getByText("Debt", { exact: true }),
-          ).toBeVisible()
+        await expect(details).toBeVisible()
+        expect(await details.innerText()).not.toMatch(
+          /Credit type unverified|Funding source unverified|Usage scope unverified|Validity unverified|@standard-usd/,
+        )
+        for (const text of detailTexts[type] ?? [])
+          await expect(details).toContainText(text)
+        if (detailTexts[type])
           await captureVisualViews({
             page,
-            ready: nativeDetails,
-            captureTarget: nativeDetails,
-            id: "native-novita-charges-debt",
+            ready: details,
+            captureTarget: details,
+            id: `all-native-${type.toLowerCase()}-details`,
+            extensionDir,
+            views: [{ id: "light", width: 1440, height: 1000, theme: "light" }],
+          })
+        if (type === SITE_TYPES.NEW_API) {
+          const technical = details.getByText("Technical details (debug)", {
+            exact: true,
+          })
+          await technical.click()
+          const provenance = details.getByText(
+            /new-api\/dev-fixture\/balance@standard-usd\/v1/,
+          )
+          await expect(provenance).toBeVisible()
+          await captureVisualViews({
+            page,
+            ready: provenance,
+            captureTarget: details,
+            id: "new-api-debug-details",
+            extensionDir,
+          })
+          await technical.click()
+        }
+        if (type === SITE_TYPES.FOXCODE && process.env.AAH_VISUAL_CAPTURE_DIR) {
+          await details
+            .getByText("All time", { exact: true })
+            .scrollIntoViewIfNeeded()
+          await captureVisualViews({
+            page,
+            ready: details,
+            captureTarget: details,
+            id: "native-foxcode-yearly-lifetime",
             extensionDir,
           })
         }
-        await page.keyboard.press("Escape")
-      }
-      for (const type of [
-        SITE_TYPES.NEW_API,
-        SITE_TYPES.SUB2API,
-        SITE_TYPES.RELAYFOR,
-        SITE_TYPES.KIMI,
-        SITE_TYPES.DAHL,
-        SITE_TYPES.CUBENCE,
-        SITE_TYPES.FREEMODEL,
-      ]) {
-        await show(type)
-        await captureVisualViews({
-          page,
-          ready: row(type),
-          captureTarget: row(type),
-          id: `native-${type.toLowerCase()}`,
-          extensionDir,
-          views: [
-            { id: "light", width: 1440, height: 1000, theme: "light" },
-            { id: "dark", width: 390, height: 1000, theme: "dark" },
-          ],
-        })
+        if (supplementalTexts[type]) {
+          for (const text of supplementalTexts[type])
+            await expect(details).toContainText(text)
+        }
+        if (supplementalTexts[type] || type === SITE_TYPES.NANOGPT) {
+          await captureVisualViews({
+            page,
+            ready: details,
+            captureTarget: details,
+            id: `native-${type.toLowerCase()}-details`,
+            extensionDir,
+          })
+        }
+        if (type === SITE_TYPES.NANOGPT || type === SITE_TYPES.NOVITA) {
+          const isNanoGpt = type === SITE_TYPES.NANOGPT
+          const metric = details.getByText(isNanoGpt ? "8 Image" : "Debt", {
+            exact: true,
+          })
+          await metric.scrollIntoViewIfNeeded()
+          await expect(metric).toBeVisible()
+          await captureVisualViews({
+            page,
+            ready: details,
+            captureTarget: details,
+            id: isNanoGpt
+              ? "native-nanogpt-images"
+              : "native-novita-charges-debt",
+            extensionDir,
+          })
+        }
+        if (type === SITE_TYPES.NANOGPT) {
+          await page.keyboard.press("Escape")
+        } else {
+          await details
+            .getByRole("button", { name: "Close", exact: true })
+            .click()
+        }
+        // A newly filtered row can appear beneath the old cursor and open its hover preview.
+        await page.mouse.move(0, 0)
+        await search.focus()
+        await expect(details).not.toBeVisible()
       }
     } else {
       await page.goto(
@@ -2722,7 +2670,9 @@ for (const phase of [
     await waitForExtensionRoot(page)
     await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
     await panel
-      .getByRole("button", { name: "Dev: Clear fixture accounts (40)" })
+      .getByRole("button", {
+        name: `Dev: Clear fixture accounts (${ACCOUNT_SITE_TYPE_VALUES.length})`,
+      })
       .click()
     await expect(
       panel.getByRole("button", { name: "Dev: Clear fixture accounts (0)" }),
@@ -2765,7 +2715,9 @@ test("dev native observation states persist for every type and distinguish missi
     })
     .click()
   await expect(
-    panel.getByRole("button", { name: "Dev: Clear fixture accounts (121)" }),
+    panel.getByRole("button", {
+      name: `Dev: Clear fixture accounts (${ACCOUNT_SITE_TYPE_VALUES.length * 3 + 1})`,
+    }),
   ).toBeEnabled()
   const config = await getPlasmoStorageJsonValue<AccountStorageConfig>(
     worker,
@@ -2773,7 +2725,7 @@ test("dev native observation states persist for every type and distinguish missi
   )
   if (!config) throw new Error("Missing persisted state scenarios")
   const fixtures = config.accounts.filter((a) => a.id !== "keep-real")
-  expect(fixtures).toHaveLength(121)
+  expect(fixtures).toHaveLength(ACCOUNT_SITE_TYPE_VALUES.length * 3 + 1)
   await panel
     .getByRole("button", { name: "Dev: View account list", exact: true })
     .click()
@@ -2844,7 +2796,9 @@ test("dev native observation states persist for every type and distinguish missi
   }
   await page.getByRole("button", { name: "Dev: Open dev panel" }).click()
   await panel
-    .getByRole("button", { name: "Dev: Clear fixture accounts (121)" })
+    .getByRole("button", {
+      name: `Dev: Clear fixture accounts (${ACCOUNT_SITE_TYPE_VALUES.length * 3 + 1})`,
+    })
     .click()
   await expect(
     panel.getByRole("button", { name: "Dev: Clear fixture accounts (0)" }),

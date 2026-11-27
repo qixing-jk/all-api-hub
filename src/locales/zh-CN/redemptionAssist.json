@@ -65,9 +65,11 @@
       "includeAccountSiteUrlsDesc": "允许每个账号站点 URL（同源）下的所有页面。",
       "includeCheckInAndRedeemUrls": "包含签到/兑换 URL",
       "includeCheckInAndRedeemUrlsDesc": "允许每个账号的签到与兑换页面（自定义或默认）。",
+      "noTabs": "没有匹配的网页标签页。你可以在下方输入匹配规则。",
       "patterns": "自定义正则规则",
       "patternsDesc": "每行一条 JavaScript RegExp 语法的正则表达式（匹配时会忽略大小写）。",
-      "patternsPlaceholder": "^https://example\\.com/console/topup"
+      "patternsPlaceholder": "^https://example\\.com/console/topup",
+      "tabPicker": "从已打开的标签页选择"
     }
   }
 }

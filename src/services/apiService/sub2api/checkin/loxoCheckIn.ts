@@ -7,6 +7,10 @@ import {
   createLoxoCheckInStatusEndpoint,
   LOXO_CHECK_IN_ENDPOINT,
 } from "./loxoCheckInProtocol"
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 import { resolveUserCheckInTimezone } from "./userCheckInProtocol"
 
 const { parseEnvelopeData, invalidResponse } =
@@ -20,10 +24,10 @@ const passiveAuth = {
 /** Passive by default; admitted execution reads may use the existing auth lifecycle. */
 export function fetchLoxoCheckInStatus(
   request: ApiServiceRequest,
-  options: { allowAuthenticationRecovery?: boolean } = {},
+  options: Sub2ApiCheckInStatusAuth = { allowAuthenticationRecovery: false },
 ) {
   const endpoint = createLoxoCheckInStatusEndpoint(resolveUserCheckInTimezone())
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     LOXO_CHECK_IN_ENDPOINT,
     async (authenticated) => {
@@ -44,7 +48,7 @@ export function fetchLoxoCheckInStatus(
         requiresManualVerification: data.captcha_required,
       }
     },
-    options.allowAuthenticationRecovery ? {} : passiveAuth,
+    options,
   )
 }
 

@@ -77,6 +77,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         // Keep detector indexes stable when adding methods to this fixture.
         AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.LoxoDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],

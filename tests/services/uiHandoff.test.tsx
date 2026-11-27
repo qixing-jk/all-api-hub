@@ -69,6 +69,23 @@ describe("UI handoff channel", () => {
     expect(accept).toHaveBeenCalledExactlyOnceWith("valid")
   })
 
+  it("refreshes a staged draft's age and preserves its window on update", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(100_000)
+    const id = await channel.prepare("draft", 2)
+    await channel.publish(id, 2)
+    vi.mocked(Date.now).mockReturnValue(159_000)
+    await channel.update(id, (draft) => `${draft} with action`)
+
+    vi.mocked(Date.now).mockReturnValue(161_000)
+    const accept = vi.fn(() => true)
+    expect(await channel.receive(id, accept, 5)).toBe(false)
+    expect(await channel.receive(id, accept, 2)).toBe(true)
+    expect(accept).toHaveBeenCalledExactlyOnceWith("draft with action")
+    await expect(channel.update(id, () => "new draft")).rejects.toThrow(
+      "UI handoff unavailable",
+    )
+  })
+
   it("releases an expired signal so later setup is not blocked indefinitely", async () => {
     vi.spyOn(Date, "now").mockReturnValue(100_000)
     const expired = await channel.prepare("expired", 2)

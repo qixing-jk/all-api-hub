@@ -1,6 +1,7 @@
-import type { BrowserContext, Page, Worker } from "@playwright/test"
+import type { BrowserContext, Locator, Page, Worker } from "@playwright/test"
 
 import { XINGYA_CHECK_IN_STATUS_ENDPOINT } from "~/services/apiService/newApiFamily/variants/xingyaCheckInProtocol"
+import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { ExtensionPageGuardOptions } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
@@ -34,6 +35,10 @@ export function createNewApiAccountRecovery(params: {
   config: CompatibleApiRealSiteConfig
   /** Readiness budget for the detected-account dialog; tests shorten it. */
   dialogReadyTimeoutMs?: number
+  tokenChannel?: "extension" | "official"
+  tokenName?: string
+  expectedIdentity?: string
+  onCreatorReady?: (creator: Locator) => Promise<void>
 }): {
   extensionPageGuardOptions: ExtensionPageGuardOptions
   prepareDetectedDialog: (dialog: AccountAddDialog) => Promise<void>
@@ -56,17 +61,23 @@ export function createNewApiAccountRecovery(params: {
         /^Failed to load resource: .*status of 403\b/u.test(message.text()),
     },
     prepareDetectedDialog: async (dialog) => {
-      const recoveryHeading = dialog.dialog.getByText(
-        "Enter an Access Token manually",
-        { exact: true },
-      )
+      const recoveryEntry = dialog.dialog
+        .getByRole("button", {
+          name: "Create token in extension",
+          exact: true,
+        })
+        .or(
+          dialog.dialog.getByText(
+            /^(Enter an Access Token manually|Complete Access Token setup)$/u,
+          ),
+        )
       try {
         await expect
           .poll(
             async () =>
               ((await dialog.confirmAddButton.isVisible()) &&
                 (await dialog.confirmAddButton.isEnabled())) ||
-              (await recoveryHeading.isVisible()),
+              (await recoveryEntry.isVisible()),
             { timeout: dialogReadyTimeoutMs },
           )
           .toBe(true)
@@ -79,7 +90,21 @@ export function createNewApiAccountRecovery(params: {
         )
       }
 
-      if (!(await recoveryHeading.isVisible())) return
+      if (!(await recoveryEntry.isVisible())) return
+
+      const openFullForm = dialog.dialog.getByRole("button", {
+        name: "Open full form",
+        exact: true,
+      })
+      if (await openFullForm.isVisible()) await openFullForm.click()
+
+      if (params.expectedIdentity) {
+        await expect(dialog.siteTypeTrigger).toHaveAttribute(
+          "data-site-type",
+          "new-api",
+        )
+        await expect(dialog.userIdInput).toHaveValue(params.expectedIdentity)
+      }
 
       const fields = [
         dialog.siteUrlInput,
@@ -95,6 +120,91 @@ export function createNewApiAccountRecovery(params: {
       )
       await expect(dialog.accessTokenInput).toBeEmpty()
 
+      if ((params.tokenChannel ?? "extension") === "extension") {
+        if (!params.tokenName) await revokeStaleE2eAccessTokens(params.config)
+        await dialog.dialog
+          .getByRole("button", {
+            name: "Create token in extension",
+            exact: true,
+          })
+          .click()
+        const creator = dialog.dialog.getByRole("region", {
+          name: "Create token in extension",
+          exact: true,
+        })
+        await expect(
+          creator.getByLabel("Token name", { exact: true }),
+        ).toBeVisible({ timeout: 30_000 })
+        await creator
+          .getByLabel("Token name", { exact: true })
+          .fill(params.tokenName ?? E2E_ACCESS_TOKEN_NAME)
+        const expiration = creator.getByRole("combobox", { name: "Expiration" })
+        if ((await expiration.textContent())?.trim() !== "Never expires") {
+          await expiration.click()
+          await params.page
+            .getByRole("option", { name: "Never expires", exact: true })
+            .click()
+        }
+        await expect(expiration).toHaveText("Never expires")
+        await params.onCreatorReady?.(creator)
+        // The usage suite needs key creation/reveal as well as read access.
+        for (const scope of [
+          "Create and manage API keys",
+          "Reveal API key secrets",
+          "Wallet actions, purchases and check-in",
+        ]) {
+          const permission = creator.getByRole("checkbox", {
+            name: scope,
+            exact: true,
+          })
+          if (await permission.count()) await permission.check()
+        }
+        const secondFactor = creator.getByRole("radio", {
+          name: "Two-factor authentication (2FA)",
+          exact: true,
+        })
+        if (
+          params.config.totpSecret &&
+          (await secondFactor.count()) &&
+          (await secondFactor.isEnabled())
+        ) {
+          await secondFactor.check()
+          await fillSecret(
+            creator.getByLabel("Authenticator code", { exact: true }),
+            generateNewApiTotpCode(params.config.totpSecret),
+            "Authenticator code",
+          )
+        } else {
+          const password = creator.getByRole("radio", {
+            name: "Password",
+            exact: true,
+          })
+          if (await password.count()) await password.check()
+          await fillSecret(
+            creator.getByLabel("Account password", { exact: true }),
+            params.config.password,
+            "Account password",
+          )
+        }
+        await dialog.dialog
+          .getByRole("button", { name: "Verify and create token", exact: true })
+          .click()
+        await expect(
+          dialog.dialog.getByText(
+            "Token verified and filled in. Review your account details, then save.",
+            { exact: true },
+          ),
+        ).toBeVisible({ timeout: 45_000 })
+        for (const [index, field] of fields.entries())
+          await expect(field).toHaveValue(atIndex(detectedValues, index))
+        await expect
+          .poll(async () =>
+            Boolean((await dialog.accessTokenInput.inputValue()).trim()),
+          )
+          .toBe(true)
+        return
+      }
+
       const context = params.page.context()
       const worker = await getServiceWorker(context)
       const sourceTab = await params.page.evaluate(() =>
@@ -106,7 +216,7 @@ export function createNewApiAccountRecovery(params: {
       const [securityPage] = await Promise.all([
         waitForNewUserFacingCredentialPage(context, worker, sourceTab.windowId),
         dialog.dialog
-          .getByRole("button", { name: "Open token page", exact: true })
+          .getByRole("button", { name: /^(Get from site|Open token page)$/u })
           .click(),
       ])
 
@@ -122,12 +232,13 @@ export function createNewApiAccountRecovery(params: {
         await expect(dialog.accessTokenInput).toBeFocused()
 
         const token = await copyNewApiAccessToken(securityPage, params.config, {
-          tokenName: E2E_ACCESS_TOKEN_NAME,
+          tokenName: params.tokenName ?? E2E_ACCESS_TOKEN_NAME,
           neverExpires: true,
           useClipboard: true,
-          allowLegacyRotation: true,
-          beforeCreateScopedToken: () =>
-            revokeStaleE2eAccessTokens(params.config),
+          allowLegacyRotation: !params.tokenName,
+          beforeCreateScopedToken: params.tokenName
+            ? undefined
+            : () => revokeStaleE2eAccessTokens(params.config),
         })
         await params.page.bringToFront()
         for (const [index, field] of fields.entries()) {

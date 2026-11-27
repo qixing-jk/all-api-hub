@@ -16,6 +16,7 @@ import {
   createNewApiAccountKeyResources,
   createNewApiCapabilities,
 } from "~/services/apiAdapters/newApi"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
@@ -158,41 +159,50 @@ describe("New API account key resources", () => {
       )
     },
   )
-  it.each([SITE_TYPES.NEW_API, SITE_TYPES.WONG_GONGYI])(
-    "displays and edits the common %s key budget in USD",
-    async (siteType) => {
-      mockFetchAccountTokens.mockResolvedValue([
-        token({
-          remain_quota: 123456,
-          used_quota: 234,
-          unlimited_quota: false,
-        }),
-      ])
-      const session = await createNewApiAccountKeyResources(siteType).open({
-        account: { id: "account-1", siteType },
-        request,
-      })
-      const collection = await session.openCollection("account")
-      const row = (await collection.list()).items[0]!
-      expect(row.displayFacts).toContainEqual(
-        expect.objectContaining({
-          kind: "budget-constraint",
-          budget: expect.objectContaining({
-            asset: {
-              kind: "currency",
-              code: "USD",
-            },
-            remaining: expect.objectContaining({
-              status: "known",
-              value: "0.246912",
-            }),
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.WONG_GONGYI,
+    SITE_TYPES.SHELL_API,
+    SITE_TYPES.APIYI,
+    SITE_TYPES.LAOZHANG,
+  ])("displays and edits the common %s key budget in USD", async (siteType) => {
+    const rowFixture = {
+      ...token({
+        remain_quota: 123456,
+        used_quota: 234,
+        unlimited_quota: false,
+      }),
+      models: "",
+      ip_whitelist: "",
+    }
+    mockFetchAccountTokens.mockResolvedValue([rowFixture])
+    mockFetchTokenById.mockResolvedValue(rowFixture)
+    const session = await getSiteTypeCapabilities(
+      siteType,
+    ).account!.keyResourceManagement!.open({
+      account: { id: "account-1", siteType },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const row = (await collection.list()).items[0]!
+    expect(row.displayFacts).toContainEqual(
+      expect.objectContaining({
+        kind: "budget-constraint",
+        budget: expect.objectContaining({
+          asset: {
+            kind: "currency",
+            code: "USD",
+          },
+          remaining: expect.objectContaining({
+            status: "known",
+            value: "0.246912",
           }),
         }),
-      )
-      const editor = await collection.openEditEditor(row.ref)
-      expect(editor.initialValues.quotaUsd).toBe(0.246912)
-    },
-  )
+      }),
+    )
+    const editor = await collection.openEditEditor(row.ref)
+    expect(editor.initialValues.quotaUsd).toBe(0.246912)
+  })
   it.each([false, true])(
     "uses the recovered Cookie for the subsequent create and preserves lifecycle observers (private: %s)",
     async (privateSession) => {

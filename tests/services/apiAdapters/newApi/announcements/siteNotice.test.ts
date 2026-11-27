@@ -28,12 +28,9 @@ vi.mock("~/services/apiService/newApiFamily/default/siteNotice", () => ({
   fetchSiteNotice: newApiFamilyFetchSiteNoticeMock,
 }))
 
-vi.mock(
-  "~/services/apiService/newApiFamily/variants/laozhangSiteNotice",
-  () => ({
-    fetchLaoZhangSiteNotice: laoZhangFetchSiteNoticeMock,
-  }),
-)
+vi.mock("~/services/apiService/shellApiFamily/laozhangSiteNotice", () => ({
+  fetchLaoZhangSiteNotice: laoZhangFetchSiteNoticeMock,
+}))
 
 describe("newApiSiteNotice", () => {
   it("uses the family default except for LaoZhang's explicit notice capability", async () => {

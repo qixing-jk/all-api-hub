@@ -1,4 +1,3 @@
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   parseSub2ApiProDailyCheckInMutationResponse,
   parseSub2ApiProDailyCheckInStatusResponse,
@@ -7,6 +6,7 @@ import {
   SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
   type Sub2ApiProDailyCheckInOperationResult,
 } from "~/services/apiService/sub2api/checkin/checkIn"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   SUB2API_CHECK_IN_RECOVERY_REASONS,
@@ -14,6 +14,11 @@ import {
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 const fetchSub2ApiProDailyCheckInStatusWithRequest = async (
   request: ApiServiceRequest,
@@ -25,15 +30,16 @@ const fetchSub2ApiProDailyCheckInStatusWithRequest = async (
   return parseSub2ApiProDailyCheckInStatusResponse(response)
 }
 
-/** Reads the pinned Sub2API Pro status without reactive GET-side auth replay. */
+/** Reads the pinned Sub2API Pro status using the caller's recovery policy. */
 export async function fetchSub2ApiProDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     SUB2API_PRO_DAILY_CHECK_IN_STATUS_ENDPOINT,
     fetchSub2ApiProDailyCheckInStatusWithRequest,
-    { proactiveRefresh: false, recoverUnauthorized: false },
+    auth,
   )
 }
 
@@ -62,10 +68,10 @@ export async function performSub2ApiProDailyCheckIn(
       request,
       SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
       async (authenticatedRequest) => {
-        const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-          endpoint: SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
-          options: { method: "POST", cache: "no-store" },
-        })
+        const response = await postSub2ApiCheckIn(
+          authenticatedRequest,
+          SUB2API_PRO_DAILY_CHECK_IN_ENDPOINT,
+        )
         return parseSub2ApiProDailyCheckInMutationResponse(response)
       },
       fetchSub2ApiProDailyCheckInStatusWithRequest,
