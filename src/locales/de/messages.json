@@ -107,6 +107,11 @@
   },
   "errors": {
     "api": {
+      "browserBackgroundVerificationFailed": "Die Website-Verifizierung konnte nicht im Hintergrund abgeschlossen werden. Versuchen Sie es erneut. Melden Sie bei weiteren Fehlern ein Kompatibilitätsproblem für diese Website.",
+      "browserLoginCleanupUnconfirmed": "Die Bereinigung der neuen Anmeldesitzung konnte nicht bestätigt werden. Prüfen Sie vor einem erneuten Versuch die aktiven Sitzungen auf der Website.",
+      "browserProofLoginRequired": "Diese Anmeldedaten gehören zu einer Website-Sitzung. Melden Sie sich auf der Website mit demselben Konto an und versuchen Sie es erneut. Sie können auch die Kontoanmeldung konfigurieren, um eine unabhängige Sitzung zu erhalten.",
+      "browserProofRejected": "Die Website hat die Anfragesignatur abgelehnt. Versuchen Sie es erneut. Falls der Fehler bestehen bleibt, melden Sie ein Kompatibilitätsproblem mit dieser Website.",
+      "browserProofSecondFactorRequired": "Dieses Konto erfordert einen zweiten Verifizierungsschritt, den die Erweiterung für diese Website noch nicht unterstützt.",
       "invalidResponseFormat": "Ungültiges Antwortformat",
       "missingRecoveryPolicy": "Die Erweiterung konnte diese Anfrage nicht vorbereiten. Aktualisieren Sie die Erweiterung oder melden Sie das Problem.",
       "nonJsonContent": "{{contentType}} statt JSON zurückgegeben (HTTP {{status}})",
@@ -216,8 +221,9 @@
   "sub2api": {
     "authPersistenceFailed": "Die aktualisierte Sub2API-Anmeldung konnte nicht sicher in diesem Konto gespeichert werden. Aktualisieren oder importieren Sie das Konto erneut und versuchen Sie es dann noch einmal.",
     "configMissing": "Bitte konfigurieren Sie zuerst die Sub2API-Basis-URL und den Admin API Key in den Grundeinstellungen.",
-    "loginRequired": "Bitte melden Sie sich zuerst beim Sub2API-Dashboard an (damit die Erweiterung auth_token/auth_user aus localStorage lesen kann) und versuchen Sie es erneut.",
-    "refreshTokenInvalid": "Das Sub2API-Aktualisierungstoken ist ungültig oder wurde rotiert. Importieren Sie die Sitzung erneut aus dem Dashboard (empfohlen: Inkognito-/privates Fenster) oder fügen Sie ein aktualisiertes refresh_token ein und versuchen Sie es erneut."
+    "independentSessionRequired": "Der Signaturschlüssel dieser unabhängigen Sub2API-Sitzung ist nicht verfügbar. Wähle im Kontoeditor „Erneut anmelden“ oder „Sitzung abrufen“, um sie zu ersetzen.",
+    "loginRequired": "Melde dich auf der Sub2API-Website an und versuche es erneut, oder richte die Kontoanmeldung für eine unabhängige Sitzung ein.",
+    "refreshTokenInvalid": "Dieses Sub2API-Aktualisierungstoken kann die Sitzung nicht mehr erneuern. Nutze „Erneut anmelden“ oder „Sitzung abrufen“ oder importiere ein aktuelles Token erneut bzw. füge es ein, wenn die Website das erlaubt."
   },
   "toast": {
     "error": {

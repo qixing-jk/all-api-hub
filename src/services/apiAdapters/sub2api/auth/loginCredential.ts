@@ -9,6 +9,7 @@ import type {
   AccountLoginCredential,
 } from "~/services/apiAdapters/contracts/accountLogin"
 import { fetchSub2ApiAuthIdentity } from "~/services/apiService/sub2api/auth/authIdentity"
+import { hasSub2ApiPanelBinding } from "~/services/apiService/sub2api/auth/panelProofCapability"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
@@ -37,7 +38,13 @@ export const sub2ApiLoginCredentialRecovery: NonNullable<
               authType: AuthTypeEnum.AccessToken,
               accessToken: credential.accessToken,
             },
-            forceTempWindow: true,
+            forceTempWindow: !(
+              result.evidence?.credentialIssued === true ||
+              (await hasSub2ApiPanelBinding(
+                target.site_url,
+                credential.accessToken,
+              ))
+            ),
             abortSignal: target.abortSignal,
             protectionBypassExecution: target.protectionBypassExecution,
             tempWindowRequestSource: target.tempWindowRequestSource,

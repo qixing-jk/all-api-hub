@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { getRequestProtocol } from "~/services/apiAdapters/requestProtocol"
 import {
   EXTENSION_HEADER_NAME,
   EXTENSION_HEADER_VALUE,
 } from "~/utils/browser/cookieHelper"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+
+vi.mock("~/services/apiAdapters/requestProtocol", () => ({
+  getRequestProtocol: vi.fn(),
+}))
 
 const { logger, mockLogCloudflareGuard, mockSendRuntimeMessage } = vi.hoisted(
   () => ({
@@ -32,8 +38,42 @@ vi.mock("~/entrypoints/content/messageHandlers/utils/cloudflareGuard", () => ({
 describe("handlePerformTempWindowFetch", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(getRequestProtocol).mockReset()
     vi.unstubAllGlobals()
     vi.stubGlobal("location", { origin: "https://example.com" })
+  })
+
+  it("rechecks the page origin after async transport preparation", async () => {
+    const preparation = createDeferred<undefined>()
+    vi.mocked(getRequestProtocol).mockReturnValueOnce(preparation.promise)
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"))
+    vi.stubGlobal("fetch", fetchMock)
+    const { handlePerformTempWindowFetch } =
+      await import("~/entrypoints/content/messageHandlers/handlers/tempWindowFetch")
+    const sendResponse = vi.fn()
+    handlePerformTempWindowFetch(
+      {
+        expectedOrigin: "https://example.com",
+        fetchUrl: "https://example.com/api/data",
+        requestId: "page-navigation",
+      },
+      sendResponse,
+    )
+    vi.stubGlobal("location", { origin: "https://next.example.com" })
+    preparation.resolve(undefined)
+
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: "Temporary context origin changed before fetch",
+        transportLifecycle: {
+          upstreamRequestDispatched: false,
+          upstreamResponseReceived: false,
+        },
+      }),
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
   })
 
   it("rejects an expired request before dispatch in the browser context", async () => {

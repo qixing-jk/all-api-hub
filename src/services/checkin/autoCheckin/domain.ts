@@ -43,7 +43,8 @@ export function isCheckInMethodStatusCurrent(
   fallbackTimeZone?: string,
 ) {
   if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) return false
-  const timeZone = getCheckInResetTimeZone(methodId) ?? fallbackTimeZone
+  const timeZone =
+    getCheckInResetTimeZone(methodId, status.resetTimeZone) ?? fallbackTimeZone
   const evidence = status.evidence
   if (
     evidence.source !== CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration

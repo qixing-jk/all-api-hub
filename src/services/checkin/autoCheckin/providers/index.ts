@@ -20,6 +20,7 @@ import { freeApiProvider } from "./freeApi"
 import { freeggProvider } from "./freegg"
 import { geniusProgrammerProvider } from "./geniusProgrammer"
 import { hiyoProvider } from "./hiyo"
+import { linxiProvider } from "./linxiCheckIn"
 import { nexavlinksProvider } from "./nexavlinks"
 import { pmApiProvider } from "./pmapi"
 import {
@@ -46,6 +47,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: newApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn]: voApiV2Provider,
   [AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn]: sub2apiProProvider,
+  [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: linxiProvider,
   [AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn]:
     geniusProgrammerProvider,
   [AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn]: denxioProvider,

@@ -178,6 +178,10 @@
       "description": "This method uses the third-party {{source}} check-in protocol and only works on deployments that support it.",
       "name": "{{source}} daily check-in"
     },
+    "freeGgAllowance": {
+      "description": "Claims the daily allowance, resetting at midnight UTC+8. Visiting the site or refreshing the account can also claim it. The ledger is checked first to avoid claiming again.",
+      "name": "Daily allowance from {{source}}"
+    },
     "generic": {
       "name": "Daily check-in"
     },
@@ -198,6 +202,7 @@
       "freeGg": "FreeGG",
       "geniusProgrammer": "Genius Programmer Relay",
       "hiyo": "Hiyo Free",
+      "linxi": "100xLabs",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

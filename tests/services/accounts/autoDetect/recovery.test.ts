@@ -9,6 +9,22 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 describe("account auto-detect recovery", () => {
+  it("preserves website ownership evidence for Sub2API recovery", () => {
+    expect(
+      createDetectedAccountRecoveryData({
+        detected: {
+          siteType: SITE_TYPES.SUB2API,
+          userId: "17",
+          accessToken: "website-access",
+          sub2apiWebsiteSessionBound: true,
+        },
+        requestedAuthType: AuthTypeEnum.AccessToken,
+      }),
+    ).toMatchObject({
+      sub2apiWebsiteSessionBound: true,
+      accessToken: "website-access",
+    })
+  })
   it("retains native name fallbacks after the user model is normalized", () => {
     expect(
       createDetectedAccountRecoveryData({

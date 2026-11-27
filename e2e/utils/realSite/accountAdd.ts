@@ -42,8 +42,11 @@ function getAccountAddDialog(page: Page) {
     accessTokenInput: dialog.getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput,
     ),
-    sub2apiRefreshTokenSwitch: dialog.getByTestId(
-      ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenSwitch,
+    sub2apiBrowserSessionOption: dialog.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiBrowserSessionOption,
+    ),
+    sub2apiIndependentSessionOption: dialog.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiIndependentSessionOption,
     ),
     sub2apiImportSessionButton: dialog.getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiImportSessionButton,

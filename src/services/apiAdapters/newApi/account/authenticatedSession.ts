@@ -6,6 +6,7 @@ import {
   parseNewApiDashboardAuthBundleResponse,
 } from "~/services/apiService/newApiFamily/dashboardAuth"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import { freeggSelfRequestPolicy } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
 import {
   API_DIRECT_REQUEST_REASONS,
   API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES,
@@ -87,6 +88,7 @@ export async function createNewApiAuthenticatedSessionRequest(
   const self = await newApiFamilyRequests.envelope(request, {
     endpoint: "/api/user/self",
     options: { method: "GET", cache: "no-store" },
+    ...freeggSelfRequestPolicy(request.baseUrl),
   })
   if (self.success !== true || !isRecord(self.data))
     throw new Error("New API dashboard account identity is unconfirmed")

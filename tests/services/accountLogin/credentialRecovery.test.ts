@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_COOKIE_VALIDATION_STATUS } from "~/constants/accountCookieValidation"
 import { executeWithAccountCredentialRecovery } from "~/services/accountCredentialRecovery"
 import { verifyRecoveredCredential } from "~/services/accountCredentialRecovery/result"
+import { getAccountLoginCapability } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
@@ -12,6 +13,10 @@ const deps = vi.hoisted(() => ({
   mutate: vi.fn(),
   login: vi.fn(),
   verify: vi.fn(),
+  identity: vi.fn(),
+}))
+vi.mock("~/services/apiService/sub2api/auth/authIdentity", () => ({
+  fetchSub2ApiAuthIdentity: deps.identity,
 }))
 vi.mock("~/services/accounts/cookieValidation", async (importOriginal) => ({
   ...(await importOriginal<
@@ -25,11 +30,212 @@ vi.mock("~/services/accounts/accountStorage/accountConfigStore", () => ({
 vi.mock("~/services/accountLogin", () => ({ loginAccount: deps.login }))
 
 describe("account credential recovery", () => {
+  afterEach(() => vi.unstubAllGlobals())
   beforeEach(() => {
     vi.resetAllMocks()
     deps.verify.mockResolvedValue({
       status: ACCOUNT_COOKIE_VALIDATION_STATUS.Valid,
     })
+  })
+
+  function sub2ApiFixture(credentialIssued = true) {
+    let stored = {
+      id: "sub2api-saved",
+      site_type: "sub2api",
+      site_url: "https://sub2api-cleanup.example",
+      authType: AuthTypeEnum.AccessToken,
+      account_info: { id: "17", access_token: "expired" },
+      login: {
+        methodId: "password",
+        credentials: { username: "member@example.com", password: "secret" },
+        automaticRecovery: true,
+      },
+    } as unknown as SiteAccount
+    deps.read.mockImplementation(async () => ({ accounts: [stored] }))
+    deps.mutate.mockImplementation(async (_id, mutation) => {
+      const result = mutation(stored)
+      stored = result.nextAccount
+      return result.result
+    })
+    deps.identity.mockResolvedValue({ identity: { userId: "17" } })
+    const credential = {
+      accessToken: "issued-access",
+      sub2apiAuth: {
+        refreshToken: "issued-refresh",
+        tokenExpiresAt: 2000000000000,
+      },
+    }
+    deps.login.mockResolvedValue({
+      status: "authenticated",
+      identity: "17",
+      credential,
+      ...(credentialIssued ? { evidence: { credentialIssued: true } } : {}),
+    })
+    const fetch = vi.fn().mockResolvedValue(Response.json({ code: 0 }))
+    vi.stubGlobal("fetch", fetch)
+    return {
+      request: {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+        allowAccountCredentialRecovery: true,
+        accountId: stored.id,
+        siteType: "sub2api" as const,
+        baseUrl: stored.site_url,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          userId: "17",
+          accessToken: "expired",
+        },
+      },
+      credential,
+      fetch,
+      get: () => stored,
+      error: new ApiError(
+        "expired",
+        401,
+        "/api/v1/auth/me",
+        API_ERROR_CODES.HTTP_401,
+      ),
+    }
+  }
+
+  it("revokes a newly issued token family when independent verification fails", async () => {
+    const f = sub2ApiFixture()
+    deps.identity.mockRejectedValue(new Error("Identity read unavailable"))
+    await expect(
+      executeWithAccountCredentialRecovery(
+        f.request,
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toMatchObject({ result: { status: "uncertain" }, cause: f.error })
+    expect(f.fetch).toHaveBeenCalledWith(
+      "https://sub2api-cleanup.example/api/v1/auth/logout",
+      expect.objectContaining({
+        credentials: "omit",
+        body: JSON.stringify({ refresh_token: "issued-refresh" }),
+      }),
+    )
+    expect(f.get().account_info.access_token).toBe("expired")
+  })
+
+  it("keeps ordinary cnf credential verification in its native page context", async () => {
+    const f = sub2ApiFixture(false)
+    const loggedIn = await deps.login()
+    loggedIn.credential.accessToken = `e30.${btoa(JSON.stringify({ cnf: { jkt: "unrelated" } }))}.signature`
+    await verifyRecoveredCredential(loggedIn, f.get())
+    expect(deps.identity).toHaveBeenCalledWith(
+      expect.objectContaining({ forceTempWindow: true }),
+    )
+  })
+
+  it("verifies an extension-issued unsigned credential without a page", async () => {
+    const f = sub2ApiFixture()
+    await verifyRecoveredCredential(await deps.login(), f.get())
+    expect(deps.identity).toHaveBeenCalledWith(
+      expect.objectContaining({ forceTempWindow: false }),
+    )
+  })
+
+  it("preserves the persistence failure after revoking its unused token family", async () => {
+    const f = sub2ApiFixture()
+    const failure = new Error("storage write failed")
+    deps.mutate.mockRejectedValue(failure)
+    await expect(
+      executeWithAccountCredentialRecovery(
+        f.request,
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toBe(failure)
+    expect(f.fetch).toHaveBeenCalledOnce()
+    expect(f.get().account_info.access_token).toBe("expired")
+  })
+
+  it("dispatches abandoned credential cleanup through the login capability", async () => {
+    const f = sub2ApiFixture()
+    const capability = getAccountLoginCapability(f.get())!
+    const original = Object.getOwnPropertyDescriptor(
+      capability,
+      "discardCredential",
+    )
+    const discard = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(capability, "discardCredential", {
+      value: discard,
+      configurable: true,
+    })
+    try {
+      deps.identity.mockRejectedValue(new Error("verification unavailable"))
+      await expect(
+        executeWithAccountCredentialRecovery(
+          f.request,
+          vi.fn().mockRejectedValue(f.error),
+        ),
+      ).rejects.toThrow()
+      expect(discard).toHaveBeenCalledExactlyOnceWith(f.get(), f.credential)
+      expect(f.fetch).not.toHaveBeenCalled()
+    } finally {
+      if (original)
+        Object.defineProperty(capability, "discardCredential", original)
+      else Reflect.deleteProperty(capability, "discardCredential")
+    }
+  })
+
+  it("cleans up a late issued credential after its caller cancels", async () => {
+    const f = sub2ApiFixture()
+    const controller = new AbortController()
+    const loggedIn = await deps.login()
+    deps.login.mockImplementation(async () => {
+      controller.abort()
+      return loggedIn
+    })
+    await expect(
+      executeWithAccountCredentialRecovery(
+        { ...f.request, abortSignal: controller.signal },
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toThrow()
+    await vi.waitFor(() => expect(f.fetch).toHaveBeenCalledOnce())
+    expect(deps.mutate).not.toHaveBeenCalled()
+  })
+
+  it("reports unconfirmed cleanup while retaining the original persistence failure", async () => {
+    const f = sub2ApiFixture()
+    const failure = new Error("storage write failed")
+    deps.mutate.mockRejectedValue(failure)
+    f.fetch.mockRejectedValue(new Error("logout unavailable"))
+    await expect(
+      executeWithAccountCredentialRecovery(
+        f.request,
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toMatchObject({
+      message: "messages:errors.api.browserLoginCleanupUnconfirmed",
+      result: { status: "uncertain" },
+      cause: failure,
+    })
+    expect(f.fetch).toHaveBeenCalledOnce()
+  })
+
+  it("keeps borrowed website credentials when independent verification fails", async () => {
+    const f = sub2ApiFixture(false)
+    deps.identity.mockRejectedValue(new Error("Identity read unavailable"))
+    await expect(
+      executeWithAccountCredentialRecovery(
+        f.request,
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toMatchObject({ result: { status: "uncertain" }, cause: f.error })
+    expect(f.fetch).not.toHaveBeenCalled()
+  })
+
+  it("retains a saved issued token family when the retried read still fails", async () => {
+    const f = sub2ApiFixture()
+    await expect(
+      executeWithAccountCredentialRecovery(
+        f.request,
+        vi.fn().mockRejectedValue(f.error),
+      ),
+    ).rejects.toBe(f.error)
+    expect(f.get().account_info.access_token).toBe("issued-access")
+    expect(f.fetch).not.toHaveBeenCalled()
   })
 
   it("does not persist or retry a Cookie rejected by independent verification", async () => {

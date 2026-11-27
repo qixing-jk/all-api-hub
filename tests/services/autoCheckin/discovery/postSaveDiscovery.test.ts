@@ -38,6 +38,7 @@ const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
     vi.fn(),
     vi.fn(),
     vi.fn(),
+    vi.fn(),
   ],
   checkIn: vi.fn(),
 }))
@@ -74,7 +75,11 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
+        // BaiApi is declared after Emrank in the real registry, but this
+        // fixture only covers Sub2API candidates; order still maps to
+        // detectors by index, so preserve existing detector indexes.
         AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
         AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
       ].map((id, index) => ({

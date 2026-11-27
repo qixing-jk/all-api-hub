@@ -7,6 +7,7 @@ import {
   Sub2ApiTokenRefreshError,
 } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/type"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
@@ -49,6 +50,37 @@ const captureRefreshError = async (
 }
 
 describe("Sub2API token refresh", () => {
+  it("preserves a known pre-handler proof rejection instead of calling it an uncertain rotation", async () => {
+    const error = new ApiError(
+      "Proof rejected",
+      401,
+      "/api/v1/auth/refresh",
+      API_ERROR_CODES.REQUEST_PROOF_INVALID,
+    )
+    mockFetchApiResponse.mockRejectedValueOnce(error)
+    await expect(
+      refreshSub2ApiTokens({
+        request: createRequest(),
+        refreshToken: "saved-refresh",
+      }),
+    ).rejects.toBe(error)
+  })
+  it("preserves a pre-dispatch signing-key mismatch for independent login recovery", async () => {
+    const error = new ApiError(
+      "Key mismatch",
+      401,
+      "/api/v1/auth/refresh",
+      API_ERROR_CODES.HTTP_401,
+      "PANEL_PROOF_KEY_MISMATCH",
+    )
+    mockFetchApiResponse.mockRejectedValueOnce(error)
+    await expect(
+      refreshSub2ApiTokens({
+        request: createRequest(),
+        refreshToken: "browser-refresh",
+      }),
+    ).rejects.toBe(error)
+  })
   beforeEach(() => {
     vi.clearAllMocks()
   })

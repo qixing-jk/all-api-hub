@@ -210,6 +210,22 @@ describe("newApiFamily accountData", () => {
     await expect(fetchAccountQuota(baseRequest)).resolves.toBeUndefined()
   })
 
+  it("does not replay a FreeGG balance read that can credit the daily allowance", async () => {
+    mockFetchApiData.mockResolvedValueOnce({ quota: 155000000 })
+    await expect(
+      fetchAccountQuota({ ...baseRequest, baseUrl: "https://freegg.app" }),
+    ).resolves.toBe(155000000)
+    expect(mockFetchApiData).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        endpoint: "/api/user/self",
+        operationSemantics: "mutation",
+        credentialRecovery: undefined,
+        tempWindowFallback: { codes: [], statusCodes: [] },
+      }),
+    )
+  })
+
   it("fetchTodayUsage short-circuits when cashflow collection is disabled", async () => {
     await expect(
       fetchTodayUsage({

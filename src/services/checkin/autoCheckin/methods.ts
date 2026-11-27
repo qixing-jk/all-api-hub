@@ -294,6 +294,8 @@ const reconcileProviderResult = async (input: {
   methodId: AutoCheckinMethodRegistration["id"]
   providerResult: AutoCheckinProviderOutcome
   startedAt: number
+  mutationStartedAt?: number
+  resetTimeZone?: string
   getStatus?: NonNullable<AutoCheckinProvider["getStatus"]>
 }): Promise<{
   result: DecidedCheckInResult
@@ -301,9 +303,10 @@ const reconcileProviderResult = async (input: {
 }> => {
   const execution = await confirmCheckInAttempt({
     account: input.account,
-    timeZone: getCheckInResetTimeZone(input.methodId),
+    timeZone: getCheckInResetTimeZone(input.methodId, input.resetTimeZone),
     result: input.providerResult,
     startedAt: input.startedAt,
+    mutationStartedAt: input.mutationStartedAt,
     readStatus: input.getStatus
       ? async () => {
           const status = await input.getStatus!({
@@ -977,6 +980,10 @@ async function executeSelectedCheckInOnce(
     methodId: registration.id,
     providerResult,
     startedAt,
+    resetTimeZone:
+      mutationLifecycle.admittedMutation?.resetTimeZone ??
+      statusProof?.resetTimeZone,
+    mutationStartedAt: mutationLifecycle.admittedMutation?.startedAt,
     getStatus: operations.getStatus,
   })
   return {

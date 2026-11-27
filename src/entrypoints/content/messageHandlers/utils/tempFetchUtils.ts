@@ -1,6 +1,9 @@
+import type { TempWindowResponseType } from "~/types/tempWindowFetch"
+import {
+  normalizeHeaderInit,
+  type DispatchBoundRequestInit,
+} from "~/utils/browser/requestInitMessage"
 import { createLogger } from "~/utils/core/logger"
-
-export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 
 /**
  * Unified logger scoped to content-side temp window fetch helpers.
@@ -12,11 +15,13 @@ const logger = createLogger("TempFetchUtils")
  * Ensures headers are sanitized and mutations do not affect original objects.
  * @param options Raw RequestInit payload.
  */
-export function normalizeFetchOptions(options: RequestInit = {}): RequestInit {
-  const normalized: RequestInit = { ...options }
+export function normalizeFetchOptions(
+  options: DispatchBoundRequestInit = {},
+): DispatchBoundRequestInit {
+  const normalized = { ...options }
 
   if (options.headers) {
-    normalized.headers = sanitizeHeaders(options.headers)
+    normalized.headers = normalizeHeaderInit(options.headers)
   }
 
   // Message-cloned signals lose the native AbortSignal prototype.
@@ -25,41 +30,6 @@ export function normalizeFetchOptions(options: RequestInit = {}): RequestInit {
   }
 
   return normalized
-}
-
-/**
- * Converts various header inputs to a plain object accepted by fetch.
- * @param headers Headers instance, tuple array, or object.
- * @returns Plain key/value header map.
- */
-function sanitizeHeaders(headers: HeadersInit): Record<string, string> {
-  if (headers instanceof Headers) {
-    const result: Record<string, string> = {}
-    headers.forEach((value, key) => {
-      result[key] = value
-    })
-    return result
-  }
-
-  if (Array.isArray(headers)) {
-    return headers.reduce(
-      (acc, [key, value]) => {
-        acc[key] = value
-        return acc
-      },
-      {} as Record<string, string>,
-    )
-  }
-
-  return Object.entries(headers).reduce(
-    (acc, [key, value]) => {
-      if (value != null) {
-        acc[key] = String(value)
-      }
-      return acc
-    },
-    {} as Record<string, string>,
-  )
 }
 
 /**

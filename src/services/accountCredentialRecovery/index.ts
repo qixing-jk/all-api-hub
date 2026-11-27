@@ -5,6 +5,10 @@ import {
   isAccountLoginConfigured,
   resolveAccountLogin,
 } from "~/services/accountLogin/configCodec"
+import {
+  discardAccountLoginCredential,
+  getIssuedAccountLoginCredential,
+} from "~/services/accountLogin/credentialCleanup"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import type { AccountLoginCredential } from "~/services/apiAdapters/contracts/accountLogin"
 import { getAccountLoginCapability } from "~/services/apiAdapters/registry"
@@ -23,6 +27,7 @@ import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { safeRandomUUID } from "~/utils/core/identifier"
+import { t } from "~/utils/i18n/core"
 
 import {
   applyRecoveredCredentialToAccount,
@@ -131,24 +136,24 @@ export async function executeWithAccountCredentialRecovery<T>(
               request.abortSignal,
               request.abortDeadline?.signal,
             ])
+            let issuedCredential: AccountLoginCredential | undefined
             try {
-              const result = await verifyRecoveredCredential(
-                await loginAccount({
-                  account: { ...account, login },
-                  methodId: login.methodId,
-                  requestId: safeRandomUUID("account-credential-recovery"),
-                  attended: false,
-                  captureCredential: true,
-                  abortSignal: cancellation.signal,
-                }),
-                {
-                  ...account,
-                  abortSignal: cancellation.signal,
-                  protectionBypassExecution: request.protectionBypassExecution,
-                  tempWindowRequestSource: request.tempWindowRequestSource,
-                  fetchContext: request.fetchContext,
-                },
-              )
+              const loggedIn = await loginAccount({
+                account: { ...account, login },
+                methodId: login.methodId,
+                requestId: safeRandomUUID("account-credential-recovery"),
+                attended: false,
+                captureCredential: true,
+                abortSignal: cancellation.signal,
+              })
+              issuedCredential = getIssuedAccountLoginCredential(loggedIn)
+              const result = await verifyRecoveredCredential(loggedIn, {
+                ...account,
+                abortSignal: cancellation.signal,
+                protectionBypassExecution: request.protectionBypassExecution,
+                tempWindowRequestSource: request.tempWindowRequestSource,
+                fetchContext: request.fetchContext,
+              })
               assertActive(request)
               if (result.status !== BROWSER_LOGIN_STATUS.Authenticated)
                 throw new AccountCredentialRecoveryError(result, error)
@@ -182,6 +187,25 @@ export async function executeWithAccountCredentialRecovery<T>(
                   }
                 },
               )
+            } catch (recoveryError) {
+              if (issuedCredential) {
+                try {
+                  await discardAccountLoginCredential(account, issuedCredential)
+                } catch {
+                  const cleanupError = new AccountCredentialRecoveryError(
+                    {
+                      status: BROWSER_LOGIN_STATUS.Uncertain,
+                      message: t(
+                        "messages:errors.api.browserLoginCleanupUnconfirmed",
+                      ),
+                    },
+                    error,
+                  )
+                  cleanupError.cause = recoveryError
+                  throw cleanupError
+                }
+              }
+              throw recoveryError
             } finally {
               cancellation.dispose()
             }

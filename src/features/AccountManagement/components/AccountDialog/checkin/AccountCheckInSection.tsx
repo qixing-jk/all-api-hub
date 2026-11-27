@@ -58,7 +58,10 @@ import {
 } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
-import { getCheckInAccountLoginMode } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getCheckInAccountLoginMode,
+  getCheckInMethodPresentationMetadata,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig } from "~/types"
 
 import { AccountVerificationContinuation } from "./AccountVerificationContinuation"
@@ -197,7 +200,14 @@ export function AccountCheckInSection({
     .filter(Boolean)
     .join(" ")
   const showRefreshHint =
-    hasSelectedMethod && !methodStatusMessage && !hasUnknownDetection
+    hasSelectedMethod &&
+    !methodStatusMessage &&
+    !hasUnknownDetection &&
+    !(
+      selectedMethodId &&
+      getCheckInMethodPresentationMetadata(selectedMethodId)
+        .accountRefreshMayGrant
+    )
   // The deployment's own gate: the site asks for human verification when the
   // grant is claimed, so unattended execution cannot complete on its own.
   const selectedRequiresManualVerification =

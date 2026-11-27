@@ -11,7 +11,10 @@ import {
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
-import { FREEGG_DAILY_ALLOWANCE_ORIGINS } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
+import {
+  FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+  FREEGG_DAILY_ALLOWANCE_ORIGINS,
+} from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
 import {
   XINGYA_CHECK_IN_ORIGINS,
   XINGYA_CHECK_IN_STATUS_ENDPOINT,
@@ -38,6 +41,10 @@ import {
   createHiyoCheckInStatusEndpoint,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
+import {
+  LINXI_DEFAULT_RESET_TIME_ZONE,
+  linxiStatusRoute,
+} from "~/services/apiService/sub2api/checkin/linxiCheckInProtocol"
 import {
   createNexaVlinksCheckInStatusEndpoint,
   resolveNexaVlinksCheckInTimezone,
@@ -107,10 +114,12 @@ type CheckInMethodLabelKey =
   | "methods.daily.name"
   | "methods.login.name"
   | "methods.bizDecipherFreeGift.name"
+  | "methods.freeGgAllowance.name"
 type CheckInMethodDisclosureKey =
   | "methods.daily.description"
   | "methods.login.description"
   | "methods.bizDecipherFreeGift.description"
+  | "methods.freeGgAllowance.description"
 type CheckInMethodSourceNameKey = `methods.sources.${
   | "geniusProgrammer"
   | "denxio"
@@ -128,10 +137,13 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "sidrune"
   | "nexavlinks"
   | "xingya"
+  | "linxi"
   | "apiKeyCasa"
   | "agentRouter"}`
 
 export type CheckInMethodPresentationMetadata = {
+  /** Account balance reads can also claim this method on the deployment. */
+  readonly accountRefreshMayGrant?: boolean
   readonly kind: "daily" | "login"
   readonly labelKey: CheckInMethodLabelKey
   readonly disclosureKey?: CheckInMethodDisclosureKey
@@ -142,6 +154,8 @@ export type CheckInMethodPresentationMetadata = {
 interface AutoCheckinMethodDefinitionBase {
   /** Calendar used by the site to reset its daily check-in. Defaults to the device calendar. */
   readonly resetTimeZone?: string
+  /** The method can verify a deployment-specific reset timezone in its protocol. */
+  readonly reportsResetTimeZone?: boolean
   readonly presentation?: Partial<
     Omit<CheckInMethodPresentationMetadata, "sourceName">
   >
@@ -173,6 +187,8 @@ export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
+    // Linxi deployments may require a manual security step; never queue a retry.
+    AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
     AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
@@ -377,12 +393,18 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Specific,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN],
     origins: FREEGG_DAILY_ALLOWANCE_ORIGINS,
-    presentation: { sourceNameKey: "methods.sources.freeGg" },
+    presentation: {
+      sourceNameKey: "methods.sources.freeGg",
+      labelKey: "methods.freeGgAllowance.name",
+      accountRefreshMayGrant: true,
+      disclosureKey: "methods.freeGgAllowance.description",
+    },
     source: {
       kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
       sourceName: "FreeGG",
     },
-    supportsStatusReadback: false,
+    supportsStatusReadback: true,
+    resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
     feedbackStatusRoutes: [{ path: "/api/status", public: true }],
     legacy: false,
     newAccountCompatibility: false,
@@ -445,6 +467,30 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: "/api/v1/redeem/checkin/status" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: {
+    resetTimeZone: LINXI_DEFAULT_RESET_TIME_ZONE,
+    reportsResetTimeZone: true,
+    // Public frontends for the K40 hosts and 100xLabs use this protocol.
+    discoveryOrigins: [
+      "https://sub.100xlabs.space",
+      "https://k40.shengqainbang.cn",
+    ],
+    // An inconclusive probe on a different deployment must not block a verified method.
+    unknownDiscoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Generic,
+    presentation: { sourceNameKey: "methods.sources.linxi" },
+    id: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Linxi / 100xLabs",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: linxiStatusRoute() },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -796,13 +842,26 @@ export function getUnknownCheckInDiscoveryPriority(
   )
 }
 
-/** A missing reset zone uses the device calendar. */
+/** Only methods with a timezone-bearing protocol can override their default calendar. */
 export function getCheckInResetTimeZone(
   methodId: CheckInMethodId,
+  observedTimeZone?: string,
 ): string | undefined {
   const definition: AutoCheckinMethodDefinition =
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
-  return definition.resetTimeZone
+  return (
+    (definition.reportsResetTimeZone ? observedTimeZone : undefined) ??
+    definition.resetTimeZone
+  )
+}
+
+/** Whether persisted observations of this method may carry a site-reported zone. */
+export function reportsCheckInResetTimeZone(
+  methodId: CheckInMethodId,
+): boolean {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.reportsResetTimeZone === true
 }
 
 /** Returns whether the selected method can verify today without posting. */

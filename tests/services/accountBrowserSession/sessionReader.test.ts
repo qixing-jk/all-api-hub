@@ -10,6 +10,7 @@ import {
 } from "~/services/accountBrowserSession"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { createAccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
+import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/auth/browserAuth"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -21,6 +22,7 @@ const {
   mockIsExtensionBackground,
   mockLoggerWarn,
   mockLoggerInfo,
+  mockIsFirefox,
   mockSendRuntimeMessage,
   mockSendTabMessage,
 } = vi.hoisted(() => ({
@@ -30,6 +32,7 @@ const {
   mockIsExtensionBackground: vi.fn(),
   mockLoggerWarn: vi.fn(),
   mockLoggerInfo: vi.fn(),
+  mockIsFirefox: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
   mockSendTabMessage: vi.fn(),
 }))
@@ -48,6 +51,7 @@ vi.mock("~/utils/browser", async (importOriginal) => {
   return {
     ...actual,
     isExtensionBackground: mockIsExtensionBackground,
+    isFirefox: mockIsFirefox,
   }
 })
 
@@ -102,9 +106,31 @@ function resolveAccountBrowserSession(
 }
 
 describe("account browser-session reader", () => {
+  it("preserves verified website ownership without exporting refresh credentials", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "17",
+        accessToken: "website-access",
+        sub2apiWebsiteSessionBound: true,
+      },
+    })
+    const session = await readAccountBrowserSessionFromTab({
+      tabId: 12,
+      baseUrl: "https://sub2.example",
+      siteType: SITE_TYPES.SUB2API,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+    })
+    expect(session).toMatchObject({
+      sub2apiWebsiteSessionBound: true,
+      accessToken: "website-access",
+    })
+    expect(session?.sub2apiAuth).toBeUndefined()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsExtensionBackground.mockReturnValue(false)
+    mockIsFirefox.mockReturnValue(false)
     mockGetBrowserApiCapabilities.mockReturnValue({
       hasWindows: true,
       hasTabs: true,
@@ -881,6 +907,41 @@ describe("account browser-session reader", () => {
     expect(session?.userId).toBe("3")
   })
 
+  it.each([false, true])(
+    "uses only the default store for the requested private mode: %s",
+    async (incognito) => {
+      mockSendTabMessage.mockResolvedValue({
+        success: true,
+        data: { userId: "17" },
+      })
+      const stores = [
+        "firefox-container-1",
+        "firefox-default",
+        "firefox-private",
+      ]
+      const session = await readAccountBrowserSessionFromExistingTabs({
+        baseUrl: "https://sub2.example.com",
+        siteType: SITE_TYPES.SUB2API,
+        browserContext: { incognito, defaultCookieStoreOnly: true },
+        candidateTabs: stores.map((cookieStoreId, index) => ({
+          id: index + 1,
+          index,
+          highlighted: false,
+          active: false,
+          pinned: false,
+          incognito,
+          cookieStoreId,
+          url: "https://sub2.example.com",
+        })),
+      })
+      expect(session?.userId).toBe("17")
+      expect(mockSendTabMessage).toHaveBeenCalledExactlyOnceWith(
+        incognito ? 3 : 2,
+        expect.anything(),
+      )
+    },
+  )
+
   it("does not read a supplied snapshot for an invalid target origin", async () => {
     expect(
       await readAccountBrowserSessionFromExistingTabs({
@@ -1302,6 +1363,11 @@ describe("account browser-session reader", () => {
     })
 
     expect(session?.source).toBe(ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW)
+    expect(session?.fetchContext).toEqual({
+      kind: "browser-context",
+      incognito: true,
+      cookieStoreId: "firefox-private",
+    })
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         action: RuntimeActionIds.ProtectionBypassExecuteTask,
@@ -1316,4 +1382,96 @@ describe("account browser-session reader", () => {
       }),
     )
   })
+})
+it.each([
+  [undefined, 4],
+  [{ kind: "browser-context", cookieStoreId: "firefox-container-2" }, 2],
+  [
+    {
+      kind: "browser-context",
+      incognito: true,
+      cookieStoreId: "firefox-private",
+    },
+    1,
+  ],
+] as const)(
+  "recovers the same identity only in its allowed browser partition (%j)",
+  async (fetchContext, tabId) => {
+    const baseUrl = "https://sub2.example.com"
+    mockGetAllTabs.mockResolvedValueOnce([
+      {
+        id: 1,
+        url: baseUrl,
+        active: true,
+        incognito: true,
+        cookieStoreId: "firefox-private",
+      },
+      { id: 2, url: baseUrl, cookieStoreId: "firefox-container-2" },
+      { id: 3, url: baseUrl, cookieStoreId: "firefox-container-3" },
+      { id: 4, url: baseUrl, cookieStoreId: "firefox-default" },
+    ])
+    mockSendTabMessage.mockImplementationOnce(async (id) => ({
+      success: true,
+      data: { userId: "17", accessToken: `token-${id}` },
+    }))
+    await expect(
+      recoverSub2ApiBrowserAuth({
+        baseUrl,
+        expectedUserId: "17",
+        fetchContext,
+      }),
+    ).resolves.toMatchObject({ accessToken: `token-${tabId}` })
+    expect(mockSendTabMessage).toHaveBeenCalledExactlyOnceWith(
+      tabId,
+      expect.anything(),
+    )
+  },
+)
+
+it("recovers a closed tab through a temporary page in the pinned cookie store", async () => {
+  const baseUrl = "https://sub2.example.com"
+  const cookieStoreId = "firefox-container-2"
+  mockGetAllTabs.mockResolvedValueOnce([])
+  mockSendRuntimeMessage.mockResolvedValueOnce({
+    success: true,
+    data: { userId: "17", accessToken: "container-token" },
+  })
+  await expect(
+    recoverSub2ApiBrowserAuth({
+      baseUrl,
+      expectedUserId: "17",
+      protectionBypassExecution: testExecution,
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 17,
+        origin: baseUrl,
+        cookieStoreId,
+      },
+    }),
+  ).resolves.toMatchObject({
+    accessToken: "container-token",
+    fetchContext: { kind: "browser-context", cookieStoreId },
+  })
+  expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      task: {
+        kind: "session_read",
+        params: expect.objectContaining({ cookieStoreId }),
+      },
+    }),
+  )
+})
+
+it("skips unclassified Firefox tabs when the browser hides their cookie store", async () => {
+  mockIsFirefox.mockReturnValue(true)
+  const baseUrl = "https://sub2.example.com"
+  mockGetAllTabs.mockResolvedValueOnce([{ id: 1, url: baseUrl }])
+  mockSendTabMessage.mockResolvedValueOnce({
+    success: true,
+    data: { userId: "17", accessToken: "unclassified-token" },
+  })
+  await expect(
+    recoverSub2ApiBrowserAuth({ baseUrl, expectedUserId: "17" }),
+  ).resolves.toBeNull()
+  expect(mockSendTabMessage).not.toHaveBeenCalled()
 })

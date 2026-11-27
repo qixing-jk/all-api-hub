@@ -100,7 +100,12 @@ export function AccountCheckInRouteFields({
   const { t } = useTranslation("accountDialog")
   const methods = candidateMethodIds.filter(supportsCheckInRouteOverride)
   if (methods.length === 0) return null
-  const multiple = methods.length > 1
+  const multiple =
+    methods.length > 1 ||
+    Boolean(
+      checkIn.selection.methodId &&
+      !methods.includes(checkIn.selection.methodId),
+    )
   return (
     <div className="space-y-density-2">
       {methods.map((methodId) => (

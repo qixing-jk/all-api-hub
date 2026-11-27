@@ -20,6 +20,11 @@ export type AccountBrowserSessionSource =
 
 export type AccountBrowserSessionFetchContext = ApiServiceFetchContext
 
+export type AccountBrowserSessionScope = ApiTransportBrowserFetchContext & {
+  /** With no explicit cookie store, accept only the browser's default partition. */
+  defaultCookieStoreOnly?: boolean
+}
+
 export type AccountBrowserSession = {
   source: AccountBrowserSessionSource
   siteType: AccountSiteType
@@ -29,6 +34,7 @@ export type AccountBrowserSession = {
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
+  sub2apiWebsiteSessionBound?: true
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: AccountBrowserSessionFetchContext
 }
@@ -70,7 +76,7 @@ export type ReadAccountBrowserSessionFromExistingTabsOptions = {
   diagnostics?: AccountDetectionDiagnostics
   baseUrl: string
   siteType: AccountSiteType
-  browserContext?: ApiTransportBrowserFetchContext
+  browserContext?: AccountBrowserSessionScope
   /** Reuse a tab query snapshot; origin and browser context are still checked. */
   candidateTabs?: readonly browser.tabs.Tab[]
   isUsableSession?: AccountBrowserSessionPredicate
@@ -98,6 +104,7 @@ export type ResolveAccountBrowserSessionOptions = {
   baseUrl: string
   siteType: AccountSiteType
   currentTab?: ApiTransportBrowserFetchContext & { tabId: number }
+  browserContext?: AccountBrowserSessionScope
   useExistingTabs?: boolean
   useTempWindow?: boolean
   tempWindowRequestSource?: TempWindowRequestSource

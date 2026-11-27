@@ -105,6 +105,11 @@
   },
   "errors": {
     "api": {
+      "browserBackgroundVerificationFailed": "无法在后台完成站点验证。请重试，仍失败时可反馈该站点的兼容问题。",
+      "browserLoginCleanupUnconfirmed": "无法确认新登录会话已清理。重试前请在站点检查活动会话。",
+      "browserProofLoginRequired": "此凭据属于网页登录会话。请在网站登录同一账号后重试，也可配置账号登录以获取独立会话。",
+      "browserProofRejected": "网站拒绝了请求签名。请重试；仍失败时，可反馈该站点的兼容问题。",
+      "browserProofSecondFactorRequired": "此账号需要二次验证，扩展暂未适配该站点的二次验证登录。",
       "invalidResponseFormat": "响应数据格式错误",
       "missingRecoveryPolicy": "扩展无法准备此请求，请更新扩展或反馈此问题。",
       "nonJsonContent": "返回了 {{contentType}} 而不是 JSON（HTTP {{status}}）",
@@ -214,8 +219,9 @@
   "sub2api": {
     "authPersistenceFailed": "无法将刷新的 Sub2API 登录信息安全地保存到此账号。请刷新或重新导入该账号，然后重试。",
     "configMissing": "请先在基础设置中配置 Sub2API 基础 URL 和管理员 API Key。",
-    "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user 用于导入会话）后再重试。",
-    "refreshTokenInvalid": "Sub2API refresh_token 已失效/已轮转。请从控制台重新导入会话（推荐无痕/隐私窗口），或粘贴新的 refresh_token 后重试。"
+    "independentSessionRequired": "此独立 Sub2API 会话的签名密钥不可用。请在账号编辑器中选择「重新登录」或「登录获取」来替换会话。",
+    "loginRequired": "请登录 Sub2API 网站后重试，或配置账号登录以获取独立会话。",
+    "refreshTokenInvalid": "此 Sub2API 刷新令牌已无法续期。请配置账号登录并使用「重新登录」或「登录获取」，也可在站点允许时重新导入或粘贴有效的刷新令牌。"
   },
   "toast": {
     "error": {

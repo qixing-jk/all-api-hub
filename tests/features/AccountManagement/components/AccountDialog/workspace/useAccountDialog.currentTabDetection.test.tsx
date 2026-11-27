@@ -324,6 +324,68 @@ describe("useAccountDialog current tab detection", () => {
     ).toHaveLength(0)
   })
 
+  it("clears website-bound evidence after a fresh unbound Sub2API detection", async () => {
+    const detected = {
+      username: "User",
+      accessToken: "access",
+      userId: "17",
+      exchangeRate: 7,
+      siteName: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: buildCheckInConfig(),
+    }
+    mockAutoDetectAccount
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: true,
+        data: { ...detected, sub2apiWebsiteSessionBound: true },
+      })
+      .mockResolvedValueOnce({
+        kind: "detected",
+        success: true,
+        data: detected,
+      })
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+    await act(async () =>
+      result.current.setters.setUrl("https://sub2api.example"),
+    )
+    await act(async () => result.current.handlers.handleAutoDetect())
+    expect(result.current.state.isWebsiteSessionBound).toBe(true)
+    await act(async () => result.current.handlers.handleAutoDetect())
+    expect(result.current.state.isWebsiteSessionBound).toBe(false)
+  })
+
+  it("keeps website ownership evidence when detection returns a recoverable failure", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      kind: "manual-action-required",
+      success: false,
+      message: "Recovery required",
+      recoveryData: {
+        siteType: SITE_TYPES.SUB2API,
+        userId: "17",
+        accessToken: "website-access",
+        sub2apiWebsiteSessionBound: true,
+      },
+    })
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+    })
+    await act(async () =>
+      result.current.setters.setUrl("https://sub2api.example"),
+    )
+    await act(async () => result.current.handlers.handleAutoDetect())
+    expect(result.current.state.isWebsiteSessionBound).toBe(true)
+    expect(result.current.state.accessToken).toBe("website-access")
+  })
+
   it("passes the detected Kimi refresh session to account creation", async () => {
     const auth = {
       refreshToken: "refresh",

@@ -1,58 +1,61 @@
 import {
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
+import { CURRENCIES } from "~/constants/money"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  ASSET_KINDS,
+  AWARD_FULFILLMENT,
+  AWARD_TARGETS,
+} from "~/services/amounts/financialConstants"
 import {
   fetchFreeggAllowanceLogs,
   fetchFreeggPublicStatus,
-  freeggLogId,
   isFreeggAllowanceRecord,
+  isValidFreeggLog,
+  readFreeggAllowanceUsd,
   triggerFreeggDailyAllowance,
 } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowance"
 import {
   FREEGG_ALLOWANCE_LOG_ENDPOINT,
-  FREEGG_DAILY_ALLOWANCE_ORIGINS,
+  FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+  isFreeggUrl,
 } from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
+import { composeAbortSignals } from "~/services/apiTransport/abortableTask"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import {
   createUnconfirmedCheckInResult,
+  withCheckInConfirmation,
   withCheckInResponseConfirmation,
 } from "~/services/checkin/autoCheckin/confirmation"
+import {
+  isCheckInObservationCurrent,
+  readDayStableCheckInObservation,
+} from "~/services/checkin/statusObservation"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 import type { AutoCheckinProvider } from "./contracts"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
-  readQuotaAwards,
   resolveProviderErrorResult,
 } from "./shared"
-
-/** Only the deployment whose public assets expose daily_allowance_setting. */
-function isFreeggUrl(value: string | undefined): boolean {
-  try {
-    const url = new URL(value ?? "")
-    return (
-      !url.username &&
-      !url.password &&
-      FREEGG_DAILY_ALLOWANCE_ORIGINS.some((origin) => origin === url.origin)
-    )
-  } catch {
-    return false
-  }
-}
 
 /**
  * FreeGG v1.0.0-rc.49 has a daily allowance separate from checkin_enabled.
  * The public console describes a fixed grant on the first authenticated visit.
- * Execution reference: https://github.com/ZHT0711/egern-freegg-login (v2.0.0).
- * That script's top-up/positive-balance fallbacks are deliberately not evidence.
+ * Verified protocol observations: .scratch/freegg-daily-allowance/spec.md.
  *
- * No reset timezone or authoritative today field is public. Historical logs
- * therefore cannot establish today's state. Until that contract is available,
- * only a new, account-matched grant within this execution interval is confirmed.
+ * Live observations establish UTC+8 days and structured type-1 grants. Log IDs
+ * are presentation positions; timestamped account evidence confirms a claim.
  */
 export const freeggProvider: AutoCheckinProvider = {
   getReadiness(account) {
@@ -95,8 +98,95 @@ export const freeggProvider: AutoCheckinProvider = {
       },
     }
   },
-  // No getStatus: a local-calendar interpretation of old logs would falsely
-  // imply a verified site day. Discovery and refresh must never call self.
+  async getStatus({ account, request, observedAt, signal }) {
+    if (!request && account && !this.getReadiness(account).ready) return
+    const source =
+      request ??
+      (account
+        ? createAccountApiRequestFromStoredAccount(account).request
+        : undefined)
+    if (
+      !source ||
+      !isFreeggUrl(source.baseUrl) ||
+      !source.auth.userId ||
+      source.auth.authType !== AuthTypeEnum.AccessToken ||
+      !source.auth.accessToken?.trim() ||
+      signal?.aborted ||
+      source.abortSignal?.aborted
+    )
+      return
+    if (
+      account &&
+      (String(source.auth.userId) !== String(account.account_info.id) ||
+        new URL(source.baseUrl).origin !== new URL(account.site_url).origin)
+    )
+      return
+    const unknown = () => ({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+      reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse,
+      attemptedAt: observedAt,
+    })
+    const composed = composeAbortSignals([signal, source.abortSignal])
+    try {
+      const stable = await readDayStableCheckInObservation(
+        () =>
+          fetchFreeggAllowanceLogs({
+            baseUrl: source.baseUrl,
+            auth: source.auth,
+            accountId: source.accountId,
+            siteType: source.siteType,
+            directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
+            abortSignal: composed.signal,
+          }),
+        FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+      )
+      if (!stable) return unknown()
+      const { records, complete, serverTime } = stable.observation
+      observedAt = stable.observedAt
+      if (
+        serverTime !== undefined &&
+        !isCheckInObservationCurrent(
+          serverTime,
+          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+          observedAt,
+        )
+      )
+        return unknown()
+      const businessDay = getDayKeyFromUnixSeconds(
+        observedAt / 1000,
+        FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+      )
+      if (
+        records.some(
+          (r) =>
+            !isValidFreeggLog(r, source.auth.userId, serverTime ?? Date.now()),
+        )
+      )
+        return unknown()
+      const checked = records.some(
+        (r) =>
+          isFreeggAllowanceRecord(r) &&
+          getDayKeyFromUnixSeconds(
+            r.created_at as number,
+            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+          ) === businessDay,
+      )
+      if (!checked && !complete) return unknown()
+      return {
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        today: checked
+          ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+          : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+        evidence: {
+          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+          observedAt,
+        },
+      }
+    } finally {
+      composed.dispose()
+    }
+  },
   async checkIn(account, context) {
     if (!("site_type" in account)) {
       return resolveProviderErrorResult({
@@ -119,23 +209,73 @@ export const freeggProvider: AutoCheckinProvider = {
         auth: storedRequest.auth,
         directRequestReason: API_DIRECT_REQUEST_REASONS.ProviderProtocol,
       }
-      const before = await fetchFreeggAllowanceLogs(request)
+      const baseline = await fetchFreeggAllowanceLogs(request)
+      if (
+        !baseline.complete ||
+        (baseline.serverTime !== undefined &&
+          !isCheckInObservationCurrent(
+            baseline.serverTime,
+            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+          ))
+      )
+        return createUnconfirmedCheckInResult(account)
+      const before = baseline.records
       if (
         before.some(
-          (item) =>
-            item.user_id !== undefined &&
-            String(item.user_id) !== String(account.account_info.id),
+          (r) =>
+            !isValidFreeggLog(
+              r,
+              account.account_info.id,
+              baseline.serverTime ?? Date.now(),
+            ),
         )
+      )
+        return createUnconfirmedCheckInResult(account)
+      const day = getDayKeyFromUnixSeconds(
+        Date.now() / 1000,
+        FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+      )
+      const already = before.find(
+        (item) =>
+          isFreeggAllowanceRecord(item) &&
+          getDayKeyFromUnixSeconds(
+            item.created_at as number,
+            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+          ) === day,
+      )
+      if (already)
+        return withCheckInConfirmation(
+          account,
+          {
+            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            messageKey:
+              AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
+          },
+          {
+            kind: "observed",
+            status: {
+              outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+              today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+              resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+              evidence: {
+                source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+                observedAt: Date.now(),
+              },
+            },
+          },
+        )
+      if (
+        context.beforeRecoveredMutation &&
+        !(await context.beforeRecoveredMutation())
       ) {
         return createUnconfirmedCheckInResult(account)
       }
-      const previousIds = new Set(before.map((item) => freeggLogId(item.id)))
-      const startedAt = Math.floor(Date.now() / 1000)
+      const startedAt = Math.floor((baseline.serverTime ?? Date.now()) / 1000)
       triggerAttempted = true
-      let identity: unknown
+      let response: Awaited<ReturnType<typeof triggerFreeggDailyAllowance>>
       let triggerResponseLost = false
       try {
-        identity = await triggerFreeggDailyAllowance({
+        response = await triggerFreeggDailyAllowance({
           ...request,
           observer: context.mutationLifecycle,
         })
@@ -147,57 +287,67 @@ export const freeggProvider: AutoCheckinProvider = {
       const expectedIdentity = String(account.account_info.id)
       if (
         !triggerResponseLost &&
-        (!identity || String(identity) !== expectedIdentity)
+        (!response?.id || String(response.id) !== expectedIdentity)
       ) {
         return createUnconfirmedCheckInResult(account)
       }
-      const after = await fetchFreeggAllowanceLogs(request)
+      const readback = await fetchFreeggAllowanceLogs(request)
+      if (
+        readback.serverTime !== undefined &&
+        !isCheckInObservationCurrent(
+          readback.serverTime,
+          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+        )
+      )
+        return createUnconfirmedCheckInResult(account)
+      const after = readback.records
       if (
         after.some(
-          (item) =>
-            item.user_id !== undefined &&
-            String(item.user_id) !== expectedIdentity,
-        ) ||
-        (triggerResponseLost &&
-          ![...before, ...after].some(
-            (item) => String(item.user_id) === expectedIdentity,
-          ))
-      ) {
-        return createUnconfirmedCheckInResult(account)
-      }
-      const completedAt = Math.floor(Date.now() / 1000)
-      const record = after.find((item) => {
-        const id = freeggLogId(item.id)
-        return (
-          id !== undefined &&
-          !previousIds.has(id) &&
-          isFreeggAllowanceRecord(item) &&
-          (item.user_id === undefined ||
-            String(item.user_id) === expectedIdentity) &&
-          typeof item.created_at === "number" &&
-          Number.isInteger(item.created_at) &&
-          item.created_at >= startedAt &&
-          item.created_at <= completedAt
+          (r) =>
+            !isValidFreeggLog(
+              r,
+              account.account_info.id,
+              readback.serverTime ?? Date.now(),
+            ),
         )
-      })
+      )
+        return createUnconfirmedCheckInResult(account)
+      const completedAt = Math.floor((readback.serverTime ?? Date.now()) / 1000)
+      const record = after.find(
+        (item) =>
+          isFreeggAllowanceRecord(item) &&
+          (!triggerResponseLost || String(item.user_id) === expectedIdentity) &&
+          (item.created_at as number) >= startedAt &&
+          (item.created_at as number) <= completedAt,
+      )
       if (!record) return createUnconfirmedCheckInResult(account)
-      const quota =
-        typeof record.quota === "number" &&
-        Number.isFinite(record.quota) &&
-        record.quota > 0
-          ? record.quota
-          : undefined
+      if (
+        response?.allowanceDate &&
+        response.allowanceDate !==
+          getDayKeyFromUnixSeconds(
+            record.created_at as number,
+            FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+          )
+      )
+        return createUnconfirmedCheckInResult(account)
+      const usdAmount = readFreeggAllowanceUsd(record)
       return withCheckInResponseConfirmation(
         account,
         {
           status: CHECKIN_RESULT_STATUS.SUCCESS,
           messageKey:
             AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinSuccessful,
-          awards: readQuotaAwards(account, quota, {
-            id: String(record.id),
-            operation: FREEGG_ALLOWANCE_LOG_ENDPOINT,
-            field: "quota",
-          }),
+          awards: [
+            accountAward(account, {
+              id: `freegg:${record.created_at}`,
+              operation: FREEGG_ALLOWANCE_LOG_ENDPOINT,
+              field: "other.content_parts.params.quota",
+              value: usdAmount,
+              asset: { kind: ASSET_KINDS.Currency, code: CURRENCIES.USD },
+              target: AWARD_TARGETS.Wallet,
+              fulfillment: AWARD_FULFILLMENT.Credited,
+            }),
+          ],
         },
         {
           timestamp: new Date(

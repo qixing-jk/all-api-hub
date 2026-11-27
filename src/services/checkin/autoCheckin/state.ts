@@ -147,7 +147,7 @@ const getRetainedKnownStatusFacts = (
     CheckInMethodStatus,
     { outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Known }
   >,
-  "availability" | "requiresManualVerification"
+  "availability" | "requiresManualVerification" | "resetTimeZone"
 > => {
   if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) return {}
   return {
@@ -155,6 +155,7 @@ const getRetainedKnownStatusFacts = (
     ...(status.requiresManualVerification
       ? { requiresManualVerification: status.requiresManualVerification }
       : {}),
+    ...(status.resetTimeZone ? { resetTimeZone: status.resetTimeZone } : {}),
   }
 }
 
@@ -163,6 +164,7 @@ export function markCheckInMethodExecuted(input: {
   config: CheckInConfig
   methodId: CheckInMethodId
   observedAt: number
+  resetTimeZone?: string
 }): CheckInConfig {
   const retainedFacts = getRetainedKnownStatusFacts(
     input.config.methodKnowledge.methods[input.methodId]?.status,
@@ -173,6 +175,7 @@ export function markCheckInMethodExecuted(input: {
     status: {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
       ...retainedFacts,
+      ...(input.resetTimeZone ? { resetTimeZone: input.resetTimeZone } : {}),
       today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
       evidence: {
         source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution,

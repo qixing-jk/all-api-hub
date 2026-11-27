@@ -379,6 +379,34 @@ describe("apiTransport request helpers", () => {
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps a temporary page's signing failure distinct from an HTTP response", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: false,
+      error: "The website signing key changed",
+      code: ApiErrorCodes.HTTP_401,
+      localError: { statusCode: 401, upstreamCode: "PANEL_PROOF_KEY_MISMATCH" },
+      transportLifecycle: {
+        upstreamRequestDispatched: false,
+        upstreamResponseReceived: false,
+      },
+    })
+    await expect(
+      fetchApiResponse(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+          forceTempWindow: true,
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      code: ApiErrorCodes.HTTP_401,
+      upstreamCode: "PANEL_PROOF_KEY_MISMATCH",
+    })
+  })
+
   it.each(["POST", "GET"] as const)(
     "does not replay a %s mutation after a WAF response",
     async (method) => {

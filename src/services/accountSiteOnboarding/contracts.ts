@@ -38,8 +38,7 @@ export type AimlApiConsoleTransientAuth = {
 }
 export const AIMLAPI_CONSOLE_TRANSIENT_AUTH_KIND = "aimlapi_console"
 export type ContentSessionTransientAuth =
-  | NewApiDashboardTransientAuth
-  | AimlApiConsoleTransientAuth
+  NewApiDashboardTransientAuth | AimlApiConsoleTransientAuth
 
 export type ContentSessionExtractionResult = {
   userId: string | number
@@ -51,6 +50,8 @@ export type ContentSessionExtractionResult = {
     refreshToken: string
     tokenExpiresAt?: number
   }
+  /** A verified website session whose refresh credential stays in the browser. */
+  sub2apiWebsiteSessionBound?: true
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 

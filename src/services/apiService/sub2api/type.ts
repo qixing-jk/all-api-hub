@@ -7,7 +7,16 @@
 
 export const SUB2API_SESSION_BINDING_MISMATCH_CODE = "SESSION_BINDING_MISMATCH"
 
+export const SUB2API_PANEL_KEY_ERRORS = {
+  Mismatch: "PANEL_PROOF_KEY_MISMATCH",
+  WebsiteKeyMissing: "PANEL_PROOF_BROWSER_KEY_MISSING",
+  IndependentSessionRequired: "PANEL_PROOF_INDEPENDENT_SESSION_REQUIRED",
+} as const
+
 export const SUB2API_AUTH_ME_ENDPOINT = "/api/v1/auth/me"
+export const SUB2API_AUTH_LOGIN_ENDPOINT = "/api/v1/auth/login"
+export const SUB2API_AUTH_LOGOUT_ENDPOINT = "/api/v1/auth/logout"
+export const SUB2API_AUTH_REFRESH_ENDPOINT = "/api/v1/auth/refresh"
 export const SUB2API_PUBLIC_SETTINGS_ENDPOINT = "/api/v1/settings/public"
 export const SUB2API_AFFILIATE_ENDPOINT = "/api/v1/user/aff"
 export const SUB2API_KEYS_ENDPOINT = "/api/v1/keys"
@@ -65,6 +74,8 @@ export type Sub2ApiPublicSettingsData = {
   oidc_oauth_provider_name?: string | null
   dingtalk_oauth_enabled?: boolean | null
   wechat_oauth_open_enabled?: boolean | null
+  turnstile_enabled?: boolean | null
+  totp_enabled?: boolean | null
   tencent_captcha_enabled?: boolean | null
   aliyun_captcha_enabled?: boolean | null
 }

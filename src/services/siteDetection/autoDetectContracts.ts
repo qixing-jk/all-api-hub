@@ -28,6 +28,7 @@ export interface AutoDetectData {
   siteType: AccountSiteType
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
+  sub2apiWebsiteSessionBound?: true
   sub2apiAuth?: Sub2ApiAuthConfig
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: AutoDetectFetchContext

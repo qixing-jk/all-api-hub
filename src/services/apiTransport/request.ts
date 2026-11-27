@@ -1,4 +1,5 @@
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
+import { getRequestProtocol } from "~/services/apiAdapters/requestProtocol"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { mapCompatibilityResponse } from "~/services/apiTransport/compatibilityResponse"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
@@ -345,12 +346,13 @@ function normalizeMessageFetchResponse<T>(
   endpoint: string,
 ): AcquiredTransportResponse<T> {
   const status = response.status ?? (response.success ? 200 : undefined)
-  if (status === undefined) {
+  if (status === undefined || (!response.success && response.localError)) {
     throw new ApiError(
       response.error || "Extension fetch failed",
-      undefined,
+      response.localError?.statusCode,
       endpoint,
       response.code,
+      response.localError?.upstreamCode,
     )
   }
 
@@ -419,6 +421,7 @@ const _fetchApiWithMapper = async <T, TResult>(
   await enforceLogRequestRateLimit({ baseUrl, endpoint: options.endpoint })
 
   const context = {
+    siteType: request.siteType,
     baseUrl: baseUrl,
     url,
     endpoint: options.endpoint,
@@ -484,6 +487,16 @@ const _fetchApiWithMapper = async <T, TResult>(
       }
       // Private credentials must never degrade to ambient cookies or a page.
       if (request.cookieSession) return await primaryRequest()
+      // Credential-bound protocols can require the extension's execution context.
+      if (
+        await (
+          await getRequestProtocol(request.siteType)
+        )?.requiresExtensionContext(
+          request.baseUrl,
+          resolvedAuth.accessToken ?? "",
+        )
+      )
+        return await primaryRequest()
       const fallback = async () => {
         const execution = request.protectionBypassExecution
         if (!execution) {

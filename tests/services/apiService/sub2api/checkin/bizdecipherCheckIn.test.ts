@@ -24,9 +24,15 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
 vi.mock("~/services/apiService/sub2api/auth/browserAuth", () => ({
   recoverSub2ApiBrowserAuth: vi.fn(),
 }))
-vi.mock("~/services/apiService/sub2api/auth/tokenRefresh", () => ({
-  refreshSub2ApiTokens: vi.fn(),
-}))
+vi.mock(
+  "~/services/apiService/sub2api/auth/tokenRefresh",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/tokenRefresh")
+    >()),
+    refreshSub2ApiTokens: vi.fn(),
+  }),
+)
 
 const request: ApiServiceRequest = {
   directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,

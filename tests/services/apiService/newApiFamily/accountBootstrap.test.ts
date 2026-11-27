@@ -57,6 +57,20 @@ describe("newApiFamily accountBootstrap", () => {
     clearNewApiAccessTokenDialectsForTests()
   })
 
+  it("treats FreeGG account discovery as a mutation without credential recovery", async () => {
+    mockFetchApiData.mockResolvedValueOnce({ id: 1, username: "alice" })
+    await fetchUserInfo({ ...request, baseUrl: "https://freegg.app" })
+    expect(mockFetchApiData).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        endpoint: "/api/user/self",
+        operationSemantics: "mutation",
+        credentialRecovery: undefined,
+        tempWindowFallback: { codes: [], statusCodes: [] },
+      }),
+    )
+  })
+
   it("fetchUserInfo returns the normalized public shape", async () => {
     mockFetchApiData.mockResolvedValueOnce({
       id: 9,

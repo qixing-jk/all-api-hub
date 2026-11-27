@@ -39,12 +39,10 @@ type TurnstileAutoStartState = {
 
 declare global {
   var __aahTurnstileAutoStartState:
-    | Map<string, TurnstileAutoStartState>
-    | undefined
+    Map<string, TurnstileAutoStartState> | undefined
 
   var __aahTurnstilePreTriggerState:
-    | Map<string, TurnstileAutoStartState>
-    | undefined
+    Map<string, TurnstileAutoStartState> | undefined
 }
 
 const TURNSTILE_AUTOSTART_MIN_INTERVAL_MS = 1000
@@ -788,6 +786,8 @@ async function readAssistedPageToken(
  */
 export async function waitForTurnstileToken(params: {
   requestId?: string | null
+  /** Deployment settings confirm a widget that may mount after document readiness. */
+  expectTurnstile?: boolean
   timeoutMs?: unknown
   preTrigger?: TurnstilePreTrigger
   userAssist?: TurnstileUserAssist
@@ -811,7 +811,11 @@ export async function waitForTurnstileToken(params: {
     return { status: "token_obtained", token: initialPageToken, detection }
   }
 
-  if (!detection.hasTurnstile && !preTriggerEnabled) {
+  if (
+    !detection.hasTurnstile &&
+    !preTriggerEnabled &&
+    params.expectTurnstile !== true
+  ) {
     clearTurnstileGuardState(params.requestId)
     return { status: "not_present", token: null, detection }
   }

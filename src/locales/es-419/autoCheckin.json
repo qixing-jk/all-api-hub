@@ -182,6 +182,10 @@
       "description": "Este método usa el protocolo de check-in de terceros de {{source}} y solo funciona en instalaciones compatibles.",
       "name": "Check-in diario de {{source}}"
     },
+    "freeGgAllowance": {
+      "description": "Reclama el saldo diario, que se restablece a medianoche UTC+8. Visitar el sitio o actualizar la cuenta también puede reclamarlo. Primero se revisa el registro para evitar repetir la operación.",
+      "name": "Saldo diario de {{source}}"
+    },
     "generic": {
       "name": "Check-in diario"
     },
@@ -202,6 +206,7 @@
       "freeGg": "FreeGG",
       "geniusProgrammer": "Genius Programmer Relay",
       "hiyo": "Hiyo Free",
+      "linxi": "100xLabs",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

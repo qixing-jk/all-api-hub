@@ -126,6 +126,28 @@ it("retains possible dispatch when a retried POST is already in flight at cancel
   }
 })
 
+it.each(["PANEL_PROOF_BROWSER_KEY_MISSING", "PANEL_PROOF_KEY_MISMATCH"])(
+  "keeps a local %s failure in the current browser context",
+  async (upstreamCode) => {
+    mocks.send.mockResolvedValueOnce({
+      success: false,
+      error: "Browser signing unavailable",
+      localError: { statusCode: 401, upstreamCode },
+      transportLifecycle: {
+        upstreamRequestDispatched: false,
+        upstreamResponseReceived: false,
+      },
+    })
+    await expect(
+      execute({ operationSemantics: API_OPERATION_SEMANTICS.Read }),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      upstreamCode,
+    })
+    expect(mocks.fallback).not.toHaveBeenCalled()
+  },
+)
+
 it.each(["receiver unavailable", "explicit rejection"])(
   "allows the first GET mutation dispatch after %s proves the page did not dispatch",
   async (failure) => {
