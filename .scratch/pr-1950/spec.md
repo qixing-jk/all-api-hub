@@ -8,4 +8,6 @@ The current known verification limits are Safari execution and real-site login/r
 
 The review's MSW suggestion was adopted for redirect and identity-validation scenarios, where native Fetch semantics matter. Existing dispatch-level doubles remain for assertions about request options, signing bytes, bounded retries and cancellation. The full test-suite rewrite was not required for these repairs.
 
+The remote session-mode E2E trace exposed a combined startup/login wait using the generic 10-second UI budget. The receiver appeared 6.45 seconds into that wait, with no website login request before expiry. The repair checks receiver-form mounting separately and uses the existing login-recovery budget for completed website login on both surfaces. An injected 11-second preflight delay reproduced the old failure and passed in both locales after repair; the diagnostic variants and logs are retained under `artifacts/handoff-delay-*`. The delay is not part of the committed fixture.
+
 Remote CI, coverage and bot acceptance must be reconciled against the pushed repair SHA before delivery. The final collection and worklist under `artifacts/` record that outcome; original-head results must not be reused as repair-head evidence.

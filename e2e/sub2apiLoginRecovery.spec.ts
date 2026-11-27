@@ -37,6 +37,8 @@ const presentations = [
   { locale: "zh-CN", theme: "dark", copy: zhCn },
 ] as const
 
+const LOGIN_RECOVERY_TIMEOUT_MS = 90_000
+
 test("Sub2API manual token gains login recovery and subsequent refresh-token renewal", async ({
   context,
   page,
@@ -323,7 +325,7 @@ async function runLoginRecovery(
       .poll(
         async () =>
           (await readStoredAccounts(worker))[0]?.account_info.access_token,
-        { timeout: 90000 },
+        { timeout: LOGIN_RECOVERY_TIMEOUT_MS },
       )
       .toBe("login-access")
     const recovered = (await readStoredAccounts(worker))[0]!
@@ -336,7 +338,7 @@ async function runLoginRecovery(
       .poll(
         async () =>
           (await readStoredAccounts(worker))[0]?.account_info.access_token,
-        { timeout: 90000 },
+        { timeout: LOGIN_RECOVERY_TIMEOUT_MS },
       )
       .toBe("rotated-access")
     expect(
@@ -465,32 +467,46 @@ async function verifySessionModes({
     )
     await popupDraft.acquire.click()
     await expect.poll(() => popup.isClosed()).toBe(true)
-    await expect
-      .poll(() =>
-        page.evaluate(
-          ({ sidePanelPath, routeParam, loginTestId, readyText }) =>
-            chrome.extension.getViews().some((view) => {
-              const location = new URL(view.location.href)
-              const isReceiver =
-                location.pathname === `/${sidePanelPath}` ||
-                location.searchParams.has(routeParam)
-              return (
-                isReceiver &&
-                Array.from(
-                  view.document.querySelectorAll(
-                    `[data-testid="${loginTestId}"] [role="status"]`,
-                  ),
-                ).some((status) => status.textContent?.includes(readyText))
-              )
-            }),
-          {
-            sidePanelPath: SIDEPANEL_PAGE_PATH,
-            routeParam: ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery,
-            loginTestId: ids.accountFormSectionLogin,
-            readyText: copy.login.sub2apiSessionReady,
-          },
-        ),
+    const readReceiverLoginState = () =>
+      page.evaluate(
+        ({ sidePanelPath, routeParam, loginTestId, readyText }) => {
+          const receiver = chrome.extension.getViews().find((view) => {
+            const location = new URL(view.location.href)
+            return (
+              location.pathname === `/${sidePanelPath}` ||
+              location.searchParams.has(routeParam)
+            )
+          })
+          const login = receiver?.document.querySelector(
+            `[data-testid="${loginTestId}"]`,
+          )
+          return {
+            mounted: Boolean(login),
+            ready: Array.from(
+              login?.querySelectorAll('[role="status"]') ?? [],
+            ).some((status) => status.textContent?.includes(readyText)),
+          }
+        },
+        {
+          sidePanelPath: SIDEPANEL_PAGE_PATH,
+          routeParam: ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery,
+          loginTestId: ids.accountFormSectionLogin,
+          readyText: copy.login.sub2apiSessionReady,
+        },
       )
+    // Cold receiver startup and website login are separate async phases. CI can
+    // spend most of the UI assertion budget before login has even started.
+    await expect
+      .poll(async () => (await readReceiverLoginState()).mounted, {
+        message: "Popup handoff mounts the receiver login form",
+        timeout: 30_000,
+      })
+      .toBe(true)
+    await expect
+      .poll(async () => (await readReceiverLoginState()).ready, {
+        message: "Popup handoff completes website login in the receiver",
+        timeout: LOGIN_RECOVERY_TIMEOUT_MS,
+      })
       .toBe(true)
     const worker = await getServiceWorker(context)
     expect((await readStoredAccounts(worker))[0]?.sub2apiAuth).toBeUndefined()
@@ -499,7 +515,7 @@ async function verifySessionModes({
     const ready = desktop.login.getByRole("status").filter({
       hasText: copy.login.sub2apiSessionReady,
     })
-    await expect(ready).toBeInViewport()
+    await expect(ready).toBeInViewport({ timeout: LOGIN_RECOVERY_TIMEOUT_MS })
     await expect(ready).toBeFocused()
     await expect(desktop.acquire).toHaveCount(0)
     await desktop.screenshot("login-confirmed")
