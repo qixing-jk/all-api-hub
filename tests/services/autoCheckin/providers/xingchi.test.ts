@@ -113,6 +113,7 @@ describe("Xingchi check-in integration", () => {
     vi.mocked(fetchXingchiDailyCheckInStatus).mockResolvedValue({
       enabled: true,
       checkedInToday: false,
+      day: undefined,
     })
     vi.mocked(performXingchiDailyCheckIn).mockResolvedValue({
       rewardAmount: 12.5,
@@ -248,6 +249,7 @@ describe("Xingchi check-in integration", () => {
       vi.mocked(fetchXingchiDailyCheckInStatus).mockResolvedValue({
         enabled: checkedInToday,
         checkedInToday,
+        day: undefined,
       })
       await executeSelectedCheckIn({
         account: createAccount(),
@@ -446,7 +448,11 @@ describe("Xingchi check-in integration", () => {
     async (day) => {
       vi.mocked(fetchXingchiDailyCheckInStatus)
         .mockResolvedValueOnce({ enabled: true, checkedInToday: false, day })
-        .mockResolvedValue({ enabled: true, checkedInToday: true })
+        .mockResolvedValue({
+          enabled: true,
+          checkedInToday: true,
+          day: undefined,
+        })
       vi.mocked(performXingchiDailyCheckIn).mockImplementation(
         async (request) => {
           request.observer?.onDispatch()
