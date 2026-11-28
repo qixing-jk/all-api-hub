@@ -10,7 +10,8 @@ the existing failing browser workflows. Generated evidence stays in `artifacts/`
 Current iteration: fix unit CI shard correctness, retain the financial file split,
 and withdraw the page-clock experiment after hosted timeout failures. Main
 `430f46609e` has been merged, including its native-details batching fix. The original
-performance baseline remains fixed above; final-head validation is pending.
+performance baseline remains fixed above. Full Test and E2E passed on implementation
+`71ee31efa8`; both inventories are complete. Whole-E2E speedup remains unproven.
 
 ## Baseline and hypotheses
 
@@ -582,3 +583,76 @@ The earlier controlled unit comparison used a fixed cache key. Its retained
 candidate JUnit was rechecked: 2,143 records, 2,143 unique files, zero duplicates.
 Its results remain applicable to that revision. The faulty PR #1958 run is not
 valid full-suite or coverage evidence and must be rerun after the fix reaches it.
+
+### Final unit CI validation
+
+[Test 46133677647](https://github.com/qixing-jk/all-api-hub/actions/runs/46133677647)
+passed on `71ee31efa82f5a26e09e68d8be0c59d969603997`: 35,125 tests passed,
+two existing skips, 2,144 unique test files. The independent JUnit comparison
+matches all 2,144 files from the current Vitest collection inventory, including
+both editor files absent from PR #1958. The hosted guard separately verified
+file/project identities before coverage and JUnit uploads, both of which succeeded.
+
+The profile producer ran for 5s and resolved cache
+`unit-test-durations-46129396704-1` once. All six shard logs confirm artifact
+`15258464903`, digest
+`570a3afac79ade3727cba790b9eeef68ced0b3000962a5e2f025b99336543fce`.
+This proves equal inputs in this complete run; the actual-CLI regression covers
+an intervening cache update and a repeated shard. No real failed-job rerun was
+needed because the final Test run passed on its first attempt.
+
+Workflow wall time was 508s, the slowest unit execution step 328s, six execution
+steps summed 1,609s and all job durations summed 1,990s. These timings accompany
+the correctness result; they are not a controlled speed comparison with the
+earlier base because main/test inventory, restored profile and runner allocations
+changed. Global coverage passed (statements 97.37%, branches 93.71%, functions
+98.33%, lines 98.47%).
+
+The final local financial run after withdrawing the clock passed 35/35 cases,
+with zero test/startup retries. Keep `financial-final-no-clock.{json,log}`,
+`hosted-final-unit/`, `final-unit-{all-jobs,merge,profile-job}.log`, the final run/job
+snapshots and `verify-final-hosted.py` locally through review. The corrected
+workflow, report CLI and regression checks are the durable prevention; no new
+agent rule or memory update is needed.
+
+### Final E2E validation and review decision
+
+[E2E 46133680401](https://github.com/qixing-jk/all-api-hub/actions/runs/46133680401)
+passed on the same implementation `71ee31efa8`: 1,002 passes, the same seven
+existing skips, zero test retries and zero fixture-startup retries. All 1,009
+test identities exactly match an independent final `playwright test --list`
+collection; there are no duplicate or missing identities. `--list` does not
+execute conditional skip statements, so runtime skipped identities were separately
+checked against the prior complete run and match exactly. All 196 expected default
+specs are present. Firefox, DNR, bookmarks and isolated performance tests passed.
+
+| Hosted outcome | Fixed main baseline | Prior candidate | Final implementation |
+| --- | ---: | ---: | ---: |
+| Workflow wall time | 891s | 866s | 938s |
+| Slowest default smoke step | 722s | 775s | 753s |
+| Six smoke execution steps, sum | 3,686s | 3,448s | 3,862s |
+| All job durations, sum | 4,576s | 4,287s | 4,755s |
+| Financial longest file span | 455.30s | 502.90s | 290.62s |
+| Financial cumulative case work | 454.67s | 502.11s | 563.26s |
+
+Final financial spans are 290.62s for 12 lifecycle/matrix cases, 167.05s for
+15 display cases, and 106.26s for eight typography cases. The two additional
+cases are upstream's detail batching; build content, timing profiles and runner
+allocations also changed. These figures do not establish overall CI improvement
+or isolate the split's hosted cost. Keep the ordinary file split for local feedback
+latency and smaller worker tails, but do not advertise a whole-run speedup.
+The clock experiment is rejected on the actual CI evidence above.
+
+Review recommendation: retain the verified startup/HTTP teardown fixes, optional
+density captures, scoped independent cases, and unit shard correctness repair.
+The remaining Windows launch timeout under host contention is an explicitly open
+P2 investigation, not repaired by passing hosted runs. The historic Firefox
+greeting failure also remains unexplained. No retries or deadlines were increased
+by this round, and no PR was created. Final source changes were committed and
+pushed; this report-only follow-up records completed remote evidence.
+
+Keep `hosted-final-e2e/`, `hosted-final-e2e-summary.json`, final run/job snapshots,
+`final-e2e-expected.json` and `verify-final-hosted.py` in ignored artifacts through
+review. Earlier failed experiments remain useful evidence for the rejected clock
+approach and the unresolved local startup issue. Preserve the unrelated
+`.scratch/browser-tab-site-favicon/` directory.
