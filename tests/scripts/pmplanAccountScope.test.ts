@@ -2,7 +2,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { chromium } from "@playwright/test"
-import { expect, it } from "vitest"
+import { expect, it, vi } from "vitest"
 
 import {
   PMPLAN_WEB_ORIGIN,
@@ -23,6 +23,17 @@ const hostedAccount = {
   site_url: `${PMPLAN_WEB_ORIGIN}/#/keys`,
   account_info: { id: 661 },
 }
+
+it("enforces the configured native identity before selecting any saved account", () => {
+  vi.stubEnv("PMPLAN_USER_ID", "662")
+  try {
+    expect(() => requirePmplanAccount([hostedAccount], "661")).toThrow(
+      /identity/,
+    )
+  } finally {
+    vi.unstubAllEnvs()
+  }
+})
 
 it("selects the hosted account among same-ID deployments and ignores invalid addresses", () => {
   expect(
@@ -63,6 +74,7 @@ it("reads notices only for the selected account and deployment", async () => {
       accountId: hostedAccount.id,
       baseUrl: PMPLAN_WEB_ORIGIN,
       status: "error",
+      lastCheckedAt: 42,
     }
     await page.evaluate(
       (sites) => {
@@ -92,9 +104,10 @@ it("reads notices only for the selected account and deployment", async () => {
         selected,
       },
     )
-    expect(await readPmplanAnnouncementStatus(page, hostedAccount)).toBe(
-      "error",
-    )
+    expect(await readPmplanAnnouncementStatus(page, hostedAccount)).toEqual({
+      status: "error",
+      lastCheckedAt: 42,
+    })
     expect(
       await readPmplanAnnouncementStatus(page, {
         ...hostedAccount,

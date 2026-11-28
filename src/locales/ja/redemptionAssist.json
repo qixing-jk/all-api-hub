@@ -53,6 +53,7 @@
     "redeemFailed": "引き換えに失敗しました。しばらくしてからもう一度お試しください。",
     "redeemLoading": "引き換えを試行中…",
     "redeemSuccess": "引き換えに成功しました。反映額: {{amount}}",
+    "redemptionUncertain": "交換結果を確認できませんでした。再試行する前に、選択したサイトで結果を確認してください。",
     "selectAll": "すべて選択",
     "success": {
       "settingsSaved": "Redemption Assist の設定を保存しました"

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   hasTelemetryUsageData,
+  isPmplanModelOnlyTelemetry,
   resolveTelemetryModes,
 } from "~/services/apiCredentialProfiles/telemetry/modePlanner"
 import {
@@ -18,6 +19,15 @@ const autoConfig: ApiCredentialTelemetryConfig = {
 }
 
 describe("api credential telemetry mode planner", () => {
+  it("does not apply the model-only hint to invalid URLs or explicit telemetry", () => {
+    expect(isPmplanModelOnlyTelemetry("invalid")).toBe(false)
+    expect(
+      isPmplanModelOnlyTelemetry(
+        "https://plan.pmcat.top",
+        API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint,
+      ),
+    ).toBe(false)
+  })
   it.each(["https://plan.pmcat.top", "https://plan.pmcat.top/v1"])(
     "skips automatic usage probes only for the verified PM-Plan origin: %s",
     (baseUrl) => {

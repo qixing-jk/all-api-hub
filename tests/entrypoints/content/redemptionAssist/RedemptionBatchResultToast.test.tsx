@@ -35,6 +35,37 @@ const createDeferred = <T,>() => {
 }
 
 describe("RedemptionBatchResultToast", () => {
+  it("does not offer another retry after a claim reply is lost", async () => {
+    const user = userEvent.setup()
+    const onRetry = vi.fn().mockRejectedValue(new Error("port closed"))
+    render(
+      <RedemptionBatchResultToast
+        results={[
+          {
+            code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+            preview: "PMRC****PQRS",
+            success: false,
+            message: "Previously rejected",
+          },
+        ]}
+        onRetry={onRetry}
+        onClose={vi.fn()}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("redemptionAssist:messages.pmplanClaimUncertain"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("redemptionAssist:messages.claimUnconfirmed"),
+    ).toBeInTheDocument()
+    expect(onRetry).toHaveBeenCalledTimes(1)
+  })
   it("shows uncertain claim recovery without offering an immediate retry", () => {
     render(
       <RedemptionBatchResultToast

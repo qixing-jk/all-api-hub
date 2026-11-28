@@ -3,8 +3,47 @@ import { afterEach, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { pmplanContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/pmplan"
 import { getAccountBrowserIdentityCapability } from "~/services/accountSiteOnboarding/registry"
+import { pmplanBrowserIdentity } from "~/services/apiAdapters/pmplan/browserIdentity"
+import { detectsPmplan } from "~/services/apiService/pmplan/detection"
 
 afterEach(() => vi.restoreAllMocks())
+it("requires a JSON media type even when health returns a valid program identity", async () => {
+  const response = new Response(
+    JSON.stringify({
+      ok: true,
+      name: "pm-plan",
+      version: "1.0",
+      time: "2026-01-01T00:00:00Z",
+    }),
+  )
+  response.headers.delete("content-type")
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(response)
+  expect(await detectsPmplan("https://custom-plan.example")).toBe(false)
+})
+it.each(["invalid", "file:///tmp/plan", "https://user:secret@plan.example"])(
+  "declines unsafe browser identity origins: %s",
+  (origin) => {
+    expect(
+      pmplanBrowserIdentity.canObserve({
+        origin,
+        siteType: SITE_TYPES.PMPLAN,
+        candidateUserIds: [],
+      }),
+    ).toBe(false)
+  },
+)
+it("returns no verified identity for a malformed console response", async () => {
+  const context = {
+    origin: "https://plan.example",
+    siteType: SITE_TYPES.PMPLAN,
+    candidateUserIds: [],
+  }
+  expect(
+    await pmplanBrowserIdentity
+      .observe(context)!
+      .verify(vi.fn().mockResolvedValue({})),
+  ).toBeNull()
+})
 it("extracts the live PM-Plan console identity without exporting a token", async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValue(
     new Response(JSON.stringify({ user: { id: 661, username: "sample" } })),

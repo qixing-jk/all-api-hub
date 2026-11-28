@@ -234,6 +234,23 @@ it("reports no compatible account for a PMRC code instead of offering generic ac
 })
 
 describe("redemptionAssist shouldPrompt batch filtering", () => {
+  it("suppresses automatic prompts when detection is disabled", async () => {
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      redemptionAssist: {
+        ...DEFAULT_PREFERENCES.redemptionAssist!,
+        enabled: false,
+      },
+    })
+    expect(
+      await resolveShouldPrompt({
+        url: "https://example.com",
+        codes: ["a".repeat(32)],
+      }),
+    ).toMatchObject({ success: true, promptableCodes: [] })
+  })
   it("registers typed runtime listeners once", async () => {
     vi.resetModules()
     messagingMocks.onRedemptionAssistMessage.mockClear()

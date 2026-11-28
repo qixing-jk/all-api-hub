@@ -1,4 +1,3 @@
-/* global chrome */
 import assert from "node:assert/strict"
 import fs from "node:fs/promises"
 import path from "node:path"
@@ -12,7 +11,6 @@ import {
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../../../src/features/KeyManagement/testIds.ts"
 import { TOKEN_PROVISIONING_TEST_IDS as provisioning } from "../../../src/features/TokenProvisioning/testIds.ts"
 import { PMPLAN_WEB_ORIGIN as origin } from "../../../src/services/accountSiteDefinitions/identifiers.ts"
-import { PMPLAN_KEY_STATUSES } from "../../../src/services/apiService/pmplan/constants.ts"
 import { getAccounts } from "../../cdp/sandbox.mjs"
 import {
   configureExtensionPage,
@@ -28,6 +26,7 @@ import {
   readPmplanAnnouncementStatus,
   requirePmplanAccount,
 } from "./accountScope.mjs"
+import { revokePmplanKeys } from "./keyCleanup.mjs"
 import { submitPmplanKeyCreation } from "./keyCreation.mjs"
 
 /** Follow-up acceptance against an existing UI-added account; only confirmed disposable keys are mutated. */
@@ -39,8 +38,7 @@ export async function runPmplanUpstream({
   write,
 }) {
   await fs.mkdir(evidenceDir, { recursive: true })
-  const ui = await context.newPage()
-  const site = await context.newPage()
+  let ui, site, capture
   const owned = new Set()
   let baseline = []
   const report = {
@@ -49,13 +47,7 @@ export async function runPmplanUpstream({
     cleanup: {},
     capturedAt: new Date().toISOString(),
   }
-  const capture = createUiCapture({
-    page: ui,
-    directory: evidenceDir,
-    screenshots: report.screenshots,
-    mask: [ui.getByTestId(provisioning.oneTimeKeyInput)],
-    timeoutMs: 30000,
-  })
+
   const nativeRead = (endpoint) =>
     site.evaluate(async (endpoint) => {
       const response = await fetch(endpoint, {
@@ -71,9 +63,20 @@ export async function runPmplanUpstream({
       location.hash = route
     }, route)
   const row = (id) =>
-    ui.getByTestId(keys.nativeKeyRow).filter({ hasText: `PM-Plan #${id}` })
+    ui
+      .getByTestId(keys.nativeKeyRow)
+      .and(ui.locator(`[data-resource-id="${id}"]`))
   return runScenarioWithCleanup({
     run: async () => {
+      ui = await context.newPage()
+      site = await context.newPage()
+      capture = createUiCapture({
+        page: ui,
+        directory: evidenceDir,
+        screenshots: report.screenshots,
+        mask: [ui.getByTestId(provisioning.oneTimeKeyInput)],
+        timeoutMs: 30000,
+      })
       ui.setDefaultTimeout(60000)
       await ui.emulateMedia({ reducedMotion: "reduce" })
       await configureExtensionPage(ui, {
@@ -88,10 +91,6 @@ export async function runPmplanUpstream({
       )
       baseline = (await nativeRead("/api/keys")).keys
       const models = (await nativeRead("/api/models")).models
-      assert.ok(
-        models.length,
-        "Live account requires at least one model for restriction editing",
-      )
       await ui.goto(`chrome-extension://${extensionId}/options.html#account`, {
         waitUntil: "domcontentloaded",
         timeout: 120000,
@@ -168,9 +167,11 @@ export async function runPmplanUpstream({
                 "keys.revoke.readback",
               ],
               prerequisite: () =>
-                write
-                  ? undefined
-                  : "Pass --write to create/edit/revoke one disposable key",
+                !write
+                  ? "Pass --write to create/edit/revoke one disposable key"
+                  : !models.length
+                    ? "Live account requires at least one model for restriction editing"
+                    : undefined,
               run: async () => {
                 await navigate(`keys?accountId=${account.id}`)
                 await openNativeKeyEditor(ui, {
@@ -294,6 +295,10 @@ export async function runPmplanUpstream({
                 const notices = await nativeRead("/api/notices")
                 report.nativeNoticeCount = notices.notices.length
                 await navigate("siteAnnouncements")
+                const before = await readPmplanAnnouncementStatus(
+                  serviceWorker,
+                  account,
+                )
                 await ui
                   .getByRole("button", {
                     name: /^(Check now|立即检查)$/,
@@ -302,10 +307,17 @@ export async function runPmplanUpstream({
                   .first()
                   .click()
                 await expect
-                  .poll(() =>
-                    readPmplanAnnouncementStatus(serviceWorker, account),
-                  )
-                  .toBe("success")
+                  .poll(async () => {
+                    const current = await readPmplanAnnouncementStatus(
+                      serviceWorker,
+                      account,
+                    )
+                    return (
+                      current?.status === "success" &&
+                      current.lastCheckedAt > (before?.lastCheckedAt ?? 0)
+                    )
+                  })
+                  .toBe(true)
                 await capture(
                   "notices-empty.png",
                   ui.locator("[data-options-page-content]"),
@@ -321,29 +333,16 @@ export async function runPmplanUpstream({
     finalizers: [
       async () => {
         const errors = []
-        for (const id of owned) {
-          try {
-            assert.ok(!baseline.some((k) => k.id === id))
-            if (
-              (await nativeRead("/api/keys")).keys.find((k) => k.id === id)
-                ?.status !== PMPLAN_KEY_STATUSES.Revoked
-            )
-              await site.evaluate(async (id) => {
-                const response = await fetch(`/api/keys/${id}`, {
-                  method: "DELETE",
-                  headers: { "X-PMPlan-CSRF": "1" },
-                })
-                if (!response.ok)
-                  throw Error(`Owned key cleanup: ${response.status}`)
-              }, id)
-            assert.equal(
-              (await nativeRead("/api/keys")).keys.find((k) => k.id === id)
-                ?.status,
-              "revoked",
-            )
-          } catch (error) {
-            errors.push(error)
-          }
+        try {
+          for (const id of owned)
+            assert.ok(!baseline.some((key) => key.id === id))
+          await revokePmplanKeys({
+            site,
+            ids: owned,
+            readKeys: async () => (await nativeRead("/api/keys")).keys,
+          })
+        } catch (error) {
+          errors.push(error)
         }
         if (baseline.length) {
           const final = (await nativeRead("/api/keys")).keys
@@ -368,8 +367,8 @@ export async function runPmplanUpstream({
           JSON.stringify(report, null, 2),
         )
       },
-      () => ui.close(),
-      () => site.close(),
+      () => ui?.close(),
+      () => site?.close(),
     ],
     cleanupMessage: "PM-Plan follow-up cleanup failed",
     failureMessage: "PM-Plan follow-up and cleanup failed",

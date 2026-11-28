@@ -104,6 +104,9 @@ export function extractRedemptionCodesFromText(
         .replace(/^[("'`([{<]+/g, "")
         .replace(/[)"'`\]}>.,;:!?]+$/g, "")
 
+      if (getRedemptionCodeKind(cleaned) !== REDEMPTION_CODE_KINDS.Generic)
+        continue
+
       const candidates = cleaned === token ? [token] : [token, cleaned]
 
       for (const candidate of candidates) {

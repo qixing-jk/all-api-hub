@@ -4,60 +4,54 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 
 import type { getServiceWorker } from "./extensionState"
 
-export async function sendRedemptionContextMenuTrigger(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-  params: {
-    pageUrl: string
-    selectionText: string
-  },
+type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
+
+async function sendToContent(
+  serviceWorker: ServiceWorker,
+  pageUrl: string,
+  message: Record<string, unknown>,
+) {
+  return serviceWorker.evaluate(
+    async ({ pageUrl, message }) => {
+      const tabs = await chrome.tabs.query({})
+      const tabId = tabs.find((tab) => tab.url === pageUrl)?.id
+      if (tabId == null) return { error: "Target tab not found" }
+      try {
+        return await chrome.tabs.sendMessage(tabId, message)
+      } catch (error) {
+        return { error: String(error) }
+      }
+    },
+    { pageUrl, message },
+  )
+}
+
+/** Wait only on a read-only handshake; never retry a possibly admitted trigger. */
+export async function waitForRedemptionAssistReady(
+  serviceWorker: ServiceWorker,
+  pageUrl: string,
+  detectionEnabled?: boolean,
 ) {
   await expect
-    .poll(async () => {
-      return await serviceWorker.evaluate(
-        async ({ action, pageUrl, selectionText }) => {
-          const chromeApi = globalThis.chrome
-          const tabs = await chromeApi.tabs.query({})
-          const targetTab = tabs.find((tab) => tab.url === pageUrl)
-
-          const tabId = targetTab?.id
-          if (tabId == null) {
-            return { success: false, error: "Target tab not found" }
-          }
-
-          return await new Promise<{ success: boolean; error?: string }>(
-            (resolve) => {
-              chromeApi.tabs.sendMessage(
-                tabId,
-                {
-                  action,
-                  pageUrl,
-                  selectionText,
-                },
-                () => {
-                  const error = chromeApi.runtime?.lastError
-                  const errorMessage =
-                    typeof error?.message === "string" ? error.message : ""
-                  if (errorMessage.includes("message port closed")) {
-                    resolve({ success: true })
-                    return
-                  }
-
-                  resolve(
-                    errorMessage
-                      ? { success: false, error: errorMessage }
-                      : { success: true },
-                  )
-                },
-              )
-            },
-          )
-        },
-        {
-          action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
-          pageUrl: params.pageUrl,
-          selectionText: params.selectionText,
-        },
-      )
+    .poll(() =>
+      sendToContent(serviceWorker, pageUrl, {
+        action: RuntimeActionIds.RedemptionAssistGetStatus,
+      }),
+    )
+    .toMatchObject({
+      ready: true,
+      ...(detectionEnabled === undefined ? {} : { detectionEnabled }),
     })
-    .toMatchObject({ success: true })
+}
+
+export async function sendRedemptionContextMenuTrigger(
+  serviceWorker: ServiceWorker,
+  params: { pageUrl: string; selectionText: string },
+) {
+  await waitForRedemptionAssistReady(serviceWorker, params.pageUrl)
+  const response = await sendToContent(serviceWorker, params.pageUrl, {
+    action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
+    ...params,
+  })
+  expect(response).toMatchObject({ accepted: true })
 }

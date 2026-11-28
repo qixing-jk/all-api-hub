@@ -175,12 +175,15 @@ async function startBookmarkImportServer(): Promise<BookmarkImportServer> {
     }
 
     // Site detection probes these endpoints on scanned bookmark targets:
-    // - /api/user/info (VoAPI v2) and /api/v1/auth/me (Sub2API). Answer both
-    //   with JSON that matches no known site type instead of a bare 404,
+    // - /api/user/info (VoAPI v2), /api/v1/auth/me (Sub2API), and
+    //   /api/health (PM-Plan). Answer with JSON that matches no known site type
+    //   instead of a bare 404,
     //   whose browser console error trips the extension page guard.
     if (
       method === "GET" &&
-      (url.pathname === "/api/user/info" || url.pathname === "/api/v1/auth/me")
+      (url.pathname === "/api/user/info" ||
+        url.pathname === "/api/v1/auth/me" ||
+        url.pathname === "/api/health")
     ) {
       sendJson(200, { success: false, message: "unknown target" })
       return

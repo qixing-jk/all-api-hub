@@ -54,6 +54,7 @@
     "redeemFailed": "Einlösung fehlgeschlagen. Bitte versuchen Sie es später noch einmal.",
     "redeemLoading": "Versuche einzulösen…",
     "redeemSuccess": "Erfolgreich eingelöst. Gutgeschriebener Betrag: {{amount}}",
+    "redemptionUncertain": "Das Einlöseergebnis ist ungewiss. Prüfen Sie die ausgewählte Website, bevor Sie es erneut versuchen.",
     "selectAll": "Alles auswählen",
     "success": {
       "settingsSaved": "Die Einstellungen für die Einlösungshilfe wurden gespeichert"

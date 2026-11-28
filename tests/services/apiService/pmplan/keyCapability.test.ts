@@ -160,7 +160,16 @@ it.each(["https://plan.pmcat.top", "https://custom-plan.example"])(
           }),
         ),
         http.get(`${origin}/api/models`, () =>
-          HttpResponse.json({ models: [] }),
+          HttpResponse.json({
+            models: [
+              {
+                name: "eligible-model",
+                input_micro: 1,
+                output_micro: 2,
+                channel_count: 1,
+              },
+            ],
+          }),
         ),
       )
       const session = await getSiteTypeCapabilities(
@@ -179,6 +188,9 @@ it.each(["https://plan.pmcat.top", "https://custom-plan.example"])(
         },
       })
       const collection = await session.openCollection("account")
+      expect(await session.resolveDefaultScope()).toMatchObject({
+        scopeKey: "account",
+      })
       const page = await collection.list()
       expect(page.items[0]).toMatchObject({
         maskedLabel: "sk-pm-abc…",
@@ -206,15 +218,37 @@ it.each(["https://plan.pmcat.top", "https://custom-plan.example"])(
           (field) => field.fieldId,
         ),
       ).toEqual(["expiry", "expiresAt", "models"])
+      expect((await session.openCreateEditor("account")).fields).toContainEqual(
+        expect.objectContaining({
+          fieldId: "models",
+          options: [
+            { value: "eligible-model", displayLabel: "eligible-model" },
+          ],
+        }),
+      )
+      server.use(
+        http.get(`${origin}/api/keys`, () => HttpResponse.json({ keys: [] })),
+      )
+      await expect(collection.get(page.items[0]!.ref)).rejects.toMatchObject({
+        failure: { code: "unavailable" },
+      })
+      await expect(
+        collection.openEditEditor(page.items[0]!.ref),
+      ).rejects.toMatchObject({ failure: { code: "unavailable" } })
     } finally {
       vi.restoreAllMocks()
     }
   },
 )
 
-it.each(["https://plan.pmcat.top", "https://custom-plan.example"])(
-  "preserves a one-time secret with the correct deployment after failed readback: %s",
-  async (origin) => {
+it.each([
+  ["https://plan.pmcat.top", "failed"],
+  ["https://custom-plan.example", "failed"],
+  ["https://plan.pmcat.top", "cancelled"],
+  ["https://custom-plan.example", "cancelled"],
+])(
+  "preserves a one-time secret with the correct deployment after %s %s readback",
+  async (origin, readback) => {
     const { http, HttpResponse } = await import("msw")
     const { server } = await import("~~/tests/msw/server")
     const { installCookieTransport } =
@@ -223,6 +257,7 @@ it.each(["https://plan.pmcat.top", "https://custom-plan.example"])(
     const { vi } = await import("vitest")
     installCookieTransport("pmplan_session", new URL(origin).hostname)
     try {
+      const cancellation = new AbortController()
       let writes = 0
       server.use(
         http.get(`${origin}/api/me`, () =>
@@ -239,12 +274,13 @@ it.each(["https://plan.pmcat.top", "https://custom-plan.example"])(
             expires_at: null,
           })
         }),
-        http.get(`${origin}/api/keys`, () =>
-          HttpResponse.json(
+        http.get(`${origin}/api/keys`, () => {
+          if (readback === "cancelled") cancellation.abort()
+          return HttpResponse.json(
             { error: { message: "read unavailable" } },
             { status: 503 },
-          ),
-        ),
+          )
+        }),
       )
       const session = await getSiteTypeCapabilities(
         "pmplan",
@@ -262,7 +298,9 @@ it.each(["https://plan.pmcat.top", "https://custom-plan.example"])(
         },
       })
       const editor = await session.openCreateEditor("account")
-      const result = await editor.submit(editor.initialValues)
+      const result = await editor.submit(editor.initialValues, {
+        signal: cancellation.signal,
+      })
       expect(result.createdSecret?.secret).toBe("sk-pm-confirmed-test-secret")
       expect(result.createdSecret?.credential.baseUrl).toBe(`${origin}/v1`)
       expect(writes).toBe(1)

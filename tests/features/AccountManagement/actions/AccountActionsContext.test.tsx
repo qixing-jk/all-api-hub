@@ -36,6 +36,7 @@ const {
   mockToast,
   mockDeleteAccounts,
   mockRefreshAccount,
+  mockGetAccountById,
   mockSetAccountDisabled,
   mockSetAccountsDisabled,
   mockMarkAccountAsCustomCheckedIn,
@@ -56,6 +57,7 @@ const {
   },
   mockDeleteAccounts: vi.fn(),
   mockRefreshAccount: vi.fn(),
+  mockGetAccountById: vi.fn(),
   mockSetAccountDisabled: vi.fn(),
   mockSetAccountsDisabled: vi.fn(),
   mockMarkAccountAsCustomCheckedIn: vi.fn(),
@@ -84,6 +86,9 @@ vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
 }))
 vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
   accountRefresh: { refreshAccount: mockRefreshAccount },
+}))
+vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
+  accountQueries: { getAccountById: mockGetAccountById },
 }))
 vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
   accountCheckInState: {
@@ -214,6 +219,7 @@ const renderContext = async () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetAccountById.mockReset()
   mockGetCurrentTempWindowRequestSource.mockReturnValue(
     TEMP_WINDOW_REQUEST_SOURCES.Background,
   )
@@ -623,15 +629,15 @@ describe("AccountActionsContext", () => {
     )
   })
 
-  it("guides a rejected Cookie refresh to login configuration instead of showing refresh success", async () => {
-    const { getContext } = await renderContext()
-    const account = createAccount({
-      siteType: SITE_TYPES.ANYROUTER,
-      authType: AuthTypeEnum.Cookie,
-    })
-    mockRefreshAccount.mockResolvedValueOnce({
-      refreshed: true,
-      account: {
+  it.each(["returned", "persisted"] as const)(
+    "guides a rejected Cookie refresh using %s health to login configuration",
+    async (healthSource) => {
+      const { getContext } = await renderContext()
+      const account = createAccount({
+        siteType: SITE_TYPES.ANYROUTER,
+        authType: AuthTypeEnum.Cookie,
+      })
+      const refreshedAccount = {
         id: account.id,
         site_url: account.baseUrl,
         site_type: SITE_TYPES.ANYROUTER,
@@ -640,51 +646,57 @@ describe("AccountActionsContext", () => {
           status: SiteHealthStatus.Warning,
           code: "authentication_required",
         },
-      },
-    })
-    await act(async () => {
-      await getContext().handleRefreshAccount(account)
-    })
-    expect(mockToast.warning).toHaveBeenCalledWith(
-      "accountDialog:login.recoveryFailureDescription",
-      expect.objectContaining({
-        action: expect.objectContaining({
-          label: "accountDialog:login.configureRecovery",
-          onClick: expect.any(Function),
+      }
+      mockRefreshAccount.mockResolvedValueOnce(
+        healthSource === "returned"
+          ? { refreshed: true, account: refreshedAccount }
+          : null,
+      )
+      mockGetAccountById.mockResolvedValueOnce(refreshedAccount)
+      await act(async () => {
+        await getContext().handleRefreshAccount(account)
+      })
+      expect(mockToast.warning).toHaveBeenCalledWith(
+        "accountDialog:login.recoveryFailureDescription",
+        expect.objectContaining({
+          action: expect.objectContaining({
+            label: "accountDialog:login.configureRecovery",
+            onClick: expect.any(Function),
+          }),
         }),
-      }),
-    )
-    await expect(
-      atIndex(mockToast.promise.mock.calls, 0)[0],
-    ).resolves.toBeNull()
-    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Failure,
-      expect.objectContaining({
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
-        diagnostics: expect.objectContaining({
-          outcome: {
-            itemCount: 1,
-            successCount: 0,
-            failureCount: 1,
-            skippedCount: 0,
+      )
+      await expect(
+        atIndex(mockToast.promise.mock.calls, 0)[0],
+      ).resolves.toBeNull()
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        expect.objectContaining({
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          diagnostics: expect.objectContaining({
+            outcome: {
+              itemCount: 1,
+              successCount: 0,
+              failureCount: 1,
+              skippedCount: 0,
+            },
+          }),
+        }),
+      )
+      await act(async () => {
+        await atIndex(mockToast.warning.mock.calls, 0)[1].action.onClick()
+      })
+      expect(openTargetedOptionsPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inPageSearchParams: {
+            action: "edit",
+            accountId: account.id,
+            focusSection: "account-login",
           },
         }),
-      }),
-    )
-    await act(async () => {
-      await atIndex(mockToast.warning.mock.calls, 0)[1].action.onClick()
-    })
-    expect(openTargetedOptionsPage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        inPageSearchParams: {
-          action: "edit",
-          accountId: account.id,
-          focusSection: "account-login",
-        },
-      }),
-    )
-    expect(mockRefreshAccount).toHaveBeenCalledTimes(1)
-  })
+      )
+      expect(mockRefreshAccount).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it("reports a failed recovery configuration navigation so the notification action can be retried", async () => {
     const { getContext } = await renderContext()

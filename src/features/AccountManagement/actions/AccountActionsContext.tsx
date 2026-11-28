@@ -18,6 +18,7 @@ import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExt
 import toast from "~/lib/notify"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import {
   startProductAnalyticsAction,
@@ -130,27 +131,13 @@ export const AccountActionsProvider = ({
               )
               // A failed refresh may still persist health and attempt timestamps.
               await loadAccountData()
-              if (result) {
-                return result
-              } else {
-                throw new Error(
-                  t("messages:toast.error.refreshAccount", {
-                    accountName: account.name,
-                  }),
-                )
-              }
+              return result
             }
 
             try {
               await toast.promise(
                 refreshPromise().then(async (result) => {
-                  if (!result.refreshed) {
-                    if (!result.skippedReason)
-                      throw new Error(
-                        t("messages:toast.error.refreshAccount", {
-                          accountName: account.name,
-                        }),
-                      )
+                  if (result && !result.refreshed && result.skippedReason) {
                     analyticsCompleted = true
                     tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
                       diagnostics: buildAccountRefreshDiagnostics({
@@ -166,7 +153,10 @@ export const AccountActionsProvider = ({
                     })
                     return t("messages:toast.success.refreshSkipped")
                   }
-                  const refreshedAccount = result.account
+                  // Failed requests return null but can persist actionable health.
+                  const refreshedAccount = result
+                    ? result.account
+                    : await accountQueries.getAccountById(account.id)
                   if (
                     refreshedAccount &&
                     hasCredentialRecoveryAuthenticationFailure({
@@ -208,6 +198,12 @@ export const AccountActionsProvider = ({
                     )
                     return null
                   }
+                  if (!result?.refreshed)
+                    throw new Error(
+                      t("messages:toast.error.refreshAccount", {
+                        accountName: account.name,
+                      }),
+                    )
                   const partial =
                     result.checkInStatusRefreshOutcome ===
                     CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable

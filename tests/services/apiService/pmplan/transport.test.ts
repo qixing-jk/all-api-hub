@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
-import { fetchPmplan, fetchUserInfo } from "~/services/apiService/pmplan"
+import {
+  fetchPmplan,
+  fetchUserInfo,
+  withPmplanSession,
+} from "~/services/apiService/pmplan"
+import { createCookieOperationSession } from "~/services/apiTransport/cookieOperationSession"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -26,6 +31,35 @@ const request = {
 beforeEach(() =>
   fetchApi.mockResolvedValue({ user: { id: 661, username: "sample" } }),
 )
+
+it("normalizes a dashboard path and forwards explicit cancellation to a captured session", async () => {
+  const controller = new AbortController()
+  await withPmplanSession(
+    {
+      ...request,
+      baseUrl: `${request.baseUrl}/#/keys`,
+      abortSignal: controller.signal,
+    },
+    async (scoped) => {
+      expect(scoped.baseUrl).toBe(request.baseUrl)
+      controller.abort()
+      expect(scoped.abortSignal?.aborted).toBe(true)
+    },
+    controller.signal,
+  ).catch((error) => expect(error.name).toBe("AbortError"))
+})
+it("refuses to prepare captured Cookies for another deployment", async () => {
+  const session = createCookieOperationSession({
+    origin: request.baseUrl,
+    loginCookieName: "pmplan_session",
+  })
+  await expect(
+    session.withSession(request, (scoped) =>
+      session.prepareRequest(scoped, new URL("https://other.example/api/keys")),
+    ),
+  ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+  expect(fetchApi).not.toHaveBeenCalled()
+})
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()

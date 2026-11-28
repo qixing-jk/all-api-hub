@@ -16,11 +16,12 @@ import {
 } from "~/services/redemption/redemptionAssistMessaging"
 import {
   getRedemptionCodeKind,
-  type RedemptionCodeKind,
+  REDEMPTION_CODE_KINDS,
 } from "~/services/redemption/utils/redemptionCode"
 import { t } from "~/utils/i18n/core"
 
 import type { RedemptionBatchResultItem } from "./contracts"
+import { getUnconfirmedRedemptionOutcome } from "./redemptionOutcome"
 import {
   dismissToast,
   showAccountSelectToast,
@@ -53,8 +54,13 @@ async function redeemForAccount(accountId: string, code: string) {
       accountId,
       code,
     },
-  )
-  return manualResp && "data" in manualResp ? manualResp.data : undefined
+  ).catch(() => undefined)
+  return manualResp && "data" in manualResp && manualResp.data
+    ? manualResp.data
+    : {
+        ...getUnconfirmedRedemptionOutcome(code),
+        code: REDEMPTION_ASSIST_RESULT_CODES.OutcomeUncertain,
+      }
 }
 
 type RedeemBatchItem = RedemptionBatchResultItem
@@ -208,11 +214,14 @@ async function redeemCodesSequential(params: {
   codes: string[]
   dismissOuterLoading: () => void
 }) {
-  const selectedAccounts = new Map<RedemptionCodeKind, string>()
+  const selectedAccounts = new Map<string, string>()
 
-  const redeemOne = async (code: string): Promise<RedeemBatchItem> => {
+  const redeemAttempt = async (code: string): Promise<RedeemBatchItem> => {
     const codeKind = getRedemptionCodeKind(code)
-    const forcedAccountId = selectedAccounts.get(codeKind)
+    // A reset card carries no deployment identity, so each card needs consent.
+    const selectionKey =
+      codeKind === REDEMPTION_CODE_KINDS.PmplanResetCard ? code : codeKind
+    const forcedAccountId = selectedAccounts.get(selectionKey)
     if (forcedAccountId) {
       const manual = await redeemForAccount(forcedAccountId, code)
       const message =
@@ -240,10 +249,18 @@ async function redeemCodesSequential(params: {
         url: params.url,
         code,
       },
-    )
+    ).catch(() => undefined)
 
     const result =
       redeemResp && "data" in redeemResp ? redeemResp.data : undefined
+
+    if (!result && codeKind === REDEMPTION_CODE_KINDS.Generic) {
+      return {
+        code,
+        preview: maskCode(code),
+        ...getUnconfirmedRedemptionOutcome(code),
+      }
+    }
 
     if (result?.success) {
       return {
@@ -272,7 +289,7 @@ async function redeemCodesSequential(params: {
         }
       }
 
-      selectedAccounts.set(codeKind, selected.id)
+      selectedAccounts.set(selectionKey, selected.id)
       return redeemOne(code)
     }
 
@@ -290,6 +307,20 @@ async function redeemCodesSequential(params: {
       analyticsErrorCategory: getRedemptionPromptAnalyticsErrorCategory(
         result?.code,
       ),
+    }
+  }
+
+  const redeemOne = async (code: string): Promise<RedeemBatchItem> => {
+    try {
+      return await redeemAttempt(code)
+    } catch {
+      // Picker/preparation failure must not discard other completed rows.
+      return {
+        code,
+        preview: maskCode(code),
+        success: false,
+        message: t("redemptionAssist:messages.redeemFailed"),
+      }
     }
   }
 

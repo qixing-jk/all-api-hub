@@ -197,15 +197,19 @@ export const pmplanKeyResources = defineAccountKeyResourceCapability({
     runNativeResourceMutation({
       request: config.request,
       mapFailure: mapAccountKeyResourceFailure,
-      execute: (request) =>
-        withPmplanSession(
+      execute: (request) => {
+        let accepted:
+          | {
+              detail: null
+              createdSecret: ReturnType<
+                typeof createUnattributedAccountCreatedRuntimeSecret
+              >
+            }
+          | undefined
+        return withPmplanSession(
           request,
           async (request) => {
             const result = await createPmplanKey(request, command)
-            const detail =
-              (await fetchPmplanKeys(request).catch(() => [])).find(
-                (key) => key.id === result.id,
-              ) ?? null
             const secretEvidence = {
               displayName: `${PMPLAN_DISPLAY_NAME} #${result.id}`,
               secret: result.key,
@@ -216,14 +220,19 @@ export const pmplanKeyResources = defineAccountKeyResourceCapability({
                 tagIds: [],
               },
             }
-            if (!detail)
-              return {
-                detail: null,
-                createdSecret: createUnattributedAccountCreatedRuntimeSecret({
-                  accountId: config.account.id,
-                  ...secretEvidence,
-                }),
-              }
+            // Preserve the only plaintext response before cancellable readback.
+            accepted = {
+              detail: null,
+              createdSecret: createUnattributedAccountCreatedRuntimeSecret({
+                accountId: config.account.id,
+                ...secretEvidence,
+              }),
+            }
+            const detail =
+              (await fetchPmplanKeys(request).catch(() => [])).find(
+                (key) => key.id === result.id,
+              ) ?? null
+            if (!detail) return accepted
             const createdSecret = createAccountKeyResourceCreatedRuntimeSecret({
               ref: {
                 accountId: config.account.id,
@@ -236,7 +245,11 @@ export const pmplanKeyResources = defineAccountKeyResourceCapability({
             return { detail, createdSecret }
           },
           options?.signal,
-        ),
+        ).catch((error) => {
+          if (accepted) return accepted
+          throw error
+        })
+      },
     }),
   revoke: (config, _scope, id, options) =>
     runNativeResourceMutation({

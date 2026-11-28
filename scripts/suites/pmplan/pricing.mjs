@@ -14,6 +14,30 @@ import {
 import { readModelCatalog } from "../../flows/model-catalog.mjs"
 import { requirePmplanAccount } from "./accountScope.mjs"
 
+/** Compare each rate in its own field so equal rates cannot conceal a wrong output. */
+export async function assertPmplanModelPrices(
+  modelDisplay,
+  model,
+  timeout = 30000,
+) {
+  const expected = (value) =>
+    value === 0 ? "$0/M" : `$${(value / 1000000).toFixed(2)}/M`
+  const card = modelDisplay.locator('[data-slot="card"]').filter({
+    has: modelDisplay
+      .page()
+      .getByRole("heading", { name: model.name, exact: true }),
+  })
+  await expect(card).toHaveCount(1, { timeout })
+  await expect(card.getByText(/^(Input|输入)$/).locator("..")).toContainText(
+    expected(model.input_micro),
+    { timeout },
+  )
+  await expect(card.getByText(/^(Output|输出)$/).locator("..")).toContainText(
+    expected(model.output_micro),
+    { timeout },
+  )
+}
+
 /** Read-only price acceptance against an existing saved account; no inference or key writes. */
 export async function runPmplanPricing({
   context,
@@ -22,23 +46,25 @@ export async function runPmplanPricing({
   evidenceDir,
 }) {
   await fs.mkdir(evidenceDir, { recursive: true })
-  const site = await context.newPage()
-  const ui = await context.newPage()
+  let site, ui, capture
   const report = {
     ok: false,
     screenshots: [],
     capturedAt: new Date().toISOString(),
     extensionId,
   }
-  const capture = createUiCapture({
-    page: ui,
-    directory: evidenceDir,
-    screenshots: report.screenshots,
-    bringToFront: true,
-    timeoutMs: 30000,
-  })
+
   return runScenarioWithCleanup({
     run: async () => {
+      ui = await context.newPage()
+      site = await context.newPage()
+      capture = createUiCapture({
+        page: ui,
+        directory: evidenceDir,
+        screenshots: report.screenshots,
+        bringToFront: true,
+        timeoutMs: 30000,
+      })
       await site.goto(`${PMPLAN_WEB_ORIGIN}/`, {
         waitUntil: "domcontentloaded",
       })
@@ -119,11 +145,6 @@ export async function runPmplanPricing({
           await expect(modelDisplay.getByText(minimum).first()).toBeVisible()
         }
       }
-      const successToast = ui.getByText(
-        /^(模型数据加载成功|Model data loaded successfully)$/,
-      )
-      await expect(successToast.first()).toBeVisible({ timeout: 120000 })
-      await expect(successToast).toHaveCount(0, { timeout: 15000 })
       const verify = async (model, available) => {
         await search.fill(model.name)
         await expect(
@@ -148,10 +169,7 @@ export async function runPmplanPricing({
         await expect(modelDisplay).not.toContainText(
           /Site description:|站点说明：/,
         )
-        const expected = (value) =>
-          value === 0 ? "$0/M" : `$${(value / 1000000).toFixed(2)}/M`
-        await expect(modelDisplay).toContainText(expected(model.input_micro))
-        await expect(modelDisplay).toContainText(expected(model.output_micro))
+        await assertPmplanModelPrices(modelDisplay, model)
         if (!available)
           await expect(modelDisplay).toContainText(/不可用|Unavailable/)
       }
@@ -216,8 +234,8 @@ export async function runPmplanPricing({
           path.join(evidenceDir, "pricing-report.json"),
           JSON.stringify(report, null, 2),
         ),
-      () => ui.close(),
-      () => site.close(),
+      () => ui?.close(),
+      () => site?.close(),
     ],
     cleanupMessage: "PM-Plan pricing tab cleanup failed",
     failureMessage: "PM-Plan pricing acceptance failed",

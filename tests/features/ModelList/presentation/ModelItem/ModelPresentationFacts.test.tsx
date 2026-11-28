@@ -115,6 +115,38 @@ afterAll(() => {
 })
 
 describe("generic model presentation facts", () => {
+  it.each([
+    [0, "$0.00"],
+    [0.001, "$0.001"],
+    [0.01, "$0.01"],
+  ] as const)(
+    "preserves the precision of small published prices: %s",
+    (amount, formatted) => {
+      render(
+        <ModelPresentationDetails
+          presentation={{
+            sections: [
+              {
+                id: "price",
+                label: { fallback: "Pricing" },
+                facts: [
+                  {
+                    type: MODEL_DISPLAY_FACT_TYPES.CurrencyPrice,
+                    label: { fallback: "Input" },
+                    amount,
+                    currency: "USD",
+                    unit: MODEL_DISPLAY_PRICE_UNITS.Request,
+                  },
+                ],
+              },
+            ],
+          }}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      expect(screen.getByText(`${formatted} / request`)).toBeVisible()
+    },
+  )
   it("preserves open-plan order and highlights only a current value present in the list", () => {
     const presentation: ModelPresentation = {
       summaryLayout: MODEL_PRESENTATION_SUMMARY_LAYOUTS.Inline,

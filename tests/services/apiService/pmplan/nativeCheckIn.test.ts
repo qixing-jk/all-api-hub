@@ -37,6 +37,21 @@ it("targets the native PM-Plan check-in button once", async () => {
   expect(result.status).not.toBe("success")
 })
 
+it("does not open a page when no native check-in route is declared", async () => {
+  const { clickNativeCheckInPageAction } =
+    await import("~/services/checkin/autoCheckin/providers/nativeCheckInPageAction")
+  const { buildSiteAccount } = await import("~~/tests/test-utils/factories")
+  const readStatus = vi.fn()
+  const result = await clickNativeCheckInPageAction(
+    buildSiteAccount({ site_type: "requesty" }),
+    {} as never,
+    { selector: "button", requestIdPrefix: "test", readStatus },
+  )
+  expect(result.status).toBe("failed")
+  expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+  expect(readStatus).not.toHaveBeenCalled()
+})
+
 it("confirms a native click with account-bound status evidence on the current day", async () => {
   installCookieTransport("pmplan_session", "plan.pmcat.top")
   vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({

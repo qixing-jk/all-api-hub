@@ -54,6 +54,7 @@
     "redeemFailed": "Redemption failed. Please try again later.",
     "redeemLoading": "Trying to redeem…",
     "redeemSuccess": "Redeemed successfully. Credited amount: {{amount}}",
+    "redemptionUncertain": "The redemption result is uncertain. Check the selected site before trying again.",
     "selectAll": "Select all",
     "success": {
       "settingsSaved": "Redemption assist settings have been saved"

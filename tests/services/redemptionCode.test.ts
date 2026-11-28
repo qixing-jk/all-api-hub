@@ -38,6 +38,11 @@ describe("redemptionCode", () => {
         extractRedemptionCodesFromText(invalid, { relaxedCharset: true }),
       ).toEqual([])
     }
+    expect(
+      extractRedemptionCodesFromText('"PMRC-' + "A".repeat(25) + '"', {
+        relaxedCharset: true,
+      }),
+    ).toEqual([])
   })
 
   it("recognizes and normalizes native PM-Plan reset codes independently of generic relaxed validation", () => {

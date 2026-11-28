@@ -14,7 +14,10 @@ import {
   getServiceWorker,
   requestAndExpectOptionalPermissions,
 } from "~~/e2e/utils/extensionState"
-import { sendRedemptionContextMenuTrigger } from "~~/e2e/utils/redemptionAssist"
+import {
+  sendRedemptionContextMenuTrigger,
+  waitForRedemptionAssistReady,
+} from "~~/e2e/utils/redemptionAssist"
 
 const resetCode = "PMRC-ABCD-EFGH-JKMN-PQRS"
 const genericCode = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
@@ -179,6 +182,7 @@ test("PM-Plan redemption filters targets, confirms claims and preserves uncertai
 
     // Native-page automatic detection still requires explicit target confirmation.
     await page.goto(origin)
+    await waitForRedemptionAssistReady(worker, page.url(), true)
     await page.locator("#code").evaluate((target) => {
       const range = document.createRange()
       range.selectNodeContents(target)

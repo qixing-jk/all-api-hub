@@ -55,6 +55,7 @@
     "redeemFailed": "El canje falló. Inténtalo de nuevo más tarde.",
     "redeemLoading": "Intentando canjear...",
     "redeemSuccess": "Canje realizado correctamente. Monto acreditado: {{amount}}",
+    "redemptionUncertain": "El resultado del canje es incierto. Revisa el sitio seleccionado antes de volver a intentarlo.",
     "selectAll": "Seleccionar todo",
     "success": {
       "settingsSaved": "La configuración del asistente de canje se guardó"

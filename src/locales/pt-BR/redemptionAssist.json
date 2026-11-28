@@ -55,6 +55,7 @@
     "redeemFailed": "Falha no resgate. Por favor, tente novamente mais tarde.",
     "redeemLoading": "Tentando resgatar…",
     "redeemSuccess": "Resgatado com sucesso. Valor creditado: {{amount}}",
+    "redemptionUncertain": "O resultado do resgate é incerto. Verifique o site selecionado antes de tentar novamente.",
     "selectAll": "Selecionar tudo",
     "success": {
       "settingsSaved": "As configurações de assistência de resgate foram salvas"

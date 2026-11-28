@@ -40,6 +40,15 @@ it("supports native expiry presets without requiring a custom date", () => {
   expect(
     editor.buildCommand({ ...editor.initialValues, expiry: expiry.Never }),
   ).toMatchObject({ expires_at: null })
+  const custom = {
+    ...editor.initialValues,
+    expiry: expiry.Custom,
+    expiresAt: "2026-12-01T08:00:00Z",
+  }
+  expect(editor.validate(custom)).toEqual({ valid: true })
+  expect(editor.buildCommand(custom)).toMatchObject({
+    expires_at: "2026-12-01T08:00:00.000Z",
+  })
   expect(
     editor.validate({
       ...editor.initialValues,

@@ -108,6 +108,74 @@ const codeA = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
 const codeB = "b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6"
 
 describe("setupRedemptionAssistContent", () => {
+  it("preserves short manual-code previews while masking long codes", async () => {
+    const { maskCode } =
+      await import("~/features/RedemptionAssist/redemptionBatch")
+    expect(maskCode("  ABC123  ")).toBe("ABC123")
+    expect(maskCode(codeA)).toBe("a1b2****c5d6")
+  })
+  it("cancels a multi-code context-menu prompt without dispatching redemption", async () => {
+    const { handleContextMenuRedemption } =
+      await import("~/features/RedemptionAssist/contentFlow")
+    mockShowRedemptionPromptToast.mockResolvedValue({
+      action: REDEMPTION_PROMPT_ACTIONS.Cancel,
+    })
+    await handleContextMenuRedemption(
+      `${codeA}\n${codeB}`,
+      "https://source.test",
+    )
+    expect(mockSendRedemptionAssistMessage).not.toHaveBeenCalled()
+    expect(mockShowRedeemBatchResultToast).not.toHaveBeenCalled()
+  })
+  it("distinguishes a lost generic redemption reply from reset-card preparation failure", async () => {
+    const { runRedemptionBatch } =
+      await import("~/features/RedemptionAssist/redemptionBatch")
+    mockSendRedemptionAssistMessage.mockRejectedValue(new Error("port closed"))
+    await runRedemptionBatch({
+      url: "https://source.test",
+      codes: [codeA, "PMRC-ABCD-EFGH-JKMN-PQRS"],
+      confirmedPrompt: false,
+    })
+    expect(mockShowRedeemBatchResultToast.mock.calls[0]![0]).toEqual([
+      expect.objectContaining({
+        code: codeA,
+        success: false,
+        retryable: false,
+        outcomeUncertain: true,
+      }),
+      {
+        code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+        preview: "PMRC****PQRS",
+        success: false,
+        message: "redemptionAssist:messages.redeemFailed",
+      },
+    ])
+    expect(mockShowAccountSelectToast).not.toHaveBeenCalled()
+  })
+  it.each([undefined, { success: false }, { success: true }])(
+    "does not prompt when eligibility is absent or rejected: %j",
+    async (reply) => {
+      const { scanForRedemptionCodes } =
+        await import("~/features/RedemptionAssist/contentFlow")
+      mockSendRedemptionAssistMessage.mockResolvedValue(reply)
+      await scanForRedemptionCodes(codeA)
+      expect(mockShowRedemptionPromptToast).not.toHaveBeenCalled()
+      expect(mockShowRedeemBatchResultToast).not.toHaveBeenCalled()
+    },
+  )
+  it("ignores empty and non-code scans, and non-HTTP origins", async () => {
+    const { scanForRedemptionCodes, handleContextMenuRedemption } =
+      await import("~/features/RedemptionAssist/contentFlow")
+    await scanForRedemptionCodes()
+    await scanForRedemptionCodes("plain text")
+    await handleContextMenuRedemption(" ", "https://example.com")
+    const { isHttpUrl } = await import("~/utils/core/urlParsing")
+    const parsing = await import("~/utils/core/urlParsing")
+    expect(isHttpUrl("file:///card.txt")).toBe(false)
+    vi.spyOn(parsing, "isHttpUrl").mockReturnValue(false)
+    await scanForRedemptionCodes(codeA)
+    expect(mockSendRedemptionAssistMessage).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -139,6 +207,66 @@ describe("setupRedemptionAssistContent", () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+  })
+
+  it.each([true, false])(
+    "reports installed detection listeners (%s) without dispatching redemption",
+    async (enableDetection) => {
+      const { setupRedemptionAssistContent } =
+        await import("~/entrypoints/content/redemptionAssist")
+      const cleanup = setupRedemptionAssistContent({
+        enableDetection,
+        enableContextMenu: true,
+      })
+      const listener = vi.mocked(
+        globalThis.browser.runtime.onMessage.addListener,
+      ).mock.calls[0]![0]
+      const respond = vi.fn()
+      listener(
+        { action: RuntimeActionIds.RedemptionAssistGetStatus },
+        {},
+        respond,
+      )
+      expect(respond).toHaveBeenCalledWith({
+        ready: true,
+        detectionEnabled: enableDetection,
+      })
+      expect(mockSendRedemptionAssistMessage).not.toHaveBeenCalled()
+      cleanup()
+    },
+  )
+
+  it("acknowledges valid context-menu admission and rejects empty selections", async () => {
+    const { setupRedemptionAssistContent } =
+      await import("~/entrypoints/content/redemptionAssist")
+    const cleanup = setupRedemptionAssistContent({
+      enableDetection: false,
+      enableContextMenu: true,
+    })
+    const listener = vi.mocked(globalThis.browser.runtime.onMessage.addListener)
+      .mock.calls[0]![0]
+    const respond = vi.fn()
+    listener(
+      {
+        action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
+        selectionText: " ",
+      },
+      {},
+      respond,
+    )
+    expect(respond).toHaveBeenLastCalledWith({ accepted: false })
+    expect(mockSendRedemptionAssistMessage).not.toHaveBeenCalled()
+    listener(
+      {
+        action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
+        selectionText: codeA,
+      },
+      {},
+      respond,
+    )
+    expect(respond).toHaveBeenLastCalledWith({ accepted: true })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    cleanup()
   })
 
   it("ignores unrelated runtime messages in the context-menu listener", async () => {
@@ -1214,23 +1342,26 @@ describe("setupRedemptionAssistContent", () => {
 
   it("confirms reset-card targets and keeps mixed batch account selections separate", async () => {
     const resetCode = "PMRC-ABCD-EFGH-JKMN-PQRS"
+    const otherResetCode = "PMRC-2345-6789-ABCD-EFGH"
     mockShowRedemptionPromptToast.mockResolvedValueOnce({
       action: REDEMPTION_PROMPT_ACTIONS.Auto,
-      selectedCodes: [codeA, resetCode, codeB],
+      selectedCodes: [codeA, resetCode, otherResetCode, codeB],
     })
     mockShowAccountSelectToast
       .mockResolvedValueOnce({ id: "generic" })
       .mockResolvedValueOnce({ id: "plan" })
+      .mockResolvedValueOnce({ id: "other-plan" })
     mockSendRedemptionAssistMessage.mockImplementation(async (type, data) => {
       if (type === RedemptionAssistMessageTypes.AutoRedeemByUrl)
         return {
           data: {
             success: false,
-            code:
-              data.code === resetCode
-                ? REDEMPTION_ASSIST_RESULT_CODES.SelectAccount
-                : REDEMPTION_ASSIST_RESULT_CODES.MultipleAccounts,
-            candidates: [{ id: data.code === resetCode ? "plan" : "generic" }],
+            code: data.code.startsWith("PMRC-")
+              ? REDEMPTION_ASSIST_RESULT_CODES.SelectAccount
+              : REDEMPTION_ASSIST_RESULT_CODES.MultipleAccounts,
+            candidates: [
+              { id: data.code.startsWith("PMRC-") ? "plan" : "generic" },
+            ],
             message: "Confirm the card's deployment; claiming does not use it",
           },
         }
@@ -1260,7 +1391,7 @@ describe("setupRedemptionAssistContent", () => {
     listener(
       {
         action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
-        selectionText: `${codeA}\n${resetCode}\n${codeB}`,
+        selectionText: `${codeA}\n${resetCode}\n${otherResetCode}\n${codeB}`,
         pageUrl: "https://source.test",
       },
       {},
@@ -1276,9 +1407,10 @@ describe("setupRedemptionAssistContent", () => {
     ).toEqual([
       ["generic", codeA],
       ["plan", resetCode],
+      ["other-plan", otherResetCode],
       ["generic", codeB],
     ])
-    expect(mockShowAccountSelectToast).toHaveBeenCalledTimes(2)
+    expect(mockShowAccountSelectToast).toHaveBeenCalledTimes(3)
     expect(mockShowAccountSelectToast).toHaveBeenLastCalledWith(
       [{ id: "plan" }],
       {
@@ -1291,7 +1423,89 @@ describe("setupRedemptionAssistContent", () => {
       retryable: false,
       outcomeUncertain: true,
     })
+    await mockShowRedeemBatchResultToast.mock.calls[0]![1](otherResetCode)
+    expect(mockSendRedemptionAssistMessage).toHaveBeenLastCalledWith(
+      RedemptionAssistMessageTypes.AutoRedeem,
+      { accountId: "other-plan", code: otherResetCode },
+    )
+    expect(mockShowAccountSelectToast).toHaveBeenCalledTimes(3)
     cleanup()
+  })
+
+  it.each(["reject", "empty"])(
+    "keeps completed rows and suppresses replay after a %s claim reply",
+    async (reply) => {
+      const resetCode = "PMRC-ABCD-EFGH-JKMN-PQRS"
+      const { runRedemptionBatch } =
+        await import("~/features/RedemptionAssist/redemptionBatch")
+      mockShowAccountSelectToast.mockResolvedValueOnce({ id: "plan" })
+      mockSendRedemptionAssistMessage.mockImplementation(async (type, data) => {
+        if (type === RedemptionAssistMessageTypes.AutoRedeem) {
+          if (reply === "reject") throw new Error("port closed")
+          return undefined
+        }
+        return {
+          data:
+            data.code === resetCode
+              ? {
+                  success: false,
+                  code: REDEMPTION_ASSIST_RESULT_CODES.SelectAccount,
+                  candidates: [{ id: "plan" }],
+                }
+              : { success: true, message: "Redeemed" },
+        }
+      })
+      await runRedemptionBatch({
+        url: "https://source.test",
+        codes: [codeA, resetCode, codeB],
+        confirmedPrompt: true,
+      })
+      const [rows, retry] = mockShowRedeemBatchResultToast.mock.calls[0]!
+      expect(rows).toEqual([
+        expect.objectContaining({ code: codeA, success: true }),
+        expect.objectContaining({
+          code: resetCode,
+          success: false,
+          retryable: false,
+          outcomeUncertain: true,
+          message: "redemptionAssist:messages.pmplanClaimUncertain",
+        }),
+        expect.objectContaining({ code: codeB, success: true }),
+      ])
+      await expect(retry(resetCode)).resolves.toMatchObject({
+        retryable: false,
+        outcomeUncertain: true,
+      })
+    },
+  )
+
+  it("keeps completed rows when a later account picker fails and continues remaining codes", async () => {
+    const { runRedemptionBatch } =
+      await import("~/features/RedemptionAssist/redemptionBatch")
+    mockShowAccountSelectToast.mockRejectedValueOnce(new Error("picker failed"))
+    mockSendRedemptionAssistMessage.mockImplementation(async (_type, data) => ({
+      data:
+        data.code === codeB
+          ? {
+              success: false,
+              code: REDEMPTION_ASSIST_RESULT_CODES.MultipleAccounts,
+              candidates: [{ id: "generic" }],
+            }
+          : { success: true, message: "Redeemed" },
+    }))
+    await runRedemptionBatch({
+      url: "https://source.test",
+      codes: [codeA, codeB, "cccccccccccccccccccccccccccccccc"],
+      confirmedPrompt: true,
+    })
+    expect(mockShowRedeemBatchResultToast.mock.calls[0]![0]).toEqual([
+      expect.objectContaining({ code: codeA, success: true }),
+      expect.objectContaining({ code: codeB, success: false }),
+      expect.objectContaining({
+        code: "cccccccccccccccccccccccccccccccc",
+        success: true,
+      }),
+    ])
   })
 
   it("reuses the user-selected fallback account for later context-menu batch redemptions", async () => {

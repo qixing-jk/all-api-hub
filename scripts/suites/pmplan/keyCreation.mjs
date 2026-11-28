@@ -21,45 +21,67 @@ export async function submitPmplanKeyCreation({
   timeoutMs = 60000,
 }) {
   assert.ok(write, "PM-Plan key creation requires --write")
-  let creationRequest, resolveResponse, rejectResponse, rejectCapture, result
+  let resolveResponse, resolveDispatch, rejectCapture, result
+  const creationRequests = new Set()
+  const captures = []
   let active = true
   let submittedRequests = 0
   const evidenceAbort = new AbortController()
-  const response = new Promise((resolve, reject) => {
+  const dispatched = new Promise((resolve) => {
+    resolveDispatch = resolve
+  })
+  const response = new Promise((resolve) => {
     resolveResponse = resolve
-    rejectResponse = reject
   })
   const deadline = new Promise((_, reject) => {
     rejectCapture = reject
   })
   // The deadline covers headers, body consumption and evidence persistence.
   const captured = Promise.race([
-    response.then(async (response) => {
-      assert.ok(response.ok(), "PM-Plan key creation was rejected")
-      const body = await response.json()
-      assert.ok(active, "PM-Plan create capture already ended; do not replay")
-      assert.ok(
-        Number.isSafeInteger(body.id) && body.id > 0,
-        "Creation response must confirm the cleanup ID; do not replay the create",
+    response.then(async () => {
+      // Every matching dispatch owns its own response, including duplicates.
+      const results = await Promise.allSettled(captures)
+      const failures = results
+        .filter((item) => item.status === "rejected")
+        .map((item) => item.reason)
+      if (failures.length === 1) throw failures[0]
+      if (failures.length)
+        throw new AggregateError(failures, "PM-Plan creation responses failed")
+      assert.equal(
+        creationRequests.size,
+        1,
+        "Duplicate PM-Plan create dispatch; do not replay",
       )
-      assert.ok(
-        !existingIds.has(body.id),
-        "Refuse to claim an existing PM-Plan key",
-      )
-      // Ownership survives evidence failure so the suite's finalizer can still revoke it.
-      confirmedIds.add(body.id)
-      await fs.writeFile(
-        path.join(evidenceDir, `created-key-${body.id}.json`),
-        JSON.stringify(body, null, 2),
-        { signal: evidenceAbort.signal },
-      )
-      return body
+      return results[0].value
     }),
     deadline,
   ]).then(
     (value) => ({ value }),
     (error) => ({ error }),
   )
+  const captureResponse = async (request) => {
+    const response = await request.response()
+    assert.ok(response, "PM-Plan create response lost; do not replay")
+    assert.ok(response.ok(), "PM-Plan key creation was rejected")
+    const body = await response.json()
+    assert.ok(active, "PM-Plan create capture already ended; do not replay")
+    assert.ok(
+      Number.isSafeInteger(body.id) && body.id > 0,
+      "Creation response must confirm the cleanup ID; do not replay the create",
+    )
+    assert.ok(
+      !existingIds.has(body.id),
+      "Refuse to claim an existing PM-Plan key",
+    )
+    // Ownership survives evidence failure so the suite's finalizer can still revoke it.
+    confirmedIds.add(body.id)
+    await fs.writeFile(
+      path.join(evidenceDir, `created-key-${body.id}.json`),
+      JSON.stringify({ id: body.id }, null, 2),
+      { signal: evidenceAbort.signal },
+    )
+    return body
+  }
   let timeout
   const startCaptureDeadline = () => {
     if (timeout) return
@@ -80,54 +102,104 @@ export async function submitPmplanKeyCreation({
     ) {
       submittedRequests++
       try {
-        if (
-          !creationRequest &&
-          isDeepStrictEqual(request.postDataJSON(), input)
-        ) {
-          creationRequest = request
+        if (isDeepStrictEqual(request.postDataJSON(), input)) {
+          creationRequests.add(request)
           startCaptureDeadline()
+          const capture = captureResponse(request)
+          // Attach rejection handling immediately; collect the outcome after the submit settles.
+          capture.catch(() => {})
+          captures.push(capture)
+          resolveDispatch()
         }
       } catch {
         // Malformed or unrelated requests cannot establish resource ownership.
       }
     }
   }
-  const observeResponse = (response) => {
-    if (response.request() === creationRequest) resolveResponse(response)
-  }
-  const observeFailure = (request) => {
-    if (request === creationRequest)
-      rejectResponse(new Error("PM-Plan create response lost; do not replay"))
-  }
   page.on("request", observeRequest)
-  page.on("response", observeResponse)
-  page.on("requestfailed", observeFailure)
   let submitted = false
+  let observingFetch = false
   try {
     await runScenarioWithCleanup({
       run: async () => {
+        // Count initiation in the owned page before protocol events reach Node.
+        await page.evaluate((endpoint) => {
+          const original = window.fetch
+          const pending = []
+          const wrapped = function (...args) {
+            const request = args[0]
+            const url = new URL(
+              request instanceof Request ? request.url : String(request),
+              location.href,
+            ).href
+            const method =
+              args[1]?.method ??
+              (request instanceof Request ? request.method : "GET")
+            const result = original.apply(this, args)
+            if (url === endpoint && method.toUpperCase() === "POST")
+              pending.push(
+                result.then(
+                  () => undefined,
+                  () => undefined,
+                ),
+              )
+            return result
+          }
+          window.fetch = wrapped
+          window.__aahPmplanCreateObservation = { original, wrapped, pending }
+        }, `${PMPLAN_WEB_ORIGIN}/api/keys`)
+        observingFetch = true
         await submitNativeKeyEditor(page, { waitForClose: false, timeoutMs })
+        if (!expectValidationError) {
+          submitted = true
+          startCaptureDeadline()
+          await Promise.race([dispatched, deadline])
+        }
         if (expectValidationError) {
           await expect(
             page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor),
           ).toContainText("Enter a valid value.")
+        }
+        startCaptureDeadline()
+        const browserRequests = await Promise.race([
+          page.evaluate(async () => {
+            const { pending } = window.__aahPmplanCreateObservation
+            let count
+            do {
+              count = pending.length
+              await Promise.all(pending)
+            } while (count !== pending.length)
+            return count
+          }),
+          deadline,
+        ])
+        await expect
+          .poll(() => submittedRequests, { timeout: timeoutMs })
+          .toBe(browserRequests)
+        resolveResponse()
+        if (expectValidationError) {
           assert.equal(
             submittedRequests,
             0,
             "Invalid custom expiry reached the server",
           )
-        } else {
-          submitted = true
-          // UI readiness has its own bounded wait; capture cannot expire before dispatch.
-          startCaptureDeadline()
         }
       },
       finalizers: [
         async () => {
-          if (!submitted && !creationRequest) return
+          if (!submitted && !creationRequests.size) return
+          resolveResponse()
           const capture = await captured
           if (capture.error) throw capture.error
           result = capture.value
+        },
+        async () => {
+          if (!observingFetch || page.isClosed()) return
+          await page.evaluate(() => {
+            const state = window.__aahPmplanCreateObservation
+            if (window.fetch === state.wrapped) window.fetch = state.original
+            delete window.__aahPmplanCreateObservation
+          })
         },
       ],
       cleanupMessage: "PM-Plan creation response capture failed",
@@ -139,7 +211,5 @@ export async function submitPmplanKeyCreation({
     clearTimeout(timeout)
     evidenceAbort.abort()
     page.off("request", observeRequest)
-    page.off("response", observeResponse)
-    page.off("requestfailed", observeFailure)
   }
 }

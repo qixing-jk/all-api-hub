@@ -71,6 +71,22 @@ it.each([401, 403, 503])(
   },
 )
 
+it("preserves unknown native key status without enabling mutations", async () => {
+  installCookieTransport("pmplan_session", "plan.pmcat.top")
+  server.use(
+    http.get("https://plan.pmcat.top/api/me", () =>
+      HttpResponse.json({ user: { id: 661, username: "sample" } }),
+    ),
+    http.get("https://plan.pmcat.top/api/keys", () =>
+      HttpResponse.json({ keys: [{ ...key(), status: "future-status" }] }),
+    ),
+  )
+  const collection = await openCollection()
+  const item = (await collection.list()).items[0]!
+  expect(item.status).toBe("unknown")
+  expect(item.actions).toMatchObject({ canRevoke: false, canUpdate: false })
+})
+
 it("edits and clears model restrictions, preserving expiry and never returning a secret", async () => {
   installCookieTransport("pmplan_session", "plan.pmcat.top")
   let current = key()

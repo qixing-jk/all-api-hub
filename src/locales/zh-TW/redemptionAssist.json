@@ -53,6 +53,7 @@
     "redeemFailed": "兌換失敗，請稍後重試。",
     "redeemLoading": "正在嘗試兌換，請稍候…",
     "redeemSuccess": "兌換成功，到帳額度：{{amount}}",
+    "redemptionUncertain": "兌換結果尚未確認，請先前往所選站點核實後再嘗試。",
     "selectAll": "全選",
     "success": {
       "settingsSaved": "兌換助手設定已儲存"

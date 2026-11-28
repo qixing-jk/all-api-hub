@@ -126,6 +126,19 @@ it("PM-Plan refuses native writes without an explicit isolated profile", async (
   expect(mocks.connect).not.toHaveBeenCalled()
 })
 
+it("PM-Plan isolates suite artifacts and repeated invocation evidence", async () => {
+  await pmplan(["--suite=all"])
+  const first = [mocks.ui, mocks.probe, mocks.upstream, mocks.pricing].map(
+    (mock) => mock.mock.calls[0]![0].evidenceDir,
+  )
+  expect(new Set(first).size).toBe(4)
+  await pmplan(["--suite=all"])
+  const second = [mocks.ui, mocks.probe, mocks.upstream, mocks.pricing].map(
+    (mock) => mock.mock.calls[1]![0].evidenceDir,
+  )
+  expect(new Set([...first, ...second]).size).toBe(8)
+})
+
 it.each(runners)(
   "$name dispatches all suites and limits an explicit UI selection",
   async ({ name, main, args }) => {

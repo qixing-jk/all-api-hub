@@ -59,6 +59,105 @@ const useSnapshot = (value: Record<string, unknown>) => {
     http.get("https://plan.pmcat.top/api/me", () => HttpResponse.json(value)),
   )
 }
+it.each([-1, 0.5, "100", null, Number.MAX_SAFE_INTEGER + 1])(
+  "rejects unusable allowance counters: %j",
+  async (h5_used) => {
+    const body = snapshot()
+    useSnapshot({ ...body, usage: { ...body.usage, h5_used } })
+    await expect(fetchAccountData(request)).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  },
+)
+it("keeps daily cost available when the request count is malformed", async () => {
+  useSnapshot({
+    ...snapshot(),
+    daily_usage: [{ day: "01-01", requests: -1, cost_micro: 125000 }],
+  })
+  const data = await fetchAccountData(request)
+  expect(data.todayStatsAvailability?.requests.reason).toBe("invalid_payload")
+  expect(data.usageObservations?.[0]).toMatchObject({
+    totalRequests: undefined,
+    cost: { amount: { value: "0.125" } },
+  })
+})
+it("retains stable native window order when all windows are unlimited", async () => {
+  const body = snapshot()
+  useSnapshot({
+    ...body,
+    usage: {
+      ...body.usage,
+      h5_limit: null,
+      weekly_limit: null,
+      monthly_limit: null,
+    },
+  })
+  expect(
+    (await fetchAccountData(request)).allowances?.entries.map(
+      (entry) => entry.id,
+    ),
+  ).toEqual(["h5", "weekly", "monthly"])
+})
+it("places a later unlimited window after finite windows", async () => {
+  const body = snapshot()
+  useSnapshot({ ...body, usage: { ...body.usage, weekly_limit: null } })
+  expect(
+    (await fetchAccountData(request)).allowances?.entries.map(
+      (entry) => entry.id,
+    ),
+  ).toEqual(["h5", "monthly", "weekly"])
+})
+it.each(["2026-02-30", "2026-13-01", "0000-00-00"])(
+  "keeps impossible server days unavailable: %s",
+  async (today) => {
+    useSnapshot({ ...snapshot(), checkin: { today } })
+    const data = await fetchAccountData(request)
+    expect(data.usageObservations).toBeUndefined()
+    expect(data.todayStatsAvailability?.requests.reason).toBe("invalid_payload")
+  },
+)
+it.each([null, {}, { name: "" }, { name: 3 }])(
+  "rejects malformed plan metadata: %j",
+  async (plan) => {
+    useSnapshot({ ...snapshot(), plan })
+    await expect(fetchAccountData(request)).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  },
+)
+it.each([
+  { created_at: "invalid" },
+  { model: null },
+  { status: 600 },
+  { total_tokens: -1 },
+  { cost_micro: null },
+])(
+  "discards malformed recent records without changing valid allowances: %j",
+  async (change) => {
+    useSnapshot({
+      ...snapshot(),
+      recent_usage: [{ ...snapshot().recent_usage[0], ...change }],
+    })
+    const data = await fetchAccountData(request)
+    expect(data.recentUsageRecords).toBeUndefined()
+    expect(data.allowances?.entries).toHaveLength(3)
+  },
+)
+it("preserves native recent failure messages", async () => {
+  useSnapshot({
+    ...snapshot(),
+    recent_usage: [
+      {
+        ...snapshot().recent_usage[0],
+        status: 429,
+        error_code: "rate_limited",
+      },
+    ],
+  })
+  expect(
+    (await fetchAccountData(request)).recentUsageRecords?.[0],
+  ).toMatchObject({ status: "429", errorMessage: "rate_limited" })
+})
 it("preserves each overlapping window's used and maximum amounts", async () => {
   useSnapshot(snapshot())
   const data = await fetchAccountData(request)

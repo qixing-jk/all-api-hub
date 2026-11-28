@@ -184,6 +184,7 @@ test("PM-Plan discovers independent deployments and preserves their sessions thr
       await site.close()
       await context.clearCookies({ domain: new URL(origin).hostname })
       const row = page.getByTestId(getAccountManagementListItemTestId(saved.id))
+      await row.hover()
       await row.getByTestId(accounts.rowEditButton).click()
       await expect(dialog.getByTestId(accounts.siteUrlInput)).toHaveValue(
         origin,
@@ -193,6 +194,7 @@ test("PM-Plan discovers independent deployments and preserves their sessions thr
       )
       await closeAccountDraft(page)
       const previousReads = identityReads.get(origin) ?? 0
+      await row.hover()
       await row.getByTestId(accounts.rowMoreActionsButton).click()
       await page.getByTestId(accounts.rowRefreshMenuItem).click()
       await expect

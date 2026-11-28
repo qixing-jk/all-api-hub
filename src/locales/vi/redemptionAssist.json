@@ -53,6 +53,7 @@
     "redeemFailed": "Đổi mã thất bại, vui lòng thử lại sau.",
     "redeemLoading": "Đang thử đổi mã, vui lòng đợi…",
     "redeemSuccess": "Đổi mã thành công, số dư nhận được: {{amount}}",
+    "redemptionUncertain": "Chưa xác nhận được kết quả đổi mã. Hãy kiểm tra trang đã chọn trước khi thử lại.",
     "selectAll": "Chọn tất cả",
     "success": {
       "settingsSaved": "Đã lưu cài đặt Trợ lý đổi mã"

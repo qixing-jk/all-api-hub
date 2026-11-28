@@ -62,25 +62,33 @@ const plan: PricingPlan = {
   issues: [],
 }
 
-it("retains the minimum-reference label when calculating a usage estimate", async () => {
-  const quote = quoteModelPrice(
-    {
-      ...plan,
-      rules: [],
-      source: {
-        kind: "estimate",
-        notes: [{ kind: "channel-minimum", scope: "account" }],
+it.each(["account", "catalog"] as const)(
+  "retains the %s minimum-reference label when calculating a usage estimate",
+  async (scope) => {
+    const quote = quoteModelPrice(
+      {
+        ...plan,
+        rules: [],
+        source: {
+          kind: "estimate",
+          notes: [{ kind: "channel-minimum", scope }],
+        },
       },
-    },
-    { purpose: "request", usage: { input: 1000000, output: 500000 } },
-  )
-  expect(quote.amount).toBe(2)
-  render(<ModelPriceQuote quote={quote} />)
-  expect(
-    await screen.findByText("modelList:minimumReferencePrice"),
-  ).toHaveAttribute("title", "modelList:pricingNotes.accountChannelMinimum")
-  expect(screen.queryByText("modelList:estimatedPrice")).not.toBeInTheDocument()
-})
+      { purpose: "request", usage: { input: 1000000, output: 500000 } },
+    )
+    expect(quote.amount).toBe(2)
+    render(<ModelPriceQuote quote={quote} />)
+    expect(
+      await screen.findByText("modelList:minimumReferencePrice"),
+    ).toHaveAttribute(
+      "title",
+      `modelList:pricingNotes.${scope === "account" ? "accountChannelMinimum" : "catalogChannelMinimum"}`,
+    )
+    expect(
+      screen.queryByText("modelList:estimatedPrice"),
+    ).not.toBeInTheDocument()
+  },
+)
 
 it.each([
   ["exact", "catalog", null],

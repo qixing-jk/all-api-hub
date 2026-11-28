@@ -18,6 +18,7 @@ import {
 import { createLogger } from "~/utils/core/logger"
 
 import type { RedemptionBatchResultItem } from "../contracts"
+import { getUnconfirmedRedemptionOutcome } from "../redemptionOutcome"
 
 export type { RedemptionBatchResultItem } from "../contracts"
 
@@ -46,7 +47,7 @@ export const RedemptionBatchResultToast: React.FC<
 > = ({ results, onRetry, onClose }) => {
   const { t } = useTranslation("redemptionAssist")
   const [items, setItems] = useState<
-    Array<RedemptionBatchResultItem & { genericRetryFailure?: boolean }>
+    Array<RedemptionBatchResultItem & { retryReplyLost?: boolean }>
   >(() => results)
   const [retryingCode, setRetryingCode] = useState<string | null>(null)
 
@@ -105,11 +106,9 @@ export const RedemptionBatchResultToast: React.FC<
           item.code === code
             ? {
                 ...item,
-                success: false,
+                ...getUnconfirmedRedemptionOutcome(code, t),
                 errorMessage,
-                message: errorMessage,
-                genericRetryFailure:
-                  !(error instanceof Error) && typeof error !== "string",
+                retryReplyLost: true,
               }
             : item,
         ),
@@ -190,8 +189,8 @@ export const RedemptionBatchResultToast: React.FC<
                 )}
               </div>
               <div className="whitespace-pre-line text-muted-foreground">
-                {item.genericRetryFailure
-                  ? t("common:status.error")
+                {item.retryReplyLost
+                  ? getUnconfirmedRedemptionOutcome(item.code, t).message
                   : item.message}
               </div>
             </div>

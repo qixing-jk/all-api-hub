@@ -82,6 +82,77 @@ it("retains the confirmed cleanup ID even if writing creation evidence fails", a
   expect([...confirmedIds]).toEqual([17])
 })
 
+it("preserves capture failure when restoring the page observer also fails", async () => {
+  vi.spyOn(fs, "writeFile").mockRejectedValueOnce(new Error("ENOSPC"))
+  const evaluate = page.evaluate.bind(page)
+  vi.spyOn(page, "evaluate").mockImplementation(((callback: any, arg: any) => {
+    if (
+      String(callback).includes("delete window.__aahPmplanCreateObservation")
+    ) {
+      return Promise.reject(new Error("observer restore failed"))
+    }
+    return evaluate(callback, arg)
+  }) as typeof page.evaluate)
+  const failure = await submitPmplanKeyCreation({
+    page,
+    input,
+    write: true,
+    confirmedIds: new Set(),
+    existingIds: new Set(),
+    evidenceDir: directory,
+  }).catch((error: unknown) => error)
+  expect(failure).toBeInstanceOf(AggregateError)
+  expect(
+    (failure as AggregateError).errors.map((error: Error) => error.message),
+  ).toEqual(["ENOSPC", "observer restore failed"])
+})
+
+it("keeps plaintext only in memory and persists only cleanup metadata", async () => {
+  const result = await submitPmplanKeyCreation({
+    page,
+    input,
+    write: true,
+    confirmedIds: new Set(),
+    existingIds: new Set(),
+    evidenceDir: directory,
+  })
+  expect(result.key).toBe("sk-pm-owned")
+  const evidence = await fs.readFile(
+    path.join(directory, "created-key-17.json"),
+    "utf8",
+  )
+  expect(evidence).not.toContain("sk-pm-owned")
+  expect(JSON.parse(evidence)).toEqual({ id: 17 })
+})
+
+it("fails duplicate matching dispatch and retains every confirmed cleanup ID", async () => {
+  let nextId = 17
+  await context.route(`${origin}/api/keys`, (route) =>
+    route.fulfill({ json: { id: nextId++, key: "sk-pm-owned" } }),
+  )
+  await page.evaluate((input) => {
+    document.querySelector("button")!.onclick = async () => {
+      for (let i = 0; i < 2; i++)
+        await fetch("/api/keys", {
+          method: "POST",
+          body: JSON.stringify(input),
+        })
+    }
+  }, input)
+  const confirmedIds = new Set<number>()
+  await expect(
+    submitPmplanKeyCreation({
+      page,
+      input,
+      write: true,
+      confirmedIds,
+      existingIds: new Set(),
+      evidenceDir: directory,
+    }),
+  ).rejects.toThrow(/Duplicate/)
+  expect([...confirmedIds]).toEqual([17, 18])
+})
+
 it("retains an accidentally created key when the validation-only submission regresses", async () => {
   await page.locator("section").evaluate((section) => {
     section.append(document.createTextNode("Enter a valid value."))

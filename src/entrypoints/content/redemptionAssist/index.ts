@@ -33,7 +33,9 @@ export function setupRedemptionAssistContent(options?: {
   }
 
   if (options?.enableContextMenu ?? true) {
-    cleanups.push(registerContextMenuTriggerListener())
+    cleanups.push(
+      registerContextMenuTriggerListener(options?.enableDetection ?? true),
+    )
   }
 
   return () => {
@@ -137,7 +139,7 @@ function setupRedemptionAssistDetection() {
  * This entry point bypasses whitelist and code format filters: it sends the raw
  * selection to the background auto-redeem flow directly.
  */
-function registerContextMenuTriggerListener() {
+function registerContextMenuTriggerListener(detectionEnabled: boolean) {
   const listener = (
     request:
       | {
@@ -147,7 +149,13 @@ function registerContextMenuTriggerListener() {
         }
       | null
       | undefined,
+    _sender: browser.runtime.MessageSender,
+    sendResponse: (response: unknown) => void,
   ) => {
+    if (request?.action === RuntimeActionIds.RedemptionAssistGetStatus) {
+      sendResponse({ ready: true, detectionEnabled })
+      return
+    }
     if (request?.action !== RuntimeActionIds.RedemptionAssistContextMenuTrigger)
       return
 
@@ -156,10 +164,13 @@ function registerContextMenuTriggerListener() {
 
     if (!selectionText) {
       logger.warn("Context menu trigger missing selection")
+      sendResponse?.({ accepted: false })
       return
     }
 
     void handleContextMenuRedemption(selectionText, pageUrl)
+    // Acknowledge admission synchronously; claim completion has its own UI.
+    sendResponse?.({ accepted: true })
   }
 
   return onRuntimeMessage(listener)

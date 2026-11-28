@@ -1,3 +1,4 @@
+import fs from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -26,7 +27,7 @@ export async function main(args = process.argv.slice(2)) {
       throw new Error(`Unknown argument: ${arg}`)
   if (known.includes("--help")) {
     console.log(
-      "PM-Plan current-worktree acceptance: [--isolate] [--prod] [--suite=all|probe|ui|upstream|pricing] [--write] [--evidence-dir=<ignored path>]. Requires an existing PM-Plan login; upstream and pricing also require an existing UI-added account. PMPLAN_USER_ID optionally binds the expected identity. Without --write the key lifecycle is reported blocked. Pricing is read-only. No paid inference or check-in grant is sent.",
+      "PM-Plan current-worktree acceptance: [--isolate] [--prod] [--suite=all|probe|ui|upstream|pricing] [--write] [--evidence-dir=<ignored parent directory>]. Each invocation and suite gets a unique evidence directory. Requires an existing PM-Plan login; upstream and pricing also require an existing UI-added account. PMPLAN_USER_ID optionally binds the expected identity. Without --write the key lifecycle is reported blocked. Pricing is read-only. No paid inference or check-in grant is sent.",
     )
     return
   }
@@ -34,10 +35,12 @@ export async function main(args = process.argv.slice(2)) {
     throw new Error("PM-Plan native writes require --isolate")
   const suite =
     known.find((arg) => arg.startsWith("--suite="))?.slice(8) ?? "all"
-  const evidenceDir = path.resolve(
+  const evidenceParent = path.resolve(
     known.find((arg) => arg.startsWith("--evidence-dir="))?.slice(15) ??
-      `.scratch/pmplan/evidence/live-${Date.now()}`,
+      ".scratch/pmplan/artifacts/live",
   )
+  await fs.mkdir(evidenceParent, { recursive: true })
+  const evidenceDir = await fs.mkdtemp(path.join(evidenceParent, "run-"))
   const environment = {
     targetUrl: PMPLAN_WEB_ORIGIN,
     build: known.includes("--prod") ? "production" : "development",
@@ -50,11 +53,13 @@ export async function main(args = process.argv.slice(2)) {
           : ".output/chrome-mv3-dev",
       ),
     })
-  const run = async (work) => {
+  const run = async (id, work) => {
+    const suiteEvidence = path.join(evidenceDir, id)
+    await fs.mkdir(suiteEvidence, { recursive: true })
     const dev = await connect()
     environment.extensionId = dev.extensionId
     return runScenarioWithCleanup({
-      run: () => work(dev),
+      run: () => work({ ...dev, evidenceDir: suiteEvidence }),
       finalizers: [() => dev.close()],
       cleanupMessage: "PM-Plan connection cleanup failed",
       failureMessage: "PM-Plan acceptance and cleanup failed",
@@ -75,7 +80,7 @@ export async function main(args = process.argv.slice(2)) {
           "pricing.sort-estimate",
           "pricing.narrow-layout",
         ],
-        run: () => run((dev) => runPmplanPricing({ ...dev, evidenceDir })),
+        run: () => run("pricing", (dev) => runPmplanPricing(dev)),
       },
       {
         id: "upstream",
@@ -86,10 +91,9 @@ export async function main(args = process.argv.slice(2)) {
           "notices.account-source",
         ],
         run: () =>
-          run((dev) =>
+          run("upstream", (dev) =>
             runPmplanUpstream({
               ...dev,
-              evidenceDir,
               write: known.includes("--write"),
             }),
           ),
@@ -104,7 +108,7 @@ export async function main(args = process.argv.slice(2)) {
           "native.usage",
           "native.checkin",
         ],
-        run: () => run((dev) => runPmplanProbe({ ...dev, evidenceDir })),
+        run: () => run("probe", (dev) => runPmplanProbe(dev)),
       },
       {
         id: "ui",
@@ -117,10 +121,9 @@ export async function main(args = process.argv.slice(2)) {
           "navigation.action-gates",
         ],
         run: () =>
-          run((dev) =>
+          run("ui", (dev) =>
             runPmplanUi({
               ...dev,
-              evidenceDir,
               write: known.includes("--write"),
             }),
           ),

@@ -9,6 +9,12 @@ import { STORAGE_KEYS } from "../../../src/services/core/storageKeys.ts"
 
 /** Bind live acceptance to the hosted console's deployment and verified identity. */
 export function requirePmplanAccount(accounts, userId) {
+  if (process.env.PMPLAN_USER_ID)
+    assert.equal(
+      String(userId),
+      process.env.PMPLAN_USER_ID,
+      "PM-Plan console identity mismatch",
+    )
   const matches = accounts.filter((account) => {
     if (
       account.site_type !== SITE_TYPES.PMPLAN ||
@@ -36,7 +42,7 @@ export function readPmplanAnnouncementStatus(serviceWorker, account) {
     async ({ key, siteType, accountId, origin }) => {
       const raw = (await chrome.storage.local.get(key))[key]
       const store = typeof raw === "string" ? JSON.parse(raw) : raw
-      return Object.values(store?.sites ?? {}).find((site) => {
+      const site = Object.values(store?.sites ?? {}).find((site) => {
         if (
           site.siteType !== siteType ||
           site.sourceScope !== "account" ||
@@ -48,7 +54,10 @@ export function readPmplanAnnouncementStatus(serviceWorker, account) {
         } catch {
           return false
         }
-      })?.status
+      })
+      return site
+        ? { status: site.status, lastCheckedAt: site.lastCheckedAt }
+        : undefined
     },
     {
       key: STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE,

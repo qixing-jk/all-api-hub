@@ -556,6 +556,9 @@ describe("useAccountKeyResourceController", () => {
       ...invalid,
       expiresAt: new Date(Date.now() + 86400000).toISOString(),
     }
+    act(() => result.current.setEditorValues(editorId - 1, corrected))
+    expect(result.current.editor?.values).toEqual(invalid)
+    expect(result.current.editor?.feedback?.fieldIssues).toHaveLength(2)
     act(() => result.current.setEditorValues(editorId, corrected))
     expect(result.current.editor?.feedback?.fieldIssues).toEqual([
       { fieldId: "models", code: "unsupported_option" },
