@@ -36,7 +36,7 @@ The dev panel's **Add native site balance scenarios** covers every registered ac
 
 ```bash
 pnpm test tests/features/DevPanel/fixtureSiteBalances.test.ts tests/features/DevPanel/fixtureAccounts.test.ts
-pnpm exec playwright test e2e/devFinancialFixtures.spec.ts --workers=1 --retries=0
+pnpm exec playwright test e2e/devFinancialFixtures.spec.ts e2e/devFinancialDisplay.spec.ts e2e/devFinancialTypography.spec.ts --workers=1 --retries=0
 pnpm exec playwright test e2e/balanceOfficialComparison.spec.ts --workers=1 --retries=0
 ```
 

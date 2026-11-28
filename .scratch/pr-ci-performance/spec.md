@@ -7,6 +7,11 @@ maintenance. Keep test coverage, assertions, isolation, and existing deadlines.
 The agreed test boundaries are the actual CI CLIs, shared browser fixtures, and
 the existing failing browser workflows. Generated evidence stays in `artifacts/`.
 
+Current iteration: reduce repeated search-debounce waits in four financial
+matrix cases and divide the existing 33 financial cases into three ordinary
+sequential spec files. Local measurements and screenshot acceptance are complete;
+the third-round hosted result is pending. See the third-round section below.
+
 ## Baseline and hypotheses
 
 - Recent ordinary PRs: E2E 13-16 minutes; Test about 9 minutes. In run
@@ -399,3 +404,91 @@ review. `compare-round2.py`, `hosted-round2-{base,candidate}-summary.json`,
 `hosted-round2-identities.json`, `hosted-round2-iteration-identity.json`,
 `hosted-round2-{base,candidate}/`, and both run/job API snapshots reproduce the
 hosted comparison. No PR has been created.
+
+## Third round: financial matrix waits and file scheduling
+
+### Observed growth and chosen scope
+
+The six default smoke execution steps grew from a summed 2,531s on November 15
+([43727863243](https://github.com/qixing-jk/all-api-hub/actions/runs/43727863243))
+to 3,100s on November 21
+([44937190946](https://github.com/qixing-jk/all-api-hub/actions/runs/44937190946))
+and 3,686s in the November 28 baseline above. The slowest step rose from 480s
+to 649s and 722s. These snapshots establish the reported slowdown, not its full
+cause: runner allocation and test inventory also changed. From `20d783705d14`
+to the fixed baseline, E2E changed across 112 files (+22,612/-929 lines).
+The 23 newly added default spec files account for 2,332.54s of the baseline's
+13,528.79s cumulative case duration. Cumulative case duration is not job wall time.
+
+In the prior candidate, `devFinancialFixtures.spec.ts` occupied one worker for
+502.90s (502.11s cumulative case work). Trace inspection of the original native
+state matrix found 128 search fills repeatedly paying the production 150ms
+debounce. The ordinary UI search is only how these balance assertions materialize
+virtualized rows. Needle-settings screenshots occupied about 0.8s of a 14.2s
+profiled case, so their removal did not justify expanding this iteration.
+
+### Retained changes and contracts
+
+- Install Playwright's page clock before navigation in the three native-site
+  matrix phases and the native-state matrix; advance 200ms after each real search
+  fill. The clock runs normally between advances. Original real UI interactions,
+  visible values, currency changes, zero/missing/stale distinctions, persisted
+  account readback and cleanup assertions remain. Production debounce and all
+  existing deadlines remain unchanged. Clock semantics follow the
+  [official clock guide](https://playwright.dev/docs/clock).
+- Keep 10 fixture creation/lifecycle/matrix cases in `devFinancialFixtures.spec.ts`,
+  move 10 typography cases to `devFinancialTypography.spec.ts` and 13 ordinary
+  display cases to `devFinancialDisplay.spec.ts`. These are sequential files;
+  existing worker/file scheduling can distribute them. No new parallel mode,
+  shared helper layer, worker count or workflow was introduced.
+- Update the existing real-site guide's command to include all three files.
+  TypeScript AST comparison confirms all 19 non-import top-level statements
+  match the saved clock-optimized unsplit source. All 33 original test titles,
+  projects and expected outcomes match after only normalizing the file move.
+
+### Local acceptance
+
+Same build and four configured Chromium workers; commands run sequentially.
+The unchanged build's provenance records baseline `137403eef4` and input hash
+`baa633c76314af5a6a5823ec7bdaf59533814f0fbe2b5451b3a234b24702dd5d`;
+the existing fixture verifies current build inputs before reuse.
+
+| Comparison | Before | After | Result |
+| --- | ---: | ---: | --- |
+| Four financial matrices, CLI wall | 117.36s | 67.60s | Same four passing original cases |
+| Native-state matrix, case duration | 48.0s | 21.2s | Same 41-type state matrix and persistence/cleanup assertions |
+| All 33 cases, clock enabled, CLI wall | 171.85s unsplit | 87.42s split; 91.66s repeat | 33/33 pass in every run; no test-level retries |
+| All 33 cases, cumulative case work | 168.30s unsplit | 185.71s split; 217.66s repeat | Increased overlap/contention; repeat includes a startup retry |
+| Fixture startup retries | 0 unsplit | 0 split; 1 repeat | Existing 25s Chromium launch problem remains unresolved |
+
+The repeat's typography case hit `launchPersistentContext`'s 25s deadline and
+recovered through the existing fixture retry. Preserve that failure in
+`financial-clock-split-repeat.{json,log}`; do not describe the repeat as retry-free
+or infer the local launch cause from eventual success. The first split run was
+clean. Remote validation must assess whether the scheduling benefit carries to CI.
+
+Optional screenshot acceptance ran all four clock-modified cases successfully.
+The predeclared `financial-capture-expected.json` contains 74 checkpoint IDs;
+all 74 PNG/metadata pairs match exactly, including each image's SHA-256.
+The missing-state row and opened Dahl details were visually inspected: the
+expected row state and complete detail content are rendered. No product UI
+changed; the remaining images retain the existing capture assertions.
+
+The actual six-shard CLI, using the previous hosted profile, assigns all 196
+default spec files exactly once. Fixtures/display initially land on shard 1 and
+typography on shard 6. The old fixture weight still describes all 33 cases;
+the two new files initially use the existing median fallback until a subsequent
+successful workflow refreshes the profile. This cold-profile limitation is
+explicit; no special migration or new scheduling machinery was added.
+
+Local reproduction: with `AAH_SKIP_E2E_BUILD=1`, run
+`pnpm exec playwright test e2e/devFinancialFixtures.spec.ts e2e/devFinancialDisplay.spec.ts e2e/devFinancialTypography.spec.ts --project=chromium --workers=4 --reporter=list,json`.
+For the four matrix cases use `--grep "dev native observation states|dev site balance scenarios"`.
+Set `AAH_VISUAL_CAPTURE_DIR` to a fresh directory for optional captures.
+The retained before source is `artifacts/financial-clock-unsplit-source.ts`.
+
+Keep this decision/evidence summary in Git. Keep the raw `financial-filter-*`,
+`financial-state-clock-*`, `financial-clock-*`, `round3-*`, historical job snapshots,
+and task-local comparison/split scripts in ignored `artifacts/` through review.
+`verify-round3-local.py` and `round3-local-summary.json` record inventory, timing,
+retry and capture checks. The existing local startup gap remains open.
