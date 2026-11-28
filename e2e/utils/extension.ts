@@ -1,6 +1,6 @@
 import fs from "node:fs/promises"
 import path from "node:path"
-import type { BrowserContext, Worker } from "@playwright/test"
+import { errors, type BrowserContext, type Worker } from "@playwright/test"
 
 import { assertE2eBuildMetadataCurrent } from "~~/e2e/utils/e2eBuildMetadata"
 
@@ -75,6 +75,7 @@ async function probeExtensionServiceWorker(
 
 async function describeServiceWorkerReadiness(
   worker: Worker,
+  deadline: number,
   expectedExtensionId?: string,
 ): Promise<{ reason: string; ready: boolean }> {
   const workerUrl = worker.url()
@@ -91,8 +92,19 @@ async function describeServiceWorkerReadiness(
     }
   }
 
+  let probeTimer: ReturnType<typeof setTimeout> | undefined
   try {
-    const probe = await probeExtensionServiceWorker(worker)
+    // Worker.evaluate has no timeout option. A paused or unresponsive worker
+    // must not bypass the startup deadline and prevent the fixture's retry.
+    const probe = await Promise.race([
+      probeExtensionServiceWorker(worker),
+      new Promise<never>((_resolve, reject) => {
+        probeTimer = setTimeout(
+          () => reject(new Error("browser API probe timed out")),
+          Math.max(0, deadline - Date.now()),
+        )
+      }),
+    ])
     const missingApis = [
       probe.runtimeId ? null : "chrome.runtime.id",
       probe.hasRuntimeGetManifest ? null : "chrome.runtime.getManifest",
@@ -111,6 +123,8 @@ async function describeServiceWorkerReadiness(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return { ready: false, reason: `probe failed: ${message}` }
+  } finally {
+    clearTimeout(probeTimer)
   }
 }
 
@@ -132,6 +146,7 @@ export async function getExtensionServiceWorker(
   if (cachedWorker) {
     const readiness = await describeServiceWorkerReadiness(
       cachedWorker,
+      deadline,
       options.extensionId,
     )
     observedWorkers.set(cachedWorker.url(), readiness.reason)
@@ -151,6 +166,7 @@ export async function getExtensionServiceWorker(
     for (const worker of candidateWorkers) {
       const readiness = await describeServiceWorkerReadiness(
         worker,
+        deadline,
         options.extensionId,
       )
       observedWorkers.set(worker.url(), readiness.reason)
@@ -170,7 +186,12 @@ export async function getExtensionServiceWorker(
       .waitForEvent("serviceworker", {
         timeout: Math.min(250, remainingMs),
       })
-      .catch(() => undefined)
+      .catch((error: unknown) => {
+        if (error instanceof errors.TimeoutError) return undefined
+        // A closed context cannot produce another worker. Preserve that failure
+        // instead of hot-looping until the startup deadline before retrying.
+        throw error
+      })
 
     if (eventWorker) {
       candidateWorkers.add(eventWorker)
