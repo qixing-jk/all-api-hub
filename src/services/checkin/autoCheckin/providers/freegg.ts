@@ -37,12 +37,16 @@ import {
   withCheckInConfirmation,
   withCheckInResponseConfirmation,
 } from "~/services/checkin/autoCheckin/confirmation"
+import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import {
   isCheckInObservationCurrent,
   readDayStableCheckInObservation,
 } from "~/services/checkin/statusObservation"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  CHECKIN_RESULT_STATUS,
+  getAutoCheckinSkipReasonTranslationKey,
+} from "~/types/autoCheckin"
 import type { CheckInMethodStatus } from "~/types/checkIn"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
@@ -334,6 +338,18 @@ export const freeggProvider: AutoCheckinProvider = {
       )
     } catch (error) {
       if (triggerAttempted) return createUnconfirmedCheckInResult(account)
+      const reason = getCheckInMethodUnknownReason(error)
+      if (
+        reason ===
+          CHECK_IN_METHOD_UNKNOWN_REASON_CODES.AuthenticationRequired ||
+        reason === CHECK_IN_METHOD_UNKNOWN_REASON_CODES.PermissionDenied
+      ) {
+        return {
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: reason,
+          messageKey: getAutoCheckinSkipReasonTranslationKey(reason),
+        }
+      }
       return resolveProviderErrorResult({
         error,
       })

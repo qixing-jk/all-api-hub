@@ -257,6 +257,40 @@ describe("FreeGG daily allowance", () => {
       expect(envelope).toHaveBeenCalledTimes(1)
     },
   )
+  it.each([
+    [401, "authentication_required", false],
+    [401, "authentication_required", true],
+    [403, "permission_denied", false],
+    [403, "permission_denied", true],
+  ] as const)(
+    "reports ledger HTTP %s as %s before dispatch with stale proof %s",
+    async (httpStatus, reasonCode, staleProof) => {
+      serverHttpStatus = httpStatus
+      envelope.mockResolvedValue(logs([]))
+      const site = account()
+      const result = await freeggProvider.checkIn(site, {
+        ...context,
+        ...(staleProof
+          ? {
+              statusProof: {
+                outcome: "known" as const,
+                today: "not_checked" as const,
+                evidence: {
+                  source: "probe" as const,
+                  observedAt: now - 86400000,
+                },
+              },
+            }
+          : {}),
+      })
+
+      expect(result).toMatchObject({ status: "skipped", reasonCode })
+      expect(canAutomaticallyRetryCheckinResult(result)).toBe(false)
+      expect(
+        envelope.mock.calls.map(([, options]) => options.endpoint),
+      ).toEqual(["/api/log/self?p=1&page_size=100&type=1"])
+    },
+  )
   it("uses local time conservatively when the server omits Date", async () => {
     serverDateMissing = true
     mockExecution([log({ created_at: now / 1000 - 86400 })], [grant()])
@@ -264,6 +298,28 @@ describe("FreeGG daily allowance", () => {
       status: "success",
     })
   })
+  it.each([401, 403])(
+    "keeps completion uncertain when readback returns HTTP %s after dispatch",
+    async (httpStatus) => {
+      envelope
+        .mockResolvedValueOnce(logs([]))
+        .mockImplementationOnce(async () => {
+          serverHttpStatus = httpStatus
+          return { success: true, message: "", data: { id: 17 } }
+        })
+        .mockResolvedValueOnce(logs([log()]))
+
+      expect(await freeggProvider.checkIn(account(), context)).toMatchObject({
+        status: "uncertain",
+        reasonCode: "checkin_unconfirmed",
+      })
+      expect(
+        envelope.mock.calls.filter(
+          ([, options]) => options.endpoint === "/api/user/self",
+        ),
+      ).toHaveLength(1)
+    },
+  )
   it("does not claim after account intent changes while baseline reads are pending", async () => {
     mockExecution([], [log()])
     const beforeRecoveredMutation = vi.fn(async () => false)
@@ -832,11 +888,13 @@ describe("FreeGG daily allowance", () => {
     expect(envelope).not.toHaveBeenCalled()
   })
   it.each([
+    ["same_day", "already_checked"],
     ["checked", "already_checked"],
     ["not_checked", "success"],
     ["unknown", "uncertain"],
+    ["authentication_required", "skipped"],
   ])(
-    "reconciles a previous-day preflight with today's %s ledger through the shared executor",
+    "reconciles an elapsed preflight with today's %s ledger through the shared executor",
     async (today, expectedStatus) => {
       const midnight = Date.parse("2026-11-24T16:00:00Z")
       vi.setSystemTime(midnight - 1000)
@@ -858,12 +916,14 @@ describe("FreeGG daily allowance", () => {
           },
         },
       }
-      const todaysGrant = log({ created_at: midnight / 1000 + 1 })
+      const rereadAt = today === "same_day" ? midnight - 500 : midnight + 1000
+      const todaysGrant =
+        today === "same_day" ? log() : log({ created_at: midnight / 1000 + 1 })
       envelope.mockResolvedValueOnce(logs([log()]))
       if (today === "not_checked") mockExecution([], [todaysGrant])
       else
         envelope.mockResolvedValue(
-          logs(today === "checked" ? [todaysGrant] : [log({ type: 2 })]),
+          logs(today === "unknown" ? [log({ type: 2 })] : [todaysGrant]),
         )
 
       const execution = await executeSelectedCheckIn({
@@ -871,23 +931,31 @@ describe("FreeGG daily allowance", () => {
         globalAutomaticExecutionEnabled: true,
         context,
         revalidateAccount: async (checkIn) => {
-          vi.setSystemTime(midnight + 1000)
+          vi.setSystemTime(rereadAt)
+          if (today === "authentication_required") serverHttpStatus = 401
           return { ...site, checkIn: checkIn ?? site.checkIn }
         },
       })
 
-      expect(execution).toMatchObject({
-        kind: "executed",
-        result: { status: expectedStatus },
-      })
+      expect(execution).toMatchObject(
+        today === "same_day"
+          ? { kind: "skipped", reason: "already_checked" }
+          : { kind: "executed", result: { status: expectedStatus } },
+      )
       expect(
         envelope.mock.calls.filter(
           ([, options]) => options.endpoint === "/api/user/self",
         ),
       ).toHaveLength(today === "not_checked" ? 1 : 0)
+      if (today === "same_day") expect(envelope).toHaveBeenCalledTimes(1)
+      if (today === "authentication_required")
+        expect(execution).toMatchObject({
+          result: { reasonCode: "authentication_required" },
+          retryable: false,
+        })
       if (today === "checked")
         expect(execution).toMatchObject({
-          confirmation: { kind: "observed", observedAt: midnight + 1000 },
+          confirmation: { kind: "observed", observedAt: rereadAt },
         })
     },
   )
