@@ -9,9 +9,11 @@ the existing failing browser workflows. Generated evidence stays in `artifacts/`
 
 Current iteration: fix unit CI shard correctness, retain the financial file split,
 and withdraw the page-clock experiment after hosted timeout failures. Main
-`430f46609e` has been merged, including its native-details batching fix. The original
-performance baseline remains fixed above. Full Test and E2E passed on implementation
-`71ee31efa8`; both inventories are complete. Whole-E2E speedup remains unproven.
+`d05e7cf117` has been merged, including the earlier native-details batching fix
+and the catalog/native-editor refactor. The original performance baseline remains
+fixed above. Full Test and E2E passed on implementation `71ee31efa8`; both
+inventories are complete. That evidence predates the latest main integration.
+Whole-E2E speedup remains unproven.
 
 ## Baseline and hypotheses
 
@@ -46,7 +48,7 @@ Candidates, in priority order:
 | Lower PR CI duration | Fixed-input before/after measurements; distinguish local and hosted results | Local subset and hosted long-file gains; full hosted comparison below does not establish an overall E2E speedup |
 | Retain behavior and failure detection | Existing affected unit/E2E cases; preserve behavior/layout assertions and deadlines | Full hosted Test/E2E pass; original identities retained except the documented one-to-five matrix split. Screenshot-only hygiene checks become opt-in in round two. |
 | Repair internal timeout causes | Reproduce current failure before changing its owning logic | Hung probes, closed-context polling and unfinished HTTP connection teardown reproduced; focused checks and full hosted E2E pass |
-| Low complexity | Reuse existing helpers; reject experiments without measurable benefit | Direct import, scoped parallel modes, split existing scenarios, bounded existing probe; no new CI layers |
+| Low complexity | Reuse existing helpers; reject experiments without measurable benefit | Direct import, scoped parallel modes, split existing scenarios and bounded existing probe. One lightweight profile job prevents cache races. |
 
 ## Local measurements
 
@@ -114,8 +116,9 @@ startup acceptance.
 
 ## Decisions and remaining evidence
 
-- Keep the existing six runners, four workers, coverage thresholds and CI steps.
-  Setup/build caches are already effective; no added job or cache layer is justified.
+- Keep the existing six test runners, four workers and coverage thresholds.
+  Setup/build caches are already effective; no extra test runner or cache layer
+  is justified. The later correctness repair adds one lightweight profile producer.
 - Preserve complete stateful multiwindow recovery journeys. Parallelize their
   independent scenarios rather than severing the state transition being tested.
 - Split the AIMLAPI matrix's five independent combinations instead of giving all

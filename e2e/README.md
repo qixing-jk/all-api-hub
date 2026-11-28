@@ -19,6 +19,8 @@ pnpm e2e:ui
 
 Use the [local environment configuration](../docs/development/setup.md#local-tooling-environment-configuration) for credentials and browser paths.
 
+The density suites (`densitySettings.spec.ts` and `densityCoverage.spec.ts`) run their behavior and geometry assertions on every test run. Review screenshots use the existing opt-in `captureVisualViews` checkpoints. Run `pnpm visual:capture --spec e2e/densitySettings.spec.ts --fixture density-settings-v1` for the settings suite, or select `e2e/densityCoverage.spec.ts` with its own fixture label. See [local screenshot comparison](../docs/development/visual-evidence.md#local-screenshot-comparison) for filtering, metadata and baseline comparison.
+
 ## Firefox extension smoke tests
 
 Run `pnpm e2e:firefox` for desktop Firefox extension UI and browser API checks. The Playwright suite builds `.output/firefox-mv2-test` and installs it in a temporary Firefox profile. Selenium and geckodriver control native browser UI, and the shared Firefox RDP adapter inspects extension documents. Pass a spec path or `--grep` to focus on one workflow.
