@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { TURNSTILE_MANUAL_WAIT_MS } from "~/constants/turnstile"
+import { VERIFICATION_OPENED_WAIT_MS } from "~/constants/turnstile"
 import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
 /** Gives a live verification one fresh manual budget when its reminder is opened. */
@@ -14,9 +14,13 @@ export function createVerificationManualWindow(requestId?: string | null) {
         )
           return
         // Repeated clicks cannot retain an otherwise abandoned window forever.
-        if (!deadline) deadline = Date.now() + TURNSTILE_MANUAL_WAIT_MS
+        if (!deadline) deadline = Date.now() + VERIFICATION_OPENED_WAIT_MS
         respond({ success: true })
       })
     : () => {}
-  return { getDeadline: () => deadline, dispose }
+  return {
+    // Opening starts the operation phase, replacing the reminder/delivery phase.
+    getDeadline: (fallback = 0) => deadline || fallback,
+    dispose,
+  }
 }

@@ -1,8 +1,8 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
-  TURNSTILE_AUTO_ASSIST_MS,
-  TURNSTILE_MANUAL_WAIT_MS,
+  TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
   TURNSTILE_PAGE_API_POLL_MS,
+  VERIFICATION_REMINDER_WAIT_MS,
 } from "~/constants/turnstile"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
@@ -16,8 +16,8 @@ export function createTurnstileUserAssist(
   requestId?: string,
 ): TurnstileUserAssist {
   return {
-    autoAttemptMs: TURNSTILE_AUTO_ASSIST_MS,
-    manualTimeoutMs: TURNSTILE_MANUAL_WAIT_MS,
+    autoAttemptMs: TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
+    reminderTimeoutMs: VERIFICATION_REMINDER_WAIT_MS,
     pageTokenIntervalMs: TURNSTILE_PAGE_API_POLL_MS,
     requestAssist: async () => {
       let presented: boolean

@@ -47,6 +47,10 @@ const NATIVE_ACCOUNT_ID = "native-page-fallback-account"
 const NATIVE_ACCOUNT_NAME = "Native Page Fallback Account"
 const NATIVE_ACCOUNT_USER_ID = "native-user"
 
+type ReminderTrackingScope = typeof globalThis & {
+  __automaticVerificationReminders: number
+}
+
 type NativeCheckinFixture = {
   siteUrl: string
   counts: {
@@ -377,14 +381,20 @@ async function createNativeCheckinFixture(
         if (${captcha === "turnstile-auto"}) {
           const widget = document.createElement('div')
           widget.className = 'cf-turnstile'
-          widget.innerHTML = '<input type="hidden" name="cf-turnstile-response">'
+          widget.innerHTML = '<input id="cf-chl-widget-native_response" type="hidden" name="cf-turnstile-response">'
           document.body.append(widget)
-          setTimeout(async () => {
+          const root = widget.attachShadow({mode: 'closed'})
+          const frame = document.createElement('iframe')
+          frame.src = 'https://challenges.cloudflare.com/turnstile/aah-native-fixture'
+          window.addEventListener('message', async function complete(event) {
+            if (event.origin !== 'https://challenges.cloudflare.com' || event.source !== frame.contentWindow || event.data?.event !== 'complete') return
+            window.removeEventListener('message', complete)
             await fetch('/native-pow-started', {method: 'POST'})
             widget.querySelector('input').value = 'fixture-token'
             await fetch('/api/user/checkin?turnstile=fixture-token', {method: 'POST'})
             widget.remove()
-          }, 200)
+          })
+          root.append(frame)
           return
         }
         if (${captcha === "altcha" || captcha === "altcha-shadow"}) {
@@ -736,6 +746,32 @@ for (const { order, captcha, discover } of [
     })
     try {
       await stubLlmMetadataIndex(context)
+      if (captcha === "turnstile-auto") {
+        // Real cross-origin messages from a closed-shadow frame, with completion
+        // after the unknown-state grace period, must stay entirely automatic.
+        await context.route(
+          "https://challenges.cloudflare.com/turnstile/aah-native-fixture",
+          (route) =>
+            route.fulfill({
+              contentType: "text/html",
+              body: `<script>
+            const report = event => parent.postMessage({source: 'cloudflare-challenge', widgetId: 'native', event}, '*');
+            report('init');
+            setTimeout(() => report('complete'), 13_000);
+          </script>`,
+            }),
+        )
+        await serviceWorker.evaluate((action) => {
+          const scope = globalThis as ReminderTrackingScope
+          scope.__automaticVerificationReminders = 0
+          scope.chrome.runtime.onMessage.addListener(
+            (message: { action?: unknown } | null | undefined) => {
+              if (message?.action === action)
+                scope.__automaticVerificationReminders++
+            },
+          )
+        }, RuntimeActionIds.TurnstileRequestUserAssist)
+      }
       await seedUserPreferences(serviceWorker, {
         logging: { consoleEnabled: true, level: "debug" },
         autoCheckin: {
@@ -819,7 +855,9 @@ for (const { order, captcha, discover } of [
           await button.click()
           await expect(button).toBeDisabled()
           markManualPending()
-          await expect(button).toBeEnabled()
+          await expect(button).toBeEnabled({
+            timeout: captcha === "turnstile-auto" ? 25_000 : 10_000,
+          })
         } else {
           const response = await sendTypedRuntimeMessageFromPage(page, type)
           expect(response).toMatchObject({ success: true })
@@ -845,6 +883,15 @@ for (const { order, captcha, discover } of [
       expect(nativeFixture.counts.directCheckinPostCount).toBe(1)
       expect(nativeFixture.counts.nativePageClickCount).toBe(1)
       expect(nativeFixture.counts.nativePowStartCount).toBe(captcha ? 1 : 0)
+      if (captcha === "turnstile-auto") {
+        expect(
+          await serviceWorker.evaluate(
+            () =>
+              (globalThis as ReminderTrackingScope)
+                .__automaticVerificationReminders,
+          ),
+        ).toBe(0)
+      }
       const status = await readAutoCheckinStatus(serviceWorker)
       const result = status?.perAccount?.[NATIVE_ACCOUNT_ID]
       expect(result).toBeDefined()

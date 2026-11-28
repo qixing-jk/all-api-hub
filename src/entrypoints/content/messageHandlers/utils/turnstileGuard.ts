@@ -1,11 +1,11 @@
 import {
   TURNSTILE_ASSIST_TURN_WAIT_MS,
-  TURNSTILE_AUTO_ASSIST_MS,
   TURNSTILE_CONTAINER_SELECTOR,
   TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
   TURNSTILE_IFRAME_SELECTOR,
-  TURNSTILE_MANUAL_WAIT_MS,
   TURNSTILE_PAGE_API_POLL_MS,
+  VERIFICATION_AUTO_WAIT_MS,
+  VERIFICATION_REMINDER_WAIT_MS,
 } from "~/constants/turnstile"
 import {
   clearCheckinPageActionState,
@@ -15,8 +15,14 @@ import {
   detectTurnstileWidget,
   readTurnstileTokenFromDom,
 } from "~/services/checkin/turnstile/dom"
+import {
+  observeTurnstileInteraction,
+  shouldRequestVerificationAssist,
+  VERIFICATION_INTERACTION_STATES,
+} from "~/services/checkin/turnstile/interaction"
 import { createVerificationManualWindow } from "~/services/checkin/verificationManualWindow"
 import {
+  TURNSTILE_PRE_TRIGGER_KINDS,
   TURNSTILE_TOKEN_WAIT_STATUSES,
   type TurnstilePreTrigger,
   type TurnstileTokenWaitResult,
@@ -61,7 +67,6 @@ const TURNSTILE_AUTOSTART_MAX_ATTEMPTS = 3
 
 const PRETRIGGER_SETTLE_DELAY_MS = 600
 
-const DEFAULT_WAIT_TIMEOUT_MS = TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
 const MIN_WAIT_TIMEOUT_MS = 500
 const MAX_WAIT_TIMEOUT_MS = 30_000
 const WAIT_POLL_INTERVAL_MS = 250
@@ -278,13 +283,13 @@ function normalizeTimeoutMs(timeoutMs: unknown): number {
         ? Number(timeoutMs)
         : NaN
 
-  const resolved = Number.isFinite(raw) ? raw : DEFAULT_WAIT_TIMEOUT_MS
+  const resolved = Number.isFinite(raw)
+    ? raw
+    : TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
   return Math.min(Math.max(resolved, MIN_WAIT_TIMEOUT_MS), MAX_WAIT_TIMEOUT_MS)
 }
 
-/**
- * Wait for a Turnstile token to appear in the DOM.
- */
+/** Upper bounds for caller-supplied delays and page-world token responses. */
 const MAX_ASSIST_DELAY_MS = 120_000
 const MAX_PAGE_TOKEN_LENGTH = 4_096
 
@@ -299,10 +304,10 @@ export type TurnstilePageTokenRead = (params: {
  * continues until the widget writes a token.
  */
 export type TurnstileUserAssist = {
-  /** Quiet period before the window is brought forward. */
+  /** Fallback grace period when the widget's interaction state is unknown. */
   autoAttemptMs?: number
-  /** Total wait budget once the user is asked to finish verification. */
-  manualTimeoutMs?: number
+  /** Time to notice the reminder before first opening the verification window. */
+  reminderTimeoutMs?: number
   /** Minimum gap between official page-API reads. */
   pageTokenIntervalMs?: number
   requestAssist: () => Promise<unknown> | unknown
@@ -352,7 +357,8 @@ export async function waitForTurnstileToken(params: {
   let detection = detectTurnstileWidget()
 
   const preTriggerEnabled = Boolean(
-    params.preTrigger && params.preTrigger.kind !== "none",
+    params.preTrigger &&
+    params.preTrigger.kind !== TURNSTILE_PRE_TRIGGER_KINDS.None,
   )
   const assist = params.userAssist
 
@@ -366,58 +372,61 @@ export async function waitForTurnstileToken(params: {
     }
   }
 
-  const initialPageToken = await readAssistedPageToken(assist, false)
-  if (initialPageToken) {
-    clearTurnstileGuardState(params.requestId)
-    return {
-      status: TURNSTILE_TOKEN_WAIT_STATUSES.TokenObtained,
-      token: initialPageToken,
-      detection,
-    }
-  }
-
-  if (
-    !detection.hasTurnstile &&
-    !preTriggerEnabled &&
-    params.expectTurnstile !== true
-  ) {
-    clearTurnstileGuardState(params.requestId)
-    return {
-      status: TURNSTILE_TOKEN_WAIT_STATUSES.NotPresent,
-      token: null,
-      detection,
-    }
-  }
-
-  const timeoutMs = normalizeTimeoutMs(params.timeoutMs)
-  const startedAt = Date.now()
-  let deadline = startedAt + timeoutMs
-  const autoAttemptMs = assist
-    ? Math.min(
-        timeoutMs,
-        normalizeAssistDelay(assist.autoAttemptMs, TURNSTILE_AUTO_ASSIST_MS),
-      )
-    : timeoutMs
-  const assistAt = startedAt + autoAttemptMs
-  const pageTokenIntervalMs = normalizeAssistDelay(
-    assist?.pageTokenIntervalMs,
-    TURNSTILE_PAGE_API_POLL_MS,
-  )
-  let assistRequested = false
-  let assistDeclined = false
-  let lastPageTokenReadAt = 0
-  let sawTurnstile = detection.hasTurnstile
-  // Set while the assist waits for its turn in front of the user, so the wait can
-  // outlast the normal timeout without blocking token detection.
-  let assistPendingUntil: number | null = null
+  const interaction = observeTurnstileInteraction()
   const manualWindow = createVerificationManualWindow(
     assist ? params.requestId : undefined,
   )
-  const activeDeadline = () =>
-    Math.max(deadline, assistPendingUntil ?? 0, manualWindow.getDeadline())
-
   try {
-    while (Date.now() < activeDeadline()) {
+    const initialPageToken = await readAssistedPageToken(assist, false)
+    if (initialPageToken) {
+      clearTurnstileGuardState(params.requestId)
+      return {
+        status: TURNSTILE_TOKEN_WAIT_STATUSES.TokenObtained,
+        token: initialPageToken,
+        detection,
+      }
+    }
+
+    if (
+      !detection.hasTurnstile &&
+      !preTriggerEnabled &&
+      params.expectTurnstile !== true
+    ) {
+      clearTurnstileGuardState(params.requestId)
+      return {
+        status: TURNSTILE_TOKEN_WAIT_STATUSES.NotPresent,
+        token: null,
+        detection,
+      }
+    }
+
+    const timeoutMs = normalizeTimeoutMs(params.timeoutMs)
+    const startedAt = Date.now()
+    let deadline = startedAt + timeoutMs
+    const autoAttemptMs = assist
+      ? Math.min(
+          timeoutMs,
+          normalizeAssistDelay(
+            assist.autoAttemptMs,
+            TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
+          ),
+        )
+      : timeoutMs
+    const assistAt = startedAt + autoAttemptMs
+    const pageTokenIntervalMs = normalizeAssistDelay(
+      assist?.pageTokenIntervalMs,
+      TURNSTILE_PAGE_API_POLL_MS,
+    )
+    let assistRequested = false
+    let lastPageTokenReadAt = 0
+    let sawTurnstile = detection.hasTurnstile
+    // Set while the assist waits for its turn in front of the user, so the wait can
+    // outlast the normal timeout without blocking token detection.
+    let assistPendingUntil: number | null = null
+    const activeDeadline = () =>
+      manualWindow.getDeadline(Math.max(deadline, assistPendingUntil ?? 0))
+    // Always sample once at the deadline, including after a throttled timer wakes.
+    while (true) {
       const token = readTurnstileTokenFromDom()
       if (token) {
         detection = detectTurnstileWidget()
@@ -466,23 +475,28 @@ export async function waitForTurnstileToken(params: {
         }
       }
 
+      const interactionState = interaction.read()
+      if (interactionState === VERIFICATION_INTERACTION_STATES.Verifying) {
+        // Give automatic verification the existing completion budget without
+        // requiring a reminder. Progress cannot extend this bound repeatedly.
+        deadline = Math.max(deadline, startedAt + VERIFICATION_AUTO_WAIT_MS)
+      }
       if (
         assist &&
         !assistRequested &&
-        !assistDeclined &&
         sawTurnstile &&
-        Date.now() >= assistAt
+        shouldRequestVerificationAssist(interactionState, assistAt)
       ) {
         assistRequested = true
         // The assist can wait for its turn behind another verification window, and
         // the widget may still resolve on its own while it waits. Keep polling for
         // a token instead of blocking until the presentation settles.
         assistPendingUntil = Date.now() + TURNSTILE_ASSIST_TURN_WAIT_MS
-        const manualWindowMs = Math.max(
+        const reminderWindowMs = Math.max(
           timeoutMs,
           normalizeAssistDelay(
-            assist.manualTimeoutMs,
-            TURNSTILE_MANUAL_WAIT_MS,
+            assist.reminderTimeoutMs,
+            VERIFICATION_REMINDER_WAIT_MS,
           ),
         )
         void Promise.resolve()
@@ -493,17 +507,15 @@ export async function waitForTurnstileToken(params: {
           )
           .then((accepted) => {
             assistPendingUntil = null
-            if (!accepted) {
-              assistDeclined = true
-              return
-            }
-            // The window only reaches the user now, so the manual window they need
-            // to finish the challenge starts here.
-            deadline = Math.max(deadline, Date.now() + manualWindowMs)
+            if (!accepted) return
+            // Delivery starts the reaction window; opening starts a separate
+            // operation window owned by manualWindow.
+            deadline = Math.max(deadline, Date.now() + reminderWindowMs)
           })
         continue
       }
 
+      if (Date.now() >= activeDeadline()) break
       await new Promise((resolve) => setTimeout(resolve, WAIT_POLL_INTERVAL_MS))
     }
 
@@ -524,6 +536,7 @@ export async function waitForTurnstileToken(params: {
       detection,
     }
   } finally {
+    interaction.dispose()
     manualWindow.dispose()
   }
 }
