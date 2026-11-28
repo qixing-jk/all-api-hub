@@ -8,6 +8,31 @@ import {
 afterEach(() => vi.unstubAllGlobals())
 
 describe("temporary account isolation", () => {
+  it("retains the scenario error alongside failed account removal", async () => {
+    const accounts: Array<{ id: string; site_name: string }> = []
+    const worker = {
+      evaluate: vi.fn(async (_fn: unknown, arg?: unknown) => {
+        if (arg) throw new Error("cleanup failed")
+        return accounts
+      }),
+    }
+    const failure = await withUiCreatedAccount(
+      worker,
+      async (name: string) => {
+        accounts.push({ id: "created", site_name: name })
+      },
+      async () => {
+        throw new Error("scenario failed")
+      },
+    ).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(AggregateError)
+    expect((failure as AggregateError).errors.map(String).join(" ")).toContain(
+      "scenario failed",
+    )
+    expect((failure as AggregateError).errors.map(String).join(" ")).toContain(
+      "cleanup failed",
+    )
+  })
   it.each(["seed", "ui", "ui-renamed", "ui-delayed-error"])(
     "preserves accounts and concurrent edits after failure (%s)",
     async (mode) => {

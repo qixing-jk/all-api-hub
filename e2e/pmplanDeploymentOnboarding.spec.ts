@@ -233,10 +233,11 @@ test("PM-Plan discovers independent deployments and preserves their sessions thr
     const first = savedAccounts.find(
       (account) => account.site_url === origins[0],
     )!
-    await page
-      .getByTestId(getAccountManagementListItemTestId(first.id))
-      .getByTestId(accounts.rowMoreActionsButton)
-      .click()
+    const firstRow = page.getByTestId(
+      getAccountManagementListItemTestId(first.id),
+    )
+    await firstRow.hover()
+    await firstRow.getByTestId(accounts.rowMoreActionsButton).click()
     await page.getByTestId(accounts.rowRefreshMenuItem).click()
     await expect
       .poll(

@@ -128,6 +128,53 @@ it("exposes native PM-Plan key management", () => {
   ).toBeDefined()
 })
 
+it("rejects a failed create without reporting an accepted secret", async () => {
+  const { http, HttpResponse } = await import("msw")
+  const { server } = await import("~~/tests/msw/server")
+  const { installCookieTransport } =
+    await import("~~/tests/test-utils/cookieTransport")
+  const { AuthTypeEnum } = await import("~/types")
+  const { vi } = await import("vitest")
+  installCookieTransport("pmplan_session", "plan.pmcat.top")
+  let writes = 0
+  server.use(
+    http.get("https://plan.pmcat.top/api/me", () =>
+      HttpResponse.json({ user: { id: 661, username: "sample" } }),
+    ),
+    http.get("https://plan.pmcat.top/api/models", () =>
+      HttpResponse.json({ models: [] }),
+    ),
+    http.post("https://plan.pmcat.top/api/keys", () => {
+      writes++
+      return HttpResponse.json({ error: "Key limit reached" }, { status: 400 })
+    }),
+  )
+  try {
+    const session = await getSiteTypeCapabilities(
+      "pmplan",
+    ).account!.keyResourceManagement!.open({
+      account: { id: "test-account", siteType: "pmplan", name: "PM-Plan" },
+      request: {
+        accountId: "test-account",
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+        baseUrl: "https://plan.pmcat.top",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: "661",
+          cookie: "pmplan_session=saved",
+        },
+      },
+    })
+    const editor = await session.openCreateEditor("account")
+    await expect(editor.submit(editor.initialValues)).rejects.toMatchObject({
+      failure: expect.objectContaining({ message: expect.any(String) }),
+    })
+    expect(writes).toBe(1)
+  } finally {
+    vi.restoreAllMocks()
+  }
+})
+
 it.each(["https://plan.pmcat.top", "https://custom-plan.example"])(
   "opens native keys and exports the same deployment: %s",
   async (origin) => {

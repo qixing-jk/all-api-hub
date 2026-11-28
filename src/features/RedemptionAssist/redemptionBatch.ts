@@ -215,6 +215,7 @@ async function redeemCodesSequential(params: {
   dismissOuterLoading: () => void
 }) {
   const selectedAccounts = new Map<string, string>()
+  const terminalResults = new Map<string, RedeemBatchItem>()
 
   const redeemAttempt = async (code: string): Promise<RedeemBatchItem> => {
     const codeKind = getRedemptionCodeKind(code)
@@ -311,8 +312,12 @@ async function redeemCodesSequential(params: {
   }
 
   const redeemOne = async (code: string): Promise<RedeemBatchItem> => {
+    const terminal = terminalResults.get(code)
+    if (terminal) return terminal
     try {
-      return await redeemAttempt(code)
+      const result = await redeemAttempt(code)
+      if (result.retryable === false) terminalResults.set(code, result)
+      return result
     } catch {
       // Picker/preparation failure must not discard other completed rows.
       return {

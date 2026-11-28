@@ -16,7 +16,7 @@ import {
   configureExtensionPage,
   createUiCapture,
 } from "../../cdp/ui-driver.mjs"
-import { runUiScenarios } from "../../cdp/ui-scenarios.mjs"
+import { runUiScenarios, summarizeUiSuite } from "../../cdp/ui-scenarios.mjs"
 import { readModelCatalog } from "../../flows/model-catalog.mjs"
 import {
   openNativeKeyEditor,
@@ -26,7 +26,7 @@ import {
   readPmplanAnnouncementStatus,
   requirePmplanAccount,
 } from "./accountScope.mjs"
-import { revokePmplanKeys } from "./keyCleanup.mjs"
+import { finalizePmplanKeys } from "./keyCleanup.mjs"
 import { submitPmplanKeyCreation } from "./keyCreation.mjs"
 
 /** Follow-up acceptance against an existing UI-added account; only confirmed disposable keys are mutated. */
@@ -327,39 +327,19 @@ export async function runPmplanUpstream({
           ],
         }),
       )
-      if (!report.ok) await capture("failure.png", ui.locator("body"))
-      return report
+      const outcome = summarizeUiSuite(report)
+      if (outcome.ok === false) await capture("failure.png", ui.locator("body"))
+      return outcome
     },
     finalizers: [
       async () => {
-        const errors = []
-        try {
-          for (const id of owned)
-            assert.ok(!baseline.some((key) => key.id === id))
-          await revokePmplanKeys({
-            site,
-            ids: owned,
-            readKeys: async () => (await nativeRead("/api/keys")).keys,
-          })
-        } catch (error) {
-          errors.push(error)
-        }
-        if (baseline.length) {
-          const final = (await nativeRead("/api/keys")).keys
-          for (const key of baseline)
-            assert.deepEqual(
-              final.find((k) => k.id === key.id),
-              key,
-              "Existing key changed",
-            )
-        }
-        report.cleanup = {
-          ownedIds: [...owned],
-          existingKeysUnchanged: true,
-          errors: errors.map((e) => e.message),
-        }
-        if (errors.length)
-          throw new AggregateError(errors, "Disposable key cleanup failed")
+        await finalizePmplanKeys({
+          site,
+          ids: owned,
+          baseline,
+          readKeys: async () => (await nativeRead("/api/keys")).keys,
+          report,
+        })
       },
       async () => {
         await fs.writeFile(

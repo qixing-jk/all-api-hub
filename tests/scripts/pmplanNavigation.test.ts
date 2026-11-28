@@ -97,3 +97,43 @@ it("retains confirmed ownership and restores observation if the action later thr
     ),
   ).toBe(true)
 })
+
+it.each([true, false])(
+  "collects a delayed create after action failure (callback=%s)",
+  async (callback) => {
+    await page.evaluate(() => {
+      chrome.tabs.create = ((
+        _properties: unknown,
+        callback?: (tab: unknown) => void,
+      ) => {
+        const result = new Promise((resolve) =>
+          setTimeout(() => resolve({ id: 21 }), 100),
+        )
+        if (callback) {
+          void result.then(callback)
+          return
+        }
+        return result
+      }) as typeof chrome.tabs.create
+    })
+    const ownedTabIds = new Set<number>()
+    await expect(
+      openPmplanPage({
+        page,
+        url,
+        ownedTabIds,
+        action: async () => {
+          await page.evaluate(
+            ({ url, callback }) => {
+              if (callback) chrome.tabs.create({ url }, () => {})
+              else void chrome.tabs.create({ url })
+            },
+            { url, callback },
+          )
+          throw new Error("action failed")
+        },
+      }),
+    ).rejects.toThrow("action failed")
+    expect([...ownedTabIds]).toEqual([21])
+  },
+)

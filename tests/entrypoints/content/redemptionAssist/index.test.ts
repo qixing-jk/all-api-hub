@@ -209,7 +209,7 @@ describe("setupRedemptionAssistContent", () => {
     vi.restoreAllMocks()
   })
 
-  it.each([true, false])(
+  it.each([true, false, undefined])(
     "reports installed detection listeners (%s) without dispatching redemption",
     async (enableDetection) => {
       const { setupRedemptionAssistContent } =
@@ -229,7 +229,7 @@ describe("setupRedemptionAssistContent", () => {
       )
       expect(respond).toHaveBeenCalledWith({
         ready: true,
-        detectionEnabled: enableDetection,
+        detectionEnabled: enableDetection ?? true,
       })
       expect(mockSendRedemptionAssistMessage).not.toHaveBeenCalled()
       cleanup()
@@ -1472,10 +1472,14 @@ describe("setupRedemptionAssistContent", () => {
         }),
         expect.objectContaining({ code: codeB, success: true }),
       ])
+      const dispatchCount = mockSendRedemptionAssistMessage.mock.calls.length
       await expect(retry(resetCode)).resolves.toMatchObject({
         retryable: false,
         outcomeUncertain: true,
       })
+      expect(mockSendRedemptionAssistMessage).toHaveBeenCalledTimes(
+        dispatchCount,
+      )
     },
   )
 

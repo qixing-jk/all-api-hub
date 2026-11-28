@@ -944,6 +944,24 @@ for (const scenario of [
         username: "e2e-user",
         userId: "1",
       })
+    if (supportsNativeSidePanel) {
+      // Native side panels bypass Playwright's context routes. Send only this
+      // synthetic site's requests through the same-origin extension bridge so
+      // the existing fixtures see the original credentials, method and signal.
+      await recoveryView.evaluate((view, origin) => {
+        const nativeFetch = view.fetch.bind(view)
+        const fixtureFetch = window.fetch.bind(window)
+        view.fetch = (input, init) => {
+          const url =
+            typeof input === "object" && "url" in input
+              ? input.url
+              : String(input)
+          return new URL(url, view.location.href).origin === origin
+            ? fixtureFetch(input, init)
+            : nativeFetch(input, init)
+        }
+      }, new URL(baseUrl).origin)
+    }
     const postSaveRefresh = await bridge.evaluateHandle((action) => {
       const observed = { accountIds: [] as string[] }
       const listener = (message: {

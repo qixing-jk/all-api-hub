@@ -24,12 +24,43 @@ import {
   createUiCapture,
   dismissModals,
 } from "../../cdp/ui-driver.mjs"
-import { runUiScenarios } from "../../cdp/ui-scenarios.mjs"
+import { runUiScenarios, summarizeUiSuite } from "../../cdp/ui-scenarios.mjs"
 import { readModelCatalog } from "../../flows/model-catalog.mjs"
 import { openNativeKeyEditor } from "../../flows/native-key-editor.mjs"
 import { revokePmplanKeys } from "./keyCleanup.mjs"
 import { submitPmplanKeyCreation } from "./keyCreation.mjs"
 import { openPmplanPage } from "./navigation.mjs"
+
+/** Compare credentials without allowing assertion diagnostics to serialize them. */
+export function assertPmplanSecretMatch(actual, expected) {
+  assert.ok(
+    actual === expected,
+    "Displayed key differs from its creation response",
+  )
+}
+
+/** Recover only unique run-owned profile IDs, retaining the secret binding for known IDs. */
+export function findOwnedPmplanProfile({
+  profiles,
+  baselineIds,
+  secret,
+  knownId,
+}) {
+  if (!secret) return undefined
+  if (knownId) {
+    const profile = profiles.find(({ id }) => id === knownId)
+    assert.ok(
+      !profile || (!baselineIds.has(knownId) && profile.apiKey === secret),
+      "Refuse to remove an altered profile",
+    )
+    return profile
+  }
+  const matches = profiles.filter(
+    (profile) => !baselineIds.has(profile.id) && profile.apiKey === secret,
+  )
+  assert.ok(matches.length <= 1, "Run-created profile ownership is ambiguous")
+  return matches[0]
+}
 
 const localDateTime = (date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
@@ -100,6 +131,7 @@ export async function runPmplanUi({
     }, endpoint)
   }
   let accountId, createdSecret, createdProfileId, profileSecret
+  const baselineProfileIds = new Set()
   const confirmedIds = new Set()
   const ownedNativeTabIds = new Set()
   const navigate = async (hash) => {
@@ -141,19 +173,19 @@ export async function runPmplanUi({
     await expect(ui.getByTestId(keys.nativeEditor)).toBeHidden()
   }
   const removeProfile = async () => {
-    if (!createdProfileId) return
+    if (!profileSecret) return
     const data = await readProfiles(serviceWorker)
-    const owned = data.profiles.find(
-      (profile) => profile.id === createdProfileId,
-    )
+    const owned = findOwnedPmplanProfile({
+      profiles: data.profiles,
+      baselineIds: baselineProfileIds,
+      secret: profileSecret,
+      knownId: createdProfileId,
+    })
     if (!owned) {
       evidence.cleanup.profileRemoved = true
       return
     }
-    assert.ok(
-      owned.apiKey === profileSecret,
-      "Refuse to remove an altered profile",
-    )
+    createdProfileId = owned.id
     await navigate("apiCredentialProfiles")
     const profileRow = ui.getByTestId(
       getApiCredentialProfileRowTestId(createdProfileId),
@@ -223,6 +255,7 @@ export async function runPmplanUi({
         assert.equal(String(initial.user.id), process.env.PMPLAN_USER_ID)
       const baselineKeys = (await nativeRead("/api/keys")).keys
       const baselineProfiles = await readProfiles(serviceWorker)
+      baselineProfiles.profiles.forEach(({ id }) => baselineProfileIds.add(id))
       return withUiCreatedAccount(
         serviceWorker,
         async (name) => {
@@ -776,7 +809,7 @@ export async function runPmplanUi({
                     /^sk-pm-/.test(createdSecret),
                     "Unexpected native key format",
                   )
-                  assert.equal(createdSecret, responseSecret)
+                  assertPmplanSecretMatch(createdSecret, responseSecret)
                   assert.ok(
                     createdId && confirmedIds.has(createdId),
                     "Creation response must confirm the cleanup ID; do not replay a dispatched create",
@@ -1026,10 +1059,11 @@ export async function runPmplanUi({
             selected: scenarios.map(({ id }) => id),
           })
           evidence.scenarios = result.scenarios
-          if (!result.ok) {
+          const outcome = summarizeUiSuite(result)
+          if (outcome.ok === false) {
             await captureFailure()
           }
-          return { ok: result.ok }
+          return outcome
         },
       ).catch(async (error) => {
         evidence.error = {

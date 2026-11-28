@@ -35,3 +35,7 @@ export function runUiScenarios(options: {
     reason?: string
   }>
 }>
+
+export function summarizeUiSuite(
+  report: Awaited<ReturnType<typeof runUiScenarios>>,
+): { ok: boolean } | { skipped: true; reason: string }

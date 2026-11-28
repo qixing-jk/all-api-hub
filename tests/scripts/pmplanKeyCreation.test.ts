@@ -271,14 +271,16 @@ it("does not attribute a different payload from the same page to this submission
     })
   })
   const confirmedIds = new Set<number>()
-  await submitPmplanKeyCreation({
-    page,
-    input,
-    write: true,
-    confirmedIds,
-    existingIds: new Set(),
-    evidenceDir: directory,
-  })
+  await expect(
+    submitPmplanKeyCreation({
+      page,
+      input,
+      write: true,
+      confirmedIds,
+      existingIds: new Set(),
+      evidenceDir: directory,
+    }),
+  ).rejects.toThrow("Unexpected PM-Plan create dispatch")
   expect([...confirmedIds]).toEqual([17])
 })
 

@@ -15,6 +15,102 @@ import { runPmplanUpstream } from "~~/scripts/suites/pmplan/upstream.mjs"
 
 const { assertPmplanModelPrices, runPmplanPricing } = pmplanPricing
 
+it("reports unavailable native pricing fixtures as skipped", async () => {
+  const browser = await chromium.launch({ headless: true })
+  const evidenceDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), "pmplan-pricing-empty-"),
+  )
+  try {
+    const context = await browser.newContext()
+    await context.route("https://plan.pmcat.top/**", (route) =>
+      route.fulfill({ json: { user: { id: 661 }, models: [], total: 0 } }),
+    )
+    const serviceWorker = {
+      evaluate: async () => [
+        {
+          id: "fixture",
+          site_type: "pmplan",
+          site_url: "https://plan.pmcat.top",
+          account_info: { id: 661 },
+        },
+      ],
+    }
+    expect(
+      await runPmplanPricing({
+        context,
+        serviceWorker,
+        extensionId: "fixture",
+        evidenceDir,
+      }),
+    ).toMatchObject({
+      skipped: true,
+      reason: expect.stringContaining("fixture"),
+    })
+    expect(context.pages()).toHaveLength(0)
+  } finally {
+    await browser.close()
+    await fs.rm(evidenceDir, { recursive: true })
+  }
+})
+
+it.each([
+  [1, "$0.000001/M"],
+  [10000, "$0.0100/M"],
+  [999999, "$1.0000/M"],
+])("accepts native sub-dollar rate precision: %s", async (rate, label) => {
+  const browser = await chromium.launch({ headless: true })
+  try {
+    const page = await browser.newPage()
+    await page.setContent(
+      `<main><div data-slot="card"><h3>small</h3><div><span>Input</span><span>${label}</span></div><div><span>Output</span><span>${label}</span></div></div></main>`,
+    )
+    await expect(
+      assertPmplanModelPrices(
+        page.locator("main"),
+        { name: "small", input_micro: rate, output_micro: rate },
+        100,
+      ),
+    ).resolves.toBeUndefined()
+  } finally {
+    await browser.close()
+  }
+})
+
+it("persists only safe probe metadata when inventory unexpectedly exposes a key", async () => {
+  const browser = await chromium.launch({ headless: true })
+  const evidenceDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), "pmplan-probe-secret-"),
+  )
+  try {
+    const context = await browser.newContext()
+    await context.route("https://plan.pmcat.top/**", (route) =>
+      route.fulfill({
+        json: route.request().url().endsWith("/api/me")
+          ? { user: { id: 661 } }
+          : {
+              keys: [
+                {
+                  id: 17,
+                  key_prefix: "sk-pm-mask",
+                  key: "sk-pm-private-fixture",
+                },
+              ],
+            },
+      }),
+    )
+    await expect(runPmplanProbe({ context, evidenceDir })).rejects.toThrow()
+    const evidence = await fs.readFile(
+      path.join(evidenceDir, "native-reads.json"),
+      "utf8",
+    )
+    expect(evidence).not.toContain("sk-pm-private-fixture")
+    expect(evidence).toContain('"/api/keys"')
+  } finally {
+    await browser.close()
+    await fs.rm(evidenceDir, { recursive: true })
+  }
+})
+
 it("checks each native price field within its exact model card", async () => {
   const browser = await chromium.launch({ headless: true })
   try {

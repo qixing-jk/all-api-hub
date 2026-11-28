@@ -5,6 +5,25 @@ import { revokePmplanKeys } from "~~/scripts/suites/pmplan/keyCleanup.mjs"
 
 afterEach(() => vi.unstubAllGlobals())
 
+it.each([true, false])(
+  "requires revoked readback when DELETE failed: %s",
+  async (failed) => {
+    const site = {
+      evaluate: vi.fn(async () => {
+        if (failed) throw new Error("DELETE failed")
+      }),
+    }
+    const readKeys = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: 17, status: "active" }])
+      .mockResolvedValue([])
+    const cleanup = revokePmplanKeys({ site, ids: [17], readKeys })
+    if (failed) await expect(cleanup).rejects.toThrow()
+    else await expect(cleanup).resolves.toBeUndefined()
+    expect(site.evaluate).toHaveBeenCalledTimes(1)
+  },
+)
+
 it("continues cleaning other confirmed IDs when the first cleanup fails", async () => {
   const records = [
     { id: 17, status: "active" },

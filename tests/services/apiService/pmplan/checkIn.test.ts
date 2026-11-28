@@ -163,4 +163,14 @@ it("includes verified check-in support in bootstrap facts", async () => {
       },
     }),
   ).toMatchObject({ checkInSupported: true })
+  await expect(
+    getSiteTypeCapabilities("pmplan").account!.bootstrap!.fetchCheckInSupport(
+      {
+        directRequestReason: API_DIRECT_REQUEST_REASONS.Passive,
+        baseUrl: "https://plan.pmcat.top",
+        auth: { authType: AuthTypeEnum.Cookie },
+      },
+      { checkInSupported: true },
+    ),
+  ).resolves.toBe(true)
 })

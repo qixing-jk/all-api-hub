@@ -20,8 +20,11 @@ export async function assertPmplanModelPrices(
   model,
   timeout = 30000,
 ) {
-  const expected = (value) =>
-    value === 0 ? "$0/M" : `$${(value / 1000000).toFixed(2)}/M`
+  const expected = (value) => {
+    if (value === 0) return "$0/M"
+    const price = value / 1000000
+    return `$${price.toFixed(price < 0.01 ? 6 : price < 1 ? 4 : 2)}/M`
+  }
   const card = modelDisplay.locator('[data-slot="card"]').filter({
     has: modelDisplay
       .page()
@@ -97,10 +100,12 @@ export async function runPmplanPricing({
       const restricted = native.square.models.find(
         (m) => !native.eligible.models.some((e) => e.name === m.name),
       )
-      assert.ok(
-        free && paid && restricted,
-        "Live fixture requires zero, nonzero and restricted models",
-      )
+      if (!free || !paid || !restricted) {
+        const reason =
+          "Live fixture requires zero, nonzero and restricted models"
+        Object.assign(report, { skipped: true, reason })
+        return { skipped: true, reason }
+      }
       report.native = {
         plan: native.eligible.plan,
         total: native.square.total,

@@ -9,7 +9,7 @@ import {
   probePageSession,
 } from "../../cdp/session-preflight.mjs"
 
-/** Probe only native read routes; originals stay in the caller's ignored evidence directory. */
+/** Probe native read routes and retain only response metadata, never raw bodies. */
 export async function runPmplanProbe({ context, evidenceDir }) {
   const page = await context.newPage()
   return runScenarioWithCleanup({
@@ -68,7 +68,24 @@ export async function runPmplanProbe({ context, evidenceDir }) {
       await fs.writeFile(
         path.join(evidenceDir, "native-reads.json"),
         JSON.stringify(
-          { capturedAt: new Date().toISOString(), preflight, reads },
+          {
+            capturedAt: new Date().toISOString(),
+            preflight: { status: preflight.status },
+            reads: reads.map(({ endpoint, status, body }) => ({
+              endpoint,
+              status,
+              keyCount:
+                endpoint === "/api/keys" && Array.isArray(body?.keys)
+                  ? body.keys.length
+                  : undefined,
+              modelCount: Array.isArray(body?.models)
+                ? body.models.length
+                : undefined,
+              logCount: Array.isArray(body?.logs)
+                ? body.logs.length
+                : undefined,
+            })),
+          },
           null,
           2,
         ),

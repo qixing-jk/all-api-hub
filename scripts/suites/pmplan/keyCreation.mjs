@@ -177,6 +177,11 @@ export async function submitPmplanKeyCreation({
           .poll(() => submittedRequests, { timeout: timeoutMs })
           .toBe(browserRequests)
         resolveResponse()
+        assert.equal(
+          submittedRequests,
+          creationRequests.size,
+          "Unexpected PM-Plan create dispatch; outcome unconfirmed, do not replay",
+        )
         if (expectValidationError) {
           assert.equal(
             submittedRequests,
