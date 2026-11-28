@@ -39,7 +39,7 @@ Candidates, in priority order:
 | --- | --- | --- |
 | Lower PR CI duration | Fixed-input before/after measurements; distinguish local and hosted results | Local subset and hosted long-file gains; full hosted comparison below does not establish an overall E2E speedup |
 | Retain behavior and failure detection | Existing affected unit/E2E cases, no fewer assertions or raised deadlines | Full hosted Test/E2E pass; original identities retained except the documented one-to-five matrix split |
-| Repair internal timeout causes | Reproduce current failure before changing its owning logic | Fresh/cached hung probes and closed-context polling fail before fixes; 28 startup checks pass after |
+| Repair internal timeout causes | Reproduce current failure before changing its owning logic | Hung probes, closed-context polling and unfinished HTTP connection teardown reproduced; focused checks and full hosted E2E pass |
 | Low complexity | Reuse existing helpers; reject experiments without measurable benefit | Direct import, scoped parallel modes, split existing scenarios, bounded existing probe; no new CI layers |
 
 ## Local measurements
@@ -234,4 +234,29 @@ label. The confirmed red/green logs are `session-close-red-utf8.log` and
 `session-close-green.log`; the initial `session-close-red.log` also had a
 diagnostic encoding error and is excluded. Both original cases subsequently
 passed three times without retries (`session-close-final.log`, six passes).
-Targeted ESLint passed. Full hosted E2E verification of this follow-up is pending.
+Targeted ESLint, commit gates and pre-push type checking/Knip passed.
+
+The follow-up implementation is `d657ef48bef7fc1565596c3de5788d25f555154b`.
+[Complete E2E verification 46119950425](https://github.com/qixing-jk/all-api-hub/actions/runs/46119950425)
+passed on that exact revision. The six default reports contain the same 1,007
+identities as the first candidate: 1,000 passing cases, seven existing skips,
+no retries and no missing or duplicate cases. Both session-verification cases
+passed. Firefox's 20 cases, DNR's six, bookmarks' three and both isolated
+performance cases also passed without retries.
+
+This run restored the candidate build and its updated timing profile
+`e2e-spec-durations-46117851123-1`. Workflow time was 1,008s (16m48s), the slowest
+default execution step 818s, six smoke steps totaled 3,818s and all jobs totaled
+4,685s. The baseline values were 936s, 838s, 3,811s and 4,586s. This second
+candidate run therefore still does not establish an overall E2E speedup or
+lower runner cost. Its changed timing profile and runner allocation also prevent
+using it as a fixed-input repeat. Keep the demonstrated long-file/local benefits
+and timeout corrections; broader CI throughput gains remain unproven, and
+additional scheduling infrastructure is not justified by this evidence.
+
+Final evidence: `artifacts/hosted-final/`, `hosted-final-e2e-summary.json`,
+`hosted-final-e2e-identity.json`, `hosted-final-timings.json`,
+`jobs-46119950425.json`, and `final-performance-attempt-1.log`. Full unit/coverage
+evidence above remains applicable: this follow-up changes only one browser-test
+fixture and the evidence document. Any subsequent commit containing only this
+report does not alter the tested implementation.
