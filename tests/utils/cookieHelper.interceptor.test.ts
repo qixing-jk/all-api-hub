@@ -165,6 +165,47 @@ describe("cookieHelper interceptor-related behavior", () => {
     ).resolves.toEqual({})
   })
 
+  it("matches custom ports in Firefox while injecting only for registered origins", async () => {
+    vi.spyOn(protectionBypass, "isProtectionBypassFirefoxEnv").mockReturnValue(
+      true,
+    )
+    registerWebRequestInterceptor(["http://example.com:8443/*"])
+    expect(addListenerMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      { urls: ["http://example.com/*"] },
+      ["blocking", "requestHeaders"],
+    )
+    const requestHeaders = [
+      { name: EXTENSION_HEADER_NAME, value: EXTENSION_HEADER_VALUE },
+      { name: COOKIE_AUTH_HEADER_NAME, value: AUTH_MODE.COOKIE_AUTH_MODE },
+      {
+        name: COOKIE_SESSION_OVERRIDE_HEADER_NAME,
+        value: "pmplan_session=owned",
+      },
+    ]
+    await expect(
+      registeredListener!({
+        url: "http://example.com:9443/api/me",
+        requestHeaders,
+      } as any),
+    ).resolves.toEqual({})
+    expect(browser.cookies.getAll).not.toHaveBeenCalled()
+    const result = await registeredListener!({
+      url: "http://example.com:8443/api/me",
+      requestHeaders,
+    } as any)
+    expect(result.requestHeaders).toEqual([
+      { name: "Cookie", value: "pmplan_session=owned" },
+    ])
+    registerWebRequestInterceptor(["http://example.com:9443/*"])
+    await expect(
+      registeredListener!({
+        url: "http://example.com:8443/api/me",
+        requestHeaders,
+      } as any),
+    ).resolves.toEqual({})
+  })
+
   it("replaces cookie headers and merges session overrides for extension-tagged requests", async () => {
     vi.spyOn(protectionBypass, "isProtectionBypassFirefoxEnv").mockReturnValue(
       true,

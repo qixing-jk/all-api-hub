@@ -79,12 +79,12 @@ The maintained branch report (local artifact `artifacts/review-20261127/acceptan
 Retain these limits until their prerequisites are available:
 
 - Self-hosted onboarding uses two controlled origins and wire-level Cookie assertions, not a running PM-Plan backend; the local Docker engine was unavailable.
-- Real-site evidence comes from Edge CDP; controlled extension flows ran in Chromium. Firefox permission/isolation has unit coverage; Firefox and Safari browser acceptance was not run.
+- Real-site evidence comes from Edge CDP; controlled extension flows ran in Chromium. The independent Firefox transport E2E verifies missing interceptor permission, deployment Cookie isolation and saved-session override against local HTTP servers, including custom ports. Full Firefox integration and Safari browser acceptance were not run.
 - The live account was already checked in. Unchecked slider completion and an actual grant remain unverified.
 - Live notices and usage logs were empty. Nonempty notices, malformed responses, expired sessions and mutation-readback failures use controlled fixtures.
 - Prior screenshots and live runs describe their recorded builds. Behavior-preserving refactors reuse that evidence with affected unit/component checks; they are not fresh live runs.
 
-Maintained runners: `pnpm e2e:cdp:pmplan`, `e2e/pmplanAccountSemantics.spec.ts` and `e2e/pmplanDeploymentOnboarding.spec.ts`. Writable live execution requires authorization and run-owned disposable resources. No paid inference is required.
+Maintained runners: `pnpm e2e:cdp:pmplan`, `e2e/pmplanAccountSemantics.spec.ts`, `e2e/pmplanDeploymentOnboarding.spec.ts` and `pnpm e2e:firefox e2e/firefox/pmplanCookieTransport.spec.ts`. Writable live execution requires authorization and run-owned disposable resources. No paid inference is required.
 
 Related requests: [#1801](https://github.com/qixing-jk/all-api-hub/issues/1801) reports the supported hosted-account detection failure. [#1877](https://github.com/qixing-jk/all-api-hub/issues/1877) also requests redemption; reset-card claiming is now included, while card consumption remains excluded and a real successful claim is unverified. Retain a non-closing reference until the broader request is reconciled.
 
