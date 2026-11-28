@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS } from "~/constants/turnstile"
+import {
+  CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS,
+  TURNSTILE_MESSAGE_EVENTS,
+} from "~/constants/turnstile"
 import {
   handleInspectCheckinPage,
   handleTriggerCheckinPageAction,
@@ -12,6 +15,7 @@ import {
   onRuntimeMessage,
   sendRuntimeMessage,
 } from "~/utils/browser/runtimeMessages"
+import { emitTurnstileEvent } from "~~/tests/test-utils/turnstile"
 
 vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: vi.fn(async () => ({ presented: true })),
@@ -23,6 +27,115 @@ vi.mock(
 )
 
 describe("native check-in verification", () => {
+  it("gives the user two minutes to open a delivered reminder", async () => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<div class="cf-turnstile"></div>',
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "notice-reaction-time",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(14_000)
+    await vi.dynamicImportSettled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(110_000)
+    const endedBeforeTwoMinutes = response.mock.calls.length
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(endedBeforeTwoMinutes).toBe(0)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "required", provider: "turnstile" },
+      }),
+    )
+  })
+
+  it.each([0, 110_000])(
+    "switches to one full minute after opening a reminder %s ms later",
+    async (delay) => {
+      document.querySelector("button")!.addEventListener("click", () => {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          '<div class="cf-turnstile"></div>',
+        )
+      })
+      const response = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: "opened-operation-time",
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
+        },
+        response,
+      )
+      await vi.advanceTimersByTimeAsync(14_000)
+      await vi.dynamicImportSettled()
+      await vi.advanceTimersByTimeAsync(delay)
+      const listener = vi.mocked(onRuntimeMessage).mock.calls.at(-1)![0]
+      const opened = {
+        action: RuntimeActionIds.ContentVerificationAssistOpened,
+        requestId: "opened-operation-time",
+      }
+      listener(opened, {}, vi.fn())
+      await vi.advanceTimersByTimeAsync(30_000)
+      listener(opened, {}, vi.fn())
+      await vi.advanceTimersByTimeAsync(29_000)
+      const endedBeforeOneMinute = response.mock.calls.length
+      await vi.advanceTimersByTimeAsync(1_250)
+      expect(endedBeforeOneMinute).toBe(0)
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification: { status: "required", provider: "turnstile" },
+        }),
+      )
+    },
+  )
+
+  it.each([
+    TURNSTILE_MESSAGE_EVENTS.Init,
+    TURNSTILE_MESSAGE_EVENTS.InteractiveBegin,
+  ])("uses Turnstile %s state for native-page reminders", async (event) => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<iframe id="cf-chl-widget-native" src="https://challenges.cloudflare.com/turnstile/widget"></iframe>',
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "native-interaction",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    emitTurnstileEvent(document.querySelector("iframe")!, event, "native")
+    await vi.advanceTimersByTimeAsync(
+      event === TURNSTILE_MESSAGE_EVENTS.Init ? 13_000 : 250,
+    )
+    expect(sendRuntimeMessage).toHaveBeenCalledTimes(
+      event === TURNSTILE_MESSAGE_EVENTS.Init ? 0 : 1,
+    )
+    expect(response).not.toHaveBeenCalled()
+    document.querySelector("iframe")!.remove()
+    await vi.advanceTimersByTimeAsync(250)
+  })
+
   it("waits for a configured grant control during inspection without dispatching it", async () => {
     document.body.innerHTML = "<main></main>"
     const reply = vi.fn()
@@ -92,7 +205,7 @@ describe("native check-in verification", () => {
         },
         reply,
       )
-      await vi.advanceTimersByTimeAsync(55_000)
+      await vi.advanceTimersByTimeAsync(134_000)
       expect(activate).not.toHaveBeenCalled()
       expect(reply).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -124,7 +237,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(55_000)
+    await vi.advanceTimersByTimeAsync(134_000)
     expect(activate).not.toHaveBeenCalled()
     expect(sendRuntimeMessage).toHaveBeenCalledOnce()
     expect(response).toHaveBeenCalledWith(
@@ -161,7 +274,7 @@ describe("native check-in verification", () => {
     for (const widget of [firstWidget, secondWidget]) {
       widget.querySelector("input")!.addEventListener("click", activate)
     }
-    await vi.advanceTimersByTimeAsync(5_000)
+    await vi.advanceTimersByTimeAsync(13_000)
     expect(activate).not.toHaveBeenCalled()
     expect(sendRuntimeMessage).toHaveBeenCalledOnce()
     expect(response).not.toHaveBeenCalled()
@@ -207,7 +320,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(activate).toHaveBeenCalledOnce()
     expect(sendRuntimeMessage).toHaveBeenCalledOnce()
     expect(response).not.toHaveBeenCalled()
@@ -258,9 +371,11 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(55_000)
+      await vi.advanceTimersByTimeAsync(134_000)
       expect(activate).toHaveBeenCalledOnce()
-      expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+      expect(sendRuntimeMessage).toHaveBeenCalledTimes(
+        state === "verifying" ? 0 : 1,
+      )
       expect(response).toHaveBeenCalledWith(
         expect.objectContaining({
           verification: { status: "required", provider: "altcha" },
@@ -269,7 +384,7 @@ describe("native check-in verification", () => {
     },
   )
 
-  it("waits for a delayed ALTCHA render then accepts manual completion after assistance", async () => {
+  it("keeps a delayed ALTCHA proof quiet until it completes automatically", async () => {
     document.querySelector("button")!.addEventListener("click", () => {
       document.body.insertAdjacentHTML(
         "beforeend",
@@ -296,7 +411,7 @@ describe("native check-in verification", () => {
     await vi.advanceTimersByTimeAsync(5_000)
     expect(response).not.toHaveBeenCalled()
     expect(activate).not.toHaveBeenCalled()
-    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
     widget.querySelector(".altcha")!.setAttribute("data-state", "verified")
     await vi.advanceTimersByTimeAsync(500)
     expect(response).toHaveBeenCalledWith(
@@ -499,7 +614,7 @@ describe("native check-in verification", () => {
       )
     })
     document.querySelector("button")!.addEventListener("click", click)
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(click).toHaveBeenCalledOnce()
     expect(sendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.TurnstileRequestUserAssist,
@@ -540,7 +655,7 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       expect(response).not.toHaveBeenCalled()
       expect(sendRuntimeMessage).toHaveBeenCalledOnce()
       document.querySelector<HTMLInputElement>("#new-response")!.value =
@@ -577,7 +692,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({
         verification: { status: "required", provider: "turnstile" },
@@ -606,7 +721,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(sendRuntimeMessage).toHaveBeenCalledOnce()
     document.querySelector(".cf-turnstile")!.setAttribute("hidden", "")
     await vi.advanceTimersByTimeAsync(500)
@@ -633,7 +748,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({ verification: { status: "not_present" } }),
     )
@@ -665,7 +780,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     document.querySelector("#new-widget")!.remove()
     await vi.advanceTimersByTimeAsync(500)
     expect(response).toHaveBeenCalledWith(
@@ -695,7 +810,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({ verification: { status: "not_present" } }),
     )
@@ -723,12 +838,15 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       await vi.dynamicImportSettled()
-      await vi.advanceTimersByTimeAsync(34_000)
+      await vi.advanceTimersByTimeAsync(110_000)
       const listener = vi.mocked(onRuntimeMessage).mock.calls.at(-1)![0]
       listener(
-        { action: "verificationAssistOpened", requestId: openedRequestId },
+        {
+          action: RuntimeActionIds.ContentVerificationAssistOpened,
+          requestId: openedRequestId,
+        },
         {},
         vi.fn(),
       )
@@ -742,11 +860,14 @@ describe("native check-in verification", () => {
       } else {
         expect(response).not.toHaveBeenCalled()
         listener(
-          { action: "verificationAssistOpened", requestId: openedRequestId },
+          {
+            action: RuntimeActionIds.ContentVerificationAssistOpened,
+            requestId: openedRequestId,
+          },
           {},
           vi.fn(),
         )
-        await vi.advanceTimersByTimeAsync(26_000)
+        await vi.advanceTimersByTimeAsync(41_000)
         expect(response).toHaveBeenCalledWith(
           expect.objectContaining({
             verification: { status: "required", provider: "turnstile" },
@@ -774,13 +895,16 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     await vi.dynamicImportSettled()
     await vi.advanceTimersByTimeAsync(34_000)
     const listener = vi.mocked(onRuntimeMessage).mock.calls.at(-1)?.[0]
     expect(listener).toBeDefined()
     listener!(
-      { action: "verificationAssistOpened", requestId: "late-open" },
+      {
+        action: RuntimeActionIds.ContentVerificationAssistOpened,
+        requestId: "late-open",
+      },
       {},
       vi.fn(),
     )
@@ -824,7 +948,7 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
       expect(response).not.toHaveBeenCalled()
       document.querySelector("section, [role=dialog], form")!.remove()
@@ -896,9 +1020,9 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
-      await vi.advanceTimersByTimeAsync(49_000)
+      await vi.advanceTimersByTimeAsync(120_000)
       expect(response).toHaveBeenCalledWith(
         expect.objectContaining({
           verification: { status: "required", provider: "interactive" },
@@ -925,7 +1049,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(sendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.TurnstileRequestUserAssist,
       requestId: "native-image",
@@ -962,7 +1086,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(sendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.TurnstileRequestUserAssist,
       requestId: "native-delayed",
@@ -1002,7 +1126,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).not.toHaveBeenCalled()
     expect(sendRuntimeMessage).toHaveBeenCalledOnce()
     document.body.insertAdjacentHTML(
@@ -1044,9 +1168,9 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       await vi.dynamicImportSettled()
-      await vi.advanceTimersByTimeAsync(49_000)
+      await vi.advanceTimersByTimeAsync(120_000)
       expect(response).toHaveBeenCalledWith(
         expect.objectContaining({
           verification: { status: "required", provider },
@@ -1162,7 +1286,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({
         verification: { status: "required", provider: "turnstile" },
@@ -1188,7 +1312,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(3_750)
+    await vi.advanceTimersByTimeAsync(11_750)
     vi.setSystemTime(Date.now() + 1_000)
     await vi.advanceTimersByTimeAsync(500)
     expect(sendRuntimeMessage).toHaveBeenCalledWith({

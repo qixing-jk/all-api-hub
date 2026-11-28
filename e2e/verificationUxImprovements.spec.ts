@@ -57,49 +57,96 @@ for (const width of [390, 1600]) {
     const inspectMotion = async (
       side: "left" | "right",
       state: "open" | "closed",
+      toggle: () => Promise<void>,
     ) => {
-      const samples = await workspace.evaluate(
-        async (node, { side, state }) => {
-          const sheet = node.querySelector<HTMLElement>(
-            `.verification-sidebar-sheet[data-side="${side}"][data-state="${state}"]`,
-          )
-          if (!sheet) return { duration: null, animation: null, frames: [] }
-          const style = getComputedStyle(sheet)
-          const duration = style.animationDuration
-          const animation = style.animationName
-          const frames: {
-            panel: number
-            detail: number
-            width: number
-            opacity: number
-            listRows: number
-          }[] = []
-          for (let frame = 0; frame < 22 && sheet.isConnected; frame++) {
-            await new Promise<void>((resolve) =>
-              requestAnimationFrame(() => resolve()),
+      // Pause as React commits the sheet, before a delayed browser round trip
+      // can miss the entire 180 ms animation. Inspect its real CSS keyframes.
+      const capture = await workspace.evaluateHandle(
+        (node, { side, state }) => {
+          let target: { sheet: HTMLElement; animation: Animation } | undefined
+          const observer = new MutationObserver(() => {
+            const sheet = node.querySelector<HTMLElement>(
+              `.verification-sidebar-sheet[data-side="${side}"][data-state="${state}"]`,
             )
-            if (!sheet.isConnected) break
-            const host = node.querySelector<HTMLElement>(
-              ".verification-workspace-frame",
-            )!
-            const detail = node.querySelector<HTMLElement>(
-              "[data-verification-detail]:not([hidden])",
-            )!
-            const frameBox = host.getBoundingClientRect()
-            const detailBox = detail.getBoundingClientRect()
-            frames.push({
-              panel: sheet.getBoundingClientRect().left - frameBox.left,
-              detail: detailBox.left - frameBox.left,
-              width: detailBox.width,
-              opacity: Number(getComputedStyle(node).opacity),
-              listRows: sheet.querySelectorAll("[data-verification-summary]")
-                .length,
-            })
+            const animation = sheet
+              ?.getAnimations()
+              .find(
+                (item) =>
+                  item instanceof CSSAnimation &&
+                  item.animationName === (state === "open" ? "enter" : "exit"),
+              )
+            if (!sheet || !animation) return
+            animation.pause()
+            target = { sheet, animation }
+            observer.disconnect()
+          })
+          observer.observe(node, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ["data-state"],
+          })
+          return {
+            ready: () => !!target,
+            sample: async () => {
+              if (!target)
+                throw new Error("Sidebar toggle started no animation")
+              const { sheet, animation } = target
+              await animation.ready
+              const style = getComputedStyle(sheet)
+              const duration = style.animationDuration
+              const name = style.animationName
+              const milliseconds = Number(
+                animation.effect!.getComputedTiming().duration,
+              )
+              const frames = []
+              for (const fraction of [0, 0.2, 0.4, 0.6, 0.8, 0.99]) {
+                animation.currentTime = milliseconds * fraction
+                await new Promise<void>((resolve) =>
+                  requestAnimationFrame(() => resolve()),
+                )
+                const host = node.querySelector<HTMLElement>(
+                  ".verification-workspace-frame",
+                )!
+                const detail = node.querySelector<HTMLElement>(
+                  "[data-verification-detail]:not([hidden])",
+                )!
+                const frameBox = host.getBoundingClientRect()
+                const detailBox = detail.getBoundingClientRect()
+                frames.push({
+                  panel: sheet.getBoundingClientRect().left - frameBox.left,
+                  detail: detailBox.left - frameBox.left,
+                  width: detailBox.width,
+                  opacity: Number(getComputedStyle(node).opacity),
+                  listRows: sheet.querySelectorAll(
+                    "[data-verification-summary]",
+                  ).length,
+                })
+              }
+              return { duration, animation: name, frames }
+            },
+            dispose: async () => {
+              observer.disconnect()
+              if (!target) return
+              target.animation.play()
+              await target.animation.finished.catch(() => {})
+              target.animation.cancel()
+            },
           }
-          return { duration, animation, frames }
         },
         { side, state },
       )
+      let samples
+      try {
+        await toggle()
+        await expect
+          .poll(() => capture.evaluate((probe) => probe.ready()))
+          .toBe(true)
+        samples = await capture.evaluate((probe) => probe.sample())
+      } finally {
+        await capture.evaluate((probe) => probe.dispose())
+        await capture.dispose()
+      }
       await writeFile(
         test.info().outputPath(`${side}-${state}-motion.json`),
         JSON.stringify(samples, null, 2),
@@ -146,13 +193,11 @@ for (const width of [390, 1600]) {
       const listToggle = workspace.locator(
         ".verification-workspace-list-header button",
       )
-      await listToggle.click()
-      await inspectMotion("left", "closed")
+      await inspectMotion("left", "closed", () => listToggle.click())
       await expect(
         workspace.getByRole("dialog", { name: "Tests", exact: true }),
       ).toBeHidden()
-      await listToggle.click()
-      await inspectMotion("left", "open")
+      await inspectMotion("left", "open", () => listToggle.click())
       await page.emulateMedia({ reducedMotion: "reduce" })
     }
     await expect(
@@ -247,10 +292,12 @@ for (const width of [390, 1600]) {
       .boundingBox()
     if (width === 390)
       await page.emulateMedia({ reducedMotion: "no-preference" })
-    if ((await configuration.getAttribute("aria-expanded")) !== "true")
-      await configuration.click()
+    if ((await configuration.getAttribute("aria-expanded")) !== "true") {
+      if (width === 390)
+        await inspectMotion("right", "open", () => configuration.click())
+      else await configuration.click()
+    }
     if (width === 390) {
-      await inspectMotion("right", "open")
       const samples = await workspace.evaluate(async (node) => {
         const values: { left: number; width: number; opacity: number }[] = []
         for (let frame = 0; frame < 16; frame++) {
@@ -320,8 +367,7 @@ for (const width of [390, 1600]) {
       await page.emulateMedia({ reducedMotion: "no-preference" })
       await configuration.click()
       await expect(quick).toBeVisible()
-      await configuration.click()
-      await inspectMotion("right", "closed")
+      await inspectMotion("right", "closed", () => configuration.click())
       await page.emulateMedia({ reducedMotion: "reduce" })
     }
     const tests = workspace.getByRole("button", {
