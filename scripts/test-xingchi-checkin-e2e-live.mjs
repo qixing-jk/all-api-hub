@@ -16,6 +16,7 @@ import {
   detectAccountSiteType,
   openAccountAddDialog,
 } from "./flows/auto-detect.mjs"
+import { assertXingchiClaimEvidence } from "./flows/xingchi-checkin.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 loadLocalEnv()
@@ -196,6 +197,16 @@ async function runAcceptance() {
       0,
       "Discovery must not submit a claim",
     )
+    const automaticExecution = section.locator(
+      "#account-check-in-automatic-execution",
+    )
+    if (!execute && (await automaticExecution.isChecked())) {
+      await automaticExecution.click()
+    }
+    await expect(automaticExecution).toHaveAttribute(
+      "aria-checked",
+      String(execute),
+    )
     saveSubmitted = true
     await dialog.getByTestId(ids.confirmAddButton).click()
     await dialog.waitFor({ state: "hidden", timeout: 60000 })
@@ -210,6 +221,7 @@ async function runAcceptance() {
       await keyPrompt.getByRole("button", { name: /^(Cancel|取消)$/ }).click()
     })
     const saved = await readAccount()
+    assert.equal(saved.checkIn.automaticExecutionEnabled, execute)
     assert.equal(saved.checkIn.selection.mode, "automatic")
     assert.equal(saved.checkIn.selection.methodId, method)
     assert.equal(saved.hasRefresh, false)
@@ -221,6 +233,10 @@ async function runAcceptance() {
     await expect(section).toContainText(
       "Automatic selection: Xingchi daily check-in",
     )
+    await expect(automaticExecution).toHaveAttribute(
+      "aria-checked",
+      String(execute),
+    )
     await capture("saved-method", section)
     result.coverage.saveReopen = "passed"
     await detect.click()
@@ -229,6 +245,10 @@ async function runAcceptance() {
     })
     await expect(section).toContainText(
       "Automatic selection: Xingchi daily check-in",
+    )
+    await expect(automaticExecution).toHaveAttribute(
+      "aria-checked",
+      String(execute),
     )
     result.coverage.redetection = "passed"
     await dialog.getByTestId(ids.confirmAddButton).click()
@@ -286,10 +306,7 @@ async function runAcceptance() {
           "An already-claimed account must not POST",
         )
       }
-      assert(
-        ["success", "already_checked", "skipped"].includes(first.status),
-        `Check-in failed: ${first.status}/${first.reasonCode}`,
-      )
+      assertXingchiClaimEvidence(first, requests)
       result.coverage.firstGrant =
         first.status === "success" ? "passed" : "blocked-already-claimed"
       await capture("first-result", row)
@@ -332,6 +349,7 @@ async function runAcceptance() {
       await capture("checkin-results")
     }
     result.account = await readAccount()
+    assert.equal(result.account.checkIn.automaticExecutionEnabled, execute)
   } catch (error) {
     result.error = error.message
     await capture("failure").catch((e) =>
@@ -362,6 +380,10 @@ async function runAcceptance() {
     await Promise.allSettled(responseTasks)
     dev.context.off("request", observeRequest)
     dev.context.off("response", observeResponse)
+    if (!execute && requests.some((request) => request.method === "POST")) {
+      result.error =
+        "Read-only acceptance must not submit a claim, including before cleanup"
+    }
     result.cleanupErrors = cleanupErrors
     result.finishedAt = new Date().toISOString()
     await fs.writeFile(
