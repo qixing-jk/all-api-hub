@@ -2,6 +2,14 @@
 
 Read the section that matches the change.
 
+## Integration defaults, validation and UI
+
+Separate backend requirements from choices made by the official frontend. Among behaviors the backend supports, follow the user's explicit choice, then established product conventions; use the official UI's default only when neither settles the decision. For example, default new API keys to never expire when supported and consistent with the product, even if the official form selects 30 days. Preserve existing saved values when editing. A deliberate default or interaction difference is not an adaptation defect.
+
+Frontend validation should protect account/credential isolation, well-formed requests, correct units and meaning, and safe write semantics. Leave volatile business policy to the backend when it reliably rejects invalid requests with useful errors. Model-count caps, expiry lead times, changing plan lists and similar site/version limits do not need copied hardcoded validators merely because the official frontend has them. Use current server-provided options where appropriate, preserve drafts, and display safe actionable backend errors through the existing error workflow. Add a local restriction only for a concrete correctness or usability benefit that outweighs drift and maintenance; silent truncation, unintended writes or unclear backend failures can justify it. Missing duplicate validation alone is not a bug. This does not relax response parsing, authorization, secret handling or uncertain-write safeguards.
+
+Use the official experience to discover tasks, useful information and failure modes. Design for better task completion in the extension: fewer unnecessary steps, useful comparisons, consistent defaults and recoverable errors. Record the intended improvement and judge the rendered result against it. Official layouts, labels and control counts are reference material; matching them is not the completion criterion. Retain useful product capabilities when the verified contract supports them, and explain uncertainty without burying the information needed for the task.
+
 ## Dependency selection
 
 - For dependencies bundled with the extension, make size decisive only when measured output, startup, memory, or distribution impact is material; bundled code adds no per-use network request.
