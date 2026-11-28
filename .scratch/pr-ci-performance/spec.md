@@ -38,7 +38,7 @@ Candidates, in priority order:
 | Outcome | Validation | State |
 | --- | --- | --- |
 | Lower PR CI duration | Fixed-input before/after measurements; distinguish local and hosted results | Local subset and hosted long-file gains; full hosted comparison below does not establish an overall E2E speedup |
-| Retain behavior and failure detection | Existing affected unit/E2E cases, no fewer assertions or raised deadlines | Full hosted Test/E2E pass; original identities retained except the documented one-to-five matrix split |
+| Retain behavior and failure detection | Existing affected unit/E2E cases; preserve behavior/layout assertions and deadlines | Full hosted Test/E2E pass; original identities retained except the documented one-to-five matrix split. Screenshot-only hygiene checks become opt-in in round two. |
 | Repair internal timeout causes | Reproduce current failure before changing its owning logic | Hung probes, closed-context polling and unfinished HTTP connection teardown reproduced; focused checks and full hosted E2E pass |
 | Low complexity | Reuse existing helpers; reject experiments without measurable benefit | Direct import, scoped parallel modes, split existing scenarios, bounded existing probe; no new CI layers |
 
@@ -279,7 +279,7 @@ including the deliberately slow WAF and uncaptured-login scenarios, are unchange
 | Remove unconditional review screenshots | Same five density cases, before/after then after/before order | 52.87s to 49.45s; 55.17s to 54.70s. Cumulative case time 182.42s to 141.97s and 193.39s to 157.59s. Whole-group gain is small; primary benefit is less work. |
 | Preserve optional visual evidence | `density-capture-expected.json` written before capture; both original density files with `AAH_VISUAL_CAPTURE_DIR` | Five passes; all 114 PNG/JSON pairs have matching IDs, expected viewports and SHA-256 hashes. Narrow account rows, narrow calendar and desktop search inspected. |
 | Reduce serial password-login tail | Same 49 cases including the financial workload; inventories compared | Password file span 240.36s before, 101.96s and 102.94s with parallel mode. The whole experiment is qualified by startup retries below. |
-| Retain password workflow behavior | `password-parallel.json`: 16 original cases repeated three times, four workers | 48 passes, no test-level retries; fixture-level launch retries are recorded separately, not hidden by the pass count. |
+| Retain password workflow behavior | `password-parallel.json`: 16 original cases repeated three times, four workers | 48 passes, no test-level retries; two fixture-level launch retries are recorded separately, not hidden by the pass count. The full hosted run below has none. |
 | Fix newly observed Chromium launch timeout | Original workloads, minimal startup case, browser and protocol diagnostics | Not resolved. No evidence yet supports changing launcher behavior or increasing its deadline. |
 
 Commands use the existing build and `--project=chromium --workers=4 --reporter
@@ -340,5 +340,62 @@ The fresh hosted main baseline is
 [E2E 46123361818](https://github.com/qixing-jk/all-api-hub/actions/runs/46123361818)
 at the original baseline SHA. It completed successfully, including Firefox,
 DNR, bookmarks and isolated performance checks. Its six default JSON reports
-show no test or fixture-startup retries. The second-round candidate's full
-hosted result will be recorded below after completion.
+show no test or fixture-startup retries.
+
+### Second-round complete hosted result
+
+[Candidate E2E 46125843480](https://github.com/qixing-jk/all-api-hub/actions/runs/46125843480)
+passed on exact implementation `49d3488bda899a019f044c4a2cfeb06c7b5c45b6`.
+The six default reports contain 1,000 passes and the same seven existing skips,
+with zero test-level retries, zero fixture startup retries and no duplicate
+identities. All 1,007 identities match the previous completed candidate run
+46119950425. Against original main, the only identity changes are the earlier
+one-to-five authentication split and two startup regressions. Firefox, DNR,
+bookmarks and isolated performance checks all passed; release-only AMO validation
+was correctly skipped. The earlier full unit/coverage evidence remains applicable
+because this round changes only browser specs and this report. Pre-commit ESLint
+and formatting, pre-push type checking and Knip passed.
+
+| Fresh hosted comparison | Main baseline | Final candidate |
+| --- | ---: | ---: |
+| Workflow wall time | 891s (14m51s) | 866s (14m26s) |
+| Slowest default smoke step | 722s | 775s |
+| Six default smoke steps, sum | 3,686s | 3,448s |
+| All job durations, sum | 4,576s | 4,287s |
+| Password-login file span / cumulative case time | 294.19s / 293.87s | 118.13s / 270.66s |
+| Density-settings file span / cumulative case time | 187.89s / 311.56s | 115.92s / 205.82s |
+| Density-coverage file span / cumulative case time | 66.41s / 66.40s | 61.07s / 61.05s |
+
+This observation has 2.8% lower workflow wall time, 6.5% lower summed default
+execution time and 6.3% lower summed job time. It does **not** establish a stable
+whole-CI improvement: the slowest shard increased, hosted runner allocations
+vary, and the restored timing-profile hashes differ (baseline `25fa8c76...`,
+candidate `c812432f...`). Earlier whole-run comparisons above remain visible.
+The small retained changes have repeated local density-work savings and hosted
+file-level gains without adding workers or runner jobs; no more scheduling
+infrastructure is justified by these measurements.
+
+The public capture CLI also passed on the final implementation:
+`pnpm visual:capture --spec e2e/densitySettings.spec.ts --grep "global density
+preserves text and fits 320px views$" --fixture density-global-v1`, supplying all
+12 expected route/density checkpoint IDs with repeated `--expect-checkpoint`.
+It produced `.scratch/visual-captures/run-PEX0eT/capture.json` and `capture.md`,
+including build provenance and hashes. This local capture directory and the
+114-checkpoint run remain review evidence, outside Git.
+
+P2 unresolved evidence gap: under concurrent local host workloads, Chromium can
+hit the fixture's 25-second launch deadline before service-worker readiness.
+The owning boundary is `e2e/fixtures/extensionTest.ts`'s persistent-context
+launch. Closing this gap requires reproducing a failed launch with usable
+startup diagnostics on an isolated host, followed by a behavior test and a
+verified targeted correction. Passing instrumented runs or this clean hosted
+run do not resolve that local cause. The earlier reproduced probe/context/HTTP
+teardown defects are fixed independently.
+
+Review recommendation: retain the three small browser-spec changes and the
+earlier verified timeout fixes. Preserve this report in Git; keep raw diagnostic
+logs, failed experiments and comparison outputs in ignored `artifacts/` through
+review. `compare-round2.py`, `hosted-round2-{base,candidate}-summary.json`,
+`hosted-round2-identities.json`, `hosted-round2-iteration-identity.json`,
+`hosted-round2-{base,candidate}/`, and both run/job API snapshots reproduce the
+hosted comparison. No PR has been created.
