@@ -37,9 +37,17 @@ const MAX_CANDIDATE_PAGES = 3
 
 const toPath = (url: URL) => url.pathname + url.search + url.hash
 
-/** Both entrances inspect the page and bounded same-origin alternatives without clicking. */
+/** Manual review can use observations from a partially explored site. */
 export async function exploreNativeCheckInPages(
   input: NativeCheckInPageDiscoveryInput,
+): Promise<NativeCheckInPageExploration> {
+  return inspectNativeCheckInPages(input, false)
+}
+
+/** Both entrances inspect the page and bounded same-origin alternatives without clicking. */
+async function inspectNativeCheckInPages(
+  input: NativeCheckInPageDiscoveryInput,
+  requireComplete: boolean,
 ): Promise<NativeCheckInPageExploration> {
   input.signal?.throwIfAborted()
   const origin = new URL(input.pageUrl).origin
@@ -128,15 +136,16 @@ export async function exploreNativeCheckInPages(
       })
     const checked = new Set<string>([toPath(new URL(input.pageUrl))])
     const inspectCandidates = async () => {
+      if (requireComplete && !complete) return
       const pending = [...candidates.values()].filter(
         (candidate) => !checked.has(candidate.path),
       )
-      // The full set must fit the budget to authorize an automatic choice.
-      if (checked.size - 1 + pending.length > MAX_CANDIDATE_PAGES) {
+      const remaining = MAX_CANDIDATE_PAGES - (checked.size - 1)
+      if (pending.length > remaining) {
         complete = false
-        return
+        if (requireComplete) return
       }
-      for (const candidate of pending) {
+      for (const candidate of pending.slice(0, remaining)) {
         input.signal?.throwIfAborted()
         checked.add(candidate.path)
         current = new URL(candidate.path, origin).href
@@ -146,7 +155,7 @@ export async function exploreNativeCheckInPages(
         observe(candidate, probe)
       }
     }
-    if (complete) await inspectCandidates()
+    await inspectCandidates()
     const found = () =>
       [...candidates.values()].some(
         (candidate) =>
@@ -164,7 +173,23 @@ export async function exploreNativeCheckInPages(
       clues.candidates.forEach((candidate) =>
         add({ ...candidate, state: NATIVE_CHECK_IN_PAGE_STATES.Unverified }),
       )
-      if (complete) await inspectCandidates()
+      if (!requireComplete) {
+        // The rendered page can finish hydrating while the source scan runs.
+        try {
+          const probe = await input.inspect()
+          input.signal?.throwIfAborted()
+          if (!probe.success) complete = false
+          else if (probe.hasTarget || probe.hasCheckInArea)
+            observe(
+              { path: toPath(new URL(input.pageUrl)), sources: [] },
+              probe,
+            )
+        } catch {
+          input.signal?.throwIfAborted()
+          complete = false
+        }
+      }
+      if (!found()) await inspectCandidates()
     }
     return { candidates: [...candidates.values()], complete }
   } catch {
@@ -180,7 +205,7 @@ export async function exploreNativeCheckInPages(
 export async function discoverNativeCheckInPage(
   input: NativeCheckInPageDiscoveryInput,
 ): Promise<string | null> {
-  const result = await exploreNativeCheckInPages(input)
+  const result = await inspectNativeCheckInPages(input, true)
   input.signal?.throwIfAborted()
   if (result.inspectionUnavailable) return input.pageUrl
   const matches = result.candidates.filter(

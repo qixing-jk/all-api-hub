@@ -11,6 +11,7 @@ import {
   Input,
 } from "~/components/ui"
 import type { AccountSiteType } from "~/constants/siteType"
+import { getDeploymentCheckInPagePath } from "~/services/accountSiteDefinitions"
 import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import type { CheckInConfig } from "~/types/checkIn"
 import { createTab } from "~/utils/browser/tabs"
@@ -81,6 +82,8 @@ export function AccountCheckInPageField({
     value !== "" && !normalizeCheckInPagePath(value)
       ? t("form.checkInPagePathInvalid")
       : undefined
+  const defaultPath =
+    value === "" ? getDeploymentCheckInPagePath(siteType, siteUrl) : undefined
   const setPath = (text: string) => {
     clearOpenFailure()
     discovery.cancel(false)
@@ -97,6 +100,11 @@ export function AccountCheckInPageField({
     <FormField
       wrapLabelAction
       label={t("form.checkInPagePath")}
+      description={
+        defaultPath
+          ? t("form.checkInPagePathDeploymentDefault", { path: defaultPath })
+          : undefined
+      }
       labelAccessory={
         <FieldHelpPopover
           label={t("form.checkInPagePathHelp")}

@@ -100,7 +100,7 @@ describe("temporary native check-in page discovery", () => {
       pageUrl,
       "native-discovery",
       false,
-      { signal: expect.any(AbortSignal) },
+      { signal: expect.any(AbortSignal), allowInteractive: true },
       authorize,
     )
     expect(sendTabMessageWithRetry).toHaveBeenCalledWith(42, {
@@ -132,6 +132,82 @@ describe("temporary native check-in page discovery", () => {
             state: "actionable",
           },
         ],
+      },
+    })
+  })
+
+  it("verifies a known candidate even when the resource scan is incomplete", async () => {
+    vi.mocked(sendTabMessageWithRetry).mockImplementation(async (_id, msg) => {
+      if (!isRecord(msg)) throw new Error("Discovery sent an invalid message")
+      if (msg.action === RuntimeActionIds.ContentInspectCheckinPage)
+        return {
+          success: true,
+          pageUrl: currentPage,
+          hasTarget: currentPage === originUrl + destination,
+          candidates: [],
+        }
+      if (msg.action === RuntimeActionIds.ContentCheckinFeedbackScan)
+        return {
+          success: true,
+          data: {
+            status: FEEDBACK_SCAN_STATUSES.Partial,
+            pageCandidates: [{ path: destination, sources: ["script"] }],
+          },
+        }
+      throw new Error("Discovery attempted an unexpected action")
+    })
+
+    const { reply, pending } = discover("partial-discovery")
+    await pending
+
+    expect(reply).toHaveBeenCalledExactlyOnceWith({
+      success: true,
+      data: {
+        complete: false,
+        candidates: [
+          {
+            path: destination,
+            sources: ["script", "area"],
+            state: "actionable",
+          },
+        ],
+      },
+    })
+  })
+
+  it("finds a check-in area that renders during an incomplete scan with no clues", async () => {
+    let rendered = false
+    vi.mocked(sendTabMessageWithRetry).mockImplementation(async (_id, msg) => {
+      if (!isRecord(msg)) throw new Error("Discovery sent an invalid message")
+      if (msg.action === RuntimeActionIds.ContentInspectCheckinPage)
+        return {
+          success: true,
+          pageUrl: currentPage,
+          hasTarget: false,
+          hasCheckInArea: rendered,
+          candidates: [],
+        }
+      if (msg.action === RuntimeActionIds.ContentCheckinFeedbackScan) {
+        rendered = true
+        return {
+          success: true,
+          data: {
+            status: FEEDBACK_SCAN_STATUSES.Partial,
+            pageCandidates: [],
+          },
+        }
+      }
+      throw new Error("Discovery attempted an unexpected action")
+    })
+
+    const { reply, pending } = discover("late-page-discovery")
+    await pending
+
+    expect(reply).toHaveBeenCalledExactlyOnceWith({
+      success: true,
+      data: {
+        complete: false,
+        candidates: [{ path: originPath, sources: ["area"], state: "area" }],
       },
     })
   })

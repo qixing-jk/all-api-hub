@@ -45,7 +45,10 @@ export type AccountLoginCredential =
 export interface AccountAuthenticatedSession {
   readonly tabId: number
   readonly abortSignal?: AbortSignal
-  navigate(url: string): Promise<unknown>
+  navigate(
+    url: string,
+    options?: { reuseCurrentPage?: boolean },
+  ): Promise<unknown>
   waitForReadyPage(url: string): Promise<void>
   setVerificationReason(reason: LoginVerificationReason): void
   assertOrigin(): Promise<void>

@@ -2,6 +2,7 @@ import {
   TEMP_CONTEXT_MODES,
   type TempContextMode,
 } from "~/constants/tempContextMode"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import {
   type AuthorizedTempContextOutcome,
   type TempContextTask,
@@ -21,6 +22,11 @@ export const TEMP_CONTEXT_TYPES = {
 export interface TempContextTabSnapshot {
   url?: string
   status?: string
+}
+
+export type TempContextAcquireOptions = ApiTransportBrowserFetchContext & {
+  signal?: AbortSignal
+  allowInteractive?: boolean
 }
 
 export type ReportAuthorizedTempContextOutcome = (

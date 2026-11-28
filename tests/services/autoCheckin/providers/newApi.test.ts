@@ -291,8 +291,15 @@ describe("newApiProvider", () => {
       )
       const result = await checkInForTest(account)
       const destination = "https://site.example.invalid/rewards/daily"
-      if (complete) expect(navigate).toHaveBeenCalledWith(destination)
-      else expect(navigate).not.toHaveBeenCalledWith(destination)
+      if (complete)
+        expect(navigate).toHaveBeenCalledWith(destination, {
+          reuseCurrentPage: true,
+        })
+      else
+        expect(navigate).not.toHaveBeenCalledWith(
+          destination,
+          expect.anything(),
+        )
       if (source === "script")
         expect(sendSiteAction).toHaveBeenCalledWith(
           RuntimeActionIds.ContentCheckinFeedbackScan,
@@ -1887,6 +1894,7 @@ describe("newApiProvider", () => {
     expect(login.loginAccount).toHaveBeenCalledOnce()
     expect(navigate).toHaveBeenCalledWith(
       "https://site.example.invalid/console/personal",
+      { reuseCurrentPage: true },
     )
     expect(
       sendSiteAction.mock.calls.filter(

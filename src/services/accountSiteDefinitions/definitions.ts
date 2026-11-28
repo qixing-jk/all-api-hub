@@ -809,6 +809,10 @@ const ACCOUNT_SITE_DEFINITIONS = [
         siteAnnouncementsPath: "/",
       },
     },
+    checkInPathsByOrigin: {
+      // The custom console serves its native check-in on /dashboard (#1785).
+      "https://ai.facai.cloudns.org": "/dashboard",
+    },
   },
   {
     siteType: SITE_TYPES.APIYI,

@@ -1,7 +1,10 @@
 import { BROWSER_LOGIN_FAILURE_REASONS } from "~/constants/browserLogin"
 import { TURNSTILE_MANUAL_WAIT_MS } from "~/constants/turnstile"
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
-import { waitForTabComplete } from "~/services/browsingContext/tempPage/browserAdapter"
+import {
+  waitForTabComplete,
+  waitForTabDocumentReady,
+} from "~/services/browsingContext/tempPage/browserAdapter"
 import { ProtectionPageTimeoutError } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 
 import { requestLoginVerificationAssist } from "./verificationContexts"
@@ -26,6 +29,7 @@ export async function waitForBrowserLoginPageProtection(context: {
   origin: string
   requestId: string
   signal?: AbortSignal
+  document?: { url: string; allowLoadedRedirect?: boolean; timeoutMs?: number }
   assertOrigin(): Promise<void>
   interactionDeadline(): number
 }): Promise<void> {
@@ -38,12 +42,20 @@ export async function waitForBrowserLoginPageProtection(context: {
     try {
       await context.assertOrigin()
       await runAbortableTask(
-        (signal) =>
-          waitForTabComplete(context.tabId, {
+        (signal) => {
+          const meta = {
             requestId: context.requestId,
             origin: context.origin,
             signal,
-          }),
+          }
+          return context.document
+            ? waitForTabDocumentReady(context.tabId, context.document.url, {
+                ...meta,
+                allowLoadedRedirect: context.document.allowLoadedRedirect,
+                timeoutMs: context.document.timeoutMs,
+              })
+            : waitForTabComplete(context.tabId, meta)
+        },
         {
           signals: [signal],
           ...(manualDeadline ? { timeoutMs: remaining } : {}),

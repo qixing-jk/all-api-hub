@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { BROWSER_LOGIN_SESSION_MODES } from "~/constants/browserLogin"
+import {
+  BROWSER_LOGIN_PAGE_TIMEOUT_MS,
+  BROWSER_LOGIN_SESSION_MODES,
+} from "~/constants/browserLogin"
 import {
   BROWSER_OAUTH_COMPLETION_STATUS,
   BROWSER_OAUTH_CONTENT_FAILURE_REASONS,
@@ -27,7 +30,10 @@ import {
   createBrowserOAuthContext,
   type BrowserOAuthFlow,
 } from "~/services/browserOAuth/browserOAuth"
-import { waitForTabComplete } from "~/services/browsingContext/tempPage/browserAdapter"
+import {
+  waitForTabComplete,
+  waitForTabDocumentReady,
+} from "~/services/browsingContext/tempPage/browserAdapter"
 import { ProtectionPageTimeoutError } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 
 const tabUpdatedListeners = vi.hoisted(
@@ -66,6 +72,7 @@ const hasCookieReadPermissionForUrl = vi.hoisted(() => vi.fn())
 const getPreferences = vi.hoisted(() => vi.fn())
 vi.mock("~/services/browsingContext/tempPage/browserAdapter", () => ({
   waitForTabComplete: vi.fn().mockResolvedValue(undefined),
+  waitForTabDocumentReady: vi.fn().mockResolvedValue(undefined),
 }))
 const cookieCapture = vi.hoisted(() => ({ stores: vi.fn(), header: vi.fn() }))
 vi.mock("~/utils/browser/cookies", () => ({
@@ -259,6 +266,57 @@ describe("browser OAuth context", () => {
     ).resolves.toMatchObject({ status: "identity_mismatch" })
     expect(onAuthenticated).not.toHaveBeenCalled()
     expect(browserApi.removeWindow).toHaveBeenCalledOnce()
+  })
+
+  it("reuses a committed native page and waits for its document before sending an action", async () => {
+    const url = `${origin}/checkin`
+    const loading = { ...completedTab, url, status: "loading" }
+    const pending = { ...loading, pendingUrl: `${origin}/elsewhere` }
+    const onAuthenticated = vi.fn(async (session) => {
+      browserApi.getTab.mockResolvedValue(loading)
+      browserApi.updateTab.mockClear()
+      await session.navigate(url, { reuseCurrentPage: true })
+      expect(browserApi.updateTab).not.toHaveBeenCalled()
+
+      browserApi.getTab.mockResolvedValue(pending)
+      await session.navigate(url, { reuseCurrentPage: true })
+      expect(browserApi.updateTab).toHaveBeenCalledExactlyOnceWith(11, {
+        url,
+        active: true,
+      })
+      const ready = session.waitForReadyPage(url)
+      const updated = tabUpdatedListeners.at(-1)!
+      updated(11, {}, { ...loading, url: undefined })
+      updated(11, {}, pending)
+      expect(waitForTabDocumentReady).not.toHaveBeenCalled()
+      browserApi.getTab.mockResolvedValue(loading)
+      updated(11, {}, loading)
+      await ready
+      expect(waitForTabDocumentReady).toHaveBeenCalledWith(
+        11,
+        url,
+        expect.objectContaining({ timeoutMs: BROWSER_LOGIN_PAGE_TIMEOUT_MS }),
+      )
+
+      browserApi.sendTabMessageWithRetry.mockResolvedValueOnce({
+        success: true,
+      })
+      await session.sendSiteAction("checkin:inspect")
+      expect(waitForTabDocumentReady).toHaveBeenLastCalledWith(
+        11,
+        url,
+        expect.objectContaining({ allowLoadedRedirect: true }),
+      )
+    })
+    await expect(
+      browserOAuthContext.authenticate({
+        origin,
+        requestId: "ready-native-document",
+        expectedIdentity: "user-1",
+        onAuthenticated,
+      }),
+    ).resolves.toMatchObject({ status: "authenticated" })
+    expect(onAuthenticated).toHaveBeenCalledOnce()
   })
 
   it("cancels an active authenticated operation and rejects later actions", async () => {
