@@ -11,9 +11,10 @@ Current iteration: fix unit CI shard correctness, retain the financial file spli
 and withdraw the page-clock experiment after hosted timeout failures. Main
 `d05e7cf117` has been merged, including the earlier native-details batching fix
 and the catalog/native-editor refactor. The original performance baseline remains
-fixed above. Full Test and E2E passed on implementation `71ee31efa8`; both
-inventories are complete. That evidence predates the latest main integration.
-Whole-E2E speedup remains unproven.
+fixed above. Full Test and E2E passed after integration on `f078dc52a7`; both
+inventories are complete. Firefox needed one job rerun after an RDP greeting
+disconnect; this remains an unresolved startup flake. The original failure is
+retained below. Whole-E2E speedup remains unproven.
 
 ## Baseline and hypotheses
 
@@ -431,7 +432,7 @@ debounce. The ordinary UI search is only how these balance assertions materializ
 virtualized rows. Needle-settings screenshots occupied about 0.8s of a 14.2s
 profiled case, so their removal did not justify expanding this iteration.
 
-### Retained changes and contracts
+### Initial experiment and contracts (clock later withdrawn)
 
 - Install Playwright's page clock before navigation in the three native-site
   matrix phases and the native-state matrix; advance 200ms after each real search
@@ -659,3 +660,61 @@ Keep `hosted-final-e2e/`, `hosted-final-e2e-summary.json`, final run/job snapsho
 review. Earlier failed experiments remain useful evidence for the rejected clock
 approach and the unresolved local startup issue. Preserve the unrelated
 `.scratch/browser-tab-site-favicon/` directory.
+
+## Branch finishing after current main integration
+
+Published history was retained. Merge `19ebed1211` integrates main `d05e7cf117`
+without conflicts. Upstream moved native-editor policies and centralized catalog
+discriminants without changing the CI, browser-fixture or render-provider
+contracts consumed here. Documentation now explains the frozen unit profile,
+exact inventory guard and optional density captures. The branch remains
+`perf/pr-ci-throughput`, targeting `main`; no PR was created.
+
+A TypeScript AST check against that main revision confirms all 21 non-import
+top-level statements in the original financial spec are identical across the
+three final files. Original clock calls are unchanged; the rejected search-clock
+experiment contributes no final calls. The check is retained as
+`artifacts/finish-financial-equivalence.json`. No production source is changed
+relative to current main.
+
+Both workflows ran on `f078dc52a748a86b2c150a825183a94a20dbd60e`:
+
+- [Test 46137132554](https://github.com/qixing-jk/all-api-hub/actions/runs/46137132554)
+  passed: 35,125 passing tests, two original skips and all 2,144 independently
+  collected files exactly once. All six shards downloaded artifact `15260406452`
+  with digest `062627f6556dd2d4b9fddd9d47b83f5e8a32bf6afc7353e253b026df25c330ce`.
+  Coverage and JUnit upload guards passed; global coverage stayed 97.37%
+  statements, 93.71% branches, 98.33% functions and 98.47% lines. Wall time was
+  518s; unit steps had a 361s maximum and 1,921s sum.
+- [E2E 46137137445](https://github.com/qixing-jk/all-api-hub/actions/runs/46137137445)
+  default Chromium reports contain 1,002 passes and the same seven skips. All
+  1,009 identities across 196 files exactly match independent smoke collection,
+  with no duplicates, missing cases, test retries or fixture-startup retries.
+  DNR, bookmarks and isolated performance passed. First-attempt wall time was
+  956s, smoke steps had a 732s maximum and 3,471s sum. Financial work was 475.76s,
+  with a longest file span of 232.16s. These remain observations with different
+  base/profile/runner inputs, not proof of whole-CI speedup.
+- Firefox first attempt passed 19 cases and failed the native-sidebar handoff
+  case during fixture initialization, before its test body. The embedded HTML
+  report locates the failure in `connectRdp`'s initial greeting promise:
+  `Firefox debugger disconnected` after 4.65s of fixture setup. There was no
+  screenshot because no extension adapter had been created. The Firefox suite,
+  fixture, RDP transport and product inputs are unchanged relative to main.
+  The original case passed ten local repetitions in Firefox 157.0.1 with no
+  retries. A rerun of only the failed remote Firefox job passed all 20 cases,
+  making workflow attempt 2 successful. Neither result establishes the cause or
+  fixes the intermittent greeting disconnect. No retry or deadline was added.
+
+Retain the first Firefox log, HTML report, extracted failed-case steps, local
+repeat log and remote rerun log as `artifacts/finish-firefox-*`. The independent
+inventories, JUnit, six Chromium JSON reports, run/job snapshots and summaries
+remain under `artifacts/finish-*`, with `verify-finish-hosted.py` reproducing the
+inventory checks. `run-46137137445.json` preserves the failed first attempt;
+`finish-e2e-attempt2.json` records the successful retry without overwriting it.
+
+Pre-commit documentation checks and pre-push compile/Knip passed. Related-issue
+searches covered titles, bodies and comments for CI, E2E, sharding, missing tests
+and timeouts; no matching issue warrants a closing reference. The report and
+rejected-experiment decisions remain in Git; raw evidence stays local through
+review, and unrelated scratch is preserved. Regression protection lives in the
+existing CLI tests; no additional agent rule or memory entry is needed.
