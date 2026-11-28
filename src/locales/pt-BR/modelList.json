@@ -199,6 +199,7 @@
     "compactionCharge": "Compactação remota",
     "consoleSettings": "Configurações oficiais",
     "contextLimit": "Limite de contexto",
+    "currentValue": "{{value}} · Atual",
     "defaultDimensions": "Dimensões padrão",
     "inputModalities": "Modalidades de entrada",
     "maximumOutputTokens": "Máximo de tokens de saída",
@@ -322,6 +323,7 @@
     "subscriptionMultiplier": "Multiplicador da assinatura",
     "subscriptionPlan": "Assinatura",
     "supportedDimensions": "Dimensões compatíveis",
+    "supportedPlans": "Planos disponíveis",
     "supportsImages": "Suporte a imagens",
     "tokenCount_one": "{{formattedCount}} token",
     "tokenCount_many": "{{formattedCount}} tokens",
@@ -397,6 +399,7 @@
     "modelNamesCopied": "Nomes dos modelos copiados",
     "siteUrlCopied": "URL do site copiada"
   },
+  "minimumReferencePrice": "Menor preço de canal",
   "modelCapabilityFilter": {
     "coverageHint_one": "{{count}} modelo desta lista ainda não tem detalhes de recursos e, por isso, é ignorado pelos filtros de recursos.",
     "coverageHint_many": "{{count}} modelos desta lista ainda não têm detalhes de recursos e, por isso, são ignorados pelos filtros de recursos.",
@@ -504,9 +507,11 @@
   "pricingDescription": "Os preços vêm do site. Unidades de cobrança diferentes, como milhões de tokens, imagens, segundos e requisições, são comparadas separadamente. Confira a unidade de cada cotação; o site determina os valores cobrados.",
   "pricingNote": "Observação sobre os preços dos modelos",
   "pricingNotes": {
+    "accountChannelMinimum": "Os mínimos de entrada e saída são calculados separadamente entre os canais disponíveis no seu plano e podem vir de canais diferentes. O custo real depende do canal selecionado.",
     "allChannels": "Todos os canais",
     "ambiguousCharges": "Várias cobranças compartilham a mesma medida de uso, mas suas quantidades ou fases não podem ser separadas. As demais tarifas conhecidas são mantidas.",
     "ambiguousVariantCharges": "A fonte publica cobranças por unidade e por variante, mas não esclarece se são somadas ou substituídas.",
+    "catalogChannelMinimum": "Os mínimos de entrada e saída são calculados separadamente entre todos os canais, incluindo os indisponíveis no seu plano. Apenas como referência.",
     "dedicatedPrices": "Preços dedicados com multiplicadores incluídos",
     "defaultRoute": "Rota padrão",
     "endpointSourceConflict": "Os registros oficiais de endpoints deste modelo apresentam regras de cobrança conflitantes; não é possível determinar o preço aplicável.",

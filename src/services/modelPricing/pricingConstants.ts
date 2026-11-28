@@ -11,6 +11,7 @@ export const PRICING_SOURCE_NOTE_KINDS = {
   ENDPOINT_SOURCE_CONFLICT: "endpoint-source-conflict",
   WHOLE_REQUEST_TIER: "whole-request-tier",
   ROUTING_CONTEXT: "routing-context",
+  CHANNEL_MINIMUM: "channel-minimum",
 } as const
 
 export const PRICING_METERS = {

@@ -23,6 +23,7 @@ import { novitaAccountDetectionPrivacy } from "~/services/apiAdapters/novita/acc
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/account/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/account/browserIdentity"
 import { pmApiBrowserIdentity } from "~/services/apiAdapters/pmapi/browserIdentity"
+import { pmplanBrowserIdentity } from "~/services/apiAdapters/pmplan/browserIdentity"
 import { relayForBrowserIdentity } from "~/services/apiAdapters/relayfor/browserIdentity"
 import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/account/browserIdentity"
 import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/browserIdentity"
@@ -50,6 +51,7 @@ import { nanoGptContentSessionExtractor } from "./contentSession/nanogpt"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { novitaContentSessionExtractor } from "./contentSession/novita"
 import { pmApiContentSessionExtractor } from "./contentSession/pmapi"
+import { pmplanContentSessionExtractor } from "./contentSession/pmplan"
 import { relayForContentSessionExtractor } from "./contentSession/relayfor"
 import { rightCodeContentSessionExtractor } from "./contentSession/rightcode"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
@@ -70,6 +72,10 @@ const siteBrowserAdapters: readonly {
   identity?: AccountBrowserIdentityCapability
   detectionPrivacy?: AccountDetectionPrivacyPolicy
 }[] = [
+  {
+    sessionExtractor: pmplanContentSessionExtractor,
+    identity: pmplanBrowserIdentity,
+  },
   {
     sessionExtractor: krillContentSessionExtractor,
     identity: krillBrowserIdentity,

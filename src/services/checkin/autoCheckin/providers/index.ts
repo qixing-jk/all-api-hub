@@ -23,6 +23,7 @@ import { hiyoProvider } from "./hiyo"
 import { linxiProvider } from "./linxiCheckIn"
 import { nexavlinksProvider } from "./nexavlinks"
 import { pmApiProvider } from "./pmapi"
+import { pmplanProvider } from "./pmplan"
 import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   createAutoCheckinMethodRegistry,
@@ -37,6 +38,7 @@ import { xiaoenProvider } from "./xiaoen"
 import { xingyaProvider } from "./xingya"
 
 const PROVIDER_BY_METHOD_ID = {
+  [AUTO_CHECKIN_METHOD_IDS.PmplanDailyCheckIn]: pmplanProvider,
   [AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn]: sidruneProvider,
   [AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn]: xiaoenProvider,
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: agentRouterProvider,

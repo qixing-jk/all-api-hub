@@ -192,6 +192,7 @@
     "compactionCharge": "Remote compaction",
     "consoleSettings": "Official settings",
     "contextLimit": "Context limit",
+    "currentValue": "{{value}} · Current",
     "defaultDimensions": "Default dimensions",
     "inputModalities": "Input modalities",
     "maximumOutputTokens": "Maximum output tokens",
@@ -314,6 +315,7 @@
     "subscriptionMultiplier": "Subscription multiplier",
     "subscriptionPlan": "Subscription",
     "supportedDimensions": "Supported dimensions",
+    "supportedPlans": "Available plans",
     "supportsImages": "Image support",
     "tokenCount_one": "{{formattedCount}} token",
     "tokenCount_other": "{{formattedCount}} tokens",
@@ -388,6 +390,7 @@
     "modelNamesCopied": "Model names copied",
     "siteUrlCopied": "Site URL copied"
   },
+  "minimumReferencePrice": "Lowest channel price",
   "modelCapabilityFilter": {
     "coverageHint_one": "{{count}} model in this list does not have capability details yet, so capability filters skip it.",
     "coverageHint_other": "{{count}} models in this list do not have capability details yet, so capability filters skip them.",
@@ -494,9 +497,11 @@
   "pricingDescription": "Prices come from the site. Different billing units, such as million tokens, images, seconds and requests, are compared separately. Check the unit beside each quote; the site determines actual charges.",
   "pricingNote": "Model Pricing Note",
   "pricingNotes": {
+    "accountChannelMinimum": "Input and output minima are calculated separately across channels available to your plan and may come from different channels. Actual charges depend on the selected channel.",
     "allChannels": "All channels",
     "ambiguousCharges": "Multiple charges share one usage meter, but their quantities or phases cannot be distinguished. Other known rates are retained.",
     "ambiguousVariantCharges": "The source declares both unit charges and a variant schedule without establishing whether these charges are additive or alternative.",
+    "catalogChannelMinimum": "Input and output minima are calculated separately across all channels, including channels unavailable to your plan. For reference only.",
     "dedicatedPrices": "Dedicated prices, multipliers included",
     "defaultRoute": "Default route",
     "endpointSourceConflict": "Official endpoint records for this model declare inconsistent charge contracts; the applicable price cannot be determined.",

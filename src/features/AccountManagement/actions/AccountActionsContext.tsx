@@ -128,8 +128,9 @@ export const AccountActionsProvider = ({
                   protectionBypassExecution: execution,
                 },
               )
+              // A failed refresh may still persist health and attempt timestamps.
+              await loadAccountData()
               if (result) {
-                await loadAccountData()
                 return result
               } else {
                 throw new Error(

@@ -156,8 +156,24 @@ describe("accountRefresh usage-history coordination", () => {
       healthStatus: { status: SiteHealthStatus.Error, message: "Unauthorized" },
     })
 
-    await accountRefresh.refreshAccount("acc-1", true)
+    expect(await accountRefresh.refreshAccount("acc-1", true)).toBeNull()
+    expect(accountMutations.updateAccountFromRefresh).toHaveBeenCalledOnce()
     expect(usageHistoryScheduler.runAfterRefreshSync).not.toHaveBeenCalled()
+  })
+
+  it("counts an unsuccessful site response as a failure when its health update was persisted", async () => {
+    refreshFromSite.mockResolvedValueOnce({
+      success: false,
+      healthStatus: { status: SiteHealthStatus.Error, message: "Unauthorized" },
+    })
+    expect(await accountRefresh.refreshAllAccounts(true)).toMatchObject({
+      success: 1,
+      failed: 1,
+      refreshedCount: 1,
+    })
+    expect(
+      usageHistoryScheduler.runAfterRefreshSync,
+    ).toHaveBeenCalledExactlyOnceWith(["acc-2"])
   })
 
   it("does not sync if the refreshed data was not persisted", async () => {
@@ -165,7 +181,7 @@ describe("accountRefresh usage-history coordination", () => {
       null,
     )
 
-    await accountRefresh.refreshAccount("acc-1", true)
+    expect(await accountRefresh.refreshAccount("acc-1", true)).toBeNull()
     expect(usageHistoryScheduler.runAfterRefreshSync).not.toHaveBeenCalled()
   })
 

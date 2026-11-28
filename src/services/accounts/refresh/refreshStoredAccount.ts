@@ -259,7 +259,7 @@ async function runRefreshAttempt(
     })
   }
   return {
-    requestFailed,
+    requestFailed: requestFailed || !result.success || !didPersist,
     result: {
       account: updatedAccount,
       balanceHistoryCaptured,

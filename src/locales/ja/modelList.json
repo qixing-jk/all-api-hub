@@ -185,6 +185,7 @@
     "compactionCharge": "リモート圧縮料",
     "consoleSettings": "公式設定を開く",
     "contextLimit": "コンテキスト上限",
+    "currentValue": "{{value}} · 現在",
     "defaultDimensions": "既定の次元数",
     "inputModalities": "入力モダリティ",
     "maximumOutputTokens": "最大出力トークン数",
@@ -306,6 +307,7 @@
     "subscriptionMultiplier": "プラン倍率",
     "subscriptionPlan": "対象プラン",
     "supportedDimensions": "対応次元数",
+    "supportedPlans": "利用対象プラン",
     "supportsImages": "画像対応",
     "tokenCount_other": "{{formattedCount}} トークン",
     "trainingChannels": "学習チャネルあり",
@@ -379,6 +381,7 @@
     "modelNamesCopied": "モデル名をコピーしました",
     "siteUrlCopied": "サイト URL をコピーしました"
   },
+  "minimumReferencePrice": "チャネル最低価格",
   "modelCapabilityFilter": {
     "coverageHint_one": "この一覧には能力説明がまだないモデルが {{count}} 件あり、能力フィルターでは一時的に除外されます。",
     "coverageHint_other": "この一覧には能力説明がまだないモデルが {{count}} 件あり、能力フィルターでは一時的に除外されます。",
@@ -485,9 +488,11 @@
   "pricingDescription": "価格はサイトから取得します。百万トークン、画像、秒、リクエストなど、課金単位ごとに比較します。各見積もりの単位を確認してください。実際の請求額はサイトの料金に従います。",
   "pricingNote": "モデル料金に関する注意",
   "pricingNotes": {
+    "accountChannelMinimum": "契約プランで利用可能なチャネルの入力・出力最低価格を個別に表示しています。異なるチャネルの価格の場合があり、実際の料金は選択されたチャネルにより異なります。",
     "allChannels": "全チャネル",
     "ambiguousCharges": "複数の料金が同じ使用量項目に対応していますが、数量や課金段階を区別できません。他の既知の料金は保持しています。",
     "ambiguousVariantCharges": "単位料金とパラメータ別料金が公開されていますが、加算か代替かが不明なため合計を計算できません。",
+    "catalogChannelMinimum": "全チャネルの入力・出力最低価格を個別に表示しています。契約プランで利用できないチャネルも含まれるため、参考値です。",
     "dedicatedPrices": "専用料金、倍率適用済み",
     "defaultRoute": "標準ルート",
     "endpointSourceConflict": "同じモデルの公式エンドポイント間で課金条件が一致しないため、適用料金を確定できません。",

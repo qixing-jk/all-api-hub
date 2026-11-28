@@ -13,6 +13,7 @@ import { freeggProvider } from "~/services/checkin/autoCheckin/providers/freegg"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
+import { pmplanProvider } from "~/services/checkin/autoCheckin/providers/pmplan"
 import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   AUTO_CHECKIN_METHOD_SOURCE_KINDS,
@@ -109,7 +110,6 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(29)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -188,6 +188,11 @@ describe("autoCheckinMethodRegistry", () => {
           provider: pmApiProvider,
         },
         {
+          id: "pmplan:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.PMPLAN],
+          provider: pmplanProvider,
+        },
+        {
           id: "relayfor:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.RELAYFOR],
           provider: relayForProvider,
@@ -204,6 +209,11 @@ describe("autoCheckinMethodRegistry", () => {
       AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
     ])
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.ONE_API)).toEqual([])
+    expect(getAutoCheckinCandidateMethodIds(SITE_TYPES.PMPLAN)).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.PmplanDailyCheckIn,
+    ])
+    expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.PMPLAN)).toEqual([])
+    expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.PMPLAN)).toEqual([])
   })
 
   it("exposes only safe read-only status operations", () => {

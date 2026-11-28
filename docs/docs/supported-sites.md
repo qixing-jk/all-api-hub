@@ -24,6 +24,7 @@
 | API易 | 采用 Shell API 兼容协议的商业 AI 模型中转服务。 | — |
 | ModelFlare    | 基于 New API 衍生的高性能 AI 模型中转平台。 | — |
 | v-api         | 基于 one-api 二开的功能强大的中转平台。                                                                                                                                                                                                                                                                                                                                                                   | 暂无                                                                                                                                                             |
+| PM-Plan | 从零实现的开源 Token Plan 分发平台，按套餐档位与渠道授权分配模型访问权限。 | [仓库](https://github.com/gh7mk2l2/pm-plan) · [主站](https://plan.pmcat.top/) |
 
 ### 独立平台与商业中转服务
 

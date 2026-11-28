@@ -18,6 +18,39 @@ const autoConfig: ApiCredentialTelemetryConfig = {
 }
 
 describe("api credential telemetry mode planner", () => {
+  it.each(["https://plan.pmcat.top", "https://plan.pmcat.top/v1"])(
+    "skips automatic usage probes only for the verified PM-Plan origin: %s",
+    (baseUrl) => {
+      expect(resolveTelemetryModes(profile(baseUrl), autoConfig)).toEqual([])
+    },
+  )
+
+  it.each([
+    "http://plan.pmcat.top",
+    "https://plan.pmcat.top:8443",
+    "https://plan.pmcat.top.example.com",
+    "https://pmapi.example.com",
+  ])(
+    "preserves automatic compatibility probes for other origins: %s",
+    (baseUrl) => {
+      expect(resolveTelemetryModes(profile(baseUrl), autoConfig)).toEqual([
+        API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+        API_CREDENTIAL_TELEMETRY_MODES.Sub2ApiUsage,
+        API_CREDENTIAL_TELEMETRY_MODES.OpenAiBilling,
+      ])
+    },
+  )
+
+  it.each([
+    API_CREDENTIAL_TELEMETRY_MODES.CustomReadOnlyEndpoint,
+    API_CREDENTIAL_TELEMETRY_MODES.NewApiTokenUsage,
+    API_CREDENTIAL_TELEMETRY_MODES.Disabled,
+  ])("honors an explicit PM-Plan telemetry choice: %s", (mode) => {
+    expect(
+      resolveTelemetryModes(profile("https://plan.pmcat.top"), { mode }),
+    ).toEqual(mode === API_CREDENTIAL_TELEMETRY_MODES.Disabled ? [] : [mode])
+  })
+
   it("keeps provider probes ahead of compatibility fallbacks", () => {
     expect(
       resolveTelemetryModes(profile("https://api.deepseek.com/v1"), autoConfig),

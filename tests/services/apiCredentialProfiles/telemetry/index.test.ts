@@ -73,6 +73,78 @@ describe("api credential profile telemetry", () => {
     vi.clearAllMocks()
   })
 
+  it("refreshes PM-Plan models without probing incompatible key usage endpoints", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "PM-Plan",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://plan.pmcat.top",
+      apiKey: "sk-pm-example",
+    })
+    await apiCredentialProfilesStorage.updateTelemetrySnapshot(profile.id, {
+      schemaVersion: 2,
+      health: { status: SiteHealthStatus.Warning },
+      lastSyncTime: Date.now() - 1_000,
+      lastError:
+        "响应 content type mismatch: expected JSON but got text/html; charset=utf-8",
+      attempts: [],
+    })
+    const fetchMock = vi.fn(
+      async () =>
+        new Response("<html>PM-Plan</html>", {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(snapshot.lastError).toBeUndefined()
+    expect(snapshot.health.status).toBe(SiteHealthStatus.Healthy)
+    expect(snapshot.facts).toEqual({
+      models: { count: 2, preview: ["gpt-4o", "o3"] },
+    })
+    expect(snapshot.attempts).toEqual([
+      expect.objectContaining({ source: "models", status: "success" }),
+    ])
+    const saved = await apiCredentialProfilesStorage.getProfileById(profile.id)
+    expect(saved?.telemetrySnapshot).toEqual(snapshot)
+    expect(saved?.apiKey).toBe(profile.apiKey)
+  })
+
+  it.each(["failure", "empty"])(
+    "retains PM-Plan model %s feedback without usage fallbacks",
+    async (outcome) => {
+      const profile = await apiCredentialProfilesStorage.createProfile({
+        name: "PM-Plan",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://plan.pmcat.top/v1",
+        apiKey: "sk-pm-example",
+      })
+      if (outcome === "failure")
+        fetchApiCredentialModelIdsMock.mockRejectedValueOnce(
+          new Error("Models unauthorized"),
+        )
+      else fetchApiCredentialModelIdsMock.mockResolvedValueOnce([])
+      const fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock)
+
+      const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(snapshot.health.status).toBe(SiteHealthStatus.Warning)
+      expect(snapshot.lastError).toBe(
+        outcome === "failure" ? "Models unauthorized" : undefined,
+      )
+      expect(snapshot.attempts).toEqual([
+        expect.objectContaining({
+          source: "models",
+          status: outcome === "failure" ? "error" : "unsupported",
+        }),
+      ])
+    },
+  )
+
   it("refreshes DeepSeek balance telemetry with provider currency facts", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "DeepSeek",

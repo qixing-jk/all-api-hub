@@ -649,6 +649,10 @@
         "rpm": "Requests per minute",
         "rpmHelp": "Maximum requests per minute for this token; 0 means unlimited."
       },
+      "pmplan": {
+        "customExpiryHelp": "Enter a future expiration date and time in your local timezone.",
+        "modelsHelp": "Leave empty to allow all current and future models available to the account. Keys inherit the account’s rolling allowances."
+      },
       "quotaCredits": "Remaining credits",
       "quotaCreditsHelp": "The key stops working once these credits run out.",
       "quotaUsd": "Quota (USD)",

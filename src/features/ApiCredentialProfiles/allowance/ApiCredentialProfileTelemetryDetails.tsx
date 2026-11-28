@@ -30,6 +30,7 @@ import { formatLocaleDateTime, formatTokenCount } from "~/utils/core/formatters"
 type ApiCredentialProfileTelemetryDetailsProps = {
   snapshot: ApiCredentialProfile["telemetrySnapshot"]
   missingTelemetryValue: string
+  usageNotice?: string
 }
 
 /** Checks whether a snapshot contains metrics worth showing by default. */
@@ -128,6 +129,7 @@ function ProviderBalanceValue({
 export function ApiCredentialProfileTelemetryDetails({
   snapshot,
   missingTelemetryValue,
+  usageNotice,
 }: ApiCredentialProfileTelemetryDetailsProps) {
   const { t } = useTranslation()
   const facts = snapshot?.facts
@@ -140,6 +142,9 @@ export function ApiCredentialProfileTelemetryDetails({
   return (
     <>
       <div className="space-y-density-3 pt-density-2 text-xs">
+        {usageNotice ? (
+          <p className="text-muted-foreground">{usageNotice}</p>
+        ) : null}
         {quotaWindows.length ? (
           <section
             data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryQuota}

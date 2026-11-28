@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next"
 
+import { CURRENCIES } from "~/constants/money"
 import { PriceRateView } from "~/features/ModelList/presentation/ModelItem/ModelItemPicingView"
 import { ModelPriceEvidenceBadge } from "~/features/ModelList/presentation/ModelItem/ModelPriceEvidenceBadge"
 import { ModelPricingSchedule } from "~/features/ModelList/presentation/ModelItem/ModelPricingSchedule"
@@ -11,6 +12,7 @@ import type { ModelPricePrecisionKind } from "~/services/modelList/pricingModel"
 import {
   PRICE_RATE_UNITS,
   PRICING_ISSUE_REASONS,
+  PRICING_SOURCE_NOTE_KINDS,
 } from "~/services/modelPricing/pricingConstants"
 import type { PriceMeter } from "~/services/modelPricing/pricingPlan"
 import {
@@ -45,10 +47,20 @@ export function ModelPublishedPricing({
   const schedule = normalizePublishedSchedule(pricing.schedule)
   const labels = pricingMeterLabels(t)
   const unitLabels = pricingRateUnitLabels(t)
-  const currency = showRealPrice ? "CNY" : "USD"
+  const currency = showRealPrice ? CURRENCIES.CNY : CURRENCIES.USD
   const conditional = schedule.some((rule) => rule.conditions.length > 0)
   const hasExplanation =
     !!pricing.source.pricingDescription || !!pricing.source.notes?.length
+  // Channel-minimum scope is carried by the compact badge's tooltip. Keep its
+  // full explanation in details, rather than repeating it on every model row.
+  const compactSource = {
+    ...pricing.source,
+    notes: pricing.source.notes?.filter(
+      (note) => note.kind !== PRICING_SOURCE_NOTE_KINDS.CHANNEL_MINIMUM,
+    ),
+  }
+  const hasCompactExplanation =
+    !!compactSource.pricingDescription || !!compactSource.notes?.length
   const isReferenceRate =
     !!pricing.source.rulesUnavailable &&
     !conditional &&
@@ -61,7 +73,10 @@ export function ModelPublishedPricing({
           <h4 className="text-sm font-medium">
             {t("scenario.publishedPrices")}
           </h4>
-          <ModelPriceEvidenceBadge kind={pricePrecision} />
+          <ModelPriceEvidenceBadge
+            kind={pricePrecision}
+            source={pricing.source}
+          />
           <ModelPricingSchedule
             schedule={schedule}
             source={pricing.source}
@@ -69,13 +84,13 @@ export function ModelPublishedPricing({
             effectiveGroup={effectiveGroup}
           />
           {!details && !hasExplanation && pricing.source.rulesUnavailable && (
-            <p className="text-muted-foreground w-full">
+            <p className="w-full text-muted-foreground">
               {t("scenario.websiteRulesUnavailable")}
             </p>
           )}
         </>
       ) : (
-        <div className="gap-y-density-1-5 flex flex-wrap items-center gap-x-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-density-1-5">
           <PriceRateView
             isAvailableForUser={isAvailableForUser}
             items={schedule.flatMap((rule) =>
@@ -86,7 +101,7 @@ export function ModelPublishedPricing({
                 const amount =
                   rate.currency === displayCurrency
                     ? rate.amount
-                    : rate.currency === "USD"
+                    : rate.currency === CURRENCIES.USD
                       ? rate.amount * exchangeRate
                       : rate.amount / exchangeRate
                 return {
@@ -97,28 +112,31 @@ export function ModelPublishedPricing({
                   value: `${formatPriceCompact(amount, displayCurrency)}${rate.unit === PRICE_RATE_UNITS.TOKEN ? "/M" : ` / ${unitLabels[rate.unit]}`}`,
                   className: isReferenceRate
                     ? "text-foreground font-medium"
-                    : (
+                    : ((
                         {
                           input: "text-pricing-input",
                           output: "text-pricing-output",
                           cacheRead: "text-pricing-cache-read",
                           cacheWrite: "text-pricing-cache-write",
                         } as Partial<Record<PriceMeter, string>>
-                      )[meter as PriceMeter] ?? "text-secondary-foreground",
+                      )[meter as PriceMeter] ?? "text-secondary-foreground"),
                 }
               }),
             )}
           />
-          <ModelPriceEvidenceBadge kind={pricePrecision} />
+          <ModelPriceEvidenceBadge
+            kind={pricePrecision}
+            source={pricing.source}
+          />
           {!details && !hasExplanation && pricing.source.rulesUnavailable && (
-            <p className="text-muted-foreground w-full">
+            <p className="w-full text-muted-foreground">
               {t("scenario.websiteRulesUnavailable")}
             </p>
           )}
         </div>
       )}
-      {!details && !conditional && hasExplanation && (
-        <ModelPricingSchedule schedule={[]} source={pricing.source} />
+      {!details && !conditional && hasCompactExplanation && (
+        <ModelPricingSchedule schedule={[]} source={compactSource} />
       )}
       {pricing.issues?.some(
         (issue) => issue.reason === PRICING_ISSUE_REASONS.SOURCE_CONFLICT,

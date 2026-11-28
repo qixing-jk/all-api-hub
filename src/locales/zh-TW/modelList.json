@@ -185,6 +185,7 @@
     "compactionCharge": "遠端壓縮費用",
     "consoleSettings": "前往官網設定",
     "contextLimit": "上下文上限",
+    "currentValue": "{{value}} · 目前",
     "defaultDimensions": "預設維度",
     "inputModalities": "輸入模態",
     "maximumOutputTokens": "最大輸出 Token 數",
@@ -306,6 +307,7 @@
     "subscriptionMultiplier": "套餐倍率",
     "subscriptionPlan": "適用套餐",
     "supportedDimensions": "支援維度",
+    "supportedPlans": "開放方案",
     "supportsImages": "圖片支援",
     "tokenCount_other": "{{formattedCount}} Token",
     "trainingChannels": "含資料訓練管道",
@@ -379,6 +381,7 @@
     "modelNamesCopied": "模型名稱已複製",
     "siteUrlCopied": "站點 URL 已複製"
   },
+  "minimumReferencePrice": "管道最低價",
   "modelCapabilityFilter": {
     "coverageHint_one": "目前列表中有 {{count}} 個模型暫無能力說明，選擇能力篩選時會先略過。",
     "coverageHint_other": "目前列表中有 {{count}} 個模型暫無能力說明，選擇能力篩選時會先略過。",
@@ -485,9 +488,11 @@
   "pricingDescription": "價格來自站點。不同計費單位（如百萬 Token、張、秒、次）分別比較，請留意每筆報價的單位。實際扣費以站點為準。",
   "pricingNote": "模型定價說明",
   "pricingNotes": {
+    "accountChannelMinimum": "目前方案可用管道的輸入、輸出最低價分別計算，可能來自不同管道；實際費用取決於請求所用管道。",
     "allChannels": "全部管道",
     "ambiguousCharges": "多項費用對應同一種用量，但目前無法區分各自的數量或計費階段，已保留其餘已知費率。",
     "ambiguousVariantCharges": "官方同時公布了不同單位的費用和參數檔位，尚未明確兩者是疊加費用還是替代費率，暫不能合計報價。",
+    "catalogChannelMinimum": "全站管道的輸入、輸出最低價分別計算，可能包含目前方案無法使用的管道；僅供參考。",
     "dedicatedPrices": "專屬價格，已含倍率",
     "defaultRoute": "預設線路",
     "endpointSourceConflict": "同一模型在官方不同介面記錄中的計費規則不一致，暫不能確定適用價格。",

@@ -40,6 +40,7 @@ import {
 } from "~/features/ApiCredentialProfiles/testIds"
 import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
 import { cn } from "~/lib/utils"
+import { isPmplanModelOnlyTelemetry } from "~/services/apiCredentialProfiles/telemetry/modePlanner"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -125,7 +126,7 @@ function AuditTimeBadge({
     <Badge
       variant="outline"
       size="sm"
-      className="dark:bg-secondary/50 bg-surface-subtle text-muted-foreground max-w-full font-normal tabular-nums"
+      className="max-w-full bg-surface-subtle font-normal text-muted-foreground tabular-nums dark:bg-secondary/50"
       title={fullLabel}
       aria-label={`${label}: ${fullLabel}`}
     >
@@ -372,16 +373,16 @@ export function ApiCredentialProfileListItem({
         tabIndex={-1}
         aria-labelledby={rowHeadingId}
         className={cn(
-          "text-foreground focus-visible:ring-ring transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-inset",
+          "text-foreground transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           isTargetHighlighted &&
-            "ring-theme-500 dark:ring-theme-400 ring-2 ring-inset",
+            "ring-2 ring-theme-500 ring-inset dark:ring-theme-400",
         )}
       >
-        <div className="py-density-4 px-3 sm:px-4">
-          <div className="gap-density-5 flex min-w-0 flex-col">
-            <div className="gap-density-2 flex min-w-0 flex-1 flex-col">
-              <div className="gap-x-density-3 gap-y-density-2 flex min-w-0 flex-wrap items-start justify-between">
-                <div className="gap-density-2 flex min-w-0 flex-1 flex-wrap items-center">
+        <div className="px-3 py-density-4 sm:px-4">
+          <div className="flex min-w-0 flex-col gap-density-5">
+            <div className="flex min-w-0 flex-1 flex-col gap-density-2">
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-density-3 gap-y-density-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-density-2">
                   <Heading6
                     id={rowHeadingId}
                     className="max-w-full min-w-0 truncate"
@@ -418,7 +419,7 @@ export function ApiCredentialProfileListItem({
                         rel="noreferrer"
                         title={sourceUrl}
                         aria-label={t("apiCredentialProfiles:list.sourceUrl")}
-                        className="focus-visible:ring-ring gap-density-1 text-link inline-flex min-w-0 items-center gap-1 text-xs underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:ring-1 focus-visible:outline-none"
+                        className="inline-flex min-w-0 items-center gap-1 gap-density-1 text-xs text-link underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                       >
                         <span className="min-w-0 truncate">
                           {t("apiCredentialProfiles:list.sourceUrl")}
@@ -455,13 +456,13 @@ export function ApiCredentialProfileListItem({
                 </div>
               </div>
 
-              <div className="gap-density-2 flex flex-1 flex-col text-xs">
-                <div className="gap-density-1 sm:gap-density-2 flex min-w-0 flex-col sm:flex-row sm:items-center">
-                  <span className="text-muted-foreground shrink-0 whitespace-nowrap">
+              <div className="flex flex-1 flex-col gap-density-2 text-xs">
+                <div className="flex min-w-0 flex-col gap-density-1 sm:flex-row sm:items-center sm:gap-density-2">
+                  <span className="shrink-0 whitespace-nowrap text-muted-foreground">
                     {t("apiCredentialProfiles:list.apiKey")}
                   </span>
                   <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
-                    <code className="dark:bg-secondary bg-muted text-secondary-foreground py-density-1 text-3xs min-w-0 flex-1 truncate rounded px-2 font-mono sm:text-xs">
+                    <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-density-1 font-mono text-3xs text-secondary-foreground sm:text-xs dark:bg-secondary">
                       {visibleKeys.has(profile.id)
                         ? profile.apiKey
                         : maskSecretForDisplay(profile.apiKey)}
@@ -507,28 +508,28 @@ export function ApiCredentialProfileListItem({
                   </div>
                 </div>
 
-                <div className="gap-density-1-5 sm:gap-density-2 flex min-w-0 flex-wrap items-center">
-                  <span className="text-muted-foreground shrink-0 whitespace-nowrap">
+                <div className="flex min-w-0 flex-wrap items-center gap-density-1-5 sm:gap-density-2">
+                  <span className="shrink-0 whitespace-nowrap text-muted-foreground">
                     {t("aiApiVerification:verifyDialog.history.lastVerified")}
                   </span>
                   <VerificationHistorySummary
                     summary={verificationSummary}
-                    className="gap-density-1-5 sm:gap-density-2 flex min-w-0 flex-wrap items-center"
+                    className="flex min-w-0 flex-wrap items-center gap-density-1-5 sm:gap-density-2"
                   />
                 </div>
 
                 <Collapsible
                   open={isTelemetryOpen}
                   onOpenChange={setIsTelemetryOpen}
-                  className="dark:bg-secondary/60 border-border-subtle bg-surface-subtle py-density-2 sm:py-density-3 flex flex-col rounded-lg border px-2 sm:px-3"
+                  className="flex flex-col rounded-lg border border-border-subtle bg-surface-subtle px-2 py-density-2 sm:px-3 sm:py-density-3 dark:bg-secondary/60"
                   data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel}
                 >
-                  <div className="gap-density-2 flex min-w-0 items-center justify-between">
+                  <div className="flex min-w-0 items-center justify-between gap-density-2">
                     <CollapsibleTrigger asChild>
                       <Button
                         type="button"
                         variant="ghost"
-                        className="gap-density-2 py-density-1 group h-auto min-h-0 min-w-0 flex-1 justify-start px-1.5 text-left"
+                        className="group h-auto min-h-0 min-w-0 flex-1 justify-start gap-density-2 px-1.5 py-density-1 text-left"
                         aria-label={t("apiCredentialProfiles:telemetry.title")}
                         aria-expanded={isTelemetryOpen}
                         aria-controls={telemetryContentId}
@@ -544,7 +545,7 @@ export function ApiCredentialProfileListItem({
                           aria-label={healthTitle}
                           role="img"
                         />
-                        <span className="text-secondary-foreground min-w-0 truncate text-xs font-medium">
+                        <span className="min-w-0 truncate text-xs font-medium text-secondary-foreground">
                           {t("apiCredentialProfiles:telemetry.title")}
                         </span>
                         {telemetry?.source ? (
@@ -558,7 +559,7 @@ export function ApiCredentialProfileListItem({
                         ) : null}
                         <ChevronDown
                           className={cn(
-                            "text-muted-foreground ml-auto h-3.5 w-3.5 shrink-0 transition-transform",
+                            "ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
                             isTelemetryOpen ? "rotate-180" : "rotate-0",
                           )}
                           aria-hidden="true"
@@ -569,7 +570,7 @@ export function ApiCredentialProfileListItem({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="dark:hover:text-foreground text-muted-foreground hover:text-secondary-foreground gap-density-1 py-density-1 text-2xs h-auto min-h-0 shrink-0 px-1.5"
+                      className="h-auto min-h-0 shrink-0 gap-density-1 px-1.5 py-density-1 text-2xs text-muted-foreground hover:text-secondary-foreground dark:hover:text-foreground"
                       onClick={handleRefreshTelemetry}
                       loading={isTelemetryRefreshing}
                       leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
@@ -584,14 +585,24 @@ export function ApiCredentialProfileListItem({
                     <ApiCredentialProfileTelemetryDetails
                       snapshot={telemetry}
                       missingTelemetryValue={missingTelemetryValue}
+                      usageNotice={
+                        isPmplanModelOnlyTelemetry(
+                          profile.baseUrl,
+                          profile.telemetryConfig?.mode,
+                        )
+                          ? t(
+                              "apiCredentialProfiles:telemetry.pmplanAccountUsageHint",
+                            )
+                          : undefined
+                      }
                     />
                   </CollapsibleContent>
                 </Collapsible>
               </div>
 
               {profile.notes?.trim() ? (
-                <div className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground py-density-2 border-l-2 px-3 text-xs">
-                  <div className="text-theme-600 dark:text-theme-300 mb-density-1 text-2xs font-medium tracking-wide">
+                <div className="border-l-2 border-primary-soft-border bg-primary-soft px-3 py-density-2 text-xs text-primary-soft-foreground">
+                  <div className="mb-density-1 text-2xs font-medium tracking-wide text-theme-600 dark:text-theme-300">
                     {t("apiCredentialProfiles:dialog.fields.notes")}
                   </div>
                   <div className="max-h-24 overflow-y-auto leading-relaxed break-words whitespace-pre-wrap">
@@ -601,8 +612,8 @@ export function ApiCredentialProfileListItem({
               ) : null}
             </div>
 
-            <div className="gap-x-density-4 gap-y-density-2 flex w-full min-w-0 flex-wrap items-center justify-between">
-              <div className="gap-density-1-5 sm:gap-density-2 flex min-w-0 flex-wrap items-center">
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-x-density-4 gap-y-density-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-density-1-5 sm:gap-density-2">
                 <AuditTimeBadge
                   Icon={CalendarPlus}
                   label={t("apiCredentialProfiles:list.createdAt")}

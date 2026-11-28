@@ -157,6 +157,7 @@ describe("account site onboarding registry", () => {
     expect(
       getContentSessionExtractors().map((extractor) => extractor.id),
     ).toEqual([
+      "pmplan",
       "krill",
       "daya",
       "pmapi",

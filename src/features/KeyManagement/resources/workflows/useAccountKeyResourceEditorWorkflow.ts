@@ -442,9 +442,23 @@ export function useAccountKeyResourceEditorWorkflow({
 
   const setEditorValues = useCallback(
     (editorId: number, values: EditableResourceProjection) => {
-      transitionEditor((current) =>
-        current?.editorId === editorId ? { ...current, values } : current,
-      )
+      transitionEditor((current) => {
+        if (current?.editorId !== editorId) return current
+        let feedback = current.feedback
+        if (
+          feedback?.code ===
+            ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed &&
+          feedback.fieldIssues?.length
+        ) {
+          const fieldIssues = feedback.fieldIssues.filter(
+            (issue) =>
+              JSON.stringify(current.values[issue.fieldId]) ===
+              JSON.stringify(values[issue.fieldId]),
+          )
+          feedback = fieldIssues.length ? { ...feedback, fieldIssues } : null
+        }
+        return { ...current, values, feedback }
+      })
     },
     [transitionEditor],
   )

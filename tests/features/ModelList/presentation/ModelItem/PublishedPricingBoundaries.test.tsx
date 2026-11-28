@@ -32,6 +32,38 @@ afterEach(() => {
   locale.language = "en"
 })
 
+it("shows structured channel minima with a concise badge and keeps the explanation in details", () => {
+  const pricing: Parameters<typeof ModelPublishedPricing>[0]["pricing"] = {
+    source: {
+      kind: "estimate",
+      notes: [{ kind: "channel-minimum", scope: "account" }],
+    },
+    schedule: [
+      {
+        id: "base",
+        conditions: [],
+        rates: {
+          input: { amount: 0, currency: "USD", unit: "token", per: 1000000 },
+          output: { amount: 3, currency: "USD", unit: "token", per: 1000000 },
+        },
+      },
+    ],
+  }
+  const props = { pricing, pricePrecision: "estimated" as const }
+  const { container, rerender } = render(<ModelPublishedPricing {...props} />)
+  expect(container).toHaveTextContent("$0/M")
+  expect(container).toHaveTextContent("$3.00/M")
+  expect(screen.getByText("minimumReferencePrice")).toHaveAttribute(
+    "title",
+    "pricingNotes.accountChannelMinimum",
+  )
+  expect(
+    screen.queryByText("pricingNotes.accountChannelMinimum"),
+  ).not.toBeInTheDocument()
+  rerender(<ModelPublishedPricing {...props} details />)
+  expect(screen.getByText("pricingNotes.accountChannelMinimum")).toBeVisible()
+})
+
 it.each([false, true])(
   "uses a distinct Chinese call unit without repeating the caption (details=%s)",
   (details) => {

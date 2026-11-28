@@ -51,7 +51,9 @@ export async function refreshApiCredentialProfileTelemetry(
   const modes = resolveTelemetryModes(profile, config)
   const attempts: ApiCredentialTelemetryAttempt[] = []
   const models =
-    modes.length > 0 ? await queryModels(profile, attempts) : undefined
+    config.mode !== API_CREDENTIAL_TELEMETRY_MODES.Disabled
+      ? await queryModels(profile, attempts)
+      : undefined
   let usageResult: AdapterSuccess | null = null
 
   for (const mode of modes) {

@@ -2,6 +2,7 @@ import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { CookieRequestSession } from "~/services/apiTransport/headerOverrides"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { hasCookieReadPermissionForUrl } from "~/utils/browser/cookieHelper"
 import { getCookiesForDomain } from "~/utils/browser/cookies"
@@ -13,13 +14,15 @@ type Snapshot =
   | { cookies: browser.cookies.Cookie[]; loginCookie?: string }
 /** Capture credentials once and resolve URL-scoped cookies for each request in that operation. */
 export function createCookieOperationSession({
-  origin,
+  origin: originPolicy,
   loginCookieName,
 }: {
-  origin: string
+  origin: string | ((request: ApiServiceRequest) => string)
   loginCookieName: string
 }) {
   const snapshots = new WeakMap<ApiServiceRequest, Snapshot>()
+  const resolveOrigin = (request: ApiServiceRequest) =>
+    typeof originPolicy === "string" ? originPolicy : originPolicy(request)
 
   /** Saved credentials never borrow ambient cookies; callers own rotation policy. */
   async function withSession<TRequest extends ApiServiceRequest, T>(
@@ -31,6 +34,7 @@ export function createCookieOperationSession({
     return runAbortableTask(
       async (signal) => {
         request = { ...request, abortSignal: signal }
+        const origin = resolveOrigin(request)
         if (
           new URL(request.baseUrl).origin !== origin ||
           request.auth.authType !== AuthTypeEnum.Cookie
@@ -108,6 +112,15 @@ export function createCookieOperationSession({
     request: ApiServiceRequest,
     url: URL,
   ): CookieRequestSession {
+    const origin = resolveOrigin(request)
+    if (url.origin !== origin) {
+      throw new ApiError(
+        "Cookie operation cannot cross deployment origins",
+        undefined,
+        url.pathname,
+        API_ERROR_CODES.FEATURE_UNSUPPORTED,
+      )
+    }
     const snapshot = snapshots.get(request)
     if (!snapshot) throw new Error("Cookie operation session was not prepared")
     let cookieHeader: string
@@ -169,5 +182,43 @@ export function createCookieOperationSession({
     return { origin, cookieHeader }
   }
 
-  return { withSession, getSession }
+  /** Select the browser's isolated Cookie transport, without console bearer credentials. */
+  async function prepareRequest<TRequest extends ApiServiceRequest>(
+    request: TRequest,
+    url: URL,
+  ) {
+    const cookieSession = getSession(request, url)
+    const firefox = import.meta.env.BROWSER === "firefox"
+    if (firefox && !(await hasCookieInterceptorPermissions()))
+      throw new ApiError(
+        t("messages:cookieTransport.permissionRequired"),
+        undefined,
+        url.pathname,
+        API_ERROR_CODES.COOKIE_PERMISSION_REQUIRED,
+      )
+    request.abortSignal?.throwIfAborted()
+    return {
+      request: {
+        ...request,
+        auth: {
+          ...request.auth,
+          accessToken: undefined,
+          ...(firefox ? { cookie: cookieSession.cookieHeader } : {}),
+        },
+        ...(firefox
+          ? {
+              cookieSession: undefined,
+              fetchContext: undefined,
+              forceTempWindow: false,
+            }
+          : { cookieSession }),
+      },
+      transport: {
+        currentTabTransport: "disabled" as const,
+        ...(firefox ? { tempWindowFallback: {} } : {}),
+      },
+    }
+  }
+
+  return { withSession, getSession, prepareRequest }
 }

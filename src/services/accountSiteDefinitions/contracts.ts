@@ -51,6 +51,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Dahl: "dahl",
   FoxCode: "foxcode",
   Xiaoen: "xiaoen",
+  Pmplan: "pmplan",
   Emrank: "emrank",
   Krill: "krill",
   Daya: "daya",

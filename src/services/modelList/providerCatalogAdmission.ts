@@ -24,6 +24,7 @@ import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import {
   isModelDisplayTranslationKey,
   MODEL_DISPLAY_FACT_TYPES,
+  MODEL_DISPLAY_PRICE_CONDITION_TYPES,
   MODEL_DISPLAY_PRICE_UNITS,
 } from "~/services/models/modelDisplayFacts"
 
@@ -103,11 +104,11 @@ const modelDisplayPriceSchema = z.strictObject({
 
 const modelDisplayPriceConditionSchema = z.discriminatedUnion("type", [
   z.strictObject({
-    type: z.literal("minimum-prompt-tokens"),
+    type: z.literal(MODEL_DISPLAY_PRICE_CONDITION_TYPES.MinimumPromptTokens),
     value: z.number().int().nonnegative(),
   }),
   z.strictObject({
-    type: z.literal("utc-window"),
+    type: z.literal(MODEL_DISPLAY_PRICE_CONDITION_TYPES.UtcWindow),
     start: utcClockSchema,
     end: utcClockSchema,
   }),

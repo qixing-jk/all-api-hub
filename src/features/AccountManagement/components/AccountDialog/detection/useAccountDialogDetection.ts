@@ -168,7 +168,7 @@ export function useAccountDialogDetection({
       currentCookie.current === cookieAuthSessionCookie &&
       shouldAutoImportCookieAuthForAccountDialogSite({
         policy,
-        authType,
+        authType: resultData.authType ?? authType,
         cookieAuthSessionCookie,
         url,
       })

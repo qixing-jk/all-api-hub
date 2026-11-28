@@ -136,6 +136,8 @@ import {
   OPENROUTER_WEB_ORIGIN,
   PMAPI_DISPLAY_NAME,
   PMAPI_HOSTNAMES,
+  PMPLAN_DISPLAY_NAME,
+  PMPLAN_HOSTNAMES,
   RELAYFOR_DISPLAY_NAME,
   RELAYFOR_HOSTNAMES,
   RELAYFOR_LOGIN_PATH,
@@ -252,6 +254,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.KRILL,
   SITE_TYPES.DAYA,
   SITE_TYPES.PMAPI,
+  SITE_TYPES.PMPLAN,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.RELAYFOR,
@@ -292,6 +295,51 @@ export const MANAGED_SITE_TYPE_ORDER = [
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 
 const ACCOUNT_SITE_DEFINITIONS = [
+  {
+    siteType: SITE_TYPES.PMPLAN,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Pmplan,
+    onboarding: {
+      displayName: PMPLAN_DISPLAY_NAME,
+      detection: { hostnames: PMPLAN_HOSTNAMES },
+      routes: {
+        loginPath: "/v1/oauth/login",
+        usagePath: "/#/usage",
+        adminCredentialsPath: "/#/keys",
+        pricingPath: "/#/models",
+        checkInPath: "/#/",
+        accessTokenPath: null,
+        redeemPath: null,
+        siteAnnouncementsPath: "/#/",
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: PMPLAN_HOSTNAMES,
+        inferFromHostname: true,
+      },
+    },
+  },
   {
     siteType: SITE_TYPES.XIAOEN,
     scopes: ACCOUNT_SCOPE,

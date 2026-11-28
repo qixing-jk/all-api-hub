@@ -56,8 +56,13 @@ interface ModelItemPricingProps {
   groupSelectionScope?: ModelListGroupSelectionScope
 }
 
+const PRICE_META_BADGE_KINDS = {
+  OptimalGroup: "optimal-group",
+  LowestPrice: "lowest-price",
+} as const
+
 interface PriceMetaBadgeViewModel {
-  kind: "optimal-group" | "lowest-price"
+  kind: (typeof PRICE_META_BADGE_KINDS)[keyof typeof PRICE_META_BADGE_KINDS]
   variant: "success" | "secondary"
 }
 
@@ -156,7 +161,10 @@ export function resolveUnavailablePriceReason(
  */
 function isAvailableCalculatedPrice(
   calculatedPrice: CalculatedPrice,
-): calculatedPrice is Exclude<CalculatedPrice, { kind: "unavailable" }> {
+): calculatedPrice is Exclude<
+  CalculatedPrice,
+  { kind: typeof CALCULATED_PRICE_KINDS.UNAVAILABLE }
+> {
   return calculatedPrice.kind !== CALCULATED_PRICE_KINDS.UNAVAILABLE
 }
 
@@ -172,7 +180,7 @@ function resolvePriceMetaBadge(params: {
 
   if (effectiveGroup && showsOptimalGroup) {
     return {
-      kind: "optimal-group",
+      kind: PRICE_META_BADGE_KINDS.OptimalGroup,
       variant: isLowestPrice ? "success" : "secondary",
     }
   }
@@ -182,7 +190,7 @@ function resolvePriceMetaBadge(params: {
   }
 
   return {
-    kind: "lowest-price",
+    kind: PRICE_META_BADGE_KINDS.LowestPrice,
     variant: "success",
   }
 }
@@ -243,13 +251,13 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   const isAllAccountsGroupScope =
     groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
   const priceMetaLabel =
-    priceMetaBadge?.kind === "optimal-group"
+    priceMetaBadge?.kind === PRICE_META_BADGE_KINDS.OptimalGroup
       ? t("optimalGroup", { group: effectiveGroupLabel })
-      : priceMetaBadge?.kind === "lowest-price"
+      : priceMetaBadge?.kind === PRICE_META_BADGE_KINDS.LowestPrice
         ? t("lowestPrice")
         : undefined
   const priceMetaTitle =
-    priceMetaBadge?.kind === "optimal-group"
+    priceMetaBadge?.kind === PRICE_META_BADGE_KINDS.OptimalGroup
       ? isLowestPrice
         ? isAllAccountsGroupScope
           ? t("optimalGroupLowestPriceWithinAccountFilters", {
@@ -265,7 +273,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
           : t("optimalGroupWithinSelectedGroups", {
               group: effectiveGroupLabel,
             })
-      : priceMetaBadge?.kind === "lowest-price"
+      : priceMetaBadge?.kind === PRICE_META_BADGE_KINDS.LowestPrice
         ? isAllAccountsGroupScope
           ? t("lowestPriceWithinAccountFilters")
           : t("lowestPriceWithinBillingMode")
@@ -274,14 +282,17 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     <Badge
       variant={priceMetaBadge.variant}
       size="sm"
-      className="text-3xs shrink-0 sm:text-xs"
+      className="shrink-0 text-3xs sm:text-xs"
       title={priceMetaTitle}
     >
       {priceMetaLabel}
     </Badge>
   ) : null
   const priceEvidence = (
-    <ModelPriceEvidenceBadge kind={model.price_metadata?.precision} />
+    <ModelPriceEvidenceBadge
+      kind={model.price_metadata?.precision}
+      source={model.pricingPlan?.source}
+    />
   )
   const hasPriceEvidence =
     model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
@@ -359,7 +370,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
         <span
           className={`block max-w-full text-xs leading-snug font-medium sm:text-sm ${
             isAvailableForUser
-              ? "dark:text-secondary-foreground text-muted-foreground"
+              ? "text-muted-foreground dark:text-secondary-foreground"
               : "text-muted-foreground"
           }`}
         >
@@ -376,7 +387,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   return (
     <div className="mt-density-2">
       {calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN ? (
-        <div className="gap-y-density-3 sm:gap-y-density-4 md:gap-y-density-6 flex flex-wrap items-center gap-x-3 sm:gap-x-4 md:gap-x-6">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-density-3 sm:gap-x-4 sm:gap-y-density-4 md:gap-x-6 md:gap-y-density-6">
           <PriceView
             prices={calculatedPrice.usdPerMillionTokens}
             exchangeRate={exchangeRate}
@@ -387,12 +398,12 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
           />
 
           {(priceMeta || hasPriceEvidence || hasContextTiers) && (
-            <div className="gap-y-density-1-5 sm:gap-y-density-2 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-density-1-5 sm:gap-x-2 sm:gap-y-density-2">
               {hasContextTiers && (
                 <Badge
                   variant="secondary"
                   size="sm"
-                  className="text-3xs shrink-0 sm:text-xs"
+                  className="shrink-0 text-3xs sm:text-xs"
                 >
                   {model.pricingPlan?.rules.some((rule) =>
                     rule.conditions.some(
@@ -411,8 +422,8 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
         </div>
       ) : (
         calculatedPrice.kind === CALCULATED_PRICE_KINDS.PER_CALL && (
-          <div className="gap-y-density-1-5 sm:gap-y-density-2 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2">
-            <span className="dark:text-secondary-foreground text-muted-foreground text-xs whitespace-nowrap sm:text-sm">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-density-1-5 sm:gap-x-2 sm:gap-y-density-2">
+            <span className="text-xs whitespace-nowrap text-muted-foreground sm:text-sm dark:text-secondary-foreground">
               {t("perCall")}
             </span>
             <ModelItemPerCallPricingView

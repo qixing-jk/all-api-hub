@@ -5186,7 +5186,7 @@ describe("accountStorage core behaviors", () => {
 
       expect(mockRefreshAccountData).toHaveBeenCalledOnce()
       expect(rejectedCommit).toBe(true)
-      expect(result).toMatchObject({ refreshed: false, reEnabled: false })
+      expect(result).toBeNull()
       expect(
         (await accountStorage.getAccountById("disabled-persist-fail"))
           ?.disabled,
@@ -6542,7 +6542,8 @@ describe("accountStorage core behaviors", () => {
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
           protectionBypassExecution: execution,
         })
-        expect(result?.refreshed).toBe(true)
+        if (success) expect(result?.refreshed).toBe(true)
+        else expect(result).toBeNull()
         if (probes) {
           expect(discover).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -6612,11 +6613,7 @@ describe("accountStorage core behaviors", () => {
       "unsupported-refresh",
     )
 
-    expect(result).toEqual(
-      expect.objectContaining({
-        refreshed: true,
-      }),
-    )
+    expect(result).toBeNull()
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).not.toHaveBeenCalled()
     expect(updatedAccount?.health).toEqual({

@@ -185,6 +185,7 @@
     "compactionCharge": "Nén từ xa",
     "consoleSettings": "Cài đặt chính thức",
     "contextLimit": "Giới hạn ngữ cảnh",
+    "currentValue": "{{value}} · Hiện tại",
     "defaultDimensions": "Số chiều mặc định",
     "inputModalities": "Phương thức đầu vào",
     "maximumOutputTokens": "Số token đầu ra tối đa",
@@ -306,6 +307,7 @@
     "subscriptionMultiplier": "Hệ số gói",
     "subscriptionPlan": "Gói đăng ký",
     "supportedDimensions": "Số chiều hỗ trợ",
+    "supportedPlans": "Gói khả dụng",
     "supportsImages": "Hỗ trợ hình ảnh",
     "tokenCount_other": "{{formattedCount}} token",
     "trainingChannels": "Có kênh huấn luyện",
@@ -379,6 +381,7 @@
     "modelNamesCopied": "Đã sao chép tên các mô hình",
     "siteUrlCopied": "Đã sao chép URL trang"
   },
+  "minimumReferencePrice": "Giá kênh thấp nhất",
   "modelCapabilityFilter": {
     "coverageHint_one": "{{count}} mô hình trong danh sách này chưa có mô tả năng lực, nên bộ lọc năng lực sẽ tạm bỏ qua mô hình này.",
     "coverageHint_other": "{{count}} mô hình trong danh sách này chưa có mô tả năng lực, nên bộ lọc năng lực sẽ tạm bỏ qua chúng.",
@@ -485,9 +488,11 @@
   "pricingDescription": "Giá được lấy từ trang web. Các đơn vị tính phí khác nhau như triệu token, ảnh, giây và yêu cầu được so sánh riêng. Hãy xem đơn vị cạnh mỗi báo giá; phí thực tế do trang web quyết định.",
   "pricingNote": "Ghi chú định giá mô hình",
   "pricingNotes": {
+    "accountChannelMinimum": "Giá đầu vào và đầu ra thấp nhất được tính riêng trên các kênh khả dụng cho gói của bạn và có thể thuộc các kênh khác nhau. Chi phí thực tế phụ thuộc vào kênh được chọn.",
     "allChannels": "Tất cả kênh",
     "ambiguousCharges": "Nhiều khoản phí dùng chung một thước đo nhưng chưa thể tách lượng sử dụng hoặc giai đoạn tính phí. Các mức giá khác đã biết được giữ lại.",
     "ambiguousVariantCharges": "Nguồn công bố cả phí theo đơn vị và theo biến thể nhưng chưa xác định các khoản này được cộng thêm hay thay thế nhau.",
+    "catalogChannelMinimum": "Giá đầu vào và đầu ra thấp nhất được tính riêng trên tất cả các kênh, kể cả kênh không khả dụng cho gói của bạn. Chỉ để tham khảo.",
     "dedicatedPrices": "Giá riêng đã bao gồm hệ số",
     "defaultRoute": "Tuyến mặc định",
     "endpointSourceConflict": "Các endpoint chính thức công bố quy tắc tính phí không nhất quán cho mô hình này; chưa thể xác định giá áp dụng.",

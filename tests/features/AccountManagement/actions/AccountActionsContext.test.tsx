@@ -791,6 +791,24 @@ describe("AccountActionsContext", () => {
     expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalled()
   })
 
+  it("reloads persisted failed health before reporting a failed refresh", async () => {
+    const { getContext } = await renderContext()
+    mockRefreshAccount.mockResolvedValueOnce(null)
+    await act(async () => {
+      await getContext().handleRefreshAccount(
+        createAccount({ id: "unauthorized", name: "PM-Plan" }),
+      )
+    })
+    await expect(atIndex(mockToast.promise.mock.calls, 0)[0]).rejects.toThrow(
+      "messages:toast.error.refreshAccount",
+    )
+    expect(mockLoadAccountData).toHaveBeenCalledOnce()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.anything(),
+    )
+  })
+
   it("tracks failed single refresh outcomes when storage returns false", async () => {
     const { getContext } = await renderContext()
 

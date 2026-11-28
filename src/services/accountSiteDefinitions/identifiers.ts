@@ -50,6 +50,7 @@ export const SITE_TYPES = {
   KIMI_GLOBAL: "kimi-global",
   DAYA: "daya",
   PMAPI: "pmapi",
+  PMPLAN: "pmplan",
   AIMLAPI: "aimlapi",
   GRSAI: "grsai",
   VERCEL_AI_GATEWAY: "vercel-ai-gateway",
@@ -386,3 +387,6 @@ export const NANOGPT_WEB_ORIGIN = "https://nano-gpt.com"
 export const NANOGPT_API_ORIGIN = "https://api.nano-gpt.com"
 /** OpenAI-compatible export base URL recommended by the official API host guide. */
 export const NANOGPT_INFERENCE_BASE_URL = `${NANOGPT_API_ORIGIN}/api/v1`
+export const PMPLAN_HOSTNAMES = ["plan.pmcat.top"] as const
+export const PMPLAN_DISPLAY_NAME = "PM-Plan"
+export const PMPLAN_WEB_ORIGIN = `https://${PMPLAN_HOSTNAMES[0]}`

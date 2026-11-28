@@ -38,6 +38,8 @@ it.each(
       <I18nextProvider i18n={i18n}>
         <PricingSourceNotes
           notes={[
+            { kind: kinds.CHANNEL_MINIMUM, scope: "account" },
+            { kind: kinds.CHANNEL_MINIMUM, scope: "catalog" },
             { kind: kinds.AMBIGUOUS_CHARGES },
             { kind: kinds.RULES_UNAVAILABLE },
             { kind: kinds.AMBIGUOUS_VARIANT_CHARGES },
@@ -86,6 +88,8 @@ it.each(
     ).toBeVisible()
     expect(document.body).not.toHaveTextContent("{{")
     for (const key of [
+      "accountChannelMinimum",
+      "catalogChannelMinimum",
       "ambiguousVariantCharges",
       "thresholdSourceConflict",
       "thresholdBasisUnverified",

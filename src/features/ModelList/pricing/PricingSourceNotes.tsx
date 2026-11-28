@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next"
 
-import { PRICING_SOURCE_NOTE_KINDS as kinds } from "~/services/modelPricing/pricingConstants"
+import {
+  PRICING_SOURCE_NOTE_KINDS as kinds,
+  PRICING_SOURCE_KINDS,
+} from "~/services/modelPricing/pricingConstants"
 import type { PricingSourceNote } from "~/services/modelPricing/pricingSourceNotes"
 
 /** Local explanations are translated here, independently of upstream descriptions. */
@@ -14,6 +17,10 @@ export function PricingSourceNotes({
     note: Exclude<PricingSourceNote, { kind: typeof kinds.ROUTING_CONTEXT }>,
   ) => {
     switch (note.kind) {
+      case kinds.CHANNEL_MINIMUM:
+        return note.scope === PRICING_SOURCE_KINDS.ACCOUNT
+          ? t("pricingNotes.accountChannelMinimum")
+          : t("pricingNotes.catalogChannelMinimum")
       case kinds.RULES_UNAVAILABLE:
         return t("scenario.websiteRulesUnavailable")
       case kinds.AMBIGUOUS_VARIANT_CHARGES:
@@ -44,7 +51,7 @@ export function PricingSourceNotes({
     <>
       {notes.map((note, index) =>
         note.kind === kinds.ROUTING_CONTEXT ? (
-          <div key={index} className="text-muted-foreground space-y-density-1">
+          <div key={index} className="space-y-density-1 text-muted-foreground">
             <p>
               {t("pricingNotes.routingContext", {
                 route: note.routeName ?? t("pricingNotes.defaultRoute"),

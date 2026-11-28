@@ -1,16 +1,15 @@
 import { XIAOEN_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { createCookieOperationSession } from "~/services/apiTransport/cookieOperationSession"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { isSafeHttpMethod } from "~/services/apiTransport/httpMethods"
 import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { isRecord } from "~/utils/core/object"
 
 import { XIAOEN_ENDPOINTS } from "./constants"
 
-const XIAOEN_CONSOLE_ORIGIN = XIAOEN_WEB_ORIGIN
 const session = createCookieOperationSession({
-  origin: XIAOEN_CONSOLE_ORIGIN,
+  origin: XIAOEN_WEB_ORIGIN,
   loginCookieName: "auth_token",
 })
 const operationReads = new WeakMap<
@@ -53,47 +52,23 @@ export async function fetchXiaoenRaw(
   options: RequestInit = {},
 ): Promise<unknown> {
   return withXiaoenSession(request, async (request) => {
-    const cookieSession = session.getSession(
+    const prepared = await session.prepareRequest(
       request,
-      new URL(endpoint, XIAOEN_CONSOLE_ORIGIN),
+      new URL(endpoint, XIAOEN_WEB_ORIGIN),
     )
-    const firefox = import.meta.env.BROWSER === "firefox"
-    if (firefox && !(await hasCookieInterceptorPermissions()))
-      throw new ApiError(
-        "Xiaoen requires Cookie interceptor permissions",
-        undefined,
-        endpoint,
-        API_ERROR_CODES.COOKIE_PERMISSION_REQUIRED,
-      )
     const method = (options.method ?? "GET").toUpperCase()
-    const body = await fetchApi<unknown>(
+    return fetchApi<unknown>(
       {
-        ...request,
-        auth: {
-          ...request.auth,
-          accessToken: undefined,
-          ...(firefox ? { cookie: cookieSession.cookieHeader } : {}),
-        },
-        ...(firefox
-          ? {
-              cookieSession: undefined,
-              fetchContext: undefined,
-              forceTempWindow: false,
-            }
-          : { cookieSession }),
-        observer: ["GET", "HEAD", "OPTIONS"].includes(method)
-          ? undefined
-          : request.observer,
+        ...prepared.request,
+        observer: isSafeHttpMethod(method) ? undefined : request.observer,
       },
       {
         endpoint,
         options: { cache: "no-store", ...options },
-        currentTabTransport: "disabled",
-        ...(firefox ? { tempWindowFallback: {} } : {}),
+        ...prepared.transport,
       },
       false,
     )
-    return body
   })
 }
 

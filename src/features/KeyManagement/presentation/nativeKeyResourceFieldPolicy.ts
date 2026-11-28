@@ -30,6 +30,7 @@ import { buildNewApiFamilyFields } from "./newApiFamilyKeyResourceFieldPolicy"
 import { buildNovitaFields } from "./novitaKeyResourceFieldPolicy"
 import { getOpenRouterKeyResourceEditorPresentation } from "./openRouterKeyResourceFieldPolicy"
 import { buildPmapiFields } from "./pmapiKeyResourceFieldPolicy"
+import { buildPmplanKeyFields } from "./pmplanKeyResourceFieldPolicy"
 import { buildRelayForFields } from "./relayForKeyResourceFieldPolicy"
 import { buildRequestyFields } from "./requestyKeyResourceFieldPolicy"
 import { buildRightCodeFields } from "./rightCodeKeyResourceFieldPolicy"
@@ -70,6 +71,7 @@ const resolveSiteFields = (
       buildVercelAiGatewayFields(descriptors),
     [editorKinds.Krill]: () => buildKrillFields(mode, descriptors),
     [editorKinds.Daya]: () => buildDayaFields(mode),
+    [editorKinds.Pmplan]: () => buildPmplanKeyFields(mode),
     [editorKinds.Pmapi]: buildPmapiFields,
     [editorKinds.Cubence]: () => buildCubenceFields(mode),
     [editorKinds.AiHubMix]: buildAiHubMixFields,

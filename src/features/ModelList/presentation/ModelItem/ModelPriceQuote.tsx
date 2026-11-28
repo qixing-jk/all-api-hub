@@ -23,6 +23,7 @@ import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,
   PRICING_ISSUE_CODES,
+  PRICING_METERS,
   PRICING_RANGE_AXES,
   PRICING_SOURCE_KINDS,
   QUOTE_STATUSES,
@@ -71,9 +72,9 @@ export function ModelPriceQuote({
         ? t("scenario.output")
         : conditionTarget === "at"
           ? t("scenario.pricingTime")
-          : conditionTarget === "cacheRead"
+          : conditionTarget === PRICING_METERS.CACHE_READ
             ? t("priceComparison.weights.cacheRead")
-            : conditionTarget === "cacheWrite"
+            : conditionTarget === PRICING_METERS.CACHE_WRITE
               ? t("priceComparison.weights.cacheWrite")
               : conditionTarget
                 ? pricingScenarioOptions(t).labels[conditionTarget]
@@ -313,6 +314,7 @@ export function ModelPriceQuote({
               <Badge variant="warning">{t("scenario.partial")}</Badge>
             )}
           <ModelPriceEvidenceBadge
+            source={quote.source}
             kind={
               quote.source.kind === PRICING_SOURCE_KINDS.ESTIMATE
                 ? MODEL_PRICE_PRECISION_KINDS.ESTIMATED

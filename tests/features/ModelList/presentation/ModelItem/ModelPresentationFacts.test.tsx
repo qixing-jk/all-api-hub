@@ -7,8 +7,10 @@ import {
 import {
   MODEL_DISPLAY_FACT_LABELS,
   MODEL_DISPLAY_FACT_TYPES,
+  MODEL_DISPLAY_PRICE_CONDITION_TYPES,
   MODEL_DISPLAY_PRICE_UNITS,
   MODEL_DISPLAY_SECTION_LABELS,
+  MODEL_PRESENTATION_SUMMARY_LAYOUTS,
   type ModelDisplayTranslationKey,
   type ModelPresentation,
 } from "~/services/models/modelDisplayFacts"
@@ -78,6 +80,7 @@ beforeAll(() => {
     "modelList",
     {
       displayFacts: {
+        currentValue: "{{value}} · Current",
         contextLimit: "Context limit",
         maximumOutputTokens: "Maximum output tokens",
         outputModalities: "Output modalities",
@@ -112,6 +115,46 @@ afterAll(() => {
 })
 
 describe("generic model presentation facts", () => {
+  it("preserves open-plan order and highlights only a current value present in the list", () => {
+    const presentation: ModelPresentation = {
+      summaryLayout: MODEL_PRESENTATION_SUMMARY_LAYOUTS.Inline,
+      summaryFacts: [
+        {
+          type: MODEL_DISPLAY_FACT_TYPES.StringList,
+          label: { fallback: "Available plans" },
+          values: ["Lite", "Essential", "custom-tier"],
+          currentValue: "Essential",
+        },
+      ],
+    }
+    const { rerender } = render(
+      <ModelPresentationSummary presentation={presentation} />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(screen.getByText("Essential · Current")).toBeVisible()
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual(["Lite", "Essential · Current", "custom-tier"])
+    rerender(
+      <ModelPresentationSummary
+        presentation={{
+          ...presentation,
+          summaryFacts: [
+            {
+              type: "string-list",
+              label: { fallback: "Available plans" },
+              values: ["Standard", "Pro"],
+              currentValue: "Essential",
+            },
+          ],
+        }}
+      />,
+    )
+    expect(screen.queryByText(/Current/)).not.toBeInTheDocument()
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual(["Standard", "Pro"])
+  })
   it("translates a structured text value using the owned display-facts namespace", () => {
     render(
       <ModelPresentationSummary
@@ -312,7 +355,7 @@ describe("generic model presentation facts", () => {
                     {
                       conditions: [
                         {
-                          type: "minimum-prompt-tokens",
+                          type: MODEL_DISPLAY_PRICE_CONDITION_TYPES.MinimumPromptTokens,
                           value: 200_000,
                         },
                       ],
@@ -327,7 +370,11 @@ describe("generic model presentation facts", () => {
                     },
                     {
                       conditions: [
-                        { type: "utc-window", start: 1630, end: 30 },
+                        {
+                          type: MODEL_DISPLAY_PRICE_CONDITION_TYPES.UtcWindow,
+                          start: 1630,
+                          end: 30,
+                        },
                       ],
                       prices: [
                         {

@@ -1,3 +1,4 @@
+import { PMPLAN_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { parseDecimal } from "~/services/amounts/decimal"
 import type { TelemetryPatch } from "~/services/apiCredentialProfiles/telemetry/contracts"
 import { TELEMETRY_PROVIDER_PROTOCOL } from "~/services/apiCredentialProfiles/telemetry/contracts"
@@ -54,6 +55,7 @@ export function resolveTelemetryModes(
 ): ApiCredentialTelemetryCapabilityMode[] {
   if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Disabled) return []
   if (config.mode === API_CREDENTIAL_TELEMETRY_MODES.Auto) {
+    if (isPmplanModelOnlyTelemetry(profile.baseUrl, config.mode)) return []
     try {
       const hostname = new URL(profile.baseUrl).hostname
       if (hostname === AUTO_TELEMETRY_HOSTS.deepSeek) {
@@ -102,6 +104,19 @@ export function resolveTelemetryModes(
     return [...AUTO_TELEMETRY_FALLBACK_MODES]
   }
   return [config.mode]
+}
+
+/** PM-Plan's account usage requires console Cookies, independently of API keys. */
+export function isPmplanModelOnlyTelemetry(
+  baseUrl: string,
+  mode: ApiCredentialTelemetryCapabilityMode = API_CREDENTIAL_TELEMETRY_MODES.Auto,
+): boolean {
+  if (mode !== API_CREDENTIAL_TELEMETRY_MODES.Auto) return false
+  try {
+    return new URL(baseUrl).origin === PMPLAN_WEB_ORIGIN
+  } catch {
+    return false
+  }
 }
 
 /** Checks whether an adapter returned user-facing usage data. */

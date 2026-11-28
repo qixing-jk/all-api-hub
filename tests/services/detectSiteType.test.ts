@@ -23,6 +23,9 @@ vi.mock("~/utils/browser/tempWindowFetch", async (importOriginal) => {
 describe("detectSiteType", () => {
   const addDefaultUnsupportedProtectedProbeHandlers = () => {
     server.use(
+      http.get(/\/api\/health$/, () =>
+        HttpResponse.json({ message: "not found" }, { status: 404 }),
+      ),
       http.get(/\/api\/user\/info$/, () => {
         return HttpResponse.json({ message: "not found" }, { status: 404 })
       }),
