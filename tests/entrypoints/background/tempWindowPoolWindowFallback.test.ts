@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest"
 
 import {
   OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
@@ -21,6 +29,8 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+import { createTempPageTabFixture } from "./tempPageTabFixture"
 
 vi.mock("~/services/browsingContext/tempPage/checkinFeedbackScan", () => ({
   executeTempCheckinFeedbackScan: vi.fn(),
@@ -109,10 +119,10 @@ describe("tempWindowPool window fallback", () => {
   let isProtectionBypassFirefoxEnvMock: ReturnType<typeof vi.fn>
   let getSiteTypeMock: ReturnType<typeof vi.fn>
   let getPreferencesMock: ReturnType<typeof vi.fn>
-  let sendMessageMock: ReturnType<typeof vi.fn>
-  let tabsGetMock: ReturnType<typeof vi.fn>
+  let sendMessageMock: Mock
+  let tabsGetMock: Mock
   let tabsQueryMock: ReturnType<typeof vi.fn>
-  let tabsUpdateMock: ReturnType<typeof vi.fn>
+  let tabsUpdateMock: Mock
   let isMobileRuntime: boolean
   let isTabletRuntime: boolean
   let tempContextMode: "auto" | "window" | "composite" | "tab"
@@ -233,10 +243,12 @@ describe("tempWindowPool window fallback", () => {
         },
       },
       tabs: {
-        get: tabsGetMock,
+        ...createTempPageTabFixture(
+          tabsGetMock,
+          tabsUpdateMock,
+          sendMessageMock,
+        ),
         query: tabsQueryMock,
-        update: tabsUpdateMock,
-        sendMessage: sendMessageMock,
       },
       windows: {
         get: vi.fn(),
@@ -4350,6 +4362,64 @@ describe("tempWindowPool window fallback", () => {
     await secondRequest
 
     expect(createTabMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("rechecks an interactive lease against its current page before navigating elsewhere", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValue({ id: 619 })
+    const pageUrl = "https://example.com/checkin"
+    tabsGetMock.mockResolvedValue({ url: pageUrl, status: "loading" })
+    let guardNeedsRecheck = false
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckAliyunGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentCheckCloudflareGuard: {
+            const passed = !guardNeedsRecheck
+            guardNeedsRecheck = false
+            return { success: true, passed }
+          }
+          case RuntimeActionIds.ContentGetDocumentState:
+            return { url: pageUrl, readyState: "interactive", timeOrigin: 1 }
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { tempWindowBackgroundRuntime } =
+      await import("~/services/browsingContext/tempPage/runtime")
+    const options = { allowInteractive: true }
+    const first = tempWindowBackgroundRuntime.acquire(
+      pageUrl,
+      "first-interactive-lease",
+      false,
+      options,
+    )
+    await vi.advanceTimersByTimeAsync(21_000)
+    const initial = await first
+    await initial.release()
+
+    guardNeedsRecheck = true
+    const second = tempWindowBackgroundRuntime.acquire(
+      "https://example.com/other",
+      "second-interactive-lease",
+      false,
+      options,
+    )
+    await vi.advanceTimersByTimeAsync(21_000)
+    const reused = await second
+    try {
+      expect(reused.tabId).toBe(initial.tabId)
+      expect(createTabMock).toHaveBeenCalledOnce()
+      expect(removeTabMock).not.toHaveBeenCalled()
+    } finally {
+      await reused.release({ forceClose: true })
+    }
   })
 
   it("re-authorizes queued same-origin work before reusing a pooled context", async () => {

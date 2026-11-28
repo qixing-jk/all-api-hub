@@ -208,6 +208,15 @@ export function setupContentMessageHandlers() {
       return handleGetUserFromLocalStorage(request, sendResponse)
     }
 
+    if (request.action === RuntimeActionIds.ContentGetDocumentState) {
+      sendResponse({
+        url: window.location.href,
+        readyState: document.readyState,
+        timeOrigin: performance.timeOrigin,
+      })
+      return false
+    }
+
     if (request.action === RuntimeActionIds.ContentCheckCapGuard) {
       return handleCheckCapGuard(request, sendResponse)
     }

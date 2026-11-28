@@ -59,7 +59,7 @@ export async function executeTempCheckinPageDiscovery(
         pageUrl,
         params.requestId,
         suppressMinimize,
-        { signal: controller.signal },
+        { signal: controller.signal, allowInteractive: true },
         authorize,
       )
       const send = (action: string, details: Record<string, unknown> = {}) =>

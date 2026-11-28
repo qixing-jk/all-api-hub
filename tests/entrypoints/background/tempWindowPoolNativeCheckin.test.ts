@@ -10,6 +10,8 @@ import {
 } from "~/types/turnstile"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
+import { createTempPageTabFixture } from "./tempPageTabFixture"
+
 const originalBrowser = (globalThis as any).browser
 
 type RuntimeMessage = {
@@ -49,7 +51,7 @@ describe("tempWindowPool native check-in page action", () => {
       ) => Promise<Record<string, unknown> | undefined>
     >
   >
-  let tabsGetMock: ReturnType<typeof vi.fn>
+  let tabFixture: ReturnType<typeof createTempPageTabFixture<RuntimeMessage>>
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -60,7 +62,6 @@ describe("tempWindowPool native check-in page action", () => {
     hasWindowsApiMock = vi.fn(() => true)
     onTabRemovedMock = vi.fn(() => () => {})
     onWindowRemovedMock = vi.fn(() => () => {})
-    tabsGetMock = vi.fn().mockResolvedValue({ status: "complete" })
     sendMessageMock = vi.fn(async (_tabId: number, message: RuntimeMessage) => {
       switch (message.action) {
         case RuntimeActionIds.ContentShowShieldBypassUi:
@@ -97,16 +98,19 @@ describe("tempWindowPool native check-in page action", () => {
           throw new Error(`Unexpected action: ${message.action}`)
       }
     })
+    tabFixture = createTempPageTabFixture(
+      vi.fn().mockResolvedValue({ status: "complete" }),
+      vi.fn().mockResolvedValue(undefined),
+      sendMessageMock,
+    )
     ;(globalThis as any).browser = {
       storage: originalBrowser.storage,
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
       },
       tabs: {
-        get: tabsGetMock,
+        ...tabFixture,
         query: vi.fn().mockResolvedValue([]),
-        update: vi.fn().mockResolvedValue(undefined),
-        sendMessage: sendMessageMock,
       },
       windows: {
         get: vi.fn(),
@@ -818,7 +822,7 @@ describe("tempWindowPool native check-in page action", () => {
     await settleTempContextReadiness()
     await firstRequest
 
-    tabsGetMock.mockResolvedValue({ status: "complete", url: "about:blank" })
+    tabFixture.setDocument(701, "about:blank")
 
     const secondResponse = vi.fn()
     const secondRequest = handleTempWindowCheckinPageAction(

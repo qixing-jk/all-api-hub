@@ -231,6 +231,8 @@ export interface AccountSiteDefinition {
   accountLogin?: AccountSiteLoginConfig
   managedResource?: ManagedResourceProductPolicy
   onboarding?: AccountSiteDefinitionOnboardingMetadata
+  /** Verified check-in page defaults for individual console origins. */
+  checkInPathsByOrigin?: Readonly<Partial<Record<string, AccountSitePagePath>>>
   productProfile?: AccountSiteProductProfileOverride
 }
 

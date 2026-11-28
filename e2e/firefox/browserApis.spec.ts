@@ -1,5 +1,9 @@
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
+
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
@@ -10,6 +14,66 @@ import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialPro
 import { createStoredApiCredentialProfile } from "~~/e2e/utils/commonUserFlows"
 
 import { expect, test } from "./extensionTest"
+
+test("Firefox checks an interactive document while a subresource is pending", async ({
+  firefoxExtension,
+}) => {
+  const server = createServer((request, response) => {
+    if (request.url === "/pending.js") {
+      response.writeHead(200, { "content-type": "application/javascript" })
+      response.flushHeaders()
+      return
+    }
+    response.end(
+      '<title>Temporary page</title><script async src="/pending.js"></script>',
+    )
+  })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/`
+  try {
+    await firefoxExtension.driver.executeScript("Services.io.offline = false")
+    const options = firefoxExtension.page("options.html")
+    await options.openInTab("#overview")
+    const tabId = await options.evaluateAsync<number>(
+      `browser.tabs.create({url: ${JSON.stringify(url)}, active: false}).then(tab => tab.id)`,
+    )
+    const actions = [
+      RuntimeActionIds.ContentGetDocumentState,
+      RuntimeActionIds.ContentCheckCapGuard,
+      RuntimeActionIds.ContentCheckCloudflareGuard,
+      RuntimeActionIds.ContentCheckAliyunGuard,
+    ]
+    try {
+      await expect
+        .poll(
+          () =>
+            options.evaluateAsync(`(async () => {
+        const id = ${tabId}
+        const { status } = await browser.tabs.get(id)
+        const replies = await Promise.all(${JSON.stringify(actions)}.map(action =>
+          browser.tabs.sendMessage(id, { action }).catch(() => null)
+        ))
+        return { status, replies }
+      })()`),
+          { timeout: 10_000 },
+        )
+        .toMatchObject({
+          status: "loading",
+          replies: [
+            { url, readyState: "interactive" },
+            { success: true, passed: true },
+            { success: true, passed: true },
+            { success: true, passed: true },
+          ],
+        })
+    } finally {
+      await options.evaluateAsync(`browser.tabs.remove(${tabId})`)
+    }
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+})
 
 test("Firefox enables Turnstile notifications after granting permission", async ({
   firefoxExtension,

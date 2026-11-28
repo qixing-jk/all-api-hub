@@ -13,6 +13,8 @@ import { createTempContextTurnstileAssist } from "~/services/browsingContext/tem
 import { TURNSTILE_ASSIST_PRESENTATIONS } from "~/services/checkin/turnstile/assistPresentation"
 import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 
+import { createTempPageTabFixture } from "./tempPageTabFixture"
+
 const originalBrowser = (globalThis as any).browser
 
 const {
@@ -298,10 +300,12 @@ describe("tempWindowPool Turnstile assist turns", () => {
         ]),
       },
       tabs: {
-        get: tabsGetMock,
+        ...createTempPageTabFixture(
+          tabsGetMock,
+          tabsUpdateMock,
+          sendMessageMock,
+        ),
         query: tabsQueryMock,
-        update: tabsUpdateMock,
-        sendMessage: sendMessageMock,
       },
       windows: {
         get: vi.fn(),

@@ -23,6 +23,9 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 for (const mode of [
   "pow",
   "turnstile",
+  "turnstile-closed-root",
+  "pending-subresource",
+  "load-handler",
   "shared-mismatch",
   "swapped-identities",
   "legacy-refresh-401",
@@ -35,15 +38,28 @@ for (const mode of [
   }, testInfo) => {
     const identityMismatch =
       mode === "shared-mismatch" || mode === "swapped-identities"
+    const turnstile = mode === "turnstile" || mode === "turnstile-closed-root"
     const confirmedIdentities = new Set<string>()
     const logins: string[] = [],
       claims: string[] = [],
       challenges: string[] = []
     let directPosts = 0
+    let pendingResourceRequests = 0
     const checked = new Set<string>()
     const server = createServer(async (req, res) => {
       const url = new URL(req.url || "/", "http://fixture")
       const path = url.pathname
+      if (path === "/pending-analytics.js") {
+        pendingResourceRequests++
+        res.writeHead(200, { "content-type": "application/javascript" })
+        res.flushHeaders()
+        return
+      }
+      if (path === "/delayed-script.js") {
+        await new Promise((resolve) => setTimeout(resolve, 4_000))
+        res.writeHead(200, { "content-type": "application/javascript" })
+        return res.end("")
+      }
       const cookieId = /session=(\d+)/.exec(req.headers.cookie || "")?.[1]
       const id =
         /^Bearer api-(\d+)$/.exec(req.headers.authorization || "")?.[1] ||
@@ -110,24 +126,22 @@ for (const mode of [
         }
         const challenge = `native-${id}`
         const nonce = Number(url.searchParams.get("pow_nonce"))
-        const valid =
-          mode === "turnstile"
-            ? url.searchParams.get("turnstile") === "check-in-widget-token"
-            : url.searchParams.get("pow_challenge") === challenge &&
-              url.searchParams.has("pow_nonce") &&
-              Number.isInteger(nonce) &&
-              createHash("sha256")
-                .update(`${challenge}:${nonce}`)
-                .digest("hex")
-                .startsWith("00")
+        const valid = turnstile
+          ? url.searchParams.get("turnstile") === "check-in-widget-token"
+          : url.searchParams.get("pow_challenge") === challenge &&
+            url.searchParams.has("pow_nonce") &&
+            Number.isInteger(nonce) &&
+            createHash("sha256")
+              .update(`${challenge}:${nonce}`)
+              .digest("hex")
+              .startsWith("00")
         if (!valid || !cookieId) {
           directPosts++
           return json({
             success: false,
-            message:
-              mode === "turnstile"
-                ? "Turnstile token invalid"
-                : "Proof of work required",
+            message: turnstile
+              ? "Turnstile token invalid"
+              : "Proof of work required",
           })
         }
         claims.push(cookieId)
@@ -154,17 +168,24 @@ for (const mode of [
       }
       if (path === "/console/personal") {
         res.writeHead(200, { "content-type": "text/html" })
-        return res.end(`<!doctype html><title>Native check-in fixture</title><main><h1>Daily check-in</h1><div class="cf-turnstile"><input name="cf-turnstile-response" value="unrelated-login-token"></div><button id="check-in">Check in</button><div id="challenge" hidden><div class="cf-turnstile"><input name="cf-turnstile-response" value=""></div><button id="complete">Complete check-in verification</button></div></main><script>
+        const widget =
+          mode === "turnstile-closed-root"
+            ? '<div id="widget-host"></div><input type="hidden" name="cf-turnstile-response">'
+            : '<div class="cf-turnstile"><input name="cf-turnstile-response" value=""></div>'
+        return res.end(`<!doctype html><title>Native check-in fixture</title><main><h1>Daily check-in</h1><div class="cf-turnstile"><input name="cf-turnstile-response" value="unrelated-login-token"></div><button id="check-in">Check in</button><div id="challenge" role="dialog" hidden>${widget}<button id="complete">Complete check-in verification</button></div></main><script>
+          const host=document.querySelector('#widget-host');
+          if(host)host.attachShadow({mode:'closed'}).innerHTML='<iframe title="Synthetic verification" src="about:blank"></iframe>';
           const submit=async payload=>{await fetch('/api/user/checkin?'+new URLSearchParams(payload),{method:'POST'});document.querySelector('#challenge').hidden=true};
-          document.querySelector('#check-in').onclick=async()=>{
+          const bindCheckin=()=>document.querySelector('#check-in').onclick=async()=>{
             document.querySelector('#check-in').disabled=true;
-            if(${mode === "turnstile"}){document.querySelector('#challenge').hidden=false;return}
+            if(${turnstile}){document.querySelector('#challenge').hidden=false;return}
             const {data:{challenge_id,prefix}}=await (await fetch('/api/user/pow/challenge?action=checkin')).json();let nonce=0;
             for(;;nonce++){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(prefix+nonce));if(new Uint8Array(hash)[0]===0)break}
             await submit({pow_challenge:challenge_id,pow_nonce:nonce});
           };
+          if(${mode === "load-handler"})window.addEventListener('load',bindCheckin);else bindCheckin();
           document.querySelector('#complete').onclick=async()=>{const token='check-in-widget-token';document.querySelector('#challenge input').value=token;await submit({turnstile:token})};
-        </script>`)
+        </script>${mode === "pending-subresource" ? '<script async src="/pending-analytics.js"></script>' : mode === "load-handler" ? '<script async src="/delayed-script.js"></script>' : ""}`)
       }
       json({}, 404)
     })
@@ -281,7 +302,7 @@ for (const mode of [
       })
       await expect(runButton).toBeVisible()
       await runButton.click()
-      if (mode === "turnstile") {
+      if (turnstile) {
         // The reminder must retain and reveal the post-login check-in window.
         await expect(
           options.getByRole("button", {
@@ -354,7 +375,7 @@ for (const mode of [
       expect([...claims].sort()).toEqual(identityMismatch ? [] : ids)
       expect([...logins].sort()).toEqual(mode === "shared-mismatch" ? [] : ids)
       expect([...challenges].sort()).toEqual(
-        mode !== "turnstile" && !identityMismatch ? ids : [],
+        !turnstile && !identityMismatch ? ids : [],
       )
       // Readback carries the target account header and the actual native Cookie.
       // Keep each pair intact so two successful accounts cannot swap identities.
@@ -362,6 +383,8 @@ for (const mode of [
         identityMismatch ? [] : ids.map((id) => `${id}:${id}`),
       )
       expect(directPosts).toBe(ids.length)
+      if (mode === "pending-subresource")
+        expect(pendingResourceRequests).toBeGreaterThan(0)
       for (const id of ids) {
         const row = options.getByRole("row").filter({ hasText: `Target ${id}` })
         await expect(row).toBeVisible()

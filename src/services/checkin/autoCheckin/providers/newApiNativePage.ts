@@ -182,7 +182,7 @@ async function performNativeSessionCheckin(
   onDispatch: () => void,
   onPageResolved: (url: string) => void,
 ): Promise<CheckinResult> {
-  await session.navigate(checkInUrl)
+  await session.navigate(checkInUrl, { reuseCurrentPage: true })
   await session.waitForReadyPage(checkInUrl)
   const pageTrigger = resolveTurnstilePreTrigger(params.account)
   if (pageTrigger.kind !== TURNSTILE_PRE_TRIGGER_KINDS.None) {
@@ -191,7 +191,7 @@ async function performNativeSessionCheckin(
       learnedPath: readNativeCheckInPageHint(params.account),
       signal: session.abortSignal,
       navigate: async (url) => {
-        await session.navigate(url)
+        await session.navigate(url, { reuseCurrentPage: true })
         await session.waitForReadyPage(url)
       },
       inspect: () =>

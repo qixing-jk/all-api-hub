@@ -586,6 +586,78 @@ for (const siteType of [
   })
 }
 
+test("clearing a check-in path saves automatic selection without storing the deployment default", async ({
+  context,
+  page,
+  extensionId,
+  extensionDir,
+}) => {
+  const account = createStoredAccount({
+    site_url: "https://ai.facai.cloudns.org",
+    checkIn: { nativePagePath: "/previous" },
+  })
+  installExtensionPageGuards(page)
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await stubNewApiSiteRoutes(context, { baseUrl: account.site_url })
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, {
+    preferencesVersion: DEFAULT_PREFERENCES.preferencesVersion,
+    openChangelogOnUpdate: false,
+  })
+  await seedStoredAccounts(worker, [account])
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+  )
+  await waitForExtensionRoot(page)
+  const row = page.getByTestId(getAccountManagementListItemTestId(account.id))
+  const dialog = page.getByRole("dialog")
+  const pathField = dialog.getByRole("textbox", {
+    name: "Check-in page path (optional)",
+  })
+  const openCheckInSettings = async () => {
+    await row.hover()
+    await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+    await chooseAccountSection(
+      page,
+      dialog.getByRole("navigation", { name: "Account settings sections" }),
+      "Check-in Settings",
+    )
+  }
+  await openCheckInSettings()
+  await expect(pathField).toHaveValue("/previous")
+  await pathField.clear()
+  await expect(pathField).toHaveAccessibleDescription(
+    "Leave empty to use /dashboard, the extension's preset check-in page for this site.",
+  )
+  await dialog
+    .getByRole("button", { name: "Save Changes", exact: true })
+    .click()
+  await expect(dialog).toBeHidden()
+  const stored = await getPlasmoStorageJsonValue<AccountStorageConfig>(
+    worker,
+    ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+  )
+  const saved = stored?.accounts.find(({ id }) => id === account.id)
+  expect(saved?.checkIn).toBeDefined()
+  expect(saved?.checkIn).not.toHaveProperty("nativePagePath")
+
+  await openCheckInSettings()
+  await expect(pathField).toHaveValue("")
+  await expect(pathField).toHaveAccessibleDescription(
+    "Leave empty to use /dashboard, the extension's preset check-in page for this site.",
+  )
+  await captureVisualViews({
+    page,
+    ready: pathField,
+    captureTarget: dialog.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+    ),
+    id: "facai-deployment-default",
+    extensionDir,
+  })
+})
+
 test("account editor continuous outline", async ({
   context,
   page,
