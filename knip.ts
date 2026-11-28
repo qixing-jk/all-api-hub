@@ -39,6 +39,8 @@ const config: KnipConfig = {
     "e2e/fixtures/uiPrimitives/fixture.tsx",
     "e2e/fixtures/uiPrimitives/analytics.ts",
     "e2e/fixtures/uiPrimitives/channelFilters.ts",
+    // Loaded by the test-only account-detection HTML entrypoint.
+    "e2e/fixtures/pmplanCookieTransportProbe.ts",
     // Invoked by the native Safari runner; Vite loads this config by CLI path.
     "e2e/safariNativeCookie/probe.config.ts",
     "e2e/safariNativeCookie/probe.ts",
