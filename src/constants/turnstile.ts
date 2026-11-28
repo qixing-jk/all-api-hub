@@ -19,12 +19,37 @@ export const TURNSTILE_SCRIPT_SELECTOR =
 export const TURNSTILE_IFRAME_SELECTOR =
   `iframe[src*="${TURNSTILE_CHALLENGE_HOST_SUBSTRING}"]` as const
 
+/** Optional messages from the official widget; never proof of completion. */
+export const TURNSTILE_MESSAGE_ORIGIN =
+  `https://${TURNSTILE_CHALLENGE_HOST_SUBSTRING}` as const
+export const TURNSTILE_MESSAGE_SOURCE = "cloudflare-challenge" as const
+export const TURNSTILE_MESSAGE_EVENTS = {
+  InteractiveBegin: "interactiveBegin",
+  Init: "init",
+  RequestExtraParams: "requestExtraParams",
+  InteractiveEnd: "interactiveEnd",
+  Complete: "complete",
+  RefreshRequest: "refreshRequest",
+  ReloadRequest: "reloadRequest",
+  Fail: "fail",
+  Reject: "reject",
+  TokenExpired: "tokenExpired",
+  InteractiveTimeout: "interactiveTimeout",
+} as const
+
 export const TURNSTILE_DEFAULT_QUERY_PARAM_NAME = "turnstile" as const
 
+/** Initial wait and fallback grace period when widget interaction is unknown. */
 export const TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS = 12_000
 
-/** Quiet automatic attempt before asking the user to finish an interactive widget. */
-export const TURNSTILE_AUTO_ASSIST_MS = 4_000
+/** Fixed completion budget for a challenge known to be processing automatically. */
+export const VERIFICATION_AUTO_WAIT_MS = 45_000
+
+/** Time to notice and open a successfully delivered verification reminder. */
+export const VERIFICATION_REMINDER_WAIT_MS = 120_000
+
+/** Time to complete verification after first opening its reminder. */
+export const VERIFICATION_OPENED_WAIT_MS = 60_000
 
 /** How long to keep waiting after the temp window is brought forward for the user. */
 export const TURNSTILE_MANUAL_WAIT_MS = 45_000

@@ -7,7 +7,7 @@ import {
   type BrowserLoginFailureReason,
 } from "~/constants/browserLogin"
 import {
-  TURNSTILE_AUTO_ASSIST_MS,
+  TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
   TURNSTILE_MANUAL_WAIT_MS,
 } from "~/constants/turnstile"
 import type {
@@ -282,7 +282,7 @@ export function createBrowserPasswordContext(
               }
               if (
                 !reminded &&
-                Date.now() - started >= TURNSTILE_AUTO_ASSIST_MS
+                Date.now() - started >= TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
               ) {
                 reminded = true
                 await session.requestAssist(

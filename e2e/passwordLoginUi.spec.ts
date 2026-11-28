@@ -1,6 +1,7 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
+import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import type { AutoCheckinStatus } from "~/types/autoCheckin"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -326,7 +327,11 @@ for (const mode of [
           name: "打开登录窗口",
           exact: true,
         })
-        await expect(reminder).toBeVisible()
+        // This fixture emits no widget interaction messages, so the reminder
+        // follows the unknown-state grace period before the usual UI wait.
+        await expect(reminder).toBeVisible({
+          timeout: TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS + 10_000,
+        })
         await captureVisualViews({
           page,
           ready: reminder,

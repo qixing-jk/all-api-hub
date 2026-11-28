@@ -1,10 +1,11 @@
 import {
   TURNSTILE_ASSIST_TURN_WAIT_MS,
-  TURNSTILE_AUTO_ASSIST_MS,
   TURNSTILE_CONTAINER_SELECTOR,
+  TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
   TURNSTILE_IFRAME_SELECTOR,
-  TURNSTILE_MANUAL_WAIT_MS,
   TURNSTILE_RESPONSE_FIELD_SELECTOR,
+  VERIFICATION_AUTO_WAIT_MS,
+  VERIFICATION_REMINDER_WAIT_MS,
 } from "~/constants/turnstile"
 import { isCheckInElementShown } from "~/services/checkin/discovery/evidence/visibility"
 import {
@@ -13,12 +14,19 @@ import {
   type PageVerificationResult,
 } from "~/types/turnstile"
 
+import {
+  observeTurnstileInteraction,
+  shouldRequestVerificationAssist,
+  VERIFICATION_INTERACTION_STATES,
+  type VerificationInteractionState,
+} from "./turnstile/interaction"
 import { createVerificationManualWindow } from "./verificationManualWindow"
 
 const APPEARANCE_WAIT_MS = 2_000
 const POLL_INTERVAL_MS = 250
 const ALTCHA_STATES = {
   Unverified: "unverified",
+  Verifying: "verifying",
   Verified: "verified",
 } as const
 
@@ -48,6 +56,7 @@ type ObservedVerification = {
     { status: typeof PAGE_VERIFICATION_STATUSES.NotPresent }
   >["provider"]
   isPending: () => boolean
+  interactionState?: () => VerificationInteractionState
   tryAutoVerify?: () => void
 }
 
@@ -213,6 +222,15 @@ function observeAltcha(
       currentWidgets().some(
         (element) => state(element) !== ALTCHA_STATES.Verified,
       ),
+    interactionState: () => {
+      const pending = currentWidgets()
+        .map(state)
+        .filter((value) => value !== ALTCHA_STATES.Verified)
+      return pending.length &&
+        pending.every((value) => value === ALTCHA_STATES.Verifying)
+        ? VERIFICATION_INTERACTION_STATES.Verifying
+        : VERIFICATION_INTERACTION_STATES.Unknown
+    },
     tryAutoVerify: () => {
       // Multiple new challenges cannot be attributed to one native action.
       // Leave their completion to the existing manual-assistance path.
@@ -269,6 +287,7 @@ function hasActiveWidgetResponse(
 /** Prefer explicit widget evidence, then recognize unfamiliar verification UI. */
 function observeVerification(
   existingWidgets?: ReadonlySet<Element>,
+  interaction?: ReturnType<typeof observeTurnstileInteraction>,
 ): ObservedVerification | undefined {
   const altcha = observeAltcha(existingWidgets)
   if (altcha) return altcha
@@ -286,6 +305,11 @@ function observeVerification(
       isPending: () =>
         !hasActiveWidgetResponse(widget, activeWidgets) &&
         activeWidgets.some(isCheckInElementShown),
+      interactionState: () =>
+        widget.provider === PAGE_VERIFICATION_PROVIDERS.Turnstile
+          ? (interaction?.read(activeWidgets) ??
+            VERIFICATION_INTERACTION_STATES.Unknown)
+          : VERIFICATION_INTERACTION_STATES.Unknown,
     }
   }
 
@@ -352,6 +376,8 @@ function observeVerification(
           !existingWidgets.has(field) &&
           !field.value.trim(),
       ),
+    interactionState: () =>
+      interaction?.read(newFields) ?? VERIFICATION_INTERACTION_STATES.Unknown,
   }
 }
 
@@ -366,30 +392,26 @@ export async function waitForPageVerification(params: {
   existingWidgets?: ReadonlySet<Element>
   requestAssist: () => Promise<unknown> | unknown
 }): Promise<PageVerificationResult> {
-  const appearanceDeadline = Date.now() + APPEARANCE_WAIT_MS
-  let observed: ObservedVerification | undefined
-  while (Date.now() <= appearanceDeadline) {
-    observed = observeVerification(params.existingWidgets)
-    if (observed) break
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
-  }
-  if (!observed) return { status: PAGE_VERIFICATION_STATUSES.NotPresent }
-
-  const provider = observed.provider
-  const autoDeadline = Date.now() + TURNSTILE_AUTO_ASSIST_MS
-  let deadline = autoDeadline
-  let assistPendingUntil = 0
-  let assistRequested = false
+  const interaction = observeTurnstileInteraction()
   const manualWindow = createVerificationManualWindow(params.requestId)
-
   try {
-    // A real timer can wake after the automatic deadline; still admit the one
-    // assist attempt before deciding that the wait has expired.
-    while (
-      !assistRequested ||
-      Date.now() <=
-        Math.max(deadline, assistPendingUntil, manualWindow.getDeadline())
-    ) {
+    const appearanceDeadline = Date.now() + APPEARANCE_WAIT_MS
+    let observed: ObservedVerification | undefined
+    while (Date.now() <= appearanceDeadline) {
+      observed = observeVerification(params.existingWidgets, interaction)
+      if (observed) break
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+    }
+    if (!observed) return { status: PAGE_VERIFICATION_STATUSES.NotPresent }
+
+    const provider = observed.provider
+    const startedAt = Date.now()
+    const autoDeadline = startedAt + TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
+    let deadline = autoDeadline
+    let assistPendingUntil = 0
+    let assistRequested = false
+    // Sample state once more after a timer wakes at or beyond the deadline.
+    while (true) {
       if (!observed.isPending()) {
         // Disappearance is only a cue to read back status, never proof of success.
         return { status: PAGE_VERIFICATION_STATUSES.Completed, provider }
@@ -397,7 +419,15 @@ export async function waitForPageVerification(params: {
 
       observed.tryAutoVerify?.()
 
-      if (!assistRequested && Date.now() >= autoDeadline) {
+      const state =
+        observed.interactionState?.() ?? VERIFICATION_INTERACTION_STATES.Unknown
+      if (state === VERIFICATION_INTERACTION_STATES.Verifying) {
+        deadline = Math.max(deadline, startedAt + VERIFICATION_AUTO_WAIT_MS)
+      }
+      if (
+        !assistRequested &&
+        shouldRequestVerificationAssist(state, autoDeadline)
+      ) {
         assistRequested = true
         assistPendingUntil = Date.now() + TURNSTILE_ASSIST_TURN_WAIT_MS
         void Promise.resolve()
@@ -408,14 +438,20 @@ export async function waitForPageVerification(params: {
           )
           .then((accepted) => {
             assistPendingUntil = 0
-            if (accepted) deadline = Date.now() + TURNSTILE_MANUAL_WAIT_MS
+            if (accepted) deadline = Date.now() + VERIFICATION_REMINDER_WAIT_MS
           })
       }
+      if (
+        Date.now() >=
+        manualWindow.getDeadline(Math.max(deadline, assistPendingUntil))
+      )
+        break
       await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
     }
 
     return { status: PAGE_VERIFICATION_STATUSES.Required, provider }
   } finally {
+    interaction.dispose()
     manualWindow.dispose()
   }
 }
