@@ -53,7 +53,8 @@ export function parseFreeApiDailyCheckInStatusResponse(
   const data = parseEnvelopeData(response, FREE_API_CHECK_IN_ENDPOINT)
   if (
     Object.hasOwn(data, "checked_in_today") &&
-    Object.hasOwn(data, "today_checked_in")
+    (Object.hasOwn(data, "today_checked_in") ||
+      Object.hasOwn(data, "claimed_today"))
   ) {
     throw invalidResponse(FREE_API_CHECK_IN_ENDPOINT)
   }

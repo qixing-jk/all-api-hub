@@ -56,6 +56,21 @@ const linxiProtocol = {
 
 const protocols = [
   {
+    name: "Xingchi",
+    methodId: AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn,
+    statusPath: "/api/v1/user/checkin",
+    claimPath: "/api/v1/user/checkin",
+    status: (checked: boolean) => ({
+      enabled: true,
+      claimed_today: checked,
+      today: "2026-11-28",
+    }),
+    receipt: () => ({
+      amount: 1,
+      status: { enabled: true, claimed_today: true },
+    }),
+  },
+  {
     name: "Clawhud",
     methodId: AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
     statusPath: "/api/v1/user/checkin/status",
@@ -534,7 +549,14 @@ describe.each(protocols)("$name check-in over HTTP", (protocol) => {
   )
   it("recovers the first status read and sends the claim once", async () => {
     const { trace, result } = await executeHttpScenario(protocol, "renew")
-    expect(trace).toEqual([get, refresh, identity, get, post])
+    expect(trace).toEqual([
+      get,
+      refresh,
+      identity,
+      get,
+      post,
+      ...(protocol.name === "Xingchi" ? [get] : []),
+    ])
     expect(result).toMatchObject({
       kind: "executed",
       result: { status: "success" },
@@ -565,7 +587,11 @@ describe.each(protocols)("$name check-in over HTTP", (protocol) => {
   })
   it("sends no credential requests when the original token works", async () => {
     const { trace, result } = await executeHttpScenario(protocol, "healthy")
-    expect(trace).toEqual([get, post])
+    expect(trace).toEqual([
+      get,
+      post,
+      ...(protocol.name === "Xingchi" ? [get] : []),
+    ])
     expect(result).toMatchObject({
       kind: "executed",
       result: { status: "success" },

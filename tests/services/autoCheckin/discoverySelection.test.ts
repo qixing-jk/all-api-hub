@@ -345,6 +345,7 @@ const knownSub2ApiSourceAddresses = [
   ["nexavlinks:daily-checkin", "https://ai.man8out.com"],
   ["nexavlinks:daily-checkin", "https://www.nexavlinks.com"],
   ["freeapi:daily-checkin", "https://freeapi.site"],
+  ["xingchi:daily-checkin", "https://xingchiapi.com"],
   ["bai-api:daily-checkin", "https://byeapi.top"],
   ["bai-api:daily-checkin", "https://api.byeapi.top"],
 ] as const satisfies readonly (readonly [CheckInMethodId, string])[]

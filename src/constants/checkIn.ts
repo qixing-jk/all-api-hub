@@ -31,6 +31,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   XiaoenDailyCheckIn: "xiaoen:daily-checkin",
   SidruneDailyCheckIn: "sidrune:daily-checkin",
   FreeApiDailyCheckIn: "freeapi:daily-checkin",
+  XingchiDailyCheckIn: "xingchi:daily-checkin",
   NexaVlinksDailyCheckIn: "nexavlinks:daily-checkin",
   EmrankDailyCheckIn: "emrank:daily-checkin",
   RelayForDailyCheckIn: "relayfor:daily-checkin",

@@ -35,6 +35,7 @@ import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 import { xiaobaiCodeProvider } from "./xiaobaiCode"
 import { xiaoenProvider } from "./xiaoen"
+import { xingchiProvider } from "./xingchi"
 import { xingyaProvider } from "./xingya"
 
 const PROVIDER_BY_METHOD_ID = {
@@ -61,6 +62,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn]: clawhudProvider,
   [AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn]: daiguaProvider,
   [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn]: freeApiProvider,
+  [AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn]: xingchiProvider,
   [AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn]: nexavlinksProvider,
   [AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn]: emRankProvider,
   [AUTO_CHECKIN_METHOD_IDS.RelayForDailyCheckIn]: relayForProvider,
