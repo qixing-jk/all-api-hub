@@ -1,5 +1,42 @@
 # Changelog
 
+## [4.12.0](https://github.com/qixing-jk/all-api-hub/compare/v4.11.0...v4.12.0) (2026-11-28)
+
+
+### Features
+
+* **accounts:** preserve native balances and cashflow ([#1915](https://github.com/qixing-jk/all-api-hub/issues/1915)) ([d056e4b](https://github.com/qixing-jk/all-api-hub/commit/d056e4b32543f1df3fad8466564453f3c6d6474b))
+* **accounts:** unblock New API setup without a token page ([#1945](https://github.com/qixing-jk/all-api-hub/issues/1945)) ([f7120eb](https://github.com/qixing-jk/all-api-hub/commit/f7120eb82f8710c32319a36deb29f4434bcd157f))
+* **checkin:** add Linxi daily check-in support ([#1928](https://github.com/qixing-jk/all-api-hub/issues/1928)) ([c8f77a2](https://github.com/qixing-jk/all-api-hub/commit/c8f77a29a5cc126c03deaf211c2e7e33a4a504c1))
+* **checkin:** discover native pages and support Flowbee check-in ([#1954](https://github.com/qixing-jk/all-api-hub/issues/1954)) ([1b4db58](https://github.com/qixing-jk/all-api-hub/commit/1b4db58315c40273a7fec3d8bf9f04afb7084ffb))
+* **checkin:** preview descriptive feedback titles ([#1942](https://github.com/qixing-jk/all-api-hub/issues/1942)) ([0fca8d8](https://github.com/qixing-jk/all-api-hub/commit/0fca8d82203ad847e7b2c1a377619d55dd87295e))
+* **checkin:** support ApiKey Casa daily check-in ([#1932](https://github.com/qixing-jk/all-api-hub/issues/1932)) ([32fe229](https://github.com/qixing-jk/all-api-hub/commit/32fe22928614bc620f507c136d5b99e9cb9ff3b3))
+* **checkin:** support BizDecipher free daily gifts ([#1934](https://github.com/qixing-jk/all-api-hub/issues/1934)) ([7303a7c](https://github.com/qixing-jk/all-api-hub/commit/7303a7cd0b27aa776191579e8753c27fe2ca570f))
+* **checkin:** support FreeGG daily allowance claims ([#1933](https://github.com/qixing-jk/all-api-hub/issues/1933)) ([137403e](https://github.com/qixing-jk/all-api-hub/commit/137403eef477625f343c068a0cc27de2a25a0f55))
+* **checkin:** support Xingchi daily check-in ([#1935](https://github.com/qixing-jk/all-api-hub/issues/1935)) ([7887220](https://github.com/qixing-jk/all-api-hub/commit/788722016d6f2720051f5d41a5ad97036ca6c4a4))
+* **credentials:** preserve source-aware balances and usage ([a4012c8](https://github.com/qixing-jk/all-api-hub/commit/a4012c8f0e1987768eaa37b7746e78279347e15c))
+* expand browser-tab site pickers with favicons ([#1946](https://github.com/qixing-jk/all-api-hub/issues/1946)) ([f797bb0](https://github.com/qixing-jk/all-api-hub/commit/f797bb00a75f43814b9219c71163eb0b6d336baa))
+* **finance:** add native usage reports and display preferences ([#1917](https://github.com/qixing-jk/all-api-hub/issues/1917)) ([1703749](https://github.com/qixing-jk/all-api-hub/commit/1703749206e9dd3a47a5b53607cb3660388f0bf5))
+* **finance:** preserve native key budgets, prices and rewards ([#1911](https://github.com/qixing-jk/all-api-hub/issues/1911)) ([5acf84b](https://github.com/qixing-jk/all-api-hub/commit/5acf84b5c34334252fe9b8489b1fee4149a9dd11))
+* **finance:** record native account observations and balance history ([#1916](https://github.com/qixing-jk/all-api-hub/issues/1916)) ([e2d035e](https://github.com/qixing-jk/all-api-hub/commit/e2d035e41e3cf1d3a59d382bddb2afde0f098761))
+* **shell-api:** support compatible Shell API accounts ([#1925](https://github.com/qixing-jk/all-api-hub/issues/1925)) ([39360d5](https://github.com/qixing-jk/all-api-hub/commit/39360d5c6454495d340e0666ef9f7f47661e203d))
+* **sub2api:** support panel-proof sessions ([#1950](https://github.com/qixing-jk/all-api-hub/issues/1950)) ([f6a22a4](https://github.com/qixing-jk/all-api-hub/commit/f6a22a442aa8ccd8e6efb699f6f954fdb91a1ca2))
+
+
+### Bug Fixes
+
+* align financial summaries and stabilize scheduled E2E checks ([#1929](https://github.com/qixing-jk/all-api-hub/issues/1929)) ([1c1bd0c](https://github.com/qixing-jk/all-api-hub/commit/1c1bd0cb23e8421ebc90d5753f848027b5dfee08))
+* **checkin:** align verification reminders with challenge progress ([#1957](https://github.com/qixing-jk/all-api-hub/issues/1957)) ([430f466](https://github.com/qixing-jk/all-api-hub/commit/430f46609e08c165e7b485d460a52b55c4ca671a))
+* **checkin:** discover Linxi by protocol across Sub2API sites ([#1951](https://github.com/qixing-jk/all-api-hub/issues/1951)) ([b4b52d8](https://github.com/qixing-jk/all-api-hub/commit/b4b52d8eebd4cce57a0b42c6a84754a262527006))
+* **checkin:** resolve Facai's check-in page and improve discovery ([#1956](https://github.com/qixing-jk/all-api-hub/issues/1956)) ([168624c](https://github.com/qixing-jk/all-api-hub/commit/168624c75b5febfa2e41b5e472b8f8ca5cdc813c))
+* **ci:** prevent incomplete shard runs and reduce E2E overhead ([#1960](https://github.com/qixing-jk/all-api-hub/issues/1960)) ([fb66c34](https://github.com/qixing-jk/all-api-hub/commit/fb66c34006e76f262b867190295967c6f0b1690b))
+* improve account and WebDAV reliability and analytics accuracy ([#1955](https://github.com/qixing-jk/all-api-hub/issues/1955)) ([7dce5bd](https://github.com/qixing-jk/all-api-hub/commit/7dce5bd68a427fed5640452398004cf77177e3e6))
+
+
+### Performance Improvements
+
+* **extension:** reduce background startup work and fix Firefox AMO packaging ([#1918](https://github.com/qixing-jk/all-api-hub/issues/1918)) ([c058947](https://github.com/qixing-jk/all-api-hub/commit/c058947641ee4c3e3c2d2d5efcc2a31128c8a714))
+
 ## [4.11.0](https://github.com/qixing-jk/all-api-hub/compare/v4.10.1...v4.11.0) (2026-11-20)
 
 
