@@ -7,10 +7,10 @@ maintenance. Keep test coverage, assertions, isolation, and existing deadlines.
 The agreed test boundaries are the actual CI CLIs, shared browser fixtures, and
 the existing failing browser workflows. Generated evidence stays in `artifacts/`.
 
-Current iteration: reduce repeated search-debounce waits in four financial
-matrix cases and divide the existing 33 financial cases into three ordinary
-sequential spec files. Local measurements and screenshot acceptance are complete;
-the third-round hosted result is pending. See the third-round section below.
+Current iteration: fix unit CI shard correctness, retain the financial file split,
+and withdraw the page-clock experiment after hosted timeout failures. Main
+`430f46609e` has been merged, including its native-details batching fix. The original
+performance baseline remains fixed above; final-head validation is pending.
 
 ## Baseline and hypotheses
 
@@ -437,7 +437,7 @@ profiled case, so their removal did not justify expanding this iteration.
   existing deadlines remain unchanged. Clock semantics follow the
   [official clock guide](https://playwright.dev/docs/clock).
 - Keep 10 fixture creation/lifecycle/matrix cases in `devFinancialFixtures.spec.ts`,
-  move 10 typography cases to `devFinancialTypography.spec.ts` and 13 ordinary
+  move eight typography cases to `devFinancialTypography.spec.ts` and 15 ordinary
   display cases to `devFinancialDisplay.spec.ts`. These are sequential files;
   existing worker/file scheduling can distribute them. No new parallel mode,
   shared helper layer, worker count or workflow was introduced.
@@ -492,3 +492,93 @@ Keep this decision/evidence summary in Git. Keep the raw `financial-filter-*`,
 and task-local comparison/split scripts in ignored `artifacts/` through review.
 `verify-round3-local.py` and `round3-local-summary.json` record inventory, timing,
 retry and capture checks. The existing local startup gap remains open.
+
+### Hosted rejection of the clock experiment
+
+The first hosted run [46130108584](https://github.com/qixing-jk/all-api-hub/actions/runs/46130108584)
+on `50100de3d0` passed 1,000 cases with seven existing skips and no test or
+fixture-startup retries. All 1,007 identities match round two after only mapping
+the financial file moves. Wall time was 937s, six smoke steps summed 3,568s,
+the slowest step was 707s, and all jobs summed 4,330s. Financial case work rose
+from 502.11s to 603.49s despite the shorter maximum file span (320.23s).
+
+A justified repeat using the refreshed profile,
+[46131468454](https://github.com/qixing-jk/all-api-hub/actions/runs/46131468454),
+failed both native-details and currency-switching cases on both attempts.
+There were 998 passes, seven skips and two failures, with no lost/duplicate
+identities or startup retries. Wall time was 896s, smoke sum 3,559s, maximum
+797s and job sum 4,436s. This is failed validation, not a speed improvement.
+
+Retained retry traces show 31 `clockFastForward` calls totaling 13.84s in details
+and 47 totaling 17.82s in currency switching; individual advances reached
+0.91s/0.98s. The local speedup did not carry to Linux CI. All six clock additions
+were therefore removed. Preserve the failed run's reports, screenshots and traces
+under `artifacts/hosted-round3-repeat/`. Keep the three ordinary spec files;
+their final scheduling benefit must be assessed without the clock change.
+
+Main advanced during the audit to `430f46609e`. Merge `4701e7a7cb` retained its
+three native-detail batches and verification reminder fixes. The merged financial
+suite passed 35 cases locally before withdrawing the clock; final validation uses
+the updated 35 cases. The two added identities come from upstream batching,
+not reduced coverage. The merge's staged tests, i18n and native permission gates
+passed. The original baseline and all unsuccessful measurements remain above.
+
+## Unit shard correctness: duplicate and missing files
+
+This is a correctness failure: CI can be green while tests were omitted. The
+user assigned this repair here after PR #1958 reverted its workflow edits.
+The other agent supplied concrete evidence through Orca; the JUnit and cache
+logs were independently checked in the named worktree.
+
+[Test 46130053600](https://github.com/qixing-jk/all-api-hub/actions/runs/46130053600)
+at `c0203e33d669ccb8dab951c0b03b6b9e82053930` passed every shard and merge job.
+Shard 2 restored `unit-test-durations-46112807572-1`; shards 1, 3 and 4 restored
+`unit-test-durations-46129396704-1`. Its JUnit contains 2,143 file records but
+only 1,653 unique names: 490 duplicate records. The native and Krill key-resource
+field-policy test files are absent. Source evidence remains at
+`G:/Development_Data/WorkSpaces/orca/all-api-hub/pr-1958-feedback/.scratch/pr-1958/artifacts/`
+(`shard-1.log` through `shard-4.log`, `ci-tests-initial/test-report.junit.xml`).
+
+Root causes: each unit shard independently restored a moving cache prefix, and
+`check-unit-test-reports.mjs` checked report presence/data but not file identity.
+The existing test fixtures even treated the same file in two shards as valid.
+
+The final workflow resolves the timing cache once in `unit-test-profile`, writes
+an explicit empty profile on a miss, and uploads one artifact consumed by every
+shard and ordinary failed-job retry. Explicit comparison cache keys remain
+supported. The producer needs no checkout, dependency install or browser.
+The merge uses `vitest list --filesOnly` to obtain the configured file/project
+inventory without executing tests, then checks its exact equality with the
+reported files. Duplicate, missing, unexpected, invalid or empty inventories fail
+before complete coverage/timing publication. Distinct Vitest projects remain
+distinct. Both coverage and JUnit Codecov uploads require a complete result;
+partial artifacts remain available for diagnosis. Assertion failures with a
+complete inventory still retain their coverage and continue to fail CI normally.
+
+| Correctness scenario | Executed check | Result |
+| --- | --- | --- |
+| Cache changes between shard launches or before a retry | Actual Vitest CLI on 18 files and two differing duration profiles | Red with independent cache restores; green with frozen artifact; every file runs once |
+| Duplicate file in otherwise complete shard reports | Actual report-guard CLI | Previously emitted complete=true; now fails with complete=false and no timing output |
+| Missing file while every shard has valid tests/coverage | Actual CLI with independent expected inventory | Fails and names the missing editor file |
+| Multiple projects, unexpected/empty/duplicate expected identities | Report-guard CLI | Accepted only for exact file/project coverage |
+| Failed assertion, valid coverage and exact actual inventory | Real Vitest shard/merge plus list CLI | Coverage retained; merged test command remains failed |
+| Cache miss or restored profile | Actual workflow initialization command | Empty profile is explicit; existing bytes are preserved |
+| Producer failure, release bypass, cancellation and explicit cache pins | Existing scheduling checks | 79 passing checks |
+
+`pnpm test:ci:scripts` passed 81 checks; unchanged shard-planner/sequencer checks
+passed 38 checks. Red/green evidence is in `artifacts/unit-{duplicate,missing,profile}-red.log`,
+`unit-report-guards-green.log`, `unit-ci-cli-guards.log` and `unit-ci-scheduling-final.log`.
+
+Audit of other consumers: E2E smoke and browser compatibility already consume
+one run artifact from the shared build producer. Their planner inventories and
+the six hosted E2E reports were checked for omissions/duplicates. No equivalent
+moving-cache read was found there. Compiled-module/browser caches do not select
+test membership. The E2E timing writer tolerates incomplete old measurements;
+unknown files receive median weights from the same frozen input. This affects
+packing, not membership. This audit does not assert every historical run was
+complete or add a new cross-workflow scheduling framework.
+
+The earlier controlled unit comparison used a fixed cache key. Its retained
+candidate JUnit was rechecked: 2,143 records, 2,143 unique files, zero duplicates.
+Its results remain applicable to that revision. The faulty PR #1958 run is not
+valid full-suite or coverage evidence and must be rerun after the fix reaches it.

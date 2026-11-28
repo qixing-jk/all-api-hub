@@ -485,7 +485,6 @@ for (const { phase, detailTypes, suffix } of [
       if (timeout > 0) test.setTimeout(timeout + 60_000)
     }
 
-    await page.clock.install()
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
     await page.addInitScript(() =>
@@ -576,8 +575,6 @@ for (const { phase, detailTypes, suffix } of [
     })
     const show = async (type: string) => {
       await search.fill(`Dev Balance: ${type}`)
-      // Run the search debounce without paying its wall time for every type.
-      await page.clock.fastForward(200)
       await expect(row(type)).toBeVisible()
       return row(type)
     }
@@ -832,7 +829,6 @@ test("dev native observation states persist for every type and distinguish missi
   extensionDir,
 }) => {
   test.setTimeout(180_000)
-  await page.clock.install()
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
   await page.addInitScript(() =>
@@ -883,8 +879,6 @@ test("dev native observation states persist for every type and distinguish missi
         name: "Enter site information or account information to search",
       })
       .fill(account.site_name)
-    // Search is only how this balance matrix reaches a virtualized row.
-    await page.clock.fastForward(200)
     const row = page.getByTestId(getAccountManagementListItemTestId(account.id))
     await expect(row).toBeVisible()
     return row

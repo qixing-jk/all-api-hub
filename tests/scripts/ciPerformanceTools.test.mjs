@@ -19,6 +19,7 @@ import { runInNewContext } from "node:vm"
 import { stringify } from "flatted"
 
 import { listShardableSpecs } from "../../e2e/utils/e2eShardPlan.shared.js"
+import { bashPath, workflowCommand } from "./workflowCommand.mjs"
 
 const root = fileURLToPath(new URL("../../", import.meta.url))
 const replay = path.join(root, ".scratch/ci-runner-performance/replay.mjs")
@@ -32,6 +33,123 @@ function temporaryDirectory(context) {
   })
   return directory
 }
+
+test("unit CI shards and retries retain their file assignments when the latest timing cache changes", (context) => {
+  const directory = temporaryDirectory(context)
+  mkdirSync(path.join(directory, "tests"))
+  const durations = Object.fromEntries(
+    Array.from({ length: 18 }, (_, index) => {
+      const file = `tests/spec-${index}.test.ts`
+      writeFileSync(
+        path.join(directory, file),
+        "test('runs the selected file', () => {})",
+      )
+      return [file, (index + 1) * 100]
+    }),
+  )
+  writeFileSync(
+    path.join(directory, "vitest.config.mts"),
+    `
+    import { DurationBalancedSequencer } from ${JSON.stringify(path.join(root, "vitest.shardSequencer.ts").replaceAll("\\", "/"))}
+    export default { test: { globals: true, maxWorkers: 1, sequence: { sequencer: DurationBalancedSequencer } } }
+  `,
+  )
+  const snapshot = path.join(directory, "snapshot.json")
+  const cache = path.join(directory, "latest.json")
+  for (const file of [snapshot, cache])
+    writeFileSync(file, JSON.stringify({ version: 1, durations }))
+  const workflow = readFileSync(
+    path.join(root, ".github/workflows/test.yml"),
+    "utf8",
+  )
+  const restore = workflow
+    .split("- name: Restore unit test durations")[1]
+    ?.split("- name:")[0]
+  assert.ok(restore)
+  const producer = workflow
+    .split("  unit-test-profile:")[1]
+    ?.split("\n  unit-tests:")[0]
+  assert.ok(producer?.includes("actions/cache/restore"))
+  const publishedName = producer.match(
+    /name: (unit-test-shard-duration-profile)/,
+  )?.[1]
+  assert.ok(publishedName && restore.includes(`name: ${publishedName}`))
+  assert.ok(producer.includes("include-hidden-files: true"))
+  assert.ok(producer.includes("if-no-files-found: error"))
+  assert.ok(producer.includes("inputs.durations_cache_key"))
+  const input = restore.includes("actions/download-artifact") ? snapshot : cache
+  const list = (index) => {
+    const output = path.join(directory, `shard-${index}.json`)
+    const result = spawnSync(
+      process.execPath,
+      [
+        path.join(root, "node_modules/vitest/vitest.mjs"),
+        "run",
+        "--reporter=json",
+        `--outputFile=${output}`,
+        `--shard=${index}/2`,
+      ],
+      {
+        cwd: directory,
+        encoding: "utf8",
+        env: { ...process.env, UNIT_TEST_SHARD_DURATIONS: input },
+      },
+    )
+    assert.equal(result.status, 0, result.stdout + result.stderr)
+    return JSON.parse(readFileSync(output, "utf8"))
+      .testResults.map(({ name }) =>
+        path.relative(directory, name).replaceAll("\\", "/"),
+      )
+      .sort()
+  }
+  const first = list(1)
+  writeFileSync(
+    cache,
+    JSON.stringify({
+      version: 1,
+      durations: { ...durations, "tests/spec-0.test.ts": 50_000 },
+    }),
+  )
+  const second = list(2)
+  assert.deepEqual(
+    [...first, ...second].sort(),
+    Object.keys(durations).sort(),
+    "Every test file must run exactly once even when the cache changes between shards",
+  )
+  assert.deepEqual(
+    list(1),
+    first,
+    "A retried shard must retain the original membership",
+  )
+})
+
+test("unit CI freezes an empty cache without overwriting restored timings", (context) => {
+  const directory = temporaryDirectory(context)
+  const command = workflowCommand(
+    "test.yml",
+    "Preserve an empty unit test profile on a cache miss",
+  )
+  const run = () => {
+    const result = spawnSync(bashPath(), ["-e", "-c", command], {
+      cwd: directory,
+      encoding: "utf8",
+    })
+    assert.equal(result.status, 0, result.stderr)
+  }
+  const profile = path.join(directory, ".vitest-durations/shard-durations.json")
+  run()
+  assert.deepEqual(JSON.parse(readFileSync(profile, "utf8")), {
+    version: 1,
+    durations: {},
+  })
+  const original = JSON.stringify({
+    version: 1,
+    durations: { "tests/a.test.ts": 123 },
+  })
+  writeFileSync(profile, original)
+  run()
+  assert.equal(readFileSync(profile, "utf8"), original)
+})
 
 /** Run the actual benchmark CLI with a controlled dependency tree and a runner sentinel. */
 function benchmarkFixture(context) {

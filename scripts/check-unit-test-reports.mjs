@@ -9,6 +9,22 @@ import {
   writeUnitTestDurationsFromReports,
 } from "./write-unit-test-durations.mjs"
 
+/** Match files across runner roots while keeping distinct Vitest projects separate. */
+function fileIdentity(name, projectName = "") {
+  if (
+    typeof name !== "string" ||
+    name.length === 0 ||
+    typeof projectName !== "string"
+  ) {
+    throw new Error("Invalid test file identity")
+  }
+  const relative = path.relative(
+    process.cwd(),
+    path.resolve(name.replaceAll("\\", "/")),
+  )
+  return JSON.stringify([projectName, relative.split(path.sep).join("/")])
+}
+
 // Test failures are valid input. Missing or unusable shard coverage is not.
 let total
 let complete = false
@@ -17,6 +33,7 @@ try {
     allowPositionals: true,
     options: {
       "durations-output": { type: "string" },
+      "expected-files": { type: "string" },
     },
   })
   const [
@@ -31,6 +48,7 @@ try {
   const names = readdirSync(directory).filter((name) => name.endsWith(".json"))
   const versions = new Set()
   const reports = []
+  const testFiles = new Map()
   for (let shard = 1; shard <= total; shard++) {
     const name = `blob-${shard}-${total}.json`
     if (!names.includes(name)) throw new Error(`Missing shard report: ${name}`)
@@ -52,6 +70,15 @@ try {
     ) {
       throw new Error(`Unusable test or coverage data: ${name}`)
     }
+    for (const file of blob[1]) {
+      const identity = fileIdentity(file.name, file.projectName)
+      if (testFiles.has(identity)) {
+        throw new Error(
+          `Duplicate test file ${identity} in ${testFiles.get(identity)} and ${name}`,
+        )
+      }
+      testFiles.set(identity, name)
+    }
     versions.add(blob[0])
     if (durationsOutput !== undefined) {
       reports.push({ shard, files: extractFileTimings(blob) })
@@ -59,6 +86,31 @@ try {
   }
   if (names.length !== total || versions.size !== 1) {
     throw new Error("Unexpected shard reports or mixed Vitest versions")
+  }
+  if (values["expected-files"] !== undefined) {
+    const inventory = JSON.parse(readFileSync(values["expected-files"], "utf8"))
+    if (!Array.isArray(inventory) || inventory.length === 0) {
+      throw new Error("Expected a nonempty test file inventory")
+    }
+    const expected = new Set()
+    for (const file of inventory) {
+      const identity = fileIdentity(file?.file, file?.projectName)
+      if (expected.has(identity))
+        throw new Error(`Duplicate expected test file ${identity}`)
+      expected.add(identity)
+    }
+    const missing = [...expected].filter((identity) => !testFiles.has(identity))
+    const unexpected = [...testFiles.keys()].filter(
+      (identity) => !expected.has(identity),
+    )
+    if (missing.length > 0)
+      throw new Error(
+        `Missing test files (${missing.length}): ${missing.slice(0, 10).join(", ")}`,
+      )
+    if (unexpected.length > 0)
+      throw new Error(
+        `Unexpected test files (${unexpected.length}): ${unexpected.slice(0, 10).join(", ")}`,
+      )
   }
   complete = true
   console.log(`All ${total} shard reports contain test and coverage data.`)
