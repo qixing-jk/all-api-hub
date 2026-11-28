@@ -2,6 +2,7 @@
 
 Baseline: merged main `fb66c34006e76f262b867190295967c6f0b1690b` (2026-11-28).
 Branch: `perf/e2e-throughput-round2`. Preserve unrelated favicon scratch.
+Tested implementation: `192846ec99a2f424173d8b11d8bcc7b868a60a9b`.
 Previous round: ../pr-ci-performance/spec.md and its retained PR 1960 evidence.
 
 Goal: lower PR feedback latency and eliminate proven internal waiting defects
@@ -31,10 +32,10 @@ comparisons remains available; this request does not ask for another PR yet.
 | Performance isolation, default artifact, failure/cancel scheduling and job deadlines | Existing `tests/scripts/ciScheduling.test.ts` | Changed scheduling expectation failed against the old workflow; all 79 cases passed after implementation. |
 | CI scripts remain consistent | `pnpm test:ci:scripts` | 82/82 passed. |
 | Optional zero/missing/stale captures remain available | `pnpm visual:capture --spec e2e/devFinancialFixtures.spec.ts --grep 'native observation states' --fixture native-observation-states-v1 --expect-checkpoint native-state-zero --expect-checkpoint native-state-missing --expect-checkpoint native-state-stale` | Passed; all three declared checkpoints captured and inspected in `../visual-captures/run-plzTwq/`. Zero remains $0.00, missing remains Unavailable, stale retains $12.30 and its stale marker. |
-| Hosted job placement, complete inventory, retries and elapsed time | Experimental branch E2E workflow | Pending. Local evidence alone does not establish hosted stability or total CI improvement. |
+| Hosted job placement, complete inventory, retries and elapsed time | [E2E run 46147208312](https://github.com/qixing-jk/all-api-hub/actions/runs/46147208312) | Passed. Six shards report exactly the CLI's 1,012 case identities: 1,005 pass, 7 unchanged skips, no missing/extra/duplicate cases, test retries or fixture launch retries. Performance 2/2, bookmarks 3/3, DNR 6/6 and Firefox 20/20 passed. |
 
 Production UI and extension API behavior do not change. Chrome is the affected
-smoke runner; hosted Firefox smoke will also run unchanged. Local raw results:
+smoke runner; hosted Firefox smoke also passed unchanged. Local raw results:
 `artifacts/states-{baseline,grouped}.json`, `financial-final.json`,
 `scheduling-{red,green}.log`, `scripts-green.log`.
 
@@ -83,14 +84,57 @@ Evidence retention: artifacts/ contains local trace and timing samples plus
 hosted JSON reports; keep through review. The pre-merge main run 46142437808 is
 profiling context only, because its source differs from the new baseline. The
 merge push run [46144798322](https://github.com/qixing-jk/all-api-hub/actions/runs/46144798322)
-completed successfully on the baseline, in 16m55s. Its six duration reports have
-no unexpected or flaky cases; the native state matrix took 49.390s. The saved
-jobs and reports are under `artifacts/main-merged*`. The next run may restore an
-updated duration profile and use different runners, so total wall-clock changes
-are observations, not a controlled causal estimate. Compare the full case
-inventory and record retry failures even if the workflow is green.
+completed successfully on the baseline. The experimental run also passed:
+
+| Measurement | Baseline | Candidate |
+| --- | --- | --- |
+| Whole E2E workflow | 16m55s | 14m23s (-2m32s, -15.0%) |
+| Six smoke steps, seconds | 491 / 805 / 646 / 796 / 508 / 646 | 477 / 470 / 774 / 578 / 564 / 713 |
+| Native state matrix | 49.390s | 32.112s (-35.0%) |
+| Performance placement and duration | After shard 2, 78s | After bookmarks, 81s |
+| Additional artifact download | None | 2s |
+| Bookmarks job including setup and performance | 61s without performance | 156s with performance |
+| Default Chromium inventory | 1,005 passed, 7 skipped | Same 1,012 identities and outcomes |
+| Default test retries / fixture launch retries | 0 / 0 | 0 / 0 |
+
+The candidate restored the profile generated at 12:44:54 UTC; the baseline used
+12:17:00 UTC. Spec membership and runners therefore differ. Build time also fell
+from 56s to 21s with cache reuse. Total workflow and hosted case deltas are
+observations, not a controlled causal estimate. In particular, candidate shard 2
+was no longer the slowest: this run does not prove that moving performance alone
+saved 81s. The change avoids attaching that work to whichever workload lands on
+shard 2 and costs one 2s download on the existing short runner.
+
+The matched local repeats support retaining grouped searches. Both hosted runs
+support retaining the small scheduling change without reducing coverage or
+mixing performance with concurrent contexts. The HTML performance report confirms
+one worker, both original cases, one attempt each, and no errors; the step log
+confirms the default build variant after the bookmarks variant.
+
+Evidence: `artifacts/report-comparison.json`, `inventory-audit.json`,
+`expected-inventory.json`, `candidate-performance-summary.json`, both frozen
+profiles, and `main-merged*` / `candidate*` job, log and artifact groups.
+`artifacts/compare-reports.py` is a local evidence utility; compare two downloaded
+report directories with Python 3. It audits reported identities and retries,
+not whether an absent report is valid. Require all six reports before using its
+comparison. The separate CLI inventory establishes the expected collection.
+
+## Next measured opportunity
+
+The new longest shard still has a serial tail: its workers finish at
+648.5/653.1/720.7/766.7s from the first case. `textSizeSettings.spec.ts` finishes
+last in both the baseline's slowest shard and the candidate's slowest shard.
+This is a better next target for a matched split/scheduling experiment than
+globally increasing workers. It is only a candidate: previous financial and
+density parallelization increased contention/startup retries, as recorded in the
+previous-round spec. Keep the existing assertions and profile isolation, and
+measure total work and retry behavior as well as wall time before retaining it.
 
 Preserve this spec and the scoped ignore rule in Git. Keep raw timing, trace,
-capture and hosted reports locally through review; do not delete unrelated
+capture and hosted reports locally through review; keep the three captures in
+`../visual-captures/run-plzTwq/` too. Do not delete unrelated
 `.scratch/browser-tab-site-favicon/` material. Review recommendation: the two
-retained changes have local support; hosted acceptance remains outstanding.
+retained changes are ready for review within the tested smoke-workflow scope.
+Commit/pre-push hooks passed formatting, ESLint, scheduling tests, permission
+warnings, compile and Knip. No new PR has been opened. The prior density/loading
+and launch stability gaps above remain unresolved.
