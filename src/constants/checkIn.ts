@@ -15,6 +15,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   WongGongyiDailyCheckIn: "wong-gongyi:daily-checkin",
   AnyrouterDailyCheckIn: "anyrouter:daily-checkin",
   AgentRouterLoginCheckIn: "agentrouter:login-checkin",
+  FreeGgDailyAllowance: "freegg:daily-allowance",
   VoApiV2DailyCheckIn: "voapi-v2:daily-checkin",
   Sub2ApiProDailyCheckIn: "sub2api-pro:daily-checkin",
   LinxiDailyCheckIn: "linxi:daily-checkin",

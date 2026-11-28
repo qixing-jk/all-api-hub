@@ -118,7 +118,7 @@ export async function runRetryCheckins(
       updates[accountId] = {
         accountId,
         accountName: account
-          ? accountDisplayNameById.get(account.id) ?? account.id
+          ? (accountDisplayNameById.get(account.id) ?? account.id)
           : accountId,
         status: CHECKIN_RESULT_STATUS.SKIPPED,
         messageKey: getAutoCheckinSkipReasonTranslationKey(

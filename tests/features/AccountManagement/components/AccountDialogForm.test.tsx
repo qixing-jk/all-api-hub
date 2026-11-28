@@ -3345,6 +3345,46 @@ describe("AccountDialog AccountForm", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("does not promise account refresh is read-only on the FreeGG allowance deployment", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.siteUrl = "https://freegg.app"
+    const methodId = AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance
+    props.draft.checkIn = mergeCheckInDiscoveryResults({
+      config: createCheckIn({ siteType: SITE_TYPES.NEW_API, supported: true }),
+      candidateMethodIds: [methodId],
+      detections: {
+        [methodId]: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 300 },
+        },
+      },
+      completedAt: 300,
+    })
+    render(<AccountForm {...withSitePolicy(props)} />)
+    expect(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:form.checkInMethod",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("accountDialog:form.checkInStatusDesc"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("autoCheckin:methods.freeGgAllowance.description"),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("textbox", {
+        name: "accountDialog:form.checkInRoutePath",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("textbox", {
+        name: "accountDialog:form.checkInRoutePathForMethod",
+      }),
+    ).toBeVisible()
+  })
+
   it("shows retained detection failures consistently and recovers after a confirmed probe", async () => {
     const props = createProps()
     const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn

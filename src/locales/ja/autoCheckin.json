@@ -174,6 +174,10 @@
       "description": "この方式はサードパーティーの {{source}} チェックインプロトコルを使用し、対応する環境でのみ利用できます。",
       "name": "{{source}} のデイリーチェックイン"
     },
+    "freeGgAllowance": {
+      "description": "毎日の付与枠を受け取ります。UTC+8 の午前0時にリセットされます。サイトへのアクセスやアカウントの更新でも付与される場合があります。実行前に履歴を確認し、受取済みならスキップします。",
+      "name": "{{source}} の毎日付与枠"
+    },
     "generic": {
       "name": "デイリーチェックイン"
     },
@@ -191,6 +195,7 @@
       "daigua": "DaiGua",
       "denxio": "Denxio",
       "freeApi": "Luna",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "天才プログラマー中継サイト",
       "hiyo": "Hiyo Free",
       "linxi": "100xLabs",

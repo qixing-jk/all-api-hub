@@ -9,6 +9,7 @@ import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/api
 import { baiApiProvider } from "~/services/checkin/autoCheckin/providers/baiApi"
 import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
+import { freeggProvider } from "~/services/checkin/autoCheckin/providers/freegg"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
@@ -108,7 +109,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(28)
+    expect(registrationContracts).toHaveLength(29)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -130,6 +131,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "new-api:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.MODELFLARE],
           provider: newApiProvider,
+        },
+        {
+          id: "freegg:daily-allowance",
+          candidateSiteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN],
+          provider: freeggProvider,
         },
         {
           id: "voapi-v2:daily-checkin",

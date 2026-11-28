@@ -178,6 +178,10 @@
       "description": "Diese Methode verwendet das Check-in-Protokoll des Drittanbieters {{source}} und funktioniert nur bei Installationen, die es unterstützen.",
       "name": "Täglicher Check-in über {{source}}"
     },
+    "freeGgAllowance": {
+      "description": "Holt das tägliche Guthaben ab; Zurücksetzung um Mitternacht UTC+8. Auch ein Websitebesuch oder eine Kontoaktualisierung kann es auslösen. Das Protokoll wird zuerst geprüft, um eine erneute Abholung zu vermeiden.",
+      "name": "Tägliches Guthaben von {{source}}"
+    },
     "generic": {
       "name": "Täglicher Check-in"
     },
@@ -195,6 +199,7 @@
       "daigua": "DaiGua",
       "denxio": "Denxio",
       "freeApi": "Luna",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "Genius Programmer Relay",
       "hiyo": "Hiyo Free",
       "linxi": "100xLabs",

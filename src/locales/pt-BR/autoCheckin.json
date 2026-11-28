@@ -182,6 +182,10 @@
       "description": "Este método usa o protocolo de check-in de terceiros do {{source}} e funciona apenas em instalações compatíveis.",
       "name": "Check-in diário do {{source}}"
     },
+    "freeGgAllowance": {
+      "description": "Resgata o crédito diário, com reinício à meia-noite UTC+8. Visitar o site ou atualizar a conta também pode resgatá-lo. O registro é verificado primeiro para evitar um novo resgate.",
+      "name": "Crédito diário de {{source}}"
+    },
     "generic": {
       "name": "Check-in diário"
     },
@@ -199,6 +203,7 @@
       "daigua": "DaiGua",
       "denxio": "Denxio",
       "freeApi": "Luna",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "Genius Programmer Relay",
       "hiyo": "Hiyo Free",
       "linxi": "100xLabs",

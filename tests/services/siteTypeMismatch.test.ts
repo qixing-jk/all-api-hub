@@ -86,6 +86,51 @@ describe("checkSiteTypeMismatch", () => {
     ).resolves.toEqual({ outcome: "agrees" })
   })
 
+  it.each([
+    {
+      systemName: "FreeGG",
+      authMessage: "Missing New-API-User header",
+      expected: { outcome: "agrees" },
+    },
+    {
+      systemName: "Veloera",
+      authMessage: "Authentication required",
+      expected: {
+        outcome: "mismatch",
+        mismatch: {
+          storedSiteType: SITE_TYPES.NEW_API,
+          suggestedSiteType: SITE_TYPES.VELOERA,
+        },
+      },
+    },
+    {
+      systemName: "FreeGG",
+      authMessage: "Authentication required",
+      expected: { outcome: "undetermined" },
+    },
+  ])(
+    "uses current site signals at an allowance origin: $systemName / $authMessage",
+    async ({ systemName, authMessage, expected }) => {
+      server.use(
+        serveShellTitle("https://freegg.app", "FreeGG"),
+        serveStatusName("https://freegg.app", systemName),
+        http.get("https://freegg.app/api/user/self", () =>
+          HttpResponse.json(
+            { success: false, message: authMessage },
+            { status: 401 },
+          ),
+        ),
+      )
+
+      await expect(
+        checkSiteTypeMismatch({
+          siteUrl: "https://freegg.app",
+          storedSiteType: SITE_TYPES.NEW_API,
+        }),
+      ).resolves.toEqual(expected)
+    },
+  )
+
   it("reports no reading when the site resolves to no registered type at all", async () => {
     server.use(
       serveShellTitle("https://example.com", "Unbranded Console"),

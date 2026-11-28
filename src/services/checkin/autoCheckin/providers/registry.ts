@@ -12,6 +12,10 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
 import {
+  FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+  FREEGG_DAILY_ALLOWANCE_ORIGINS,
+} from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
+import {
   XINGYA_CHECK_IN_ORIGINS,
   XINGYA_CHECK_IN_STATUS_ENDPOINT,
 } from "~/services/apiService/newApiFamily/variants/xingyaCheckInProtocol"
@@ -110,16 +114,19 @@ type CheckInMethodLabelKey =
   | "methods.daily.name"
   | "methods.login.name"
   | "methods.bizDecipherFreeGift.name"
+  | "methods.freeGgAllowance.name"
 type CheckInMethodDisclosureKey =
   | "methods.daily.description"
   | "methods.login.description"
   | "methods.bizDecipherFreeGift.description"
+  | "methods.freeGgAllowance.description"
 type CheckInMethodSourceNameKey = `methods.sources.${
   | "geniusProgrammer"
   | "denxio"
   | "xiaobaiCode"
   | "clawhud"
   | "freeApi"
+  | "freeGg"
   | "baiApi"
   | "sub2apiPro"
   | "toolcode"
@@ -135,6 +142,8 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "agentRouter"}`
 
 export type CheckInMethodPresentationMetadata = {
+  /** Account balance reads can also claim this method on the deployment. */
+  readonly accountRefreshMayGrant?: boolean
   readonly kind: "daily" | "login"
   readonly labelKey: CheckInMethodLabelKey
   readonly disclosureKey?: CheckInMethodDisclosureKey
@@ -377,6 +386,27 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     feedbackStatusRoutes: [],
     legacy: true,
     newAccountCompatibility: true,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance]: {
+    id: AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
+    discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Specific,
+    siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN],
+    origins: FREEGG_DAILY_ALLOWANCE_ORIGINS,
+    presentation: {
+      sourceNameKey: "methods.sources.freeGg",
+      labelKey: "methods.freeGgAllowance.name",
+      accountRefreshMayGrant: true,
+      disclosureKey: "methods.freeGgAllowance.description",
+    },
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "FreeGG",
+    },
+    supportsStatusReadback: true,
+    resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+    feedbackStatusRoutes: [{ path: "/api/status", public: true }],
+    legacy: false,
+    newAccountCompatibility: false,
   },
   [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,

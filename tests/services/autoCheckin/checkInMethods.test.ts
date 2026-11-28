@@ -2013,6 +2013,55 @@ describe("check-in methods compatibility activation", () => {
     expect(checkInRequest).not.toHaveBeenCalled()
   })
 
+  it("allows a later FreeGG retry after a failed preflight without submitting the claim", async () => {
+    const registration = autoCheckinMethodRegistry.resolveById(
+      AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
+    )!
+    const account = buildSiteAccount({
+      site_url: "https://freegg.app",
+      site_type: SITE_TYPES.NEW_API,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        access_token: "freegg-token",
+      },
+      checkIn: {
+        automaticExecutionEnabled: true,
+        selection: {
+          mode: "manual",
+          methodId: AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
+        },
+        methodKnowledge: {
+          methods: {
+            [AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance]: {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: Date.now() },
+              },
+            },
+          },
+        },
+      },
+    })
+    vi.spyOn(registration.provider, "getStatus").mockRejectedValue(
+      new TypeError("Failed to fetch"),
+    )
+    const claim = vi.spyOn(registration.provider, "checkIn")
+
+    expect(
+      await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      }),
+    ).toMatchObject({
+      kind: "blocked",
+      reason: "network_error",
+      retryable: true,
+    })
+    expect(claim).not.toHaveBeenCalled()
+  })
+
   it("blocks the initial New API mutation when status readback is invalid", async () => {
     const registration = getNewApiExecutionRegistration()
     const account = createNewApiExecutionAccount()

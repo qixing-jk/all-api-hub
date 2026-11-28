@@ -23,6 +23,7 @@ describe("execution/postRunRefresh", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
+
   it("dispatches post-checkin refreshes concurrently with best-effort isolation", async () => {
     type ObservableRefreshResult = Pick<
       NonNullable<Awaited<ReturnType<typeof accountStorage.refreshAccount>>>,
