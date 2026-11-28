@@ -1,5 +1,5 @@
-import type { BrowserContext, Worker } from "@playwright/test"
-import { describe, expect, it } from "vitest"
+import { errors, type BrowserContext, type Worker } from "@playwright/test"
+import { describe, expect, it, vi } from "vitest"
 
 import {
   DEFAULT_EXTENSION_SERVICE_WORKER_TIMEOUT_MS,
@@ -37,6 +37,7 @@ function createMockContext(
   let eventDelivered = false
 
   return {
+    browser: () => null,
     serviceWorkers: () => workers,
     waitForEvent: async (
       _event: string,
@@ -50,7 +51,7 @@ function createMockContext(
       await new Promise((resolve) =>
         setTimeout(resolve, waitOptions?.timeout ?? 0),
       )
-      throw new Error("serviceworker event timed out")
+      throw new errors.TimeoutError("serviceworker event timed out")
     },
   } as unknown as BrowserContext
 }
@@ -91,6 +92,52 @@ describe("resolveExtensionServiceWorkerTimeoutMs", () => {
 })
 
 describe("getExtensionServiceWorker", () => {
+  it("fails immediately when the browser closes instead of polling until the deadline", async () => {
+    const context = createMockContext([])
+    const closed = new Error("Target page, context or browser has been closed")
+    const wait = vi.spyOn(context, "waitForEvent").mockRejectedValue(closed)
+    try {
+      await expect(
+        getExtensionServiceWorker(context, { timeoutMs: 20 }),
+      ).rejects.toBe(closed)
+      expect(wait).toHaveBeenCalledTimes(1)
+    } finally {
+      wait.mockRestore()
+    }
+  })
+
+  it.each([false, true])(
+    "honors the startup deadline when a worker evaluation never replies (cached: %s)",
+    async (cached) => {
+      vi.useFakeTimers()
+      try {
+        const worker = createMockWorker({
+          url: "chrome-extension://unresponsive/background.js",
+        })
+        const context = createMockContext([worker])
+        if (cached) await getExtensionServiceWorker(context)
+        vi.spyOn(worker, "evaluate").mockImplementation(
+          () => new Promise(() => {}),
+        )
+        const outcome = getExtensionServiceWorker(context, {
+          timeoutMs: 20,
+        }).then(
+          () => "unexpected success",
+          (error: Error) => error.message,
+        )
+
+        await vi.advanceTimersByTimeAsync(21)
+        expect(
+          await Promise.race([outcome, Promise.resolve("still waiting")]),
+        ).toMatch(/Timed out waiting for an extension service worker/)
+        expect(vi.getTimerCount()).toBe(0)
+      } finally {
+        vi.restoreAllMocks()
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it("skips non-extension workers and workers whose extension APIs are not ready", async () => {
     const readyWorker = createMockWorker({
       url: "chrome-extension://ready-extension/background.js",

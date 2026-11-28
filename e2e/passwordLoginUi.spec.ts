@@ -22,6 +22,11 @@ import {
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
+// Each scenario owns its context; reused browser profiles must stay sequential.
+test.describe.configure({
+  mode: process.env.AAH_E2E_USER_DATA_DIR ? "default" : "parallel",
+})
+
 for (const mode of [
   "turnstile",
   "second-factor",

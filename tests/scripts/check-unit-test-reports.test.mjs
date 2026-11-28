@@ -58,6 +58,29 @@ function check(context, reports, total = "2", options = {}) {
       )
   const args = [script, directory, total]
   if (options.publishDurations) args.push("--durations-output", durationsPath)
+  if (options.expectedFiles) {
+    mkdirSync(join(directory, "inventory"), { recursive: true })
+    const expected = join(directory, "inventory/expected-files.json")
+    writeFileSync(expected, JSON.stringify(options.expectedFiles))
+    args.push("--expected-files", expected)
+  }
+  if (options.workflowEvent) {
+    // These fixtures describe distinct expected files; missing-file cases pass
+    // an explicit larger inventory instead of deriving their expectation.
+    const expected =
+      options.expectedFiles ??
+      Object.values(reports).flatMap((report) =>
+        report[1].map((file) => ({
+          file: file.name,
+          projectName: file.projectName ?? "",
+        })),
+      )
+    mkdirSync(join(directory, ".vitest"), { recursive: true })
+    writeFileSync(
+      join(directory, ".vitest/expected-files.json"),
+      JSON.stringify(expected),
+    )
+  }
   const command = options.workflowEvent ? bashPath() : process.execPath
   const commandArgs = options.workflowEvent
     ? [
@@ -91,28 +114,109 @@ function check(context, reports, total = "2", options = {}) {
   }
 }
 
-const blob = (state = "pass") => [
+const blob = (state = "pass", name = "example.test.ts") => [
   "4.0.3",
-  [{ name: "example.test.ts", result: { state } }],
+  [{ name, result: { state } }],
   [],
   [],
   { "src/example.ts": { s: { 0: 1 } } },
   100,
 ]
 
-const currentBlob = (state = "pass") => [
+const currentBlob = (state = "pass", name = "example.test.ts") => [
   "4.1.12",
-  [{ name: "example.test.ts", result: { state, duration: 25 } }],
+  [{ name, result: { state, duration: 25 } }],
   [],
   { "src/example.ts": { s: { 0: 1 } } },
   100,
   [],
 ]
+
+test("duplicate test files across shards block coverage and timing publication", (context) => {
+  const result = check(
+    context,
+    { "blob-1-2.json": currentBlob(), "blob-2-2.json": currentBlob() },
+    "2",
+    { publishDurations: true },
+  )
+  assert.equal(result.status, 1, result.stdout + result.stderr)
+  assert.match(result.stderr, /Duplicate test file/)
+  assert.equal(result.output(), "complete=false\n")
+  assert.equal(result.hasDurations(), false)
+})
+
+test("missing expected test files block publication even with every shard report present", (context) => {
+  const result = check(
+    context,
+    {
+      "blob-1-2.json": currentBlob(),
+      "blob-2-2.json": currentBlob("pass", "second.test.ts"),
+    },
+    "2",
+    {
+      publishDurations: true,
+      expectedFiles: [
+        { file: "example.test.ts" },
+        { file: "second.test.ts" },
+        { file: "missing-editor.test.ts" },
+      ],
+    },
+  )
+  assert.equal(result.status, 1, result.stdout + result.stderr)
+  assert.match(result.stderr, /Missing test files.*missing-editor.test.ts/)
+  assert.equal(result.output(), "complete=false\n")
+  assert.equal(result.hasDurations(), false)
+})
+
+test("the expected file inventory distinguishes projects", (context) => {
+  const first = currentBlob("fail", "tests/shared.test.ts")
+  const second = currentBlob("pass", "tests/shared.test.ts")
+  first[1][0].projectName = "node"
+  second[1][0].projectName = "dom"
+  const result = check(
+    context,
+    { "blob-1-2.json": first, "blob-2-2.json": second },
+    "2",
+    {
+      expectedFiles: [
+        { file: "tests/shared.test.ts", projectName: "node" },
+        { file: "tests/shared.test.ts", projectName: "dom" },
+      ],
+    },
+  )
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.output(), "complete=true\n")
+})
+
+for (const [label, expectedFiles, error] of [
+  ["unexpected", [{ file: "example.test.ts" }], /Unexpected test files/],
+  ["empty", [], /nonempty test file inventory/],
+  [
+    "duplicate expectation",
+    [{ file: "example.test.ts" }, { file: "example.test.ts" }],
+    /Duplicate expected test file/,
+  ],
+]) {
+  test(`${label} inventory blocks complete publication`, (context) => {
+    const result = check(
+      context,
+      {
+        "blob-1-2.json": currentBlob(),
+        "blob-2-2.json": currentBlob("pass", "second.test.ts"),
+      },
+      "2",
+      { expectedFiles },
+    )
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, error)
+    assert.equal(result.output(), "complete=false\n")
+  })
+}
 
 test("complete reports remain usable when an assertion failed", (context) => {
   const result = check(context, {
     "blob-1-2.json": blob("fail"),
-    "blob-2-2.json": blob(),
+    "blob-2-2.json": blob("pass", "second.test.ts"),
   })
   assert.equal(result.status, 0, result.stderr)
   assert.equal(result.output(), "complete=true\n")
@@ -123,19 +227,22 @@ test("Vitest 4.1 reports retain failed-test coverage and publish timings", (cont
     context,
     {
       "blob-1-2.json": currentBlob("fail"),
-      "blob-2-2.json": currentBlob("pass"),
+      "blob-2-2.json": currentBlob("pass", "second.test.ts"),
     },
     "2",
     { publishDurations: true },
   )
   assert.equal(result.status, 0, result.stderr)
   assert.equal(result.output(), "complete=true\n")
-  assert.deepEqual(result.durations().durations, { "example.test.ts": 50 })
+  assert.deepEqual(result.durations().durations, {
+    "example.test.ts": 25,
+    "second.test.ts": 25,
+  })
 })
 
 test("Vitest 5 reports retain failed-test coverage and publish timings", (context) => {
   const first = currentBlob("fail")
-  const second = currentBlob()
+  const second = currentBlob("pass", "second.test.ts")
   first[0] = second[0] = "5.1.0"
   const result = check(
     context,
@@ -148,7 +255,10 @@ test("Vitest 5 reports retain failed-test coverage and publish timings", (contex
   )
   assert.equal(result.status, 0, result.stderr)
   assert.equal(result.output(), "complete=true\n")
-  assert.deepEqual(result.durations().durations, { "example.test.ts": 50 })
+  assert.deepEqual(result.durations().durations, {
+    "example.test.ts": 25,
+    "second.test.ts": 25,
+  })
 })
 
 for (const [name, corrupt] of Object.entries({
@@ -175,7 +285,7 @@ for (const [name, corrupt] of Object.entries({
   },
 })) {
   test(`Vitest 4.1 ${name} blocks coverage and timing publication`, (context) => {
-    const second = currentBlob()
+    const second = currentBlob("pass", "second.test.ts")
     corrupt(second)
     const result = check(
       context,
@@ -202,7 +312,7 @@ test("complete reports can also publish balanced file durations", (context) => {
     },
     { name: "tests/b.test.ts", result: { duration: 8 } },
   ]
-  const second = blob("fail")
+  const second = blob("fail", "second.test.ts")
   second[1] = [
     {
       name: "tests/c.test.ts",
@@ -231,7 +341,7 @@ test("complete reports can also publish balanced file durations", (context) => {
 test("timing write failures retain complete coverage but fail the command", (context) => {
   const first = blob()
   first[1][0].result.duration = 100
-  const second = blob("fail")
+  const second = blob("fail", "second.test.ts")
   second[1][0].result.duration = 100
   const result = check(
     context,
@@ -249,7 +359,7 @@ for (const event of ["push", "workflow_dispatch"]) {
   test(`${event} report workflow publishes timings from the completeness command`, (context) => {
     const first = blob()
     first[1][0].result.duration = 100
-    const second = blob("fail")
+    const second = blob("fail", "second.test.ts")
     second[1][0].result.duration = 100
     const result = check(
       context,
@@ -260,14 +370,20 @@ for (const event of ["push", "workflow_dispatch"]) {
     assert.equal(result.status, 0, result.stdout + result.stderr)
     assert.equal(result.output(), "complete=true\n")
     assert.equal(result.hasDurations(), true)
-    assert.deepEqual(result.durations().durations, { "example.test.ts": 200 })
+    assert.deepEqual(result.durations().durations, {
+      "example.test.ts": 100,
+      "second.test.ts": 100,
+    })
   })
 }
 
 test("pull request report workflow checks coverage without publishing timings", (context) => {
   const result = check(
     context,
-    { "blob-1-2.json": blob("fail"), "blob-2-2.json": blob() },
+    {
+      "blob-1-2.json": blob("fail"),
+      "blob-2-2.json": blob("pass", "second.test.ts"),
+    },
     "2",
     { workflowEvent: "pull_request" },
   )
@@ -292,7 +408,7 @@ for (const [name, reports] of Object.entries({
   },
   "unexpected shard": {
     "blob-1-2.json": blob(),
-    "blob-2-2.json": blob(),
+    "blob-2-2.json": blob("pass", "second.test.ts"),
     "blob-1-3.json": blob(),
   },
   "malformed blob": {
@@ -362,7 +478,15 @@ test("workflow uploads complete coverage after failed tests without hiding failu
   )
   assert.match(
     step("Upload test results to Codecov"),
-    /hashFiles\('test-report.junit.xml'\) != ''/,
+    /steps\.reports\.outputs\.complete == 'true'.*hashFiles\('test-report.junit.xml'\) != ''/,
+  )
+  assert.match(
+    step("Check shard report completeness"),
+    /--expected-files \.vitest\/expected-files.json/,
+  )
+  assert.match(
+    step("Collect expected unit test files"),
+    /vitest list --filesOnly --json=\.vitest\/expected-files.json/,
   )
 })
 
@@ -421,10 +545,19 @@ test("real failed Vitest shards merge into coverage and JUnit while retaining fa
     diagnostics.push(result.stdout + result.stderr)
   }
   assert.deepEqual(statuses.sort(), [0, 1], diagnostics.join("\n"))
+  const inventory = run(["list", "--filesOnly", "--json=expected-files.json"])
+  assert.equal(inventory.status, 0, inventory.stdout + inventory.stderr)
   const gate = spawnSync(
     process.execPath,
-    [script, join(directory, ".vitest/blob"), "2"],
+    [
+      script,
+      join(directory, ".vitest/blob"),
+      "2",
+      "--expected-files",
+      join(directory, "expected-files.json"),
+    ],
     {
+      cwd: directory,
       encoding: "utf8",
       env: {
         ...process.env,

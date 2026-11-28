@@ -23,7 +23,6 @@ import {
   checkAimlapiRejectedCredential,
   checkAimlapiSavedCredentials,
   openAimlapiAuthForm,
-  runAimlapiAuthMatrix,
 } from "../scripts/suites/aimlapi/auth.mjs"
 import { runAimlapiUiTest } from "../scripts/suites/aimlapi/ui.mjs"
 
@@ -340,25 +339,82 @@ async function setupAuthenticationScenario({
   return { options, requests }
 }
 
-test("authentication matrix saves each supported combination and rejects invalid primary credentials", async ({
-  context,
-  extensionId,
-}) => {
-  test.setTimeout(180000)
-  const { options, requests } = await setupAuthenticationScenario({
+test.describe("authentication matrix", () => {
+  // These credential combinations share no saved account or browser state.
+  // Give each its own ordinary deadline and retry instead of one 180s budget.
+  test.describe.configure({
+    mode: process.env.AAH_E2E_USER_DATA_DIR ? "default" : "parallel",
+  })
+
+  const expectBillingCredentials = (
+    requests: Awaited<
+      ReturnType<typeof setupAuthenticationScenario>
+    >["requests"],
+  ) => {
+    expect(
+      requests
+        .filter((r) => r.path.startsWith("/v2/billing"))
+        .every((r) => r.credential === regular),
+    ).toBe(true)
+  }
+
+  test("blocks saving without a primary key", async ({
     context,
     extensionId,
+  }) => {
+    const { options, requests } = await setupAuthenticationScenario({
+      context,
+      extensionId,
+    })
+    const form = await openAimlapiAuthForm(options)
+    try {
+      await expect(form.primary).toHaveValue("")
+      await expect(form.regular).toHaveValue("")
+      await expect(form.dialog).toContainText("Use an AI/ML API management key")
+      await expect(form.save).toBeDisabled()
+      await form.regular.fill(regular)
+      await expect(form.save).toBeDisabled()
+    } finally {
+      await form.page.close()
+    }
+    expectBillingCredentials(requests)
   })
-  const results = await runAimlapiAuthMatrix(options)
-  expect(results.every((r) => r.status === "passed")).toBe(true)
-  expect(
-    requests
-      .filter((r) => r.path.startsWith("/v2/billing"))
-      .every((r) => r.credential === regular),
-  ).toBe(true)
-  expect(
-    requests.some((r) => r.path === "/v1/key" && r.credential === primary),
-  ).toBe(true)
+
+  for (const supplemental of ["", regular]) {
+    test(`saves and reopens ${supplemental ? "both keys" : "a management key"}`, async ({
+      context,
+      extensionId,
+    }) => {
+      const { options, requests } = await setupAuthenticationScenario({
+        context,
+        extensionId,
+      })
+      await checkAimlapiSavedCredentials(options, {
+        primary,
+        regular: supplemental,
+      })
+      expectBillingCredentials(requests)
+      expect(
+        requests.some((r) => r.path === "/v1/key" && r.credential === primary),
+      ).toBe(true)
+    })
+
+    test(`rejects an invalid primary key ${supplemental ? "with a valid regular key" : "on its own"}`, async ({
+      context,
+      extensionId,
+    }) => {
+      const { options, requests } = await setupAuthenticationScenario({
+        context,
+        extensionId,
+      })
+      await checkAimlapiRejectedCredential(options, {
+        primary: "aah-invalid-credential",
+        regular: supplemental,
+        message: "The AI/ML API key is invalid or has expired.",
+      })
+      expectBillingCredentials(requests)
+    })
+  }
 })
 
 test("authentication keeps replacement credentials after saving and reopening", async ({

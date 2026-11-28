@@ -50,6 +50,12 @@ const TEST_PAGE_ORIGIN = "https://api-console.example.test"
 const API_BASE_URL = "https://api-console.example.test/api"
 const API_KEY = "sk-e2e-content-api-check-key"
 
+// Every case owns its browser context, storage and routes. Reused profiles must
+// remain sequential; ordinary CI can schedule these independent cases freely.
+test.describe.configure({
+  mode: process.env.AAH_E2E_USER_DATA_DIR ? "default" : "parallel",
+})
+
 test("web batch Stop remains clickable after credentials are cleared", async ({
   context,
   page,
