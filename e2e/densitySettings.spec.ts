@@ -26,6 +26,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 parallelizeShardableSpec()
@@ -45,6 +46,7 @@ for (const width of [1280, 390, 320]) {
     context,
     page,
     extensionId,
+    extensionDir,
   }, testInfo) => {
     test.setTimeout(180_000)
     await forceExtensionLanguage(page, "en")
@@ -202,20 +204,22 @@ for (const width of [1280, 390, 320]) {
             () => document.documentElement.scrollWidth <= innerWidth,
           ),
         ).toBe(true)
-        // Scroll the measured row into view so narrow screenshots include results.
-        await row.evaluate((element) =>
-          element.scrollIntoView({ block: "center", behavior: "instant" }),
-        )
-        await page.mouse.move(0, 0)
-        await expect(page.getByRole("tooltip")).toHaveCount(0)
-        await expect(
-          page.getByText("Model data loaded successfully", { exact: true }),
-        ).toHaveCount(0)
-        // Screenshots capture actual rendered rows, controls and wrapping.
-        await page.screenshot({
-          path: testInfo.outputPath(
-            `${route.split("?")[0]}-${density}-${width}.png`,
-          ),
+        await captureVisualViews({
+          page,
+          ready: row,
+          extensionDir,
+          id: `density-${route.split("?")[0]}-${density}-${width}`,
+          // These waits only keep optional review screenshots unobstructed.
+          beforeCapture: async () => {
+            await row.evaluate((element) =>
+              element.scrollIntoView({ block: "center", behavior: "instant" }),
+            )
+            await page.mouse.move(0, 0)
+            await expect(page.getByRole("tooltip")).toHaveCount(0)
+            await expect(
+              page.getByText("Model data loaded successfully", { exact: true }),
+            ).toHaveCount(0)
+          },
         })
       }
       for (const view of [popup, sidepanel]) {

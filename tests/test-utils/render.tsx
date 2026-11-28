@@ -12,7 +12,7 @@ import { FeatureGuidanceProvider } from "~/contexts/FeatureGuidanceContext"
 import { ReleaseUpdateStatusProvider } from "~/contexts/ReleaseUpdateStatusContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
-import { ChannelDialogProvider } from "~/features/ManagedSiteChannels/editor/ChannelDialog"
+import { ChannelDialogProvider } from "~/features/ManagedSiteChannels/editor/ChannelDialog/context/ChannelDialogContext"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 interface AppProvidersProps {
@@ -71,8 +71,10 @@ interface AppRenderOptions extends Omit<RenderOptions, "wrapper"> {
   withThemeProvider?: boolean
 }
 
-interface AppRenderHookOptions<Props>
-  extends Omit<RenderHookOptions<Props>, "wrapper"> {
+interface AppRenderHookOptions<Props> extends Omit<
+  RenderHookOptions<Props>,
+  "wrapper"
+> {
   withReleaseUpdateStatusProvider?: boolean
   withUserPreferencesProvider?: boolean
   withFeatureGuidanceProvider?: boolean

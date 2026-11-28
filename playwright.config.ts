@@ -14,8 +14,10 @@ const isRealSiteE2E = !!process.env.AAH_E2E_REAL_SITE_CATEGORY
 // Written by the E2E workflow to publish per-spec timings for duration-balanced shards.
 const jsonReportFile = process.env.AAH_E2E_JSON_REPORT
 const configuredWorkerCount = Number(process.env.AAH_E2E_WORKERS)
-const workers =
-  Number.isInteger(configuredWorkerCount) && configuredWorkerCount > 0
+const reuseUserDataDir = Boolean(process.env.AAH_E2E_USER_DATA_DIR)
+const workers = reuseUserDataDir
+  ? 1
+  : Number.isInteger(configuredWorkerCount) && configuredWorkerCount > 0
     ? configuredWorkerCount
     : isCI
       ? 1
@@ -45,6 +47,9 @@ export default defineConfig({
     {
       name: "chromium",
       dependencies: ["build"],
+      // A profile belongs to one browser process, including across spec files.
+      // The project cap also applies when --workers overrides the global limit.
+      ...(reuseUserDataDir ? { workers: 1 } : {}),
       use: {
         browserName: "chromium",
         // Ordinary page fixtures must exercise the same Chrome as extension fixtures.

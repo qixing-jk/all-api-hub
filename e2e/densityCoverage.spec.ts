@@ -13,6 +13,7 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 for (const width of [1280, 320]) {
@@ -20,6 +21,7 @@ for (const width of [1280, 320]) {
     context,
     page,
     extensionId,
+    extensionDir,
   }, testInfo) => {
     test.setTimeout(240_000)
     await forceExtensionLanguage(page, "en")
@@ -112,8 +114,11 @@ for (const width of [1280, 320]) {
             ),
           )
           .toBe(true)
-        await page.screenshot({
-          path: testInfo.outputPath(`${route}-${density}-${width}.png`),
+        await captureVisualViews({
+          page,
+          ready: page.locator("main").getByRole("heading").first(),
+          extensionDir,
+          id: `density-secondary-${route}-${density}-${width}`,
         })
       }
       const sidebarPadding = await page
@@ -165,8 +170,11 @@ for (const width of [1280, 320]) {
       expect(closeRect.width).toBeGreaterThanOrEqual(24)
       expect(closeRect.height).toBeGreaterThanOrEqual(24)
       await clearSearch.focus()
-      await page.screenshot({
-        path: testInfo.outputPath(`search-${density}-${width}.png`),
+      await captureVisualViews({
+        page,
+        ready: searchInput,
+        extensionDir,
+        id: `density-search-${density}-${width}`,
       })
       await clearSearch.click({ timeout: 10_000 })
       await expect(searchInput).toHaveValue("")
@@ -222,8 +230,11 @@ for (const width of [1280, 320]) {
         calendarHeight: rect!.height,
         calendarWidth: rect!.width,
       }
-      await page.screenshot({
-        path: testInfo.outputPath(`calendar-${density}-${width}.png`),
+      await captureVisualViews({
+        page,
+        ready: calendar,
+        extensionDir,
+        id: `density-calendar-${density}-${width}`,
       })
       await day.click()
       await expect(calendar).toBeHidden()

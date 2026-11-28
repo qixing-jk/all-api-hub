@@ -36,13 +36,15 @@ The dev panel's **Add native site balance scenarios** covers every registered ac
 
 ```bash
 pnpm test tests/features/DevPanel/fixtureSiteBalances.test.ts tests/features/DevPanel/fixtureAccounts.test.ts
-pnpm exec playwright test e2e/devFinancialFixtures.spec.ts --workers=1 --retries=0
+pnpm exec playwright test e2e/devFinancialFixtures.spec.ts e2e/devFinancialDisplay.spec.ts e2e/devFinancialTypography.spec.ts --workers=1 --retries=0
 pnpm exec playwright test e2e/balanceOfficialComparison.spec.ts --workers=1 --retries=0
 ```
 
 [Native display expectations](../scenarios/nativeBalanceExpectations.ts) are independent of the fixture generator and formatters: adding an account type must supply both a fixture and an expected display. Default examples include wallet/component/allocation relationships, independent token/image assets, subscription periods, authoritative available credit, pending charges and debt. They deliberately exclude rare custom currency symbols and custom New API quota ratios. Parser tests own backend version compatibility and account/organization/team scope.
 
 For three-way review, capture the recorded old build and current build with matching source amounts, then pair the images with `pnpm visual:compare` and include the native evidence in the gallery. Map inputs through each revision's actual adapters; do not modify the current DOM to simulate an old renderer. `AAH_BALANCE_FIXTURE_EVIDENCE_DIR` optionally writes default scenario balance/allowance JSON for matching inputs; it omits credentials. Label controlled fixtures, native observations and missing live variants separately. Reuse unchanged captures and retained source evidence instead of redoing the whole investigation.
+
+The financial specs were split into fixture, display and typography files. Custom `visual:capture` workflow IDs include the spec path and grep, so a baseline recorded under the old path cannot be passed directly to `--baseline` under a new path. Capture the moved case without `--baseline`, then pair matching old/new checkpoint PNGs with `pnpm visual:compare`. Keep source amounts, fixture labels, view/theme settings and build provenance comparable; the spec move does not make mismatched captures a valid baseline.
 
 Account auto-detection and existing-account feature checks are separate scenario helpers. Real-site specs compose them by saving an account from a live site, passing the returned account fixture into reusable usage scenarios, then cleaning up through the fixture owner.
 

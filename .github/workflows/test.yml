@@ -98,9 +98,40 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml
 
-  unit-tests:
+  unit-test-profile:
     needs: release-changes
     if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      # Resolve the shared cache once. Starting or retrying a shard must not
+      # select a newer profile and silently change which test files it runs.
+      - name: Restore unit test timing cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .vitest-durations
+          key: ${{ inputs.durations_cache_key || format('unit-test-durations-{0}-{1}', github.run_id, github.run_attempt) }}
+          restore-keys: ${{ !inputs.durations_cache_key && 'unit-test-durations-' || '' }}
+
+      - name: Preserve an empty unit test profile on a cache miss
+        run: |
+          mkdir -p .vitest-durations
+          if [ ! -f .vitest-durations/shard-durations.json ]; then
+            printf '%s\n' '{"version":1,"durations":{}}' > .vitest-durations/shard-durations.json
+          fi
+
+      - name: Upload unit test shard duration profile
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-shard-duration-profile
+          path: .vitest-durations/shard-durations.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+
+  unit-tests:
+    needs: [release-changes, unit-test-profile]
+    if: ${{ !cancelled() && needs.unit-test-profile.result == 'success' && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -132,14 +163,11 @@ jobs:
         run: node -e 'const fs = require("node:fs"); const os = require("node:os"); console.log(JSON.stringify({node:process.version,cpus:os.availableParallelism(),memoryBytes:os.totalmem(),cpuModel:os.cpus()[0]?.model})); fs.appendFileSync(process.env.GITHUB_OUTPUT, "node=" + process.version + "\n")'
 
       - name: Restore unit test durations
-        uses: actions/cache/restore@v5
+        uses: actions/download-artifact@v7
         with:
-          # Timings published by the previous run's merge job. A miss (first run, or an
-          # evicted cache) only means this shard falls back to file-count sharding.
+          # Every shard and failed-job retry consumes this run's frozen input.
+          name: unit-test-shard-duration-profile
           path: .vitest-durations
-          # An explicit key freezes the same main profile that PR iterations use.
-          key: ${{ inputs.durations_cache_key || format('unit-test-durations-{0}-{1}', github.run_id, github.run_attempt) }}
-          restore-keys: ${{ !inputs.durations_cache_key && 'unit-test-durations-' || '' }}
 
       - name: Restore compiled test modules
         id: modules
@@ -216,6 +244,9 @@ jobs:
           pattern: vitest-blob-report-*
           merge-multiple: true
 
+      - name: Collect expected unit test files
+        run: pnpm exec vitest list --filesOnly --json=.vitest/expected-files.json
+
       - name: Check shard report completeness
         id: reports
         run: |
@@ -223,7 +254,7 @@ jobs:
           if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
             duration_args=(--durations-output .vitest-durations/shard-durations.json)
           fi
-          node scripts/check-unit-test-reports.mjs "${duration_args[@]}"
+          node scripts/check-unit-test-reports.mjs --expected-files .vitest/expected-files.json "${duration_args[@]}"
 
       - name: Merge test and coverage reports
         # Keep partial reports available as artifacts when the completeness gate fails.
@@ -254,7 +285,7 @@ jobs:
           key: unit-test-durations-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() && hashFiles('test-report.junit.xml') != '' }}
+        if: ${{ !cancelled() && steps.reports.outputs.complete == 'true' && hashFiles('test-report.junit.xml') != '' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

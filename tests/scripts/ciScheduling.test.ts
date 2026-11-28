@@ -172,7 +172,7 @@ it.each([
     const workflow = readFileSync(".github/workflows/test.yml", "utf8")
     const restoreStep =
       workflow
-        .split("      - name: Restore unit test durations")[1]
+        .split("      - name: Restore unit test timing cache")[1]
         ?.split("      - name:")[0] ?? ""
     const context = {
       github: { event_name: "workflow_dispatch", run_id: 42, run_attempt: 1 },
@@ -295,6 +295,7 @@ function needs(result: string, releaseOnly = "") {
   return {
     "release-changes": { result, outputs: { "release-only": releaseOnly } },
     "unit-tests": { result: "success" },
+    "unit-test-profile": { result: "success" },
   }
 }
 
@@ -306,7 +307,12 @@ describe("full unit tests without duplicate previews", () => {
         /^ {2}([\w-]+):\r?$/gm,
       ),
     ].map((match) => match[1])
-    expect(jobs).toEqual(["release-changes", "unit-tests", "unit-tests-merge"])
+    expect(jobs).toEqual([
+      "release-changes",
+      "unit-test-profile",
+      "unit-tests",
+      "unit-tests-merge",
+    ])
     expect(
       shouldRun(
         "test.yml",
@@ -320,6 +326,22 @@ describe("full unit tests without duplicate previews", () => {
       ),
     ).toBe(true)
   })
+  it.each(["failure", "skipped", "cancelled"])(
+    "does not run shards with a %s profile producer",
+    (result) => {
+      expect(
+        shouldRun(
+          "test.yml",
+          "unit-tests",
+          {
+            github: github("push"),
+            needs: { ...needs("skipped"), "unit-test-profile": { result } },
+          },
+          false,
+        ),
+      ).toBe(false)
+    },
+  )
 })
 
 describe("smoke tests after an ordinary skipped release ancestor", () => {

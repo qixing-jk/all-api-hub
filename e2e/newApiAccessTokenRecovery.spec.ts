@@ -107,6 +107,12 @@ const test = base.extend<{ profileSite: string }>({
   },
 })
 
+// The profile server binds an ephemeral port for each case, alongside its own
+// browser context. Keep native multiwindow flows intact while sharing workers.
+test.describe.configure({
+  mode: process.env.AAH_E2E_USER_DATA_DIR ? "default" : "parallel",
+})
+
 /** Native side panels are extension views, not Playwright Page targets. */
 async function getNativeSidePanel(bridge: Page) {
   await expect
