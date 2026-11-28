@@ -96,6 +96,49 @@ describe("Turnstile interaction observation", () => {
     expect(interaction.read()).toBe(VERIFICATION_INTERACTION_STATES.Unknown)
   })
 
+  it.each(["field-to-frame", "frame-to-field"])(
+    "replaces stale interaction state on a %s transition without changing other widgets",
+    (transition) => {
+      const frame = document.querySelector("iframe")!
+      const container = document.querySelector("div")!
+      container.insertAdjacentHTML(
+        "beforeend",
+        '<input type="hidden" id="cf-chl-widget-active_response">',
+      )
+      const other = document.createElement("iframe")
+      other.id = "cf-chl-widget-other"
+      other.src = "https://challenges.cloudflare.com/turnstile/other"
+      document.body.append(other)
+      emitTurnstileEvent(
+        other,
+        TURNSTILE_MESSAGE_EVENTS.InteractiveBegin,
+        "other",
+      )
+
+      frame.id = transition === "field-to-frame" ? "" : "cf-chl-widget-active"
+      emitTurnstileEvent(frame, TURNSTILE_MESSAGE_EVENTS.InteractiveBegin)
+      expect(interaction.read([container])).toBe(
+        VERIFICATION_INTERACTION_STATES.Required,
+      )
+
+      frame.id = transition === "field-to-frame" ? "cf-chl-widget-active" : ""
+      emitTurnstileEvent(frame, TURNSTILE_MESSAGE_EVENTS.InteractiveEnd)
+      frame.id = "cf-chl-widget-active"
+      expect(interaction.read([container])).toBe(
+        VERIFICATION_INTERACTION_STATES.Verifying,
+      )
+      expect(interaction.read([frame])).toBe(
+        VERIFICATION_INTERACTION_STATES.Verifying,
+      )
+      expect(interaction.read()).toBe(VERIFICATION_INTERACTION_STATES.Required)
+      expect(interaction.read([other])).toBe(
+        VERIFICATION_INTERACTION_STATES.Required,
+      )
+      other.remove()
+      expect(interaction.read()).toBe(VERIFICATION_INTERACTION_STATES.Verifying)
+    },
+  )
+
   it("stops accepting widget messages after disposal", () => {
     const frame = document.querySelector("iframe")!
     emitTurnstileEvent(frame, TURNSTILE_MESSAGE_EVENTS.Init)

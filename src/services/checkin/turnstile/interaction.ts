@@ -109,7 +109,10 @@ export function shouldRequestVerificationAssist(
  * https://challenges.cloudflare.com/turnstile/v0/api.js (verified 2026-11-28)
  */
 export function observeTurnstileInteraction() {
-  const states = new Map<Element, VerificationInteractionState>()
+  const states = new Map<
+    string,
+    { element: Element; state: VerificationInteractionState }
+  >()
   const onMessage = (
     event: MessageEvent<TurnstileInteractionMessage | null | undefined>,
   ) => {
@@ -124,7 +127,10 @@ export function observeTurnstileInteraction() {
     const widget = resolveMessageWidget(event.data.widgetId, event.source)
     if (!widget) return
     const state = interactionStateFromEvent(event.data.event)
-    if (state !== undefined) states.set(widget, state)
+    // A widget can resolve to its response field before its frame is queryable.
+    // Keep only its latest state when the resolved element changes.
+    if (state !== undefined)
+      states.set(event.data.widgetId, { element: widget, state })
   }
   window.addEventListener("message", onMessage)
   return {
@@ -137,7 +143,7 @@ export function observeTurnstileInteraction() {
     ): VerificationInteractionState => {
       const relevant: VerificationInteractionState[] = []
       const observed: Element[] = []
-      for (const [element, state] of states) {
+      for (const { element, state } of states.values()) {
         if (
           element.isConnected &&
           (!widgets.length ||
