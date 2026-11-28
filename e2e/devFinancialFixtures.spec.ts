@@ -2329,12 +2329,28 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
   ).toHaveCount(0)
 })
 
-for (const phase of [
-  "native balance rows",
-  "native balance details",
-  "currency switching",
+// Keep every site's details covered without putting all popover interactions
+// into one test's time budget. Each batch still creates and verifies all fixtures.
+const nativeDetailBatchSize = 15
+const nativeDetailBatches = Array.from(
+  {
+    length: Math.ceil(ACCOUNT_SITE_TYPE_VALUES.length / nativeDetailBatchSize),
+  },
+  (_, index) => ({
+    phase: "native balance details" as const,
+    detailTypes: ACCOUNT_SITE_TYPE_VALUES.slice(
+      index * nativeDetailBatchSize,
+      (index + 1) * nativeDetailBatchSize,
+    ),
+    suffix: ` batch ${index + 1}`,
+  }),
+)
+for (const { phase, detailTypes, suffix } of [
+  { phase: "native balance rows", detailTypes: [], suffix: "" },
+  ...nativeDetailBatches,
+  { phase: "currency switching", detailTypes: [], suffix: "" },
 ] as const) {
-  test(`dev site balance scenarios cover every account type with ${phase}`, async ({
+  test(`dev site balance scenarios cover every account type with ${phase}${suffix}`, async ({
     page,
     context,
     extensionId,
@@ -2519,7 +2535,9 @@ for (const phase of [
         name: "Balance details",
         exact: true,
       })
-      for (const { site_type: type } of config.accounts) {
+      for (const { site_type: type } of config.accounts.filter((account) =>
+        detailTypes.some((type) => type === account.site_type),
+      )) {
         const visibleRow = await show(type)
         await visibleRow
           .getByRole("button", { name: "Balance details", exact: true })
