@@ -37,8 +37,8 @@ Candidates, in priority order:
 
 | Outcome | Validation | State |
 | --- | --- | --- |
-| Lower PR CI duration | Fixed-input before/after measurements; distinguish local and hosted results | Local subset gains measured below; hosted comparison pending |
-| Retain behavior and failure detection | Existing affected unit/E2E cases, no fewer assertions or raised deadlines | 167 affected unit/component checks; four E2E files repeated twice, 139 passes including build, zero retries |
+| Lower PR CI duration | Fixed-input before/after measurements; distinguish local and hosted results | Local subset and hosted long-file gains; full hosted comparison below does not establish an overall E2E speedup |
+| Retain behavior and failure detection | Existing affected unit/E2E cases, no fewer assertions or raised deadlines | Full hosted Test/E2E pass; original identities retained except the documented one-to-five matrix split |
 | Repair internal timeout causes | Reproduce current failure before changing its owning logic | Fresh/cached hung probes and closed-context polling fail before fixes; 28 startup checks pass after |
 | Low complexity | Reuse existing helpers; reject experiments without measurable benefit | Direct import, scoped parallel modes, split existing scenarios, bounded existing probe; no new CI layers |
 
@@ -123,8 +123,8 @@ startup acceptance.
   six-case startup verification above. This stability run overlapped unit/static
   checks, so its duration is not used as a controlled performance comparison.
 - Type checking, targeted ESLint and Knip passed. Knip reports its existing
-  unused ignore-pattern hint. Full hosted coverage and before/after CI remain
-  pending. No remote branch has been published.
+  unused ignore-pattern hint. The authorized experimental branch
+  `perf/pr-ci-throughput` is published; no PR has been created.
 
 The 167 affected unit/component checks are recorded in
 [the unit log](artifacts/final-unit.log). The final startup checks add the
@@ -140,3 +140,98 @@ scratch material is preserved.
 Raw job logs, step timing responses, main JSON reports, and local baseline output
 are retained in `artifacts/` for review. The old account-editor trace download
 failed with `unexpected EOF`; the job logs were retrieved successfully.
+
+## Hosted comparison (2026-11-28)
+
+The baseline is the SHA above; the measured candidate is
+`4dd6a88d51f1bf9f6bb80b85821086386cd798a4`. All four runs completed successfully:
+
+- Test: [baseline 46117837048](https://github.com/qixing-jk/all-api-hub/actions/runs/46117837048)
+  and [candidate 46117846689](https://github.com/qixing-jk/all-api-hub/actions/runs/46117846689).
+- E2E: [baseline 46117841643](https://github.com/qixing-jk/all-api-hub/actions/runs/46117841643)
+  and [candidate 46117851123](https://github.com/qixing-jk/all-api-hub/actions/runs/46117851123).
+
+Both Test runs used Node 24.22.2, four workers per shard, timing cache
+`unit-test-durations-46112807572-1`, and the same compiled-module cache content
+for each corresponding shard. Both E2E runs used timing profile
+`e2e-spec-durations-46112807598-1`; downloaded profile SHA-256 values match
+(`570ec62ac739a2618165f67e1f0392be238697de84e83beb7848e07f91d0a9a9`).
+Adding the startup spec changes some E2E shard assignments, so compare the full
+inventory and individual files rather than treating each shard as identical work.
+
+| Hosted measurement | Baseline | Candidate |
+| --- | ---: | ---: |
+| Test workflow wall time | 527s | 507s |
+| Test slowest execution step | 387s | 359s |
+| Test six execution steps, sum | 1,823s | 1,795s |
+| Test all job durations, sum | 2,205s | 2,208s |
+| E2E workflow wall time | 936s | 1,168s |
+| E2E slowest default smoke step | 838s | 749s |
+| E2E six default smoke steps, sum | 3,811s | 4,063s |
+| E2E all job durations, sum | 4,586s | 4,936s |
+| E2E build job | 22s (cache hit) | 57s (cache miss) |
+| Longest build-to-shard-start gap | 171s | 268s |
+
+These are single-run observations, not a controlled whole-CI speedup estimate.
+Hosted CPU models vary even within each Test run (EPYC 9V45, 9V74, 7763 and Xeon
+8573C). E2E candidate shards also queued substantially later. The candidate's
+slower total E2E duration and higher aggregate runner time must remain visible;
+shorter individual files do not establish lower overall CI cost.
+
+The individual files' first-test-start to last-test-end spans decreased:
+webpage verification 295.40s to 176.44s, token recovery 489.38s to 150.12s, and
+AIMLAPI authentication 291.37s to 203.40s. Their summed test durations were
+294.88s to 459.73s, 488.98s to 464.70s, and 290.99s to 324.83s respectively.
+Surrounding unchanged files on the webpage shard were also slower (median test
+work ratio 1.48), so do not attribute its higher aggregate cost solely to the
+parallel setting. Keep the small, isolated changes on the strength of the
+repeated local comparison and hosted file-span improvement; do not add runners,
+workers or another scheduling layer on this evidence.
+
+The full unit inventory contains the same 35,086 original cases plus three new
+startup regressions: 35,087 passes and the same two skips, across 2,143 files.
+Coverage contains the same 3,428 sources and identical statement/function hit
+sets. Branch coverage adds one hit in an unchanged concurrency-control module;
+no hit is lost. Global coverage remains 97.37% statements, 93.70% branches,
+98.32% functions and 98.47% lines; completeness and upload gates passed.
+
+The default E2E inventory is 1,001 baseline cases and 1,007 candidate cases,
+excluding six skipped build setup entries. The only identity changes are the
+one-to-five authentication split and two startup regressions. Candidate: 1,000
+passes, seven existing skips, zero retries. Baseline: 993 first-attempt passes,
+one retried pass and seven skips. Firefox smoke, DNR, bookmarks and isolated
+performance cases also completed successfully. Firefox AMO packaging is a
+release-only job and was correctly skipped by both dispatches. These dispatches
+exercise the ordinary PR test jobs, not PR-only reporting or release packaging.
+
+Evidence: `artifacts/hosted-timings.json`, `hosted-unit-identity.json`,
+`hosted-coverage-comparison.json`, `hosted-e2e-identity.json`,
+`hosted-{base,candidate}-e2e-summary.json` and `hosted-{base,candidate}/`.
+`summarize-ci.py`, `compare-unit.py` and `compare-e2e.py` in `artifacts/` reproduce
+the comparisons from retained API responses and downloaded reports.
+
+## Follow-up: HTTP fixture teardown timeout
+
+The baseline E2E retry was `newApiSessionVerification.spec.ts`'s
+`missing-channel-manual-retry`: `sessionSite` teardown exceeded 63,446ms.
+The existing fixture awaited `server.close()` while an unfinished HTTP request
+could keep the server alive. Session revocation occurs before this close and
+retains its existing assertion.
+
+A temporary diagnostic runs that original browser scenario with an incomplete
+HTTP request and a two-second fixture deadline. The original UI assertions and
+session cleanup passed, then teardown failed. After closing the server's active
+connections immediately after stopping acceptance, the same scenario passed.
+This confirms the cleanup defect; the original CI trace records the successful
+retry, so it cannot independently prove which connection stalled the first run.
+No production timeout or normal test deadline was increased.
+
+Reproducer: `artifacts/reproduce-session-close.py` (Python 3, Node 24, installed
+Playwright Chromium and current E2E build). It temporarily instruments the
+original spec, runs only the affected case, restores the source bytes in
+`finally`, and retains output. Run with `SESSION_CLOSE_VARIANT` set to a fresh
+label. The confirmed red/green logs are `session-close-red-utf8.log` and
+`session-close-green.log`; the initial `session-close-red.log` also had a
+diagnostic encoding error and is excluded. Both original cases subsequently
+passed three times without retries (`session-close-final.log`, six passes).
+Targeted ESLint passed. Full hosted E2E verification of this follow-up is pending.

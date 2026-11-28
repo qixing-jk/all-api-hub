@@ -111,7 +111,12 @@ const test = sessionTest.extend<{ sessionSite: SessionSite }>({
       await run(site)
       expect(site.revocations).toBe(1)
     } finally {
-      await new Promise<void>((resolve) => server.close(() => resolve()))
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve())
+        // Session revocation is complete; unfinished browser requests must not
+        // keep this test-owned server alive throughout the teardown deadline.
+        server.closeAllConnections()
+      })
     }
   },
   newApiSessionCleanupOrigin: async ({ sessionSite }, run) =>
