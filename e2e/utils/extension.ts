@@ -128,6 +128,15 @@ async function describeServiceWorkerReadiness(
   }
 }
 
+/** An already closed context no longer appears in its browser's public list. */
+function assertContextOpen(context: BrowserContext): void {
+  const browser = context.browser()
+  if (browser && !browser.contexts().includes(context)) {
+    verifiedExtensionServiceWorkers.delete(context)
+    throw new Error("Browser context is closed")
+  }
+}
+
 /**
  * Resolve the production MV3 service worker and wait until Chrome has attached
  * the extension APIs used by the E2E storage/alarm helpers.
@@ -136,6 +145,7 @@ export async function getExtensionServiceWorker(
   context: BrowserContext,
   options: ExtensionServiceWorkerOptions = {},
 ): Promise<Worker> {
+  assertContextOpen(context)
   const timeoutMs =
     options.timeoutMs ?? DEFAULT_EXTENSION_SERVICE_WORKER_TIMEOUT_MS
   const deadline = Date.now() + timeoutMs
@@ -159,6 +169,7 @@ export async function getExtensionServiceWorker(
   }
 
   while (Date.now() <= deadline) {
+    assertContextOpen(context)
     for (const worker of context.serviceWorkers()) {
       candidateWorkers.add(worker)
     }

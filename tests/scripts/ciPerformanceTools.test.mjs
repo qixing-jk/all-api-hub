@@ -34,6 +34,62 @@ function temporaryDirectory(context) {
   return directory
 }
 
+test("Playwright serializes a reused profile across files even with a worker override", (context) => {
+  const directory = temporaryDirectory(context)
+  const configPath = path.join(directory, "playwright.config.mts")
+  writeFileSync(
+    configPath,
+    `import config from ${JSON.stringify(path.join(root, "playwright.config.ts").replaceAll("\\", "/"))}
+    export default { ...config, testDir: ${JSON.stringify(directory)}, testIgnore: [],
+      reporter: [['json']], outputDir: ${JSON.stringify(path.join(directory, "output"))},
+      projects: config.projects.filter(p => p.name === 'chromium').map(p => ({ ...p, dependencies: [] })) }
+    `,
+  )
+  for (const file of ["first", "second"]) {
+    writeFileSync(
+      path.join(directory, `${file}.spec.ts`),
+      `import { test } from ${JSON.stringify(path.join(root, "node_modules/@playwright/test/index.mjs").replaceAll("\\", "/"))}
+      import fs from 'node:fs'
+      test('owns the reused profile exclusively', async () => {
+        const lock = process.env.AAH_E2E_USER_DATA_DIR + '.lock'
+        const handle = fs.openSync(lock, 'wx')
+        try { await new Promise(resolve => setTimeout(resolve, 300)) }
+        finally { fs.closeSync(handle); fs.unlinkSync(lock) }
+      })`,
+    )
+  }
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(root, "node_modules/@playwright/test/cli.js"),
+      "test",
+      `--config=${configPath}`,
+      "--workers=4",
+    ],
+    {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CI: "",
+        AAH_E2E_USER_DATA_DIR: path.join(directory, "profile"),
+        AAH_E2E_WORKERS: "4",
+      },
+    },
+  )
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.stats.expected, 2)
+  const workerIndexes = report.suites.flatMap((suite) =>
+    suite.specs.flatMap((spec) =>
+      spec.tests.flatMap((test) =>
+        test.results.map((result) => result.workerIndex),
+      ),
+    ),
+  )
+  assert.equal(new Set(workerIndexes).size, 1)
+})
+
 test("unit CI shards and retries retain their file assignments when the latest timing cache changes", (context) => {
   const directory = temporaryDirectory(context)
   mkdirSync(path.join(directory, "tests"))

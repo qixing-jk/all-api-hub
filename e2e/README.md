@@ -19,7 +19,14 @@ pnpm e2e:ui
 
 Use the [local environment configuration](../docs/development/setup.md#local-tooling-environment-configuration) for credentials and browser paths.
 
-The density suites (`densitySettings.spec.ts` and `densityCoverage.spec.ts`) run their behavior and geometry assertions on every test run. Review screenshots use the existing opt-in `captureVisualViews` checkpoints. Run `pnpm visual:capture --spec e2e/densitySettings.spec.ts --fixture density-settings-v1` for the settings suite, or select `e2e/densityCoverage.spec.ts` with its own fixture label. See [local screenshot comparison](../docs/development/visual-evidence.md#local-screenshot-comparison) for filtering, metadata and baseline comparison.
+The density suites (`densitySettings.spec.ts` and `densityCoverage.spec.ts`) run their behavior and geometry assertions on every test run. Review screenshots use the existing opt-in `captureVisualViews` checkpoints. Capture one viewport case per command so checkpoint IDs remain unique:
+
+```bash
+pnpm visual:capture --spec e2e/densitySettings.spec.ts --grep "global density preserves text and fits 320px views$" --fixture density-settings-v1
+pnpm visual:capture --spec e2e/densityCoverage.spec.ts --grep "secondary surfaces and calendar follow density at 320px$" --fixture density-coverage-v1
+```
+
+See [local screenshot comparison](../docs/development/visual-evidence.md#local-screenshot-comparison) for filtering, metadata and baseline comparison.
 
 ## Firefox extension smoke tests
 

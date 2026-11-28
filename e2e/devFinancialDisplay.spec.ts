@@ -112,16 +112,17 @@ for (const [siteType, label] of [
         process.env.AAH_VISUAL_CAPTURE_DIR &&
         process.env.AAH_VISUAL_CAPTURE_CONTEXT === "1"
       ) {
-        const capturedViews = process.env.AAH_VISUAL_CAPTURE_VIEWS
+        const configuredViews = process.env.AAH_VISUAL_CAPTURE_VIEWS
           ? JSON.parse(process.env.AAH_VISUAL_CAPTURE_VIEWS)
-          : [
-              { id: "light", width, height: 900 },
-              { id: "dark", width, height: 900 },
-            ]
+          : null
+        const capturedViews = configuredViews ?? [
+          { id: "light", width, height: 900 },
+          { id: "dark", width, height: 900 },
+        ]
         for (const view of capturedViews) {
           const contextFile = path.join(
             process.env.AAH_VISUAL_CAPTURE_DIR!,
-            `ordinary-${siteType}-${width}-${view.id}-context`,
+            `ordinary-${siteType}-${width}-${view.id}.context`,
           )
           const metadata = JSON.parse(
             await readFile(`${contextFile}.json`, "utf8"),

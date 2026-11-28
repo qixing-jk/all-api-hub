@@ -718,3 +718,47 @@ and timeouts; no matching issue warrants a closing reference. The report and
 rejected-experiment decisions remain in Git; raw evidence stays local through
 review, and unrelated scratch is preserved. Regression protection lives in the
 existing CLI tests; no additional agent rule or memory entry is needed.
+
+
+## PR 1960 feedback repairs
+
+Review baseline: `5632277f8e1015dbad867b8a705b9499d8fe7857`, based on
+`d05e7cf117468050a19662690406ae7c9106c733`. This follow-up corrects the
+closed-context claim above: the old assertion accepted a timeout message that
+merely contained a cached worker's "closed" error. Published history is retained.
+The initial full collection and pre-push collection include all annotations and
+report no collection errors or uncovered coverable lines.
+
+| Source / outcome | Before | Repair and local evidence |
+| --- | --- | --- |
+| Review 4726798117: reused profile | Separate files can launch the same profile concurrently, including with `--workers=4`. | Cap the Chromium project at one worker whenever `AAH_E2E_USER_DATA_DIR` is set. The real CLI regression fails on the old config and passes on the repair, verifying two files finish in the same worker. Normal isolated-profile scheduling is unchanged. |
+| Review 4726798120: default captures | The capture CLI supplies JSON `null`; the spec tries to iterate it. | Apply the same nullish default as the capture helper. Actual CLI failure retained in `artifacts/pr1960-capture-null-red.log` and its referenced run log. |
+| Review 4726798123: context captures | After fixing null, readback fails with ENOENT for `-context.json`. | Read the helper's `.context` artifacts. Default captures contain exactly 12 checkpoints; explicit `dark:390x900` contains six. PNG dimensions and metadata readback pass in both real browser runs. See `artifacts/pr1960-capture-validation.json`. |
+| Review 4726798131: closed context | The strengthened original E2E consumes its five-second deadline and fails. | Check the browser's public context list before worker lookup and polling. The closed and unresponsive worker cases each pass three real Chromium repetitions; the 28 startup unit cases also pass. |
+| Review 4726798133: density commands | The documented CLI omits required `--grep` and exits before running. | Both exact documented commands pass, producing 12 settings and 39 secondary-surface screenshots. |
+| Review body 6097518616: moved baselines | Old custom workflow identity includes the previous spec path. | Document recapture without `--baseline`, then manual checkpoint pairing with `visual:compare` under matching fixture/environment/provenance constraints. |
+| E2E job 140962882388: currency timeout | Both attempts exceed the body budget while traversing 41 accounts (62.9s/64.5s including fixture setup). Trace shows steady search/assertion progress, followed by teardown closure. | Extend the existing 15-site detail batching to converted balances; retain reload, Popup and Side Panel checks separately. No timeout/retry increase, clock manipulation or assertion deletion. All converted account expectations remain covered. Three repetitions of the four currency cases pass; final regression also covers the complete financial-fixture file. |
+
+The capture artifacts are runner correctness evidence on unchanged product UI,
+not new visual acceptance claims: `.scratch/visual-captures/run-5ab0ix`,
+`run-CxZfoP`, `run-rYfy0A`, and `run-1CuanE`. Keep these and `artifacts/pr1960-*`
+through review. The 82 script tests pass, including the frozen-profile and exact
+inventory regressions. The financial batching adds three fixture setups, trading
+some cumulative execution cost for bounded per-case work; it is not claimed as a
+whole-E2E speedup.
+
+P2 stability gap: the same hosted job's 1280px density case failed once while
+Key Management still showed "Loading scopes"; its retry passed. The retained
+error context and retry trace show a mocked New API route, but the first attempt
+has no trace and does not establish the cause. One focused local run and six
+more repetitions with two workers pass without retries. No speculative product,
+timeout or mock change is made. Owner: `e2e/densitySettings.spec.ts` and native key
+scope loading. A failing-attempt trace plus a reproducing regression is needed
+to close this intermittent failure. The historical Firefox greeting and Windows
+launch gaps above also remain open. These stability gaps are separate from
+exact-head check success and bot thread acceptance.
+
+Remote reconciliation is pending for the repair commit. Inline replies must
+follow terminal review of that head and fresh thread collection; bot closure is
+not implied by local fixes. No durable instruction change qualifies: regression
+protection belongs in the existing tests and tooling.

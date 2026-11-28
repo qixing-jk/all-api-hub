@@ -37,6 +37,7 @@ function createMockContext(
   let eventDelivered = false
 
   return {
+    browser: () => null,
     serviceWorkers: () => workers,
     waitForEvent: async (
       _event: string,

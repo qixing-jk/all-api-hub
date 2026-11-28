@@ -6,9 +6,16 @@ test("a closed context fails startup without consuming its deadline", async ({
   context,
 }) => {
   await context.close()
-  await expect(
-    getExtensionServiceWorker(context, { timeoutMs: 1_000 }),
-  ).rejects.toThrow(/closed/)
+  const startedAt = Date.now()
+  const error = await getExtensionServiceWorker(context, {
+    timeoutMs: 5_000,
+  }).then(
+    () => undefined,
+    (caught: unknown) => caught,
+  )
+  expect(String(error)).toMatch(/closed/)
+  expect(String(error)).not.toMatch(/Timed out waiting/)
+  expect(Date.now() - startedAt).toBeLessThan(1_000)
 })
 
 test("an unresponsive extension worker cannot bypass the startup deadline", async ({

@@ -453,26 +453,33 @@ test("dev balance scenarios persist, open in the real account UI and clean up wi
   ).toHaveCount(0)
 })
 
-// Keep every site's details covered without putting all popover interactions
-// into one test's time budget. Each batch still creates and verifies all fixtures.
-const nativeDetailBatchSize = 15
-const nativeDetailBatches = Array.from(
-  {
-    length: Math.ceil(ACCOUNT_SITE_TYPE_VALUES.length / nativeDetailBatchSize),
-  },
-  (_, index) => ({
-    phase: "native balance details" as const,
-    detailTypes: ACCOUNT_SITE_TYPE_VALUES.slice(
-      index * nativeDetailBatchSize,
-      (index + 1) * nativeDetailBatchSize,
-    ),
-    suffix: ` batch ${index + 1}`,
-  }),
+// Keep every site's details and converted balance covered in bounded batches.
+// Each batch still creates and verifies the complete fixture inventory.
+const nativeBalanceBatchSize = 15
+const nativeBalanceBatches = [
+  "native balance details",
+  "currency conversion",
+].flatMap((phase) =>
+  Array.from(
+    {
+      length: Math.ceil(
+        ACCOUNT_SITE_TYPE_VALUES.length / nativeBalanceBatchSize,
+      ),
+    },
+    (_, index) => ({
+      phase,
+      siteTypes: ACCOUNT_SITE_TYPE_VALUES.slice(
+        index * nativeBalanceBatchSize,
+        (index + 1) * nativeBalanceBatchSize,
+      ),
+      suffix: ` batch ${index + 1}`,
+    }),
+  ),
 )
-for (const { phase, detailTypes, suffix } of [
-  { phase: "native balance rows", detailTypes: [], suffix: "" },
-  ...nativeDetailBatches,
-  { phase: "currency switching", detailTypes: [], suffix: "" },
+for (const { phase, siteTypes, suffix } of [
+  { phase: "native balance rows", siteTypes: [], suffix: "" },
+  ...nativeBalanceBatches,
+  { phase: "currency switching", siteTypes: [], suffix: "" },
 ] as const) {
   test(`dev site balance scenarios cover every account type with ${phase}${suffix}`, async ({
     page,
@@ -480,7 +487,10 @@ for (const { phase, detailTypes, suffix } of [
     extensionId,
     extensionDir,
   }) => {
-    if (process.env.AAH_VISUAL_CAPTURE_DIR && phase !== "currency switching") {
+    if (
+      process.env.AAH_VISUAL_CAPTURE_DIR &&
+      (phase === "native balance rows" || phase === "native balance details")
+    ) {
       const { timeout } = test.info()
       if (timeout > 0) test.setTimeout(timeout + 60_000)
     }
@@ -528,7 +538,7 @@ for (const { phase, detailTypes, suffix } of [
     if (!config) throw new Error("Missing native scenarios")
     if (
       process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR &&
-      phase !== "native balance details"
+      (phase === "native balance rows" || phase === "currency switching")
     ) {
       const directory = process.env.AAH_BALANCE_FIXTURE_EVIDENCE_DIR
       await mkdir(directory, { recursive: true })
@@ -660,7 +670,7 @@ for (const { phase, detailTypes, suffix } of [
         exact: true,
       })
       for (const { site_type: type } of config.accounts.filter((account) =>
-        detailTypes.some((type) => type === account.site_type),
+        siteTypes.some((type) => type === account.site_type),
       )) {
         const visibleRow = await show(type)
         await visibleRow
@@ -761,51 +771,56 @@ for (const { phase, detailTypes, suffix } of [
       await page.getByRole("button", { name: "CNY (¥)" }).click()
       await page.goto(`chrome-extension://${extensionId}/options.html#account`)
       await waitForExtensionRoot(page)
-      await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
-      await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
-      await expect(await show(SITE_TYPES.KIMI)).toContainText("¥8.00")
-      await expect(await show(SITE_TYPES.DAHL)).toContainText("2.5 M Token")
-      for (const account of config.accounts) {
-        const visibleRow = await show(account.site_type)
-        const expected =
-          nativeBalanceExpectations[
-            account.site_type as keyof typeof nativeBalanceExpectations
-          ]
-        for (const text of expected) {
-          const match = /^\$([\d,.]+)$/.exec(text)
-          const converted = match
-            ? `¥${(Number(match[1]!.replaceAll(",", "")) * 7.2).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-            : text
-          await expect(visibleRow).toContainText(converted)
+      if (phase === "currency conversion") {
+        for (const account of config.accounts.filter((account) =>
+          siteTypes.some((type) => type === account.site_type),
+        )) {
+          const visibleRow = await show(account.site_type)
+          const expected =
+            nativeBalanceExpectations[
+              account.site_type as keyof typeof nativeBalanceExpectations
+            ]
+          for (const text of expected) {
+            const match = /^\$([\d,.]+)$/.exec(text)
+            const converted = match
+              ? `¥${(Number(match[1]!.replaceAll(",", "")) * 7.2).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : text
+            await expect(visibleRow).toContainText(converted)
+          }
         }
-      }
-      await page.reload()
-      await waitForExtensionRoot(page)
-      await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
-      await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
-      for (const [entry, width] of [
-        [POPUP_PAGE_PATH, 390],
-        [SIDEPANEL_PAGE_PATH, 320],
-      ] as const) {
-        await page.setViewportSize({ width, height: 1000 })
-        await page.goto(`chrome-extension://${extensionId}/${entry}`)
-        await waitForExtensionRoot(page)
-        await expect(await show(SITE_TYPES.RELAYFOR)).toContainText(
-          "Permanent credit",
-        )
+      } else {
         await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
         await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
-        expect(
-          await page.evaluate(
-            () => document.documentElement.scrollWidth > innerWidth,
-          ),
-        ).toBe(false)
-        await captureVisualViews({
-          page,
-          ready: row(SITE_TYPES.SUB2API),
-          id: `native-${entry.replace(".html", "")}`,
-          extensionDir,
-        })
+        await expect(await show(SITE_TYPES.KIMI)).toContainText("¥8.00")
+        await expect(await show(SITE_TYPES.DAHL)).toContainText("2.5 M Token")
+        await page.reload()
+        await waitForExtensionRoot(page)
+        await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
+        await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
+        for (const [entry, width] of [
+          [POPUP_PAGE_PATH, 390],
+          [SIDEPANEL_PAGE_PATH, 320],
+        ] as const) {
+          await page.setViewportSize({ width, height: 1000 })
+          await page.goto(`chrome-extension://${extensionId}/${entry}`)
+          await waitForExtensionRoot(page)
+          await expect(await show(SITE_TYPES.RELAYFOR)).toContainText(
+            "Permanent credit",
+          )
+          await expect(await show(SITE_TYPES.NEW_API)).toContainText("¥72.00")
+          await expect(await show(SITE_TYPES.SUB2API)).toContainText("¥88.85")
+          expect(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth > innerWidth,
+            ),
+          ).toBe(false)
+          await captureVisualViews({
+            page,
+            ready: row(SITE_TYPES.SUB2API),
+            id: `native-${entry.replace(".html", "")}`,
+            extensionDir,
+          })
+        }
       }
     }
     await page.goto(`chrome-extension://${extensionId}/options.html#account`)
