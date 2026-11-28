@@ -42,6 +42,7 @@ describe("sibling status DTO discriminators", () => {
       "clawhud:daily-checkin",
       "freeapi:daily-checkin",
       "genius-programmer:daily-checkin",
+      "xingchi:daily-checkin",
     ])
   })
 

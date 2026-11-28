@@ -36,6 +36,14 @@ describe("Sub2API check-in read request", () => {
 
   it.each([
     {
+      method: AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn,
+      status: {
+        code: 0,
+        message: "ok",
+        data: { enabled: true, claimed_today: false },
+      },
+    },
+    {
       method: AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
       status: {
         code: 0,
@@ -134,7 +142,18 @@ describe("Sub2API check-in read request", () => {
       expect(recover).toHaveBeenCalledOnce()
       expect(
         fetch.mock.calls.map(([, options]) => options.options?.method),
-      ).toEqual(begin ? ["GET", "GET", "POST", "POST"] : ["GET", "GET", "POST"])
+      ).toEqual(
+        begin
+          ? ["GET", "GET", "POST", "POST"]
+          : [
+              "GET",
+              "GET",
+              "POST",
+              ...(method === AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn
+                ? ["GET"]
+                : []),
+            ],
+      )
       for (const [pending] of fetch.mock.calls.slice(1)) {
         expect(pending).toMatchObject({
           fetchContext,

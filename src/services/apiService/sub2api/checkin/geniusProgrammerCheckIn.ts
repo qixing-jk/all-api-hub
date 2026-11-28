@@ -100,8 +100,9 @@ export function parseGeniusProgrammerDailyCheckInStatusResponse(
 ) {
   const data = parseData(response, USER_CHECK_IN_STATUS_ENDPOINT)
   if (
-    Object.hasOwn(data, "checked_in_today") &&
-    Object.hasOwn(data, "today_checked_in")
+    Object.hasOwn(data, "today_checked_in") &&
+    (Object.hasOwn(data, "checked_in_today") ||
+      Object.hasOwn(data, "claimed_today"))
   ) {
     throw invalidResponse(USER_CHECK_IN_STATUS_ENDPOINT)
   }

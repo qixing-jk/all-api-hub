@@ -174,6 +174,18 @@ vi.mock(
 )
 
 vi.mock(
+  "~/services/apiService/sub2api/checkin/xingchiCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/xingchiCheckIn")
+    >()),
+    fetchXingchiDailyCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported Xingchi protocol", 404)),
+  }),
+)
+
+vi.mock(
   "~/services/apiService/sub2api/checkin/linxiCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<
