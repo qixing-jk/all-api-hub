@@ -6,6 +6,7 @@ export const PMPLAN_ENDPOINTS = {
   Models: "/api/models",
   ModelSquare: "/api/model-square",
   Notices: "/api/notices",
+  RedeemResetCard: "/api/reset-cards/redeem",
 } as const
 
 /** Public health signature owned by the protocol, independent of display branding. */

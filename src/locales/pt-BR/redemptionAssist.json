@@ -2,12 +2,16 @@
   "accountSelect": {
     "confirm": "Confirmar resgate",
     "noResults": "Nenhuma conta correspondente encontrada",
-    "noSupportedAccounts": "Nenhuma das suas contas salvas oferece resgate automático. Resgate o código manualmente no site correspondente.",
+    "noSupportedAccounts": "As contas exibidas correspondem ao tipo de código, mas o assistente ainda não oferece resgate automático para elas. Use uma página de resgate conhecida abaixo ou consulte o site emissor.",
     "openSiteManual": "Abrir o site para resgatar manualmente",
+    "requestSupport": "Solicitar suporte",
+    "supportRequestMessage": "O resgate automático ainda não é compatível com o tipo de site {{siteType}}. Solicito suporte ao resgate.",
     "title": "Selecione uma conta para usar no resgate",
     "titleFallback": "Nenhuma conta corresponde a este site. Selecione uma manualmente",
     "titleMultiple": "Várias contas disponíveis, selecione uma para resgate",
-    "unsupported": "Este tipo de site não oferece resgate automático"
+    "titleNoAutomatic": "O resgate automático não está disponível para estas contas",
+    "titlePmplan": "Selecione uma conta do PM-Plan para receber o cartão",
+    "unsupported": "O resgate automático ainda não está disponível para esta conta"
   },
   "actions": {
     "autoRedeem": "Resgate automático"
@@ -27,12 +31,21 @@
   },
   "messages": {
     "batchResultSummary": "Total: {{total}}. Sucesso: {{success}}. Falha: {{failed}}.",
+    "batchResultSummaryUnconfirmed": "Total {{total}}. Sucesso {{success}}. Falha {{failed}}. Não confirmado {{unconfirmed}}.",
     "batchResultTitle": "Resultados de resgate",
     "benefitsRedeemed": "Resgatado: {{details}}",
     "cancelled": "Cancelado",
+    "claimUnconfirmed": "Não confirmado",
     "extensionDays": "Estendida em {{days}} dias",
     "fallbackBenefit": "Benefício alternativo utilizado",
+    "incompatibleCodeKind": "Esta conta não pode resgatar este tipo de código. Escolha uma conta compatível.",
+    "invalidResetCode": "Código de cartão de redefinição do PM-Plan inválido. Confira o código PMRC completo.",
     "noAccountForUrl": "Nenhuma conta correspondente encontrada para este site. Adicione o site como uma conta em All API Hub e tente novamente.",
+    "noCompatibleAccounts": "Nenhuma conta ativada corresponde a este tipo de código. Adicione uma conta correspondente ou resgate no site emissor.",
+    "pmplanCardClaimed": "Cartão de redefinição recebido. Ele ainda não foi usado.",
+    "pmplanClaimUncertain": "O resultado não foi confirmado. Confira seus cartões no site selecionado antes de tentar novamente.",
+    "pmplanPromptConfirm": "Cartão de redefinição do PM-Plan {{code}} detectado. Receber em uma conta? Isso não usará o cartão nem redefinirá sua cota.",
+    "pmplanSelectAccount": "Escolha uma conta no site que emitiu o cartão. O prefixo PMRC não identifica o site. Receber o cartão não o utiliza.",
     "promptConfirm": "Detectamos um possível código de resgate, {{code}}, nesta página. Deseja tentar resgatá-lo automaticamente neste site?",
     "promptConfirmBatch_one": "Detectamos {{count}} possível código de resgate nesta página. Selecione o código que deseja resgatar automaticamente neste site.",
     "promptConfirmBatch_many": "Detectamos {{count}} possíveis códigos de resgate nesta página. Selecione os códigos que deseja resgatar automaticamente neste site.",

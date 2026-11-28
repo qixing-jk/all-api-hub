@@ -7,6 +7,48 @@ import {
 } from "~/services/redemption/utils/redemptionCode"
 
 describe("redemptionCode", () => {
+  it("does not reinterpret the tail of a malformed PMRC code as a generic code", () => {
+    const generic = "b".repeat(32)
+    expect(
+      extractRedemptionCodesFromText(`PMRC-${"a".repeat(32)} ${generic}`, {
+        relaxedCharset: true,
+      }),
+    ).toEqual([generic])
+  })
+  it("deduplicates mixed-case reset cards in relaxed clipboard detection without extracting partial cards", () => {
+    const code = "PMRC-ABCD-EFGH-JKMN-PQRS"
+    const generic = "a".repeat(32)
+    expect(
+      extractRedemptionCodesFromText(
+        `${code.toLowerCase()} (${code}) ${generic}`,
+        { relaxedCharset: true },
+      ),
+    ).toEqual([code, generic])
+    for (const invalid of [
+      code + "X",
+      "X" + code,
+      code.replace("ABCD", "0O1I"),
+      "PMRC-ABCD-EFGH",
+      "PMRC-" + "a".repeat(27),
+    ]) {
+      expect(isPossibleRedemptionCode(invalid, { relaxedCharset: true })).toBe(
+        false,
+      )
+      expect(
+        extractRedemptionCodesFromText(invalid, { relaxedCharset: true }),
+      ).toEqual([])
+    }
+  })
+
+  it("recognizes and normalizes native PM-Plan reset codes independently of generic relaxed validation", () => {
+    const code = "PMRC-ABCD-EFGH-JKMN-PQRS"
+    expect(isPossibleRedemptionCode(code)).toBe(true)
+    expect(isPossibleRedemptionCode(code.toLowerCase())).toBe(true)
+    expect(
+      extractRedemptionCodesFromText(`兑换码：${code.toLowerCase()}，${code}`),
+    ).toEqual([code])
+  })
+
   it("rejects missing, wrong-length, and whitespace-containing codes", () => {
     expect(isPossibleRedemptionCode(undefined)).toBe(false)
     expect(isPossibleRedemptionCode(null)).toBe(false)

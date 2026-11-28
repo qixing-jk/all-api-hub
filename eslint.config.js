@@ -217,8 +217,9 @@ const dynamicImportAllowlist = [
     ],
   },
   {
-    file: "src/entrypoints/content/redemptionAssist/utils/redemptionToasts.ts",
-    imports: ["../components/", "react"],
+    // Content redemption defers React and its toast tree until feedback is shown.
+    file: "src/features/RedemptionAssist/redemptionToasts.ts",
+    imports: ["./components/", "react"],
   },
   {
     file: "src/entrypoints/content/shared/uiRoot.ts",
@@ -674,7 +675,7 @@ export default defineConfig([
     ignores: [
       "src/lib/notify/**",
       "src/components/ThemeAwareToaster.tsx",
-      "src/entrypoints/content/redemptionAssist/components/RedemptionToaster.tsx",
+      "src/features/RedemptionAssist/components/RedemptionToaster.tsx",
     ],
     plugins: {
       notifications: {

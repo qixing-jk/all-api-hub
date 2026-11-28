@@ -2,12 +2,16 @@
   "accountSelect": {
     "confirm": "Confirm redemption",
     "noResults": "No matching accounts found",
-    "noSupportedAccounts": "None of your saved accounts support automatic redemption. Redeem the code manually on the relevant site.",
+    "noSupportedAccounts": "The accounts shown match this code type, but the assistant does not support automatic redemption for them yet. Use a known redemption page below, or check the issuing site.",
     "openSiteManual": "Open site to redeem manually",
+    "requestSupport": "Request support",
+    "supportRequestMessage": "Automatic redemption is not yet supported for site type {{siteType}}. Please add redemption support.",
     "title": "Select an account to use for redemption",
     "titleFallback": "No account matched this site, please select one manually",
     "titleMultiple": "Multiple accounts available, please select one for redemption",
-    "unsupported": "Automatic redemption is not supported for this site type"
+    "titleNoAutomatic": "Automatic redemption is not available for these accounts",
+    "titlePmplan": "Select a PM-Plan account to claim the card",
+    "unsupported": "Automatic redemption is not yet supported for this account"
   },
   "actions": {
     "autoRedeem": "Auto redeem"
@@ -27,12 +31,21 @@
   },
   "messages": {
     "batchResultSummary": "Total {{total}}. Succeeded {{success}}. Failed {{failed}}.",
+    "batchResultSummaryUnconfirmed": "Total {{total}}. Succeeded {{success}}. Failed {{failed}}. Unconfirmed {{unconfirmed}}.",
     "batchResultTitle": "Redemption results",
     "benefitsRedeemed": "Redeemed: {{details}}",
     "cancelled": "Cancelled",
+    "claimUnconfirmed": "Unconfirmed",
     "extensionDays": "Extended by {{days}} days",
     "fallbackBenefit": "Fallback benefit used",
+    "incompatibleCodeKind": "This account cannot redeem this type of code. Choose a compatible account.",
+    "invalidResetCode": "Invalid PM-Plan reset-card code. Check the complete PMRC code.",
     "noAccountForUrl": "No matching account found for this site. Please add the site as an account in All API Hub, then try again.",
+    "noCompatibleAccounts": "No enabled account matches this code type. Add a matching account or redeem on the issuing site.",
+    "pmplanCardClaimed": "Reset card claimed. It has not been used.",
+    "pmplanClaimUncertain": "The claim result is uncertain. Check your cards on the selected site before trying again.",
+    "pmplanPromptConfirm": "Detected PM-Plan reset card {{code}}. Claim it to an account? This will not use the card or reset your allowance.",
+    "pmplanSelectAccount": "Choose an account on the site that issued this card. The PMRC prefix does not identify the site. Claiming does not use the card.",
     "promptConfirm": "Detected a possible redemption code {{code}} on this page. Try auto redeem for this site?",
     "promptConfirmBatch_one": "Detected {{count}} possible redemption code on this page. Select codes to auto redeem for this site.",
     "promptConfirmBatch_other": "Detected {{count}} possible redemption codes on this page. Select codes to auto redeem for this site.",

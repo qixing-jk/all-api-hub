@@ -11,6 +11,7 @@ const SITE_SUPPORT_REQUEST_TEMPLATE = "site_support_request.yml"
 export const SITE_SUPPORT_ERROR_TYPES = {
   KeyManagementUnsupported: "key_management_unsupported",
   ModelListUnsupported: "model_list_unsupported",
+  RedemptionUnsupported: "redemption_unsupported",
 } as const
 
 export type SiteSupportErrorType =

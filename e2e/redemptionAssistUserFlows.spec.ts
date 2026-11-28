@@ -1,6 +1,5 @@
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getPopupViewTestId } from "~/entrypoints/popup/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { SiteAccount } from "~/types"
@@ -20,6 +19,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { sendRedemptionContextMenuTrigger } from "~~/e2e/utils/redemptionAssist"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const REDEEM_SITE_URL = "https://redeem.example.test"
@@ -44,68 +44,226 @@ async function readStoredAccounts(
   }
 }
 
-async function sendRedemptionContextMenuTrigger(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-  params: {
-    pageUrl: string
-    selectionText: string
-  },
-) {
-  await expect
-    .poll(async () => {
-      return await serviceWorker.evaluate(
-        async ({ action, pageUrl, selectionText }) => {
-          const chromeApi = (globalThis as any).chrome
-          const tabs = await chromeApi.tabs.query({})
-          const targetTab = tabs.find(
-            (tab: { id?: number; url?: string }) => tab.url === pageUrl,
-          )
-
-          if (targetTab?.id == null) {
-            return { success: false, error: "Target tab not found" }
-          }
-
-          return await new Promise<{ success: boolean; error?: string }>(
-            (resolve) => {
-              chromeApi.tabs.sendMessage(
-                targetTab.id,
-                {
-                  action,
-                  pageUrl,
-                  selectionText,
-                },
-                () => {
-                  const error = chromeApi.runtime?.lastError
-                  const errorMessage =
-                    typeof error?.message === "string" ? error.message : ""
-                  if (errorMessage.includes("message port closed")) {
-                    resolve({ success: true })
-                    return
-                  }
-
-                  resolve(
-                    errorMessage
-                      ? { success: false, error: errorMessage }
-                      : { success: true },
-                  )
-                },
-              )
-            },
-          )
-        },
-        {
-          action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
-          pageUrl: params.pageUrl,
-          selectionText: params.selectionText,
-        },
-      )
-    })
-    .toMatchObject({ success: true })
-}
-
 test.beforeEach(async ({ page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
+})
+
+test("keeps applicable unsupported accounts visible and provides only known manual redemption links", async ({
+  context,
+  page,
+}, testInfo) => {
+  let writes = 0
+  await context.route(
+    "https://github.com/qixing-jk/all-api-hub/issues/new**",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/html",
+        body: "<html><title>Support request fixture</title><h1>Review support request</h1></html>",
+      }),
+  )
+  await context.route(`${REDEEM_SITE_URL}/**`, async (route) => {
+    if (route.request().method() === "POST") writes++
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<html><title>Redemption choice fixture</title><h1>Redemption announcement</h1></html>",
+    })
+  })
+  await page.setViewportSize({ width: 1100, height: 850 })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, {
+    language: "en",
+    redemptionAssist: { enabled: true },
+  })
+  const manual = createStoredAccount({
+    id: "manual",
+    site_name: "Manual Sub2API",
+    site_type: "sub2api",
+    site_url: REDEEM_SITE_URL,
+  })
+  const noRoute = createStoredAccount({
+    id: "no-route",
+    site_name: "No known page",
+    site_type: "RightCode",
+    site_url: REDEEM_SITE_URL,
+    checkIn: {
+      customCheckIn: { url: `${REDEEM_SITE_URL}/unrelated-check-in` },
+    },
+  })
+  const automatic = createStoredAccount({
+    id: "auto",
+    site_name: "Automatic account",
+    site_url: REDEEM_SITE_URL,
+  })
+  const disabled = createStoredAccount({
+    ...automatic,
+    id: "disabled",
+    site_name: "Disabled account",
+    disabled: true,
+  })
+  const incompatible = createStoredAccount({
+    id: "pmplan",
+    site_name: "PM-Plan account",
+    site_type: "pmplan",
+    site_url: REDEEM_SITE_URL,
+  })
+  const host = page.locator("all-api-hub-redemption-toast")
+  const trigger = async () => {
+    await page.goto(REDEEM_PAGE_URL)
+    await sendRedemptionContextMenuTrigger(worker, {
+      pageUrl: REDEEM_PAGE_URL,
+      selectionText: REDEMPTION_CODE,
+    })
+  }
+  const capture = async (name: string) =>
+    host.locator("section").screenshot({
+      path: testInfo.outputPath(`${name}.png`),
+      animations: "disabled",
+    })
+  await seedStoredAccounts(worker, [
+    manual,
+    noRoute,
+    disabled,
+    incompatible,
+    automatic,
+  ])
+  await trigger()
+  await expect(host.getByRole("radio").first()).toBeVisible()
+  await capture("supported-and-unsupported")
+  await expect(host.getByRole("radio")).toHaveCount(3)
+  await expect(host.getByRole("radio").first()).toHaveAccessibleName(
+    /Automatic account/,
+  )
+  await expect(
+    host.getByRole("radio", { name: /Manual Sub2API/ }),
+  ).toBeDisabled()
+  await expect(
+    host.getByRole("radio", { name: /No known page/ }),
+  ).toBeDisabled()
+  await expect(host.getByText("Disabled account", { exact: true })).toHaveCount(
+    0,
+  )
+  await expect(host.getByText("PM-Plan account", { exact: true })).toHaveCount(
+    0,
+  )
+  const manualLink = host.getByRole("link", {
+    name: "Open site to redeem manually",
+    exact: true,
+  })
+  const supportLinks = host.getByRole("link", {
+    name: "Request support",
+    exact: true,
+  })
+  await expect(manualLink).toHaveCount(1)
+  await expect(manualLink).toHaveAttribute("href", `${REDEEM_SITE_URL}/redeem`)
+  await expect(supportLinks).toHaveCount(2)
+  const supportOpened = context.waitForEvent("page")
+  await supportLinks.first().focus()
+  await supportLinks.first().press("Enter")
+  const supportPage = await supportOpened
+  try {
+    await expect(supportPage).toHaveURL(
+      /github\.com\/qixing-jk\/all-api-hub\/issues\/new/,
+    )
+    const destination = new URL(supportPage.url())
+    expect(destination.searchParams.get("template")).toBe(
+      "site_support_request.yml",
+    )
+    expect(destination.searchParams.get("site-url")).toBe(REDEEM_SITE_URL)
+    expect(destination.searchParams.get("failure-type")).toBe(
+      "redemption_unsupported",
+    )
+    expect(destination.searchParams.get("failure-message")).toBe(
+      "Automatic redemption is not yet supported for site type sub2api. Please add redemption support.",
+    )
+    expect(destination.searchParams.get("extension-version")).toMatch(
+      /^\d+\.\d+\.\d+/,
+    )
+    expect(destination.href).not.toContain(REDEMPTION_CODE)
+    expect(decodeURIComponent(destination.href)).not.toContain("Manual Sub2API")
+  } finally {
+    await supportPage.close()
+  }
+  await expect(host.getByRole("radio").first()).toBeChecked()
+  expect(writes).toBe(0)
+  await host.getByRole("textbox").fill("Manual Sub2API")
+  await expect(
+    host.getByRole("button", { name: "Confirm redemption", exact: true }),
+  ).toBeDisabled()
+  await expect(
+    host.getByText(/The accounts shown match this code type/),
+  ).toBeVisible()
+  await host.getByRole("textbox").press("Enter")
+  expect(writes).toBe(0)
+  await capture("unsupported-search")
+  await host.getByRole("textbox").fill("no such account")
+  await expect(
+    host.getByText("No matching accounts found", { exact: true }),
+  ).toBeVisible()
+  await capture("no-search-results")
+  await host.getByRole("textbox").fill("")
+  await expect(
+    host.getByRole("button", { name: "Confirm redemption", exact: true }),
+  ).toBeEnabled()
+  await expect(host.getByRole("radio").first()).toBeChecked()
+  const opened = context.waitForEvent("page")
+  await manualLink.click()
+  const manualPage = await opened
+  try {
+    await expect(manualPage).toHaveURL(`${REDEEM_SITE_URL}/redeem`)
+  } finally {
+    await manualPage.close()
+  }
+  expect(writes).toBe(0)
+
+  // A same-origin manual-only account must not bypass the picker and submit.
+  await seedStoredAccounts(worker, [
+    {
+      ...manual,
+      checkIn: { ...manual.checkIn, customCheckIn: { url: REDEEM_PAGE_URL } },
+    },
+    noRoute,
+  ])
+  await trigger()
+  await expect(
+    host.getByRole("heading", {
+      name: "Automatic redemption is not available for these accounts",
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(host.getByRole("radio")).toHaveCount(2)
+  await expect(
+    host.getByRole("button", { name: "Confirm redemption", exact: true }),
+  ).toBeDisabled()
+  await expect(
+    host.getByText(/The accounts shown match this code type/),
+  ).toBeVisible()
+  await capture("all-unsupported")
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(manualLink).toBeInViewport()
+  await expect(supportLinks.first()).toBeInViewport()
+  await capture("all-unsupported-narrow")
+  await host
+    .getByRole("radio", { name: /No known page/ })
+    .locator("xpath=ancestor::label/..")
+    .scrollIntoViewIfNeeded()
+  await expect(supportLinks.last()).toBeInViewport()
+  await capture("all-unsupported-scrolled")
+  await host.getByRole("button", { name: "Cancel", exact: true }).click()
+  await expect(host.getByText("Cancelled", { exact: true })).toBeVisible()
+  expect(writes).toBe(0)
+
+  await seedStoredAccounts(worker, [disabled, incompatible])
+  await trigger()
+  await expect(
+    host.getByText(/No enabled account matches this code type/),
+  ).toBeVisible()
+  await expect(host.getByRole("radio")).toHaveCount(0)
+  await capture("no-compatible-account")
+  expect(writes).toBe(0)
 })
 
 test("detects a redemption code on a real page, redeems it for the matched account, and refreshes popup balance", async ({

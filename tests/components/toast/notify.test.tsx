@@ -16,7 +16,7 @@ import {
   ToasterPortalHost,
   ToasterPortalProvider,
 } from "~/components/toast/ToasterPortal"
-import { RedemptionToaster } from "~/entrypoints/content/redemptionAssist/components/RedemptionToaster"
+import { RedemptionToaster } from "~/features/RedemptionAssist/components/RedemptionToaster"
 import notify from "~/lib/notify"
 import contentNotify from "~/lib/notify/content"
 import { testI18n } from "~~/tests/test-utils/i18n"

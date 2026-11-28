@@ -13,11 +13,13 @@ import { t } from "~/utils/i18n/core"
 import { resolveStaticAccountRoutePath } from "../accountRoutes"
 import { pmplanKeyResources } from "./keyResources"
 import { pmplanModelCatalog, pmplanModelPricing } from "./modelCatalog"
+import { pmplanRedemption } from "./redemption"
 
 export const pmplanCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.PMPLAN,
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.Pmplan,
   account: {
+    redemption: pmplanRedemption,
     announcements: { fetch: fetchPmplanAnnouncements },
     modelCatalog: pmplanModelCatalog,
     modelPricing: pmplanModelPricing,

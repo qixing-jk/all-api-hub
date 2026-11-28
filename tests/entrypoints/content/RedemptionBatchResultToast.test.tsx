@@ -14,7 +14,7 @@ import {
 import {
   RedemptionBatchResultToast,
   type RedemptionBatchResultItem,
-} from "~/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast"
+} from "~/features/RedemptionAssist/components/RedemptionBatchResultToast"
 import enRedemptionAssist from "~/locales/en/redemptionAssist.json"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

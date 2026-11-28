@@ -54,6 +54,7 @@ import {
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
 } from "~/services/accounts/accountSiteProfile/contracts"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
+import { REDEMPTION_CODE_KINDS } from "~/services/redemption/utils/redemptionCode"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -297,6 +298,7 @@ export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 const ACCOUNT_SITE_DEFINITIONS = [
   {
     siteType: SITE_TYPES.PMPLAN,
+    redemptionCodeKinds: [REDEMPTION_CODE_KINDS.PmplanResetCard],
     scopes: ACCOUNT_SCOPE,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Pmplan,
     onboarding: {

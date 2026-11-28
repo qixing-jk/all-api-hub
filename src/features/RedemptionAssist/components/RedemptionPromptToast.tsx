@@ -19,22 +19,22 @@ import {
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
+import {
+  REDEMPTION_PROMPT_ACTIONS,
+  type RedemptionPromptCodeItem,
+  type RedemptionPromptResult,
+} from "../contracts"
+
+export type {
+  RedemptionPromptAction,
+  RedemptionPromptCodeItem,
+  RedemptionPromptResult,
+} from "../contracts"
+
 /**
  * Unified logger scoped to redemption assist prompt toast interactions.
  */
 const logger = createLogger("RedemptionPromptToast")
-
-export type RedemptionPromptAction = "auto" | "cancel"
-
-export interface RedemptionPromptResult {
-  action: RedemptionPromptAction
-  selectedCodes: string[]
-}
-
-export interface RedemptionPromptCodeItem {
-  code: string
-  preview: string
-}
 
 interface RedemptionPromptToastProps {
   message: string
@@ -81,7 +81,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
     })
-    onAction({ action: "cancel", selectedCodes: [] })
+    onAction({ action: REDEMPTION_PROMPT_ACTIONS.Cancel, selectedCodes: [] })
   }
 
   const handleAutoRedeem = (e: React.MouseEvent) => {
@@ -93,7 +93,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
     })
     onAction({
-      action: "auto",
+      action: REDEMPTION_PROMPT_ACTIONS.Auto,
       selectedCodes: codeValues.filter((c) => selected.has(c)),
     })
   }
@@ -157,7 +157,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
       >
         <p>{message}</p>
         {codes.length > 1 && (
-          <label className="gap-y-density-2 flex items-center gap-x-2">
+          <label className="flex items-center gap-x-2 gap-y-density-2">
             <input
               ref={selectAllRef}
               type="checkbox"
@@ -165,17 +165,17 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
               checked={allSelected}
               onChange={handleToggleAll}
             />
-            <span className="text-foreground text-xs">
+            <span className="text-xs text-foreground">
               {t("redemptionAssist:messages.selectAll")}
             </span>
           </label>
         )}
         {codes.length > 0 && (
-          <div className="space-y-density-1 max-h-44 overflow-y-auto pr-1">
+          <div className="max-h-44 space-y-density-1 overflow-y-auto pr-1">
             {codes.map(({ code, preview }) => (
               <label
                 key={code}
-                className="border-border/60 hover:bg-muted/70 gap-y-density-2 py-density-1-5 flex cursor-pointer items-center gap-x-2 rounded-md border px-2 text-xs"
+                className="flex cursor-pointer items-center gap-x-2 gap-y-density-2 rounded-md border border-border/60 px-2 py-density-1-5 text-xs hover:bg-muted/70"
               >
                 <input
                   type="checkbox"
@@ -183,7 +183,7 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
                   checked={selected.has(code)}
                   onChange={() => toggleCode(code)}
                 />
-                <code className="text-foreground font-mono">{preview}</code>
+                <code className="font-mono text-foreground">{preview}</code>
               </label>
             ))}
           </div>

@@ -19,18 +19,24 @@ const mockAccountModules = (surface: Record<string, unknown>) => {
   }))
 }
 
-vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({
-  SITE_ROUTE_KINDS: {
-    CheckIn: "checkIn",
-    Redeem: "redeem",
-  },
-  resolveAccountSiteRouteUrl: vi.fn(
-    (account: { baseUrl: string }, route: "checkIn" | "redeem") =>
-      Promise.resolve(
-        `${account.baseUrl}${route === "checkIn" ? "/profile" : "/wallet"}`,
-      ),
-  ),
-}))
+vi.mock(
+  "~/services/accounts/utils/siteRouteResolver",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/utils/siteRouteResolver")
+    >()),
+    SITE_ROUTE_KINDS: {
+      CheckIn: "checkIn",
+      Redeem: "redeem",
+    },
+    resolveAccountSiteRouteUrl: vi.fn(
+      (account: { baseUrl: string }, route: "checkIn" | "redeem") =>
+        Promise.resolve(
+          `${account.baseUrl}${route === "checkIn" ? "/profile" : "/wallet"}`,
+        ),
+    ),
+  }),
+)
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -46,6 +52,8 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 })
 
 afterEach(() => {
+  vi.doUnmock("~/services/apiAdapters/registry")
+  vi.doUnmock("~/services/search/accountSearch")
   vi.doUnmock("~/services/accounts/accountStorage/accountQueries")
   vi.doUnmock("~/services/accounts/accountStorage/accountPresentation")
   vi.doUnmock("~/services/accounts/accountStorage/accountRefresh")
@@ -68,32 +76,162 @@ async function resolveShouldPrompt(
   request: { url: string; codes: string[] },
   sender: browser.runtime.MessageSender = {},
 ) {
-  const { resolveRedemptionAssistShouldPromptMessage } = await import(
-    "~/services/redemption/redemptionAssist"
-  )
+  const { resolveRedemptionAssistShouldPromptMessage } =
+    await import("~/services/redemption/redemptionAssist")
   return resolveRedemptionAssistShouldPromptMessage(request, sender)
 }
 
 async function updateRuntimeSettings(request: { settings: any }) {
-  const { updateRedemptionAssistRuntimeSettings } = await import(
-    "~/services/redemption/redemptionAssist"
-  )
+  const { updateRedemptionAssistRuntimeSettings } =
+    await import("~/services/redemption/redemptionAssist")
   return updateRedemptionAssistRuntimeSettings(request)
 }
 
 async function resolveAutoRedeem(request: { accountId: string; code: string }) {
-  const { resolveRedemptionAssistAutoRedeemMessage } = await import(
-    "~/services/redemption/redemptionAssist"
-  )
+  const { resolveRedemptionAssistAutoRedeemMessage } =
+    await import("~/services/redemption/redemptionAssist")
   return resolveRedemptionAssistAutoRedeemMessage(request)
 }
 
 async function resolveAutoRedeemByUrl(request: { url: string; code: string }) {
-  const { resolveRedemptionAssistAutoRedeemByUrlMessage } = await import(
-    "~/services/redemption/redemptionAssist"
-  )
+  const { resolveRedemptionAssistAutoRedeemByUrlMessage } =
+    await import("~/services/redemption/redemptionAssist")
   return resolveRedemptionAssistAutoRedeemByUrlMessage(request)
 }
+
+it.each([
+  {
+    code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+    expected: ["plan-a", "plan-b"],
+    resultCode: "SELECT_ACCOUNT",
+  },
+  {
+    code: "a".repeat(32),
+    expected: ["generic", "unsupported"],
+    resultCode: "NO_ACCOUNTS",
+  },
+])(
+  "hard-filters compatible accounts for $resultCode without submitting",
+  async ({ code, expected, resultCode }) => {
+    const accounts = [
+      { id: "plan-a", siteType: "pmplan", baseUrl: "https://plan-a.test" },
+      { id: "plan-b", siteType: "pmplan", baseUrl: "https://plan-b.test" },
+      { id: "generic", siteType: "new-api", baseUrl: "https://generic.test" },
+      {
+        id: "unsupported",
+        siteType: "sub2api",
+        baseUrl: "https://unsupported.test",
+      },
+      {
+        id: "disabled",
+        siteType: "pmplan",
+        baseUrl: "https://plan-a.test",
+        disabled: true,
+      },
+    ]
+    mockAccountModules({
+      getAllAccounts: vi.fn().mockResolvedValue([]),
+      convertToDisplayData: vi.fn().mockReturnValue(accounts),
+    })
+    vi.doMock("~/services/search/accountSearch", () => ({
+      searchAccounts: vi.fn().mockReturnValue([]),
+    }))
+    const redeem = vi.fn()
+    vi.doMock("~/services/redemption/redeemService", () => ({
+      redeemService: { redeemCodeForAccount: redeem },
+    }))
+    const response: any = await resolveAutoRedeemByUrl({
+      url: "https://plan-a.test/dashboard",
+      code,
+    })
+    expect(response.data.code).toBe(resultCode)
+    expect(
+      (response.data.allAccounts ?? response.data.candidates).map(
+        (a: any) => a.id,
+      ),
+    ).toEqual(expected)
+    expect(redeem).not.toHaveBeenCalled()
+  },
+)
+
+it("shows applicable unsupported accounts without dispatching a same-domain match", async () => {
+  const account = {
+    id: "manual",
+    siteType: "sub2api",
+    baseUrl: "https://manual.test",
+    checkIn: { customCheckIn: { url: "https://manual.test/check-in" } },
+  }
+  mockAccountModules({
+    getAllAccounts: vi.fn().mockResolvedValue([]),
+    convertToDisplayData: vi.fn().mockReturnValue([account]),
+  })
+  vi.doMock("~/services/search/accountSearch", () => ({
+    searchAccounts: vi.fn().mockReturnValue([{ account }]),
+  }))
+  const redeem = vi.fn()
+  vi.doMock("~/services/redemption/redeemService", () => ({
+    redeemService: { redeemCodeForAccount: redeem },
+  }))
+  const response: any = await resolveAutoRedeemByUrl({
+    url: "https://manual.test/check-in",
+    code: "a".repeat(32),
+  })
+  expect(response.data).toMatchObject({
+    success: false,
+    code: "NO_AUTOMATIC_REDEMPTION",
+    candidates: [
+      { id: "manual", automaticRedemptionSupport: { status: "unsupported" } },
+    ],
+  })
+  expect(redeem).not.toHaveBeenCalled()
+})
+
+it("keeps a PM-Plan account in the PMRC bucket even when its automatic capability is unavailable", async () => {
+  mockAccountModules({
+    getAllAccounts: vi.fn().mockResolvedValue([]),
+    convertToDisplayData: vi
+      .fn()
+      .mockReturnValue([
+        { id: "plan", siteType: "pmplan", baseUrl: "https://plan.test" },
+      ]),
+  })
+  vi.doMock("~/services/apiAdapters/registry", () => ({
+    getSiteTypeCapabilities: vi.fn().mockReturnValue({ account: {} }),
+  }))
+  const pmrc: any = await resolveAutoRedeemByUrl({
+    url: "https://source.test",
+    code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+  })
+  expect(pmrc.data).toMatchObject({
+    code: "NO_AUTOMATIC_REDEMPTION",
+    candidates: [
+      { id: "plan", automaticRedemptionSupport: { status: "unsupported" } },
+    ],
+  })
+  const generic: any = await resolveAutoRedeemByUrl({
+    url: "https://source.test",
+    code: "a".repeat(32),
+  })
+  expect(generic.data.code).toBe("NO_COMPATIBLE_ACCOUNTS")
+})
+
+it("reports no compatible account for a PMRC code instead of offering generic accounts", async () => {
+  mockAccountModules({
+    getAllAccounts: vi.fn().mockResolvedValue([]),
+    convertToDisplayData: vi
+      .fn()
+      .mockReturnValue([{ id: "generic", siteType: "new-api" }]),
+  })
+  const response: any = await resolveAutoRedeemByUrl({
+    url: "https://source.test",
+    code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+  })
+  expect(response.data).toMatchObject({
+    success: false,
+    code: "NO_COMPATIBLE_ACCOUNTS",
+    message: "redemptionAssist:messages.noCompatibleAccounts",
+  })
+})
 
 describe("redemptionAssist shouldPrompt batch filtering", () => {
   it("registers typed runtime listeners once", async () => {
@@ -103,9 +241,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
       redeemService: { redeemCodeForAccount: vi.fn() },
     }))
 
-    const { setupRedemptionAssistMessagingListeners } = await import(
-      "~/services/redemption/redemptionAssist"
-    )
+    const { setupRedemptionAssistMessagingListeners } =
+      await import("~/services/redemption/redemptionAssist")
 
     setupRedemptionAssistMessagingListeners()
     setupRedemptionAssistMessagingListeners()
@@ -135,9 +272,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
   it("returns only prompt-eligible codes for a url", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     const getPreferencesMock = vi.mocked(userPreferences.getPreferences)
 
     getPreferencesMock.mockResolvedValue({
@@ -178,9 +314,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
   it("filters out codes when the whitelist blocks the url", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     const getPreferencesMock = vi.mocked(userPreferences.getPreferences)
 
     getPreferencesMock.mockResolvedValue({
@@ -216,9 +351,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
   it("allows prompting when the whitelist is enabled but resolves to no effective patterns", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       redemptionAssist: {
@@ -254,9 +388,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
   it("derives whitelist patterns from account urls and reuses the cached pattern set", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       redemptionAssist: {
@@ -336,9 +469,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
   it("derives default check-in and redeem whitelist patterns through the site route resolver", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       redemptionAssist: {
@@ -368,9 +500,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
     mockAccountModules({ getAllAccounts, convertToDisplayData })
 
-    const { resolveAccountSiteRouteUrl } = await import(
-      "~/services/accounts/utils/siteRouteResolver"
-    )
+    const { resolveAccountSiteRouteUrl } =
+      await import("~/services/accounts/utils/siteRouteResolver")
     const validHex = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
 
     const response = await resolveShouldPrompt(
@@ -403,9 +534,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
   it("updates runtime settings through the message handler and disables promptability immediately", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({
       ...DEFAULT_PREFERENCES,
       redemptionAssist: {
@@ -467,9 +597,8 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
 
   it("falls back to default runtime settings when loading preferences fails", async () => {
     vi.resetModules()
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockRejectedValue(
       new Error("prefs exploded"),
     )
@@ -530,9 +659,8 @@ describe("redemptionAssist post-redeem refresh", () => {
   it("refreshes account after successful auto redeem by url (inferred account)", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     const getPreferencesMock = vi.mocked(userPreferences.getPreferences)
     getPreferencesMock.mockResolvedValue(DEFAULT_PREFERENCES)
 
@@ -543,6 +671,7 @@ describe("redemptionAssist post-redeem refresh", () => {
 
     const displayAccount = {
       id: "acc_2",
+      siteType: "new-api",
       baseUrl: "https://example.com",
       checkIn: {
         customCheckIn: {
@@ -709,9 +838,8 @@ describe("redemptionAssist post-redeem refresh", () => {
   it("returns INVALID_URL when auto redeem by url receives an unparsable url", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue(
       DEFAULT_PREFERENCES,
     )
@@ -734,9 +862,8 @@ describe("redemptionAssist post-redeem refresh", () => {
   it("returns MULTIPLE_ACCOUNTS when several same-domain candidates match", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue(
       DEFAULT_PREFERENCES,
     )
@@ -790,9 +917,8 @@ describe("redemptionAssist post-redeem refresh", () => {
   it("returns NO_ACCOUNTS when search results exist but none provide a matching custom check-in url", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue(
       DEFAULT_PREFERENCES,
     )
@@ -841,9 +967,8 @@ describe("redemptionAssist post-redeem refresh", () => {
   it("returns the failed redeem result for a single matched account without refreshing", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue(
       DEFAULT_PREFERENCES,
     )
@@ -855,6 +980,7 @@ describe("redemptionAssist post-redeem refresh", () => {
 
     const displayAccount = {
       id: "acc_single_fail",
+      siteType: "new-api",
       baseUrl: "https://example.com",
       checkIn: {
         customCheckIn: {
@@ -902,9 +1028,8 @@ describe("redemptionAssist post-redeem refresh", () => {
   it("returns NO_ACCOUNTS with all accounts when no same-domain candidate matches", async () => {
     vi.resetModules()
 
-    const { userPreferences } = await import(
-      "~/services/preferences/userPreferences"
-    )
+    const { userPreferences } =
+      await import("~/services/preferences/userPreferences")
     vi.mocked(userPreferences.getPreferences).mockResolvedValue(
       DEFAULT_PREFERENCES,
     )

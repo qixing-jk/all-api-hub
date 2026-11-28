@@ -1,3 +1,4 @@
+import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import toast from "~/lib/notify/content"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
@@ -9,19 +10,18 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { RedemptionAccountCandidate } from "~/services/redemption/contracts"
 
-import { ensureRedemptionToastUi } from "../../shared/uiRoot"
-import type { RedemptionBatchResultItem } from "../components/RedemptionBatchResultToast"
-import {
-  type RedemptionPromptCodeItem,
-  type RedemptionPromptResult,
-} from "../components/RedemptionPromptToast"
+import type {
+  RedemptionBatchResultItem,
+  RedemptionPromptCodeItem,
+  RedemptionPromptResult,
+} from "./contracts"
 
 let redemptionToastModulesPromise: Promise<{
   createElement: typeof import("react").createElement
-  RedemptionAccountSelectToast: typeof import("../components/RedemptionAccountSelectToast").RedemptionAccountSelectToast
-  RedemptionBatchResultToast: typeof import("../components/RedemptionBatchResultToast").RedemptionBatchResultToast
-  RedemptionLoadingToast: typeof import("../components/RedemptionLoadingToast").RedemptionLoadingToast
-  RedemptionPromptToast: typeof import("../components/RedemptionPromptToast").RedemptionPromptToast
+  RedemptionAccountSelectToast: typeof import("./components/RedemptionAccountSelectToast").RedemptionAccountSelectToast
+  RedemptionBatchResultToast: typeof import("./components/RedemptionBatchResultToast").RedemptionBatchResultToast
+  RedemptionLoadingToast: typeof import("./components/RedemptionLoadingToast").RedemptionLoadingToast
+  RedemptionPromptToast: typeof import("./components/RedemptionPromptToast").RedemptionPromptToast
 }> | null = null
 
 /**
@@ -31,10 +31,10 @@ async function loadRedemptionToastModules() {
   if (!redemptionToastModulesPromise) {
     redemptionToastModulesPromise = Promise.all([
       import("react"),
-      import("../components/RedemptionAccountSelectToast"),
-      import("../components/RedemptionBatchResultToast"),
-      import("../components/RedemptionLoadingToast"),
-      import("../components/RedemptionPromptToast"),
+      import("./components/RedemptionAccountSelectToast"),
+      import("./components/RedemptionBatchResultToast"),
+      import("./components/RedemptionLoadingToast"),
+      import("./components/RedemptionPromptToast"),
     ]).then(
       ([
         reactModule,
@@ -145,7 +145,7 @@ export async function showAccountSelectToast(
 /**
  * Renders prompt toast asking user whether to auto redeem.
  * @param message Prompt copy.
- * @returns Action user chose (auto/manual/cancel).
+ * @returns Action user chose (auto/cancel).
  */
 export async function showRedemptionPromptToast(
   message: string,

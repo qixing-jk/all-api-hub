@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RedemptionBatchResultToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast"
+import { RedemptionBatchResultToast } from "~/features/RedemptionAssist/components/RedemptionBatchResultToast"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -35,6 +35,39 @@ const createDeferred = <T,>() => {
 }
 
 describe("RedemptionBatchResultToast", () => {
+  it("shows uncertain claim recovery without offering an immediate retry", () => {
+    render(
+      <RedemptionBatchResultToast
+        results={[
+          {
+            code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+            preview: "PMRC****PQRS",
+            success: false,
+            message: "Check native cards before trying again",
+            retryable: false,
+            outcomeUncertain: true,
+          },
+        ]}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(
+      screen.getByText("Check native cards before trying again"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("common:status.failed")).not.toBeInTheDocument()
+    expect(
+      screen.getByText("redemptionAssist:messages.claimUnconfirmed"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "redemptionAssist:messages.batchResultSummaryUnconfirmed",
+      ),
+    ).toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     startActionMock.mockReturnValue({

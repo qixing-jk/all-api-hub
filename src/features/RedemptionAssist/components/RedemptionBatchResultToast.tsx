@@ -14,9 +14,12 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/contracts"
 import { createLogger } from "~/utils/core/logger"
+
+import type { RedemptionBatchResultItem } from "../contracts"
+
+export type { RedemptionBatchResultItem } from "../contracts"
 
 /**
  * Unified logger scoped to redemption assist batch result toasts.
@@ -30,15 +33,6 @@ function getRetryErrorCategory(item?: RedemptionBatchResultItem) {
   return (
     item?.analyticsErrorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
   )
-}
-
-export interface RedemptionBatchResultItem {
-  code: string
-  preview: string
-  success: boolean
-  message: string
-  errorMessage?: string
-  analyticsErrorCategory?: ProductAnalyticsErrorCategory
 }
 
 export interface RedemptionBatchResultToastProps {
@@ -59,14 +53,17 @@ export const RedemptionBatchResultToast: React.FC<
   const summary = useMemo(() => {
     let successCount = 0
     let failedCount = 0
+    let unconfirmedCount = 0
     for (const item of items) {
       if (item.success) {
         successCount += 1
+      } else if (item.outcomeUncertain) {
+        unconfirmedCount += 1
       } else {
         failedCount += 1
       }
     }
-    return { successCount, failedCount, total: items.length }
+    return { successCount, failedCount, unconfirmedCount, total: items.length }
   }, [items])
 
   const handleRetry = async (code: string) => {
@@ -138,21 +135,27 @@ export const RedemptionBatchResultToast: React.FC<
         }
       >
         <p>
-          {t("redemptionAssist:messages.batchResultSummary", {
-            total: summary.total,
-            success: summary.successCount,
-            failed: summary.failedCount,
-          })}
+          {t(
+            summary.unconfirmedCount
+              ? "redemptionAssist:messages.batchResultSummaryUnconfirmed"
+              : "redemptionAssist:messages.batchResultSummary",
+            {
+              total: summary.total,
+              success: summary.successCount,
+              failed: summary.failedCount,
+              unconfirmed: summary.unconfirmedCount,
+            },
+          )}
         </p>
 
-        <div className="space-y-density-2 max-h-60 overflow-y-auto pr-1">
+        <div className="max-h-60 space-y-density-2 overflow-y-auto pr-1">
           {items.map((item, index) => (
             <div
               key={`${item.code}-${index}`}
-              className="border-border/60 bg-muted/20 gap-y-density-1 py-density-2 flex flex-col gap-x-1 rounded-md border px-2 text-xs"
+              className="flex flex-col gap-x-1 gap-y-density-1 rounded-md border border-border/60 bg-muted/20 px-2 py-density-2 text-xs"
             >
-              <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
-                <code className="text-foreground font-mono">
+              <div className="flex items-center justify-between gap-x-2 gap-y-density-2">
+                <code className="font-mono text-foreground">
                   {item.preview}
                 </code>
                 {item.success ? (
@@ -160,23 +163,33 @@ export const RedemptionBatchResultToast: React.FC<
                     {t("common:status.success")}
                   </span>
                 ) : (
-                  <div className="gap-y-density-2 flex items-center gap-x-2">
-                    <span className="text-destructive-text">
-                      {t("common:status.failed")}
-                    </span>
-                    <ContentNoticeAction
-                      disabled={retryingCode !== null}
-                      loading={retryingCode === item.code}
-                      onClick={() => handleRetry(item.code)}
+                  <div className="flex items-center gap-x-2 gap-y-density-2">
+                    <span
+                      className={
+                        item.outcomeUncertain
+                          ? "text-muted-foreground"
+                          : "text-destructive-text"
+                      }
                     >
-                      {retryingCode === item.code
-                        ? t("common:status.retrying")
-                        : t("common:actions.retry")}
-                    </ContentNoticeAction>
+                      {item.outcomeUncertain
+                        ? t("redemptionAssist:messages.claimUnconfirmed")
+                        : t("common:status.failed")}
+                    </span>
+                    {item.retryable !== false && (
+                      <ContentNoticeAction
+                        disabled={retryingCode !== null}
+                        loading={retryingCode === item.code}
+                        onClick={() => handleRetry(item.code)}
+                      >
+                        {retryingCode === item.code
+                          ? t("common:status.retrying")
+                          : t("common:actions.retry")}
+                      </ContentNoticeAction>
+                    )}
                   </div>
                 )}
               </div>
-              <div className="text-muted-foreground whitespace-pre-line">
+              <div className="whitespace-pre-line text-muted-foreground">
                 {item.genericRetryFailure
                   ? t("common:status.error")
                   : item.message}

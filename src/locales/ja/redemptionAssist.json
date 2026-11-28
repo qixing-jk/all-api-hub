@@ -2,12 +2,16 @@
   "accountSelect": {
     "confirm": "引き換えを確認",
     "noResults": "一致するアカウントが見つかりません",
-    "noSupportedAccounts": "保存済みアカウントはいずれも自動引き換えに対応していません。該当サイトでコードを手動で引き換えてください。",
+    "noSupportedAccounts": "表示されたアカウントはコードの種類に該当しますが、アシスタントの自動引き換えにはまだ対応していません。下の既知の引き換えページを開くか、発行元サイトを確認してください。",
     "openSiteManual": "サイトを開いて手動で引き換える",
+    "requestSupport": "対応をリクエスト",
+    "supportRequestMessage": "サイト種別 {{siteType}} の自動引き換えにはまだ対応していません。引き換え機能への対応を希望します。",
     "title": "引き換えに使用するアカウントを選択してください",
     "titleFallback": "このサイトに一致するアカウントがありません。手動で選択してください",
     "titleMultiple": "利用可能なアカウントが複数あります。引き換えに使うアカウントを選択してください",
-    "unsupported": "このサイトタイプは自動引き換えに対応していません"
+    "titleNoAutomatic": "これらのアカウントは自動引き換えに未対応です",
+    "titlePmplan": "カードを受け取る PM-Plan アカウントを選択",
+    "unsupported": "このアカウントの自動引き換えにはまだ対応していません"
   },
   "actions": {
     "autoRedeem": "自動引き換え"
@@ -27,12 +31,21 @@
   },
   "messages": {
     "batchResultSummary": "合計 {{total}} 件。成功 {{success}} 件。失敗 {{failed}} 件。",
+    "batchResultSummaryUnconfirmed": "合計 {{total}} 件。成功 {{success}} 件。失敗 {{failed}} 件。未確認 {{unconfirmed}} 件。",
     "batchResultTitle": "引き換え結果",
     "benefitsRedeemed": "交換完了：{{details}}",
     "cancelled": "キャンセルしました",
+    "claimUnconfirmed": "未確認",
     "extensionDays": "{{days}} 日延長",
     "fallbackBenefit": "代替特典を使用",
+    "incompatibleCodeKind": "このアカウントではこの種類のコードを引き換えられません。対応するアカウントを選択してください。",
+    "invalidResetCode": "PM-Plan リセットカードの形式が無効です。PMRC コード全体を確認してください。",
     "noAccountForUrl": "このサイトに一致するアカウントが見つかりません。All API Hub にこのサイトをアカウントとして追加してから、もう一度お試しください。",
+    "noCompatibleAccounts": "この種類のコードに該当する有効なアカウントがありません。対応するアカウントを追加するか、発行元サイトで引き換えてください。",
+    "pmplanCardClaimed": "リセットカードを受け取りました。まだ使用していません。",
+    "pmplanClaimUncertain": "受け取り結果を確認できません。再試行する前に、選択したサイトのカード一覧を確認してください。",
+    "pmplanPromptConfirm": "PM-Plan リセットカード {{code}} を検出しました。アカウントで受け取りますか？カードの使用や利用枠のリセットは行いません。",
+    "pmplanSelectAccount": "カードを発行したサイトのアカウントを選択してください。PMRC 接頭辞ではサイトを特定できません。受け取り時にカードは使用されません。",
     "promptConfirm": "このページで引き換えコード候補 {{code}} を検出しました。このサイトで自動引き換えを試しますか？",
     "promptConfirmBatch_other": "このページで {{count}} 件の引き換えコード候補を検出しました。このサイトで自動引き換えするコードを選択してください。",
     "promptSettingsLink": "Redemption Assist の設定を開く",

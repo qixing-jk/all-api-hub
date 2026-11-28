@@ -3,7 +3,8 @@ import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { RedemptionPromptToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionPromptToast"
+import { RedemptionPromptToast } from "~/features/RedemptionAssist/components/RedemptionPromptToast"
+import { REDEMPTION_PROMPT_ACTIONS } from "~/features/RedemptionAssist/contracts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -163,7 +164,7 @@ describe("RedemptionPromptToast", () => {
     fireEvent.click(autoRedeemButton)
 
     expect(onAction).toHaveBeenCalledWith({
-      action: "auto",
+      action: REDEMPTION_PROMPT_ACTIONS.Auto,
       selectedCodes: ["code-1", "code-2"],
     })
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
@@ -192,7 +193,7 @@ describe("RedemptionPromptToast", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
 
     expect(onAction).toHaveBeenCalledWith({
-      action: "cancel",
+      action: REDEMPTION_PROMPT_ACTIONS.Cancel,
       selectedCodes: [],
     })
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
