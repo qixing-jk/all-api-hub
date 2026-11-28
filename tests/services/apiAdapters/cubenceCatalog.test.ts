@@ -7,6 +7,7 @@ import {
 } from "~/services/apiAdapters/cubence/modelCatalog"
 import { fetchAnnouncements } from "~/services/apiService/cubence/announcements"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -101,7 +102,10 @@ describe("Cubence catalog and announcements", () => {
     expect(buildCubenceCatalog([model], [group])).toMatchObject({
       success: true,
       groupRatios: { "72": 0.8 },
-      groupAccess: { kind: "authoritative", usableGroups: ["72"] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: ["72"],
+      },
       data: [
         {
           model_name: "example-model",

@@ -8,6 +8,7 @@ import { fetchAimlApiModelCatalog } from "~/services/apiService/aimlapi/models"
 import { fetchAimlApiPrices } from "~/services/apiService/aimlapi/pricing"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -228,7 +229,7 @@ export const aimlApiProviderModelCatalog: ProviderModelCatalogCapability = {
     const data = await fetchCatalogRows(request)
     return {
       success: true,
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       groupRatios: {},
       data,
       model_list_source: {
@@ -263,7 +264,7 @@ export const aimlApiModelPricing: ModelPricingCapability = {
     const data = await fetchCatalogRows(request)
     return {
       success: true,
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       groupRatios: {},
       data,
     }

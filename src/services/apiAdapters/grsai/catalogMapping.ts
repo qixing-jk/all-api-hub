@@ -5,7 +5,10 @@ import {
   toOptionalString,
 } from "~/services/apiService/grsai/parsing"
 import type { GrsaiModel } from "~/services/apiService/grsai/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -95,7 +98,7 @@ export function buildGrsaiPricingResponse(
     success: true,
     data: Array.from(modelsByName.values()),
     groupRatios: {},
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
       provider: SITE_TYPES.GRSAI,

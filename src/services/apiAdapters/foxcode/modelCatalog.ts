@@ -17,7 +17,10 @@ import {
 } from "~/services/apiService/foxcode/transport"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import type {
   PriceRate,
   PricingPlan,
@@ -48,7 +51,7 @@ function buildCatalog(
   return {
     success: true,
     groupAccess: {
-      kind: "authoritative",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
       usableGroups: available.map((channel) => channel.key),
     },
     groupRatios: ratios,
@@ -207,7 +210,7 @@ export const foxCodeModelCatalog: ModelCatalogCapability = {
                 .flatMap((channel) => channel.models),
             ),
           ]
-        : channel?.models ?? []
+        : (channel?.models ?? [])
     return ids.map((id) => ({ id }))
   },
   async enrichPricing({ accountRequest, runtimeKey, models }) {
@@ -226,7 +229,10 @@ export const foxCodeModelCatalog: ModelCatalogCapability = {
             : model.enable_groups,
         })),
       groupAccess: groups.length
-        ? { kind: "authoritative", usableGroups: [...groups] }
+        ? {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups: [...groups],
+          }
         : catalog.groupAccess,
       model_list_source: { ...catalog.model_list_source!, kind: "user-scoped" },
     }

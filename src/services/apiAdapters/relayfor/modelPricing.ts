@@ -8,7 +8,10 @@ import {
 } from "~/services/apiService/relayfor"
 import type { RelayForModelListResponse } from "~/services/apiService/relayfor/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -93,9 +96,9 @@ function buildRelayForPricingResponse(
       if (isPerCall) {
         const perCallPrice = isFree
           ? 0
-          : readFiniteNumber(item.effective_request_price) ??
+          : (readFiniteNumber(item.effective_request_price) ??
             readFiniteNumber(item.base_request_price) ??
-            0
+            0)
         return {
           model_name: modelName,
           ...relayForModelPresentation(item, baseUrl),
@@ -119,18 +122,18 @@ function buildRelayForPricingResponse(
 
       const input = isFree
         ? 0
-        : readFiniteNumber(effective.input) ?? readFiniteNumber(base.input)
+        : (readFiniteNumber(effective.input) ?? readFiniteNumber(base.input))
       const output = isFree
         ? 0
-        : readFiniteNumber(effective.output) ?? readFiniteNumber(base.output)
+        : (readFiniteNumber(effective.output) ?? readFiniteNumber(base.output))
       const cacheRead = isFree
         ? 0
-        : readFiniteNumber(effective.cache_read) ??
-          readFiniteNumber(base.cache_read)
+        : (readFiniteNumber(effective.cache_read) ??
+          readFiniteNumber(base.cache_read))
       const cacheWrite = isFree
         ? 0
-        : readFiniteNumber(effective.cache_write) ??
-          readFiniteNumber(base.cache_write)
+        : (readFiniteNumber(effective.cache_write) ??
+          readFiniteNumber(base.cache_write))
 
       const hasDirectPrice = input !== undefined && output !== undefined
 
@@ -259,7 +262,7 @@ function buildRelayForPricingResponse(
     success: true,
     data,
     groupRatios: {},
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
       provider: SITE_TYPES.RELAYFOR,

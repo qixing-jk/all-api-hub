@@ -9,7 +9,10 @@ import type {
   RightCodeEffectiveUpstream,
   RightCodeProtocol,
 } from "~/services/apiService/rightcode/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -219,7 +222,7 @@ export function buildRightCodePricingResponse(
     success: true,
     data: Array.from(modelsByName.values()),
     groupRatios: {},
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
       provider: SITE_TYPES.RIGHT_CODE,

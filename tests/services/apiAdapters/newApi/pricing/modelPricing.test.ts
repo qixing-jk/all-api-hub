@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   PRICE_RATE_UNITS,
   PRICING_IMAGE_SIZES,
@@ -85,7 +86,10 @@ describe("New API model pricing adapter", () => {
       const catalog = {
         data: [],
         groupRatios: { vip: 0 },
-        groupAccess: { kind: "authoritative", usableGroups: ["vip"] },
+        groupAccess: {
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+          usableGroups: ["vip"],
+        },
         success: true,
       }
       oneHubPricingMock.mockResolvedValueOnce(catalog)
@@ -108,7 +112,7 @@ describe("New API model pricing adapter", () => {
         data: [],
         groupRatios: {},
         groupAccess: {
-          kind: "compatible-priced-fallback",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
           candidateGroups: [],
         },
         success: true,
@@ -119,7 +123,7 @@ describe("New API model pricing adapter", () => {
         createNewApiModelPricing(siteType).fetchPricing(request),
       ).resolves.toMatchObject({
         data: [],
-        groupAccess: { kind: "unavailable" },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
       })
       expect(fetchModelPricingMock).not.toHaveBeenCalled()
     },
@@ -136,7 +140,9 @@ describe("New API model pricing adapter", () => {
       SITE_TYPES.NEW_API,
     ).fetchPricing(request)
     expect(catalog.data).toEqual([])
-    expect(catalog.groupAccess).toEqual({ kind: "unavailable" })
+    expect(catalog.groupAccess).toEqual({
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE,
+    })
   })
   it.each([
     [undefined, []],
@@ -175,12 +181,12 @@ describe("New API model pricing adapter", () => {
       SITE_TYPES.NEW_API,
     ).fetchPricing(request)
     expect(catalog.groupAccess).toEqual({
-      kind: "compatible-priced-fallback",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
       candidateGroups: ["default"],
     })
     expect(atIndex(catalog.data, 0).groupAccess).toBeUndefined()
     expect(atIndex(catalog.data, 1).groupAccess).toEqual({
-      kind: "unavailable",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE,
     })
   })
   it("publishes normalized access evidence and preserves a zero multiplier", async () => {
@@ -195,7 +201,7 @@ describe("New API model pricing adapter", () => {
       SITE_TYPES.NEW_API,
     ).fetchPricing(request)
     expect(catalog.groupAccess).toEqual({
-      kind: "authoritative",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
       usableGroups: ["vip"],
     })
     expect(catalog.groupRatios).toEqual({ vip: 0 })
@@ -1111,7 +1117,10 @@ describe("New API model pricing adapter", () => {
       data: [canonicalModelRow],
       groupRatios: { standard: 1 },
       success: true,
-      groupAccess: { kind: "authoritative", usableGroups: ["standard"] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: ["standard"],
+      },
       model_list_source: { kind: "catalog-fallback" },
     })
   })
@@ -1130,7 +1139,10 @@ describe("New API model pricing adapter", () => {
       data: [canonicalModelRow],
       groupRatios: { standard: 1 },
       success: true,
-      groupAccess: { kind: "authoritative", usableGroups: ["standard"] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: ["standard"],
+      },
     })
   })
 
@@ -1149,7 +1161,10 @@ describe("New API model pricing adapter", () => {
       data: [canonicalModelRow],
       groupRatios: { legacy: 1 },
       success: true,
-      groupAccess: { kind: "authoritative", usableGroups: ["legacy"] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: ["legacy"],
+      },
     })
   })
 

@@ -16,6 +16,7 @@ import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupCont
 import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verification/verificationResultFilters"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {
@@ -98,7 +99,7 @@ const ACCOUNT_PRICING_CONTEXT = {
     success: true,
     data: [],
     groupRatios: {},
-    groupAccess: { kind: "not-applicable" as const },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
   },
 }
 const ACCOUNT_SOURCE = createAccountSource(ACCOUNT)
@@ -176,7 +177,7 @@ vi.mock("~/features/ModelList/catalog/AccountSummaryBar", () => ({
           data-has-data={String(item.hasData)}
         >
           Summary Status {item.name}:
-          {item.isLoading ? "loading" : item.errorType ?? item.count}
+          {item.isLoading ? "loading" : (item.errorType ?? item.count)}
         </div>
       ))}
       {items.map((item: any) => (
@@ -637,7 +638,10 @@ describe("ModelList page flows", () => {
           success: true,
           data: [{ model_name: "gpt-aihubmix" }],
           groupRatios: {},
-          groupAccess: { kind: "authoritative", usableGroups: [] },
+          groupAccess: {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups: [],
+          },
         },
         baseFilteredModels: [
           {
@@ -684,7 +688,10 @@ describe("ModelList page flows", () => {
           success: true,
           data: [{ model_name: "gpt-runtime" }],
           groupRatios: {},
-          groupAccess: { kind: "authoritative", usableGroups: [] },
+          groupAccess: {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups: [],
+          },
         },
         baseFilteredModels: [
           {

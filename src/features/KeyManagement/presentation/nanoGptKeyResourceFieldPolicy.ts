@@ -9,6 +9,9 @@ import {
   type NanoGptLimitField,
 } from "~/services/apiService/nanogpt/management"
 
+import type { AccountKeyResourceFieldConfiguration } from "./accountKeyResourceEditorPresentation"
+import { expiry, name } from "./nativeKeyResourceFieldPrimitives"
+
 export const nanoGptKeyFieldLabels: Readonly<
   Record<NanoGptLimitField | "zdr_policy", (t: TFunction) => string>
 > = {
@@ -38,10 +41,7 @@ export const nanoGptKeyFieldLabels: Readonly<
 }
 
 /** Maps documented NanoGPT key fields to the existing native editor sections. */
-export function buildNanoGptKeyFields(
-  name: ResourceFieldPresentation,
-  expiry: ResourceFieldPresentation,
-) {
+export function buildNanoGptKeyFields(): AccountKeyResourceFieldConfiguration {
   return {
     automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
     fields: [

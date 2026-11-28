@@ -7,7 +7,10 @@ import {
   invalidDayaResponse,
   withDayaSession,
 } from "~/services/apiService/daya/transport"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -49,7 +52,7 @@ export const dayaModelPricing: ModelPricingCapability = {
       const url = `${new URL(request.baseUrl).origin}/catalog/models`
       return {
         success: true,
-        groupAccess: { kind: "not-applicable" },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
         groupRatios: {},
         data: data.map((value) => {
           if (

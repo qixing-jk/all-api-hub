@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -45,7 +46,7 @@ describe("modelList pricingResponse", () => {
     expect(response).toMatchObject({
       success: true,
       groupRatios: {},
-      groupAccess: { kind: "unavailable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
         supportsPricing: false,

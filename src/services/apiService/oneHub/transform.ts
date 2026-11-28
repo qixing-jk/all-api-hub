@@ -4,7 +4,10 @@ import type {
   OneHubUserGroupMap,
   OneHubUserGroupsResponse,
 } from "~/services/apiService/oneHub/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
@@ -127,7 +130,7 @@ export function transformModelPricing(
     groupRatios: group_ratio,
     success: true,
     groupAccess: {
-      kind: "authoritative",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
       usableGroups: Object.keys(usable_group),
     },
   }

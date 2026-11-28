@@ -6,7 +6,10 @@ import {
   createModelPricingCacheKey,
   loadAccountModelCatalog,
 } from "~/services/modelCatalog/loader"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import { modelPricingCache } from "~/services/models/modelPricingCache"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
@@ -54,7 +57,10 @@ describe("account catalog loader", () => {
       data: [],
       success: true,
       groupRatios: { default: 0 },
-      groupAccess: { kind: "authoritative", usableGroups: [] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: [],
+      },
     }
     const result = await loadAccountModelCatalog({
       account: buildDisplaySiteData(),
@@ -73,7 +79,7 @@ describe("account catalog loader", () => {
       data: [],
       success: true,
       groupRatios: {},
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     }
     await expect(
       loadAccountModelCatalog({

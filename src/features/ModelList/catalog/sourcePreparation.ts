@@ -14,7 +14,10 @@ import {
 } from "~/features/ModelList/groups/groupContext"
 import { resolveAccountExchangeRate } from "~/features/ModelList/pricing/accountExchangeRate"
 import { normalizeGroupRatios } from "~/services/modelCatalog/groupFacts"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import { type ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
 import type { DisplaySiteData } from "~/types"
 
@@ -65,7 +68,10 @@ function canRepairSourceGroupSelection(params: {
   }
 
   if (params.groupContexts.length === 0) {
-    return params.pricing.groupAccess.kind !== "unavailable"
+    return (
+      params.pricing.groupAccess.kind !==
+      MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE
+    )
   }
 
   return true
@@ -106,17 +112,15 @@ export function prepareModelListSource(
       ? resolveAccountExchangeRate(source.account)
       : 1
   const providerCatalogFallback = isProviderCatalogFallback(pricing)
-  const items = pricing.data.map(
-    (model): PreparedModelListItem => ({
-      model,
-      source,
-      sourceIdentity,
-      groupRatios,
-      exchangeRate,
-      groupContext: resolveGroupContext(model),
-      ...(providerCatalogFallback ? { isProviderCatalogFallback: true } : {}),
-    }),
-  )
+  const items = pricing.data.map((model): PreparedModelListItem => ({
+    model,
+    source,
+    sourceIdentity,
+    groupRatios,
+    exchangeRate,
+    groupContext: resolveGroupContext(model),
+    ...(providerCatalogFallback ? { isProviderCatalogFallback: true } : {}),
+  }))
   return {
     source,
     sourceIdentity,

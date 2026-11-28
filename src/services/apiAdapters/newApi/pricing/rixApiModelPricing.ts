@@ -10,9 +10,10 @@ import {
   normalizeGroupNames,
   normalizeGroupRatios,
 } from "~/services/modelCatalog/groupFacts"
-import type {
-  ModelCatalogModel,
-  ModelCatalogSnapshot,
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogModel,
+  type ModelCatalogSnapshot,
 } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_PRICE_PRECISION_KINDS,
@@ -445,9 +446,9 @@ function buildCatalogModel(
     model_ratio: readNonNegativeAmount(price.model_ratio) ?? 0,
     model_price:
       quotaType === RIX_API_QUOTA_TYPES.CALL
-        ? readNonNegativeAmount(price.model_price) ?? 0
+        ? (readNonNegativeAmount(price.model_price) ?? 0)
         : quotaType === RIX_API_QUOTA_TYPES.TIME
-          ? readNonNegativeAmount(price.per_second_price) ?? 0
+          ? (readNonNegativeAmount(price.per_second_price) ?? 0)
           : 0,
     ...(directTokenPrices
       ? { token_price_usd_per_million: directTokenPrices }
@@ -571,12 +572,18 @@ export function normalizeRixApiModelPricingResponse(
     groupRatios,
     groupAccess:
       usableGroups && usableGroups.length
-        ? { kind: "authoritative", usableGroups }
+        ? {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups,
+          }
         : Object.keys(groupRatios).length
           ? {
-              kind: "compatible-priced-fallback",
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
               candidateGroups: Object.keys(groupRatios),
             }
-          : { kind: "authoritative", usableGroups: [] },
+          : {
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+              usableGroups: [],
+            },
   })
 }

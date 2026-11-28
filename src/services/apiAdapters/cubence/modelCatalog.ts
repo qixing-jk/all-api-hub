@@ -10,7 +10,10 @@ import {
 import { withCubenceSession } from "~/services/apiService/cubence/session"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { isRecord } from "~/utils/core/object"
 
@@ -107,7 +110,7 @@ export function buildCubenceCatalog(
       available.map((group) => [String(group.id), group.multiplier]),
     ),
     groupAccess: {
-      kind: "authoritative",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
       usableGroups: available.map((group) => String(group.id)),
     },
     model_list_source: {

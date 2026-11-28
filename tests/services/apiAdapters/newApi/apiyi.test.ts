@@ -14,6 +14,7 @@ import {
 } from "~/services/apiService/shellApiFamily/shared"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { AuthTypeEnum } from "~/types"
@@ -334,7 +335,7 @@ describe("APIyi account capabilities", () => {
         svip: 1,
       },
       groupAccess: {
-        kind: "authoritative",
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["CodexResponses", "CodexReverse", "default", "svip"],
       },
     })

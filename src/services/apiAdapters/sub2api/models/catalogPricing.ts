@@ -10,7 +10,10 @@ import {
 } from "~/services/apiAdapters/sub2api/models/stationPricing"
 import { parseSub2ApiGroupRates } from "~/services/apiService/sub2api/parsing"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -149,7 +152,10 @@ export function applySub2ApiPriceEstimates(
     groupRatios: {
       [group.groupName]: effectiveRate,
     },
-    groupAccess: { kind: "authoritative", usableGroups: [group.groupName] },
+    groupAccess: {
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+      usableGroups: [group.groupName],
+    },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
       provider: SITE_TYPES.SUB2API,

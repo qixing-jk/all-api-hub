@@ -4,7 +4,10 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/models/modelPricing"
 import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -65,7 +68,10 @@ const pricingResponse: ModelCatalogSnapshot = {
   ],
   groupRatios: {},
   success: true,
-  groupAccess: { kind: "authoritative", usableGroups: [] },
+  groupAccess: {
+    kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+    usableGroups: [],
+  },
 }
 
 describe("apiAdapter modelPricing", () => {
