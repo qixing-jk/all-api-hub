@@ -4,6 +4,7 @@ import {
   transformModelPricing,
   transformUserGroup,
 } from "~/services/apiService/oneHub/transform"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   PRICING_PURPOSES,
   PRICING_RESPONSE_FORMATS,
@@ -393,7 +394,7 @@ describe("OneHub data transformers", () => {
       expect(item.supported_endpoint_types).toEqual([])
       expect(result.groupRatios).toEqual({})
       expect(result.groupAccess).toEqual({
-        kind: "authoritative",
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       })
     })
@@ -662,7 +663,7 @@ describe("OneHub data transformers", () => {
         group3: 1,
       })
       expect(result.groupAccess).toEqual({
-        kind: "authoritative",
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["group1", "group2", "group3"],
       })
     })

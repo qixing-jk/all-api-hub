@@ -2,7 +2,7 @@
 
 Use for site-specific UI validation and developer handoff. Save real screenshots from the tested build and display them directly so the developer can assess the result without opening a browser or reading a trace.
 
-For task before/after comparisons, use [task acceptance](../../../../docs/agents/task-acceptance.md#compare-changed-ui) for scope, baseline provenance and proportionate comparison tooling. Native-site versus extension comparison below answers workflow parity; it does not replace comparison with the extension's pre-change UI.
+For task before/after comparisons, use [task acceptance](../../../../docs/agents/task-acceptance.md#compare-changed-ui) for scope, baseline provenance and proportionate comparison tooling. Native-site versus extension comparison below assesses task effort, clarity and recovery; it does not replace comparison with the extension's pre-change UI.
 
 ## Capture useful states
 

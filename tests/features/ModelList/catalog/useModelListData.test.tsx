@@ -11,6 +11,7 @@ import {
 } from "~/features/ModelList/catalog/modelManagementSources"
 import { useModelListData } from "~/features/ModelList/catalog/useModelListData"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
@@ -81,7 +82,10 @@ const SETTLED_PRICING_DATA = {
   data: [],
   groupRatios: {},
   success: true,
-  groupAccess: { kind: "authoritative", usableGroups: [] },
+  groupAccess: {
+    kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+    usableGroups: [],
+  },
 }
 
 const PROFILE = {
@@ -529,7 +533,10 @@ describe("useModelListData", () => {
         data: [],
         groupRatios: {},
         success: true,
-        groupAccess: { kind: "authoritative", usableGroups: [] },
+        groupAccess: {
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+          usableGroups: [],
+        },
       },
       pricingContexts: [],
       isLoading: false,
@@ -595,7 +602,10 @@ describe("useModelListData", () => {
           data: [],
           groupRatios: {},
           success: true,
-          groupAccess: { kind: "authoritative", usableGroups: [] },
+          groupAccess: {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups: [],
+          },
           model_list_source: buildAIHubMixModelListSource(
             MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
           ),
@@ -651,7 +661,10 @@ describe("useModelListData", () => {
         data: [],
         groupRatios: {},
         success: true,
-        groupAccess: { kind: "authoritative", usableGroups: [] },
+        groupAccess: {
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+          usableGroups: [],
+        },
         model_list_source: buildAIHubMixModelListSource(
           MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
         ),
@@ -697,7 +710,10 @@ describe("useModelListData", () => {
         data: [],
         groupRatios: {},
         success: true,
-        groupAccess: { kind: "authoritative", usableGroups: [] },
+        groupAccess: {
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+          usableGroups: [],
+        },
         model_list_source: {
           kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
           provider: SITE_TYPES.SUB2API,
@@ -755,7 +771,7 @@ describe("useModelListData", () => {
         },
         success: true,
         groupAccess: {
-          kind: "authoritative",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default"],
         },
         model_list_source: {
@@ -838,7 +854,7 @@ describe("useModelListData", () => {
             groupRatios: {},
             success: true,
             groupAccess: {
-              kind: "authoritative",
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
               usableGroups: [],
             },
             model_list_source: buildAIHubMixModelListSource(
@@ -853,7 +869,7 @@ describe("useModelListData", () => {
             groupRatios: {},
             success: true,
             groupAccess: {
-              kind: "authoritative",
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
               usableGroups: [],
             },
           },
@@ -908,7 +924,7 @@ describe("useModelListData", () => {
             groupRatios: {},
             success: true,
             groupAccess: {
-              kind: "authoritative",
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
               usableGroups: [],
             },
             model_list_source: {
@@ -1787,7 +1803,10 @@ describe("useModelListData", () => {
         data: [],
         groupRatios: {},
         success: true,
-        groupAccess: { kind: "authoritative", usableGroups: [] },
+        groupAccess: {
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+          usableGroups: [],
+        },
       },
       pricingContexts: [],
       isLoading: false,

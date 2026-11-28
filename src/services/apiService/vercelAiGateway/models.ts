@@ -1,6 +1,9 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import { createAccountBoundCatalogActionPolicy } from "~/services/modelList/catalogActionPolicy"
 import {
   MODEL_CATALOG_SCOPES,
@@ -234,7 +237,7 @@ function toVercelModelPricing(model: VercelCatalogModel): ModelPricing {
   const { input, output, cacheRead, cacheWrite } = model.pricing
   const hasTokenPrice =
     !model.meteredPricing && (input !== undefined || output !== undefined)
-  const endpoints = model.type ? endpointsByType[model.type] ?? [] : []
+  const endpoints = model.type ? (endpointsByType[model.type] ?? []) : []
   return {
     model_name: model.id,
     display_name: model.name,
@@ -380,7 +383,7 @@ export function createVercelCatalogSnapshot(
 ): ModelCatalogSnapshot {
   return {
     data: models.map(toVercelModelPricing),
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     groupRatios: {},
     success: true,
     model_list_source: {

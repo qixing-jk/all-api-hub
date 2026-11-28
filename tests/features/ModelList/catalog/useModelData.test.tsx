@@ -15,6 +15,7 @@ import { useModelData } from "~/features/ModelList/catalog/useModelData"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import {
   MODEL_CATALOG_SCOPES,
@@ -92,12 +93,10 @@ vi.mock(
       await importOriginal<
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
-    const { buildNewApiRuntimeKey } = await import(
-      "~~/tests/test-utils/accountKeyFixtures"
-    )
-    const { buildServiceCredentialRuntimeKey } = await import(
-      "~/services/accounts/keys/accountRuntimeKeys"
-    )
+    const { buildNewApiRuntimeKey } =
+      await import("~~/tests/test-utils/accountKeyFixtures")
+    const { buildServiceCredentialRuntimeKey } =
+      await import("~/services/accounts/keys/accountRuntimeKeys")
 
     return {
       ...actual,
@@ -403,7 +402,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
     })
@@ -447,7 +446,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
     })
@@ -494,7 +493,7 @@ describe("useModelData all-accounts loading", () => {
         data: [createProviderCatalogModel("example/provider-model")],
         groupRatios: {},
         success: true,
-        groupAccess: { kind: "not-applicable" as const },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
         model_list_source: createProviderCatalogModelListSource(),
       })
       const providerModelCatalog = {
@@ -565,7 +564,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel(modelName)],
       groupRatios: {},
       success: true,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: createProviderCatalogModelListSource(),
     })
     const fetchProviderPricing = vi
@@ -762,7 +761,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel("example/provider-model")],
       groupRatios: {},
       success: false,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: createProviderCatalogModelListSource(),
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
@@ -814,7 +813,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel("example/refetched-provider-model")],
       groupRatios: {},
       success: true,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: createProviderCatalogModelListSource(),
     })
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
@@ -854,7 +853,7 @@ describe("useModelData all-accounts loading", () => {
       ],
       groupRatios: {},
       success: true,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: createProviderCatalogModelListSource(),
     })
 
@@ -886,7 +885,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel("example/provider-model")],
       groupRatios: {},
       success: true,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
         provider: SITE_TYPES.OPENROUTER,
@@ -946,7 +945,7 @@ describe("useModelData all-accounts loading", () => {
           data: [],
           groupRatios: {},
           groupAccess: {
-            kind: "authoritative" as const,
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: [],
           },
           success: true,
@@ -1008,7 +1007,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { default: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["default"],
       },
     })
@@ -1016,7 +1015,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel("example/provider-model")],
       groupRatios: {},
       success: true,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: createProviderCatalogModelListSource(),
     }
     const fetchProviderPricing = vi.fn().mockResolvedValue(providerPricing)
@@ -1139,7 +1138,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel(modelName)],
       groupRatios: {},
       success: true as const,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: createProviderCatalogModelListSource(),
     })
     const fetchPublicPricing = vi
@@ -1240,7 +1239,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel("example/public-model")],
       groupRatios: {},
       success: true as const,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
@@ -1296,7 +1295,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel(modelName)],
       groupRatios: {},
       success: true as const,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope: MODEL_CATALOG_SCOPES.PERSONALIZED,
@@ -1386,7 +1385,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel(modelName)],
       groupRatios: {},
       success: true as const,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope,
@@ -1473,7 +1472,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel(modelName)],
       groupRatios: {},
       success: true as const,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope,
@@ -1583,7 +1582,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel("example/public-model")],
       groupRatios: {},
       success: true as const,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
@@ -1703,7 +1702,7 @@ describe("useModelData all-accounts loading", () => {
         data: [createProviderCatalogModel("example/public-model")],
         groupRatios: {},
         success: true as const,
-        groupAccess: { kind: "not-applicable" as const },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
         model_list_source: {
           ...createProviderCatalogModelListSource(),
           catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
@@ -1757,7 +1756,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel("example/public-model")],
       groupRatios: {},
       success: true as const,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
@@ -1833,7 +1832,7 @@ describe("useModelData all-accounts loading", () => {
       data: [createProviderCatalogModel(modelName)],
       groupRatios: {},
       success: true as const,
-      groupAccess: { kind: "not-applicable" as const },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         ...createProviderCatalogModelListSource(),
         catalogScope,
@@ -2014,7 +2013,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { default: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["default"],
       },
     })
@@ -2337,7 +2336,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { default: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["default"],
       },
       model_list_source: {
@@ -2358,7 +2357,7 @@ describe("useModelData all-accounts loading", () => {
       ],
       groupRatios: { vip: 0.5 },
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["vip"],
       },
     }
@@ -2472,7 +2471,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { default: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["default"],
       },
     }
@@ -2591,7 +2590,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { default: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["default"],
       },
     }
@@ -2734,7 +2733,10 @@ describe("useModelData all-accounts loading", () => {
       data: null,
       groupRatios: {},
       success: true,
-      groupAccess: { kind: "authoritative", usableGroups: [] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: [],
+      },
     })
     const { result } = renderHook(
       () =>
@@ -2807,7 +2809,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -2817,7 +2819,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -2885,7 +2887,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: { default: 1 },
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default"],
         },
       })
@@ -2904,7 +2906,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: { default: 1 },
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default"],
         },
       })
@@ -3015,7 +3017,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { default: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["default"],
       },
     })
@@ -3082,7 +3084,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { vip: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["vip"],
       },
     }
@@ -3138,7 +3140,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
     })
@@ -3201,7 +3203,7 @@ describe("useModelData all-accounts loading", () => {
           groupRatios: { default: 1 },
           success: true,
           groupAccess: {
-            kind: "authoritative" as const,
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["default"],
           },
         })
@@ -3276,7 +3278,7 @@ describe("useModelData all-accounts loading", () => {
           groupRatios: { default: 1 },
           success: true,
           groupAccess: {
-            kind: "authoritative" as const,
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["default"],
           },
         })
@@ -3351,7 +3353,7 @@ describe("useModelData all-accounts loading", () => {
           groupRatios: { default: 1 },
           success: true,
           groupAccess: {
-            kind: "authoritative" as const,
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["default"],
           },
         })
@@ -3362,7 +3364,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -3434,7 +3436,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -3638,7 +3640,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -3725,7 +3727,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: { default: 1 },
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default"],
         },
       })
@@ -3744,7 +3746,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: { default: 1 },
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default"],
         },
       })
@@ -3824,7 +3826,10 @@ describe("useModelData all-accounts loading", () => {
         data: [],
         success: true,
         groupRatios: {},
-        groupAccess: { kind: "authoritative", usableGroups: [] },
+        groupAccess: {
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+          usableGroups: [],
+        },
       })
       vi.mocked(getSiteTypeCapabilities).mockReturnValue(
         createMockSiteTypeCapabilities(fetchPricing),
@@ -3900,7 +3905,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { default: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["default"],
       },
     }
@@ -3976,7 +3981,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: { default: 1 },
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: ["default"],
       },
     })
@@ -4022,7 +4027,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
     }
@@ -4108,7 +4113,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
     }
@@ -4275,7 +4280,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
       model_list_source: {
@@ -4633,7 +4638,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
       model_list_source: {
@@ -4740,7 +4745,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
       model_list_source: {
@@ -4812,13 +4817,19 @@ describe("useModelData all-accounts loading", () => {
       data: never[]
       groupRatios: Record<string, never>
       success: true
-      groupAccess: { kind: "authoritative"; usableGroups: string[] }
+      groupAccess: {
+        kind: typeof MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE
+        usableGroups: string[]
+      }
     }>()
     const secondDeferred = createDeferred<{
       data: never[]
       groupRatios: Record<string, never>
       success: true
-      groupAccess: { kind: "authoritative"; usableGroups: string[] }
+      groupAccess: {
+        kind: typeof MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE
+        usableGroups: string[]
+      }
     }>()
     const fetchPricing = vi.fn().mockImplementation(({ accountId }) => {
       return accountId === "a" ? firstDeferred.promise : secondDeferred.promise
@@ -4874,7 +4885,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -4883,7 +4894,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -5075,7 +5086,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
     })
@@ -5209,7 +5220,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
     })
@@ -5292,7 +5303,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -5371,7 +5382,7 @@ describe("useModelData all-accounts loading", () => {
         groupRatios: {},
         success: true,
         groupAccess: {
-          kind: "authoritative" as const,
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [],
         },
       })
@@ -5711,7 +5722,7 @@ describe("useModelData all-accounts loading", () => {
           groupRatios: {},
           success: true,
           groupAccess: {
-            kind: "authoritative" as const,
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: [],
           },
         })
@@ -5781,7 +5792,7 @@ describe("useModelData all-accounts loading", () => {
       groupRatios: {},
       success: true,
       groupAccess: {
-        kind: "authoritative" as const,
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [],
       },
     })

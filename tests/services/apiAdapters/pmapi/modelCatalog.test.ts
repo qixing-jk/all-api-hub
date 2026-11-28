@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { pmApiModelPricing } from "~/services/apiAdapters/pmapi/modelCatalog"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
@@ -113,7 +114,7 @@ describe("PM-API model pricing", () => {
     expect(snapshot.success).toBe(true)
     expect(snapshot.groupRatios).toEqual({ default: 1, Free: 0 })
     expect(snapshot.groupAccess).toEqual({
-      kind: "authoritative",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
       usableGroups: ["default", "Free", "Nvidia"],
     })
     expect(snapshot.data).toHaveLength(4)
@@ -236,7 +237,7 @@ describe("PM-API model pricing", () => {
     )
     const snapshot = await pmApiModelPricing.fetchPricing(request)
     expect(snapshot.groupAccess).toEqual({
-      kind: "compatible-priced-fallback",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
       candidateGroups: ["default", "Free"],
     })
   })
@@ -292,7 +293,9 @@ describe("PM-API model pricing", () => {
       ),
     )
     const result = await pmApiModelPricing.fetchPricing(request)
-    expect(result.groupAccess).toEqual({ kind: "unavailable" })
+    expect(result.groupAccess).toEqual({
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE,
+    })
     expect(result.data[0]?.enable_groups).toEqual(["Free"])
     expect(result.data[0]?.completion_ratio).toBe(1)
   })

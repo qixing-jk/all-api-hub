@@ -18,6 +18,7 @@ import ModelList from "~/features/ModelList/ModelList"
 import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
 import { usePricingScenarioNavigation } from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -409,7 +410,10 @@ function createModelListData() {
       ],
       groupRatios: { vip: 1 },
       success: true,
-      groupAccess: { kind: "authoritative", usableGroups: [] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: [],
+      },
     },
     pricingContexts: [],
     isLoading: false,

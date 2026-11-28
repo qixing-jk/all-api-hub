@@ -6,6 +6,7 @@ import { createNanoGptCatalogModel } from "~/services/apiAdapters/nanogpt/modelP
 import { nanoGptProviderModelCatalog } from "~/services/apiAdapters/nanogpt/providerModelCatalog"
 import { fetchNanoGptDetailedModelCatalog } from "~/services/apiService/nanogpt/catalog"
 import * as catalogService from "~/services/apiService/nanogpt/catalog"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   PRICING_METERS,
   PRICING_SELECTION_AXES,
@@ -495,7 +496,9 @@ describe("NanoGPT provider catalog capability", () => {
         supportsGroupFiltering: false,
       },
     })
-    expect(response.groupAccess).toEqual({ kind: "not-applicable" })
+    expect(response.groupAccess).toEqual({
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE,
+    })
     expect(response.data).toHaveLength(1)
     expect(response.data[0]).toMatchObject({
       token_price_usd_per_million: { input: 0.1, output: 0.4 },

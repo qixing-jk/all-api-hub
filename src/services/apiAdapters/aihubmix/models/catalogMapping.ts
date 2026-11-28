@@ -18,7 +18,10 @@ import type {
   AIHubMixModelCatalogItem,
   AIHubMixWebsiteModel,
 } from "~/services/apiService/aihubmix/modelCatalog"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import { createAccountBoundCatalogActionPolicy } from "~/services/modelList/catalogActionPolicy"
 import {
   MODEL_CATALOG_SCOPES,
@@ -278,7 +281,7 @@ export const buildAIHubMixPricingResponse = (params: {
   return {
     success: true,
     groupRatios: {},
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind:
         params.userScopedModelIds === null

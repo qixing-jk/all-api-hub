@@ -9,7 +9,10 @@ import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/cont
 import { sub2ApiModelCatalog } from "~/services/apiAdapters/sub2api/models/modelCatalog"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
   loadAccountRuntimeKeyFallbackPricingResponse,
@@ -379,7 +382,10 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     const aihubmixPricing: ModelCatalogSnapshot = {
       success: true,
       groupRatios: {},
-      groupAccess: { kind: "authoritative", usableGroups: [] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: [],
+      },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
         provider: SITE_TYPES.AIHUBMIX,
@@ -1105,7 +1111,10 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       data: [],
       groupRatios: {},
       success: true,
-      groupAccess: { kind: "authoritative", usableGroups: [] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: [],
+      },
     })
     getSiteTypeCapabilitiesMock.mockReturnValueOnce({
       siteType: SITE_TYPES.AIHUBMIX,

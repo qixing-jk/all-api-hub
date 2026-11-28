@@ -5,7 +5,10 @@ import {
   normalizeGroupNames,
   normalizeGroupRatios,
 } from "~/services/modelCatalog/groupFacts"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   PRICE_RATE_UNITS,
   PRICING_GROUP_MULTIPLIERS,
@@ -232,13 +235,16 @@ export function normalizeNewApiModelPricingResponse(
       : {}),
     groupRatios,
     groupAccess: usableGroups.length
-      ? { kind: "authoritative", usableGroups }
+      ? { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE, usableGroups }
       : Object.keys(groupRatios).length
         ? {
-            kind: "compatible-priced-fallback",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
             candidateGroups: Object.keys(groupRatios),
           }
-        : { kind: "authoritative", usableGroups: [] },
+        : {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups: [],
+          },
   })
 }
 

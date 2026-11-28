@@ -2,6 +2,7 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { createAccountSource } from "~/features/ModelList/catalog/modelManagementSources"
 import { prepareModelListSource } from "~/features/ModelList/catalog/sourcePreparation"
 import type { ModelListItem } from "~/features/ModelList/presentation/modelListItems"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -79,7 +80,7 @@ export function buildModelListItemFixture(
         },
       ],
       groupAccess: {
-        kind: "authoritative",
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups,
       },
       groupRatios: ratios,

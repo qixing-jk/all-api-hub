@@ -7,6 +7,7 @@ import {
   resolveActiveModelGroupContext,
 } from "~/features/ModelList/groups/groupContext"
 import { normalizeGroupRatios } from "~/services/modelCatalog/groupFacts"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
@@ -53,11 +54,17 @@ describe("resolveModelGroupContext", () => {
   it("uses explicit model access without inheriting other source groups", () => {
     const context = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-      groupAccess: { kind: "authoritative", usableGroups: ["default"] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: ["default"],
+      },
       groupRatios: { default: 1, vip: 0 },
     })({
       ...BASE_MODEL,
-      groupAccess: { kind: "authoritative", usableGroups: ["vip"] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: ["vip"],
+      },
     })
     expect(context.usableGroups).toEqual(["vip"])
     expect(context.priceableGroups).toEqual(["vip"])
@@ -65,7 +72,10 @@ describe("resolveModelGroupContext", () => {
   it("keeps an explicit empty permission scope even when a price ratio exists", () => {
     const context = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
-      groupAccess: { kind: "authoritative", usableGroups: [] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: [],
+      },
       groupRatios: { default: 1 },
     })(BASE_MODEL)
     expect(context).toMatchObject({
@@ -80,7 +90,7 @@ describe("resolveModelGroupContext", () => {
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
         groupRatios: { default: 1 },
         groupAccess: {
-          kind: "authoritative",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default"],
         },
       })(BASE_MODEL),
@@ -98,7 +108,7 @@ describe("resolveModelGroupContext", () => {
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
         groupRatios: { default: 1 },
         groupAccess: {
-          kind: "authoritative",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [" vip ", "default"],
         },
       })({ enable_groups: [" vip ", "", "default", "vip"] }),
@@ -116,7 +126,7 @@ describe("resolveModelGroupContext", () => {
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
         groupRatios: { default: 0 },
         groupAccess: {
-          kind: "compatible-priced-fallback",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
           candidateGroups: ["default"],
         },
       })(BASE_MODEL),
@@ -134,7 +144,7 @@ describe("resolveModelGroupContext", () => {
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
         groupRatios: { vip: 1 },
         groupAccess: {
-          kind: "authoritative",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default"],
         },
       })({ enable_groups: ["vip"] }),
@@ -150,7 +160,7 @@ describe("resolveModelGroupContext", () => {
     const unknown = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
       groupRatios: {},
-      groupAccess: { kind: "unavailable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
     })({
       ...BASE_MODEL,
       price_metadata: {
@@ -161,7 +171,10 @@ describe("resolveModelGroupContext", () => {
     const knownEmpty = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
       groupRatios: {},
-      groupAccess: { kind: "authoritative", usableGroups: [] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: [],
+      },
     })(BASE_MODEL)
 
     expect(unknown.accessState).toBe(MODEL_GROUP_ACCESS_STATES.UNKNOWN)
@@ -176,7 +189,7 @@ describe("resolveModelGroupContext", () => {
     const context = createModelGroupResolver({
       groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
       groupRatios: {},
-      groupAccess: { kind: "unavailable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
     })(BASE_MODEL)
 
     expect(context.accessState).toBe(MODEL_GROUP_ACCESS_STATES.UNKNOWN)
@@ -188,7 +201,7 @@ describe("resolveModelGroupContext", () => {
         groupSemantics: MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
         groupRatios: { default: 1 },
         groupAccess: {
-          kind: "authoritative",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default"],
         },
       })(BASE_MODEL),

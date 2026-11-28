@@ -12,6 +12,7 @@ import {
   type KimiOpenPlatformDeployment,
 } from "~/services/kimiOpenPlatform/deployments"
 import type { KimiPricingDocEntry } from "~/services/kimiOpenPlatform/pricingDoc"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { createAccountBoundCatalogActionPolicy } from "~/services/modelList/catalogActionPolicy"
 import {
   MODEL_CATALOG_SCOPES,
@@ -182,7 +183,7 @@ function createKimiCatalogResponse(
     data: rows.map((row) => createKimiCatalogRow(row, pricingUrl)),
     groupRatios: {},
     success: true,
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
       provider: deployment.siteType,

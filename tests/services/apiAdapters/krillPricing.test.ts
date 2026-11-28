@@ -5,6 +5,7 @@ import {
   krillModelCatalog,
   krillModelPricing,
 } from "~/services/apiAdapters/krill/modelCatalog"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { pricingPlanSchema } from "~/services/modelPricing/pricingPlan"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { AuthTypeEnum } from "~/types"
@@ -107,7 +108,9 @@ it("shows the native default route and channel price, including both cache lifet
     }),
   )
   expect(plan.limits).toEqual({ totalTokens: 1000000, outputTokens: 128000 })
-  expect(result.groupAccess).toEqual({ kind: "not-applicable" })
+  expect(result.groupAccess).toEqual({
+    kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE,
+  })
   expect(row.enable_groups).toEqual([])
   expect(row.token_price_usd_per_million).toBeUndefined()
   expect(row.presentation?.summaryFacts).toContainEqual({

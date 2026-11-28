@@ -1,6 +1,6 @@
-# Native editor workflow parity
+# Native editor task design
 
-Use when adding, extending or comparing account-key or managed-resource editors. Keep their capability and write contracts separate; share this method for evaluating usability. Aim to improve common tasks and avoid regressions against the native editor within the requested scope. Field coverage alone is insufficient.
+Use when adding, extending or comparing account-key or managed-resource editors. Keep their capability and write contracts separate; share this method for evaluating usability. Follow [product defaults, validation and UI guidance](../../../../docs/agents/product.md#integration-defaults-validation-and-ui). Aim for a better extension experience for the scoped tasks; matching the official form's fields, defaults or validators does not establish that outcome.
 
 ## Establish the baseline before implementation
 
@@ -11,9 +11,9 @@ Walk through the native editor and current extension for the target role and ver
 - Prioritize by frequency, importance and error cost. “Common fields only” does not justify omitting a core workflow while adding secondary settings. Respect explicit narrower user scope and record what it excludes.
 - Compare existing app presentation seams with those tasks. Extend an inadequate shared editor seam when needed instead of flattening native interactions to fit its current field list.
 
-Keep a compact comparison in the existing task spec/evidence index; rows describe tasks and meaningful variants. Under each affected editor task, inventory the native user-editable fields, including conditional and advanced sections. For each field, record native default/options/validation, extension control or explicit disposition, submitted value and save/reopen readback. Distinguish create-only, edit-only, immutable and role-restricted fields. A field preserved invisibly in a payload remains unadapted as an editable control. Reuse this inventory and task comparison during implementation and acceptance instead of creating another site inventory.
+Keep a compact comparison in the existing task spec/evidence index; rows describe tasks and meaningful variants. Under each affected editor task, inventory the native user-editable fields, including conditional and advanced sections. Distinguish backend requirements, observed official defaults/options/validation, and the intended product choice; observing a website rule does not require enforcing it locally. Record the extension control or explicit disposition, submitted value and save/reopen readback. Distinguish create-only, edit-only, immutable and role-restricted fields. A field preserved invisibly in a payload remains unadapted as an editable control. Reuse this inventory and task comparison during implementation and acceptance instead of creating another site inventory.
 
-| Common task / variant | Native interaction and evidence | Our current gap | Intended behavior and priority | Observed result / remaining gap |
+| Common task / variant | Native interaction and evidence | Product choice / current issue | Intended behavior and priority | Observed result / remaining gap |
 | --- | --- | --- | --- | --- |
 | `<task and starting state>` | `<steps, defaults, source/version or capture>` | `<missing action or added effort>` | `<scope and expected improvement>` | `<comparison outcome and evidence>` |
 
@@ -24,7 +24,7 @@ An audit-only request ends with findings; it does not authorize implementation o
 - Put meaningful choices before their dependent inputs. Show relevant fields, help and validation for the selected type or mode; make other configured branches discoverable and restore the saved selection on reopen. Choose suitable controls rather than requiring cards or tabs everywhere.
 - Place credentials and frequent actions early. Group related inputs and progressively disclose rare settings without hiding required controls. Preserve useful native bulk, search, selection and per-item operations when they are part of the common task.
 - Switching type, collapsing sections or leaving a field untouched must preserve hidden values, secrets, unsupported settings and concurrent edits according to the resource owner's write contract. Do not infer protocol support, copy credentials across branches or reproduce native draft conversion without verifying its rules.
-- Display native defaults accurately, including empty and zero values. Validation must lead to a visible, actionable control even when the error belongs to a collapsed or inactive branch. Retain drafts on recoverable failure and follow existing partial/uncertain-write recovery rules.
+- Apply the chosen product defaults to creation and preserve actual saved values, including empty and zero, during editing. Validate correctness locally and handle backend policy rejections with visible, actionable feedback, including errors in collapsed sections. Retain drafts on recoverable failure and follow existing partial/uncertain-write recovery rules.
 
 Use the native editor to understand tasks and constraints, then design for the extension's context. Aim to improve common task completion, clarity and recovery; equivalent outcomes may use different controls, grouping or steps. Do not reproduce native complexity merely for visual or control-by-control parity, add provider-specific features to every editor or force multi-key controls onto a single-key resource.
 

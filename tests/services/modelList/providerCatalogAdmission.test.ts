@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -44,7 +45,7 @@ function createProviderResponse(modelOverrides: Record<string, unknown> = {}) {
     ],
     groupRatios: {},
     success: true,
-    groupAccess: { kind: "not-applicable" as const },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
       provider: SITE_TYPES.OPENROUTER,

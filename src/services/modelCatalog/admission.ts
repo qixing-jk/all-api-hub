@@ -1,17 +1,25 @@
 import { z } from "zod"
 
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
+
 const groupNames = z.array(z.string())
 const groupAccess = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("not-applicable") }),
   z.strictObject({
-    kind: z.literal("authoritative"),
+    kind: z.literal(MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE),
+  }),
+  z.strictObject({
+    kind: z.literal(MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE),
     usableGroups: groupNames,
   }),
   z.strictObject({
-    kind: z.literal("compatible-priced-fallback"),
+    kind: z.literal(
+      MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
+    ),
     candidateGroups: groupNames,
   }),
-  z.strictObject({ kind: z.literal("unavailable") }),
+  z.strictObject({
+    kind: z.literal(MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE),
+  }),
 ])
 
 const catalogFacts = z.object({

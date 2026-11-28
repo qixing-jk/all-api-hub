@@ -64,3 +64,13 @@ export type AccountKeyResourceEditorPresentation = {
     initiallyOpen: (values: EditableResourceProjection) => boolean
   }
 }
+
+/** Provider field rules assembled with the shared native editor sections. */
+export type AccountKeyResourceFieldConfiguration = Pick<
+  ResourceEditorFieldPolicy,
+  "fields" | "sections"
+> &
+  Pick<
+    AccountKeyResourceEditorPresentation,
+    "automaticName" | "requireFreshOptions"
+  >

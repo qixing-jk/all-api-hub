@@ -2,6 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
 import { fetchModels } from "~/services/apiService/dahl"
 import { DAHL_TOKEN_ASSET } from "~/services/apiService/dahl/constants"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { MODEL_LIST_PRICING_KINDS } from "~/services/modelList/pricingModel"
 import {
   QUOTA_COMPARISON_SCOPES,
@@ -14,7 +15,7 @@ export const dahlModelPricing: ModelPricingCapability = {
     const models = await fetchModels(request)
     return {
       success: true,
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       groupRatios: {},
       data: models.map((id) => ({
         model_name: id,

@@ -10,6 +10,7 @@ import { clearRixApiDialectChoicesForTests } from "~/services/apiService/newApiF
 import { ApiError } from "~/services/apiTransport/errors"
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
@@ -364,7 +365,7 @@ describe("Rix API model pricing", () => {
       "openai-official-cheap": 0.53,
     })
     expect(snapshot.groupAccess).toEqual({
-      kind: "compatible-priced-fallback",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
       candidateGroups: ["openai", "openai-official-cheap"],
     })
   })
@@ -381,7 +382,7 @@ describe("Rix API model pricing", () => {
     )
 
     expect(snapshot.groupAccess).toEqual({
-      kind: "authoritative",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
       usableGroups: ["openai", "azure"],
     })
   })
@@ -710,7 +711,7 @@ describe("Rix API model pricing", () => {
     })
     const snapshot = normalizeRixApiModelPricingResponse(envelope)
     expect(snapshot.groupAccess).toEqual({
-      kind: "authoritative",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
       usableGroups: [],
     })
   })
