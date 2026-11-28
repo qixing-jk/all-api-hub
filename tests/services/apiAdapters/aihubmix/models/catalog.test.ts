@@ -10,6 +10,7 @@ import {
 } from "~/services/apiAdapters/aihubmix/models/catalog"
 import { ApiError } from "~/services/apiTransport/errors"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import {
   PRICE_RATE_UNITS,
@@ -884,7 +885,7 @@ describe("AIHubMix catalog adapter", () => {
     expect(result).toMatchObject({
       success: true,
       groupRatios: {},
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
         provider: SITE_TYPES.AIHUBMIX,
@@ -1137,7 +1138,7 @@ describe("AIHubMix catalog adapter", () => {
     await expect(fetchModelPricing(baseRequest)).resolves.toMatchObject({
       success: true,
       groupRatios: {},
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
         provider: SITE_TYPES.AIHUBMIX,
@@ -1239,7 +1240,7 @@ describe("AIHubMix catalog adapter", () => {
     await expect(fetchModelPricing(baseRequest)).resolves.toMatchObject({
       success: true,
       groupRatios: {},
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
         provider: SITE_TYPES.AIHUBMIX,

@@ -4,6 +4,7 @@ import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/mo
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
 import type { NovitaPublicModel } from "~/services/apiService/novita/publicModelCatalog"
 import { fetchNovitaPublicModelCatalog } from "~/services/apiService/novita/publicModelCatalog"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { createAccountBoundCatalogActionPolicy } from "~/services/modelList/catalogActionPolicy"
 import {
   MODEL_CATALOG_SCOPES,
@@ -126,7 +127,7 @@ function createNovitaCatalogPricingResponse(
     data: models.map(adaptNovitaModel),
     groupRatios: {},
     success: true as const,
-    groupAccess: { kind: "not-applicable" as const },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
       provider: SITE_TYPES.NOVITA,

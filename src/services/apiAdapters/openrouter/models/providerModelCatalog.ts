@@ -7,6 +7,7 @@ import { fetchOpenRouterPersonalizedModelCatalog } from "~/services/apiService/o
 import { fetchOpenRouterPublicModelCatalog } from "~/services/apiService/openrouter/publicModelCatalog"
 import type { OpenRouterPublicModel } from "~/services/apiService/openrouter/publicModelCatalogSchemas"
 import { ApiError } from "~/services/apiTransport/errors"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { createAccountBoundCatalogActionPolicy } from "~/services/modelList/catalogActionPolicy"
 import {
   MODEL_CATALOG_SCOPES,
@@ -146,7 +147,7 @@ function createOpenRouterCatalogPricingResponse(
     data: models.map(adaptOpenRouterModel),
     groupRatios: {},
     success: true,
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
       provider: SITE_TYPES.OPENROUTER,

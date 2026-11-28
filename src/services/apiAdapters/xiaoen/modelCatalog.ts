@@ -8,7 +8,10 @@ import {
   invalidXiaoenResponse,
   withXiaoenSession,
 } from "~/services/apiService/xiaoen/transport"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import type { ModelDescriptor } from "~/services/models/modelDescriptor"
 import { normalizeModelDescriptors } from "~/services/models/modelDescriptor"
 import { isRecord } from "~/utils/core/object"
@@ -21,7 +24,7 @@ const publicPricing: ModelPricingCapability = {
       throw invalidXiaoenResponse(XIAOEN_ENDPOINTS.Models)
     return {
       success: true,
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       groupRatios: {},
       data: body.data.models.map((value) => {
         if (

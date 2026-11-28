@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_VENDOR_EVIDENCE_KINDS,
   type ModelVendorEvidence,
@@ -12,7 +15,10 @@ const createPricingResponse = (
 ): ModelCatalogSnapshot => ({
   success: true,
   groupRatios: {},
-  groupAccess: { kind: "authoritative", usableGroups: [] },
+  groupAccess: {
+    kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+    usableGroups: [],
+  },
   data: [
     {
       model_name: modelName,
@@ -70,9 +76,8 @@ describe("modelPricingCache", () => {
   it("round-trips pricing rows with vendor evidence", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_000)
 
-    const { modelPricingCache } = await import(
-      "~/services/models/modelPricingCache"
-    )
+    const { modelPricingCache } =
+      await import("~/services/models/modelPricingCache")
 
     const pricing = createPricingResponse("model-alpha", {
       kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
@@ -107,9 +112,8 @@ describe("modelPricingCache", () => {
     })
     vi.spyOn(Date, "now").mockReturnValue(1_000)
 
-    const { modelPricingCache } = await import(
-      "~/services/models/modelPricingCache"
-    )
+    const { modelPricingCache } =
+      await import("~/services/models/modelPricingCache")
 
     await expect(
       modelPricingCache.get("account-without-evidence"),
@@ -154,9 +158,8 @@ describe("modelPricingCache", () => {
     })
     vi.spyOn(Date, "now").mockReturnValue(1_000)
 
-    const { modelPricingCache } = await import(
-      "~/services/models/modelPricingCache"
-    )
+    const { modelPricingCache } =
+      await import("~/services/models/modelPricingCache")
 
     await expect(modelPricingCache.get("account-legacy")).resolves.toBeNull()
     expect(mocks.get).toHaveBeenCalledWith("modelCatalog_cache_v1")
@@ -165,9 +168,8 @@ describe("modelPricingCache", () => {
   it("keeps independent vendor evidence for each account cache entry", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_000)
 
-    const { modelPricingCache } = await import(
-      "~/services/models/modelPricingCache"
-    )
+    const { modelPricingCache } =
+      await import("~/services/models/modelPricingCache")
     const accountAlphaPricing = createPricingResponse("shared-model", {
       kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
       name: "Example Publisher",
@@ -212,9 +214,8 @@ describe("modelPricingCache", () => {
 
     vi.spyOn(Date, "now").mockReturnValue(1_000)
 
-    const { MODEL_PRICING_CACHE_TTL_MS, modelPricingCache } = await import(
-      "~/services/models/modelPricingCache"
-    )
+    const { MODEL_PRICING_CACHE_TTL_MS, modelPricingCache } =
+      await import("~/services/models/modelPricingCache")
 
     await expect(modelPricingCache.get("absent")).resolves.toBeNull()
 
@@ -236,9 +237,8 @@ describe("modelPricingCache", () => {
       },
     })
 
-    const { modelPricingCache } = await import(
-      "~/services/models/modelPricingCache"
-    )
+    const { modelPricingCache } =
+      await import("~/services/models/modelPricingCache")
 
     await modelPricingCache.invalidate("account-1")
 
@@ -253,9 +253,8 @@ describe("modelPricingCache", () => {
   it("swallows storage read failures and returns null", async () => {
     mocks.get.mockRejectedValueOnce(new Error("storage read failed"))
 
-    const { modelPricingCache } = await import(
-      "~/services/models/modelPricingCache"
-    )
+    const { modelPricingCache } =
+      await import("~/services/models/modelPricingCache")
 
     await expect(modelPricingCache.get("account-1")).resolves.toBeNull()
     expect(mocks.logger.error).toHaveBeenCalledWith(
@@ -275,9 +274,8 @@ describe("modelPricingCache", () => {
       .mockRejectedValueOnce(new Error("storage write failed"))
       .mockRejectedValueOnce(new Error("storage delete failed"))
 
-    const { modelPricingCache } = await import(
-      "~/services/models/modelPricingCache"
-    )
+    const { modelPricingCache } =
+      await import("~/services/models/modelPricingCache")
 
     await expect(
       modelPricingCache.set("account-2", {

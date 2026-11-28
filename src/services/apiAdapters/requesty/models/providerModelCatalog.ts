@@ -6,6 +6,7 @@ import {
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
 import type { RequestyPublicModel } from "~/services/apiService/requesty/publicModelCatalog"
 import { fetchRequestyPublicModelCatalog } from "~/services/apiService/requesty/publicModelCatalog"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -133,7 +134,7 @@ export const requestyProviderModelCatalog: ProviderModelCatalogCapability = {
       data: models.map(adaptRequestyModel),
       groupRatios: {},
       success: true,
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
       model_list_source: {
         kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
         provider: SITE_TYPES.REQUESTY,

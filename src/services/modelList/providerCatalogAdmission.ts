@@ -1,7 +1,10 @@
 import { z } from "zod"
 
 import type { AccountSiteType } from "~/constants/siteType"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_CATALOG_FAILURE_CATEGORIES,
   MODEL_CATALOG_SCOPES,
@@ -360,7 +363,9 @@ const providerModelCatalogPricingResponseSchema = z.strictObject({
   data: z.array(productCanonicalModelSchema),
   groupRatios: z.record(z.string(), finiteNonnegativeNumberSchema),
   success: z.literal(true),
-  groupAccess: z.strictObject({ kind: z.literal("not-applicable") }),
+  groupAccess: z.strictObject({
+    kind: z.literal(MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE),
+  }),
   model_list_source: providerModelCatalogSourceSchema,
 })
 

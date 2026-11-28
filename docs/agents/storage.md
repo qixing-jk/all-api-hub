@@ -1,6 +1,14 @@
 # Storage Guidance
 
-Read this when adding or changing a persistent store, a storage key, or a write that crosses extension contexts.
+Read this when adding or changing a persistent store, a storage key, a data migration or compatibility path, or a write that crosses extension contexts.
+
+## Establish the release and data baseline
+
+Before designing a stored format or compatibility change, proactively determine whether the affected feature and format are unreleased, released, or unconfirmed. Reuse the user's confirmed task context; otherwise inspect release tags/history, the branch delta and the existing storage owner. Record the conclusion and evidence in the task spec. Earlier feature commits, development profiles and fixtures alone do not establish a released contract; a branch name or repository-wide version alone does not establish the status of a particular feature.
+
+For an unreleased feature, evolve its format and fixtures directly. Add migrations, legacy readers, compatibility aliases or deprecation paths only for a demonstrated data population that must survive: a shipped format or explicitly retained user/development data. Identify that population and required conversion before implementation. An unconfirmed release state calls for investigation, not a speculative migration. Updating a fixture does not authorize clearing existing profiles or rewriting unrelated data.
+
+Assess shared storage separately: an unreleased integration can still change a format already used by released features. Preserve those actual compatibility obligations. Regression fixtures should represent the supported contract, rather than immortalizing each discarded development format.
 
 ## Every read-modify-write runs under one lock
 

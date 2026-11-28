@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { buildGrsaiPricingResponse } from "~/services/apiAdapters/grsai/catalogMapping"
 import type { GrsaiModel } from "~/services/apiService/grsai/type"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -83,7 +84,9 @@ describe("grsai model catalog mapping", () => {
     const snapshot = buildGrsaiPricingResponse([model()])
 
     expect(snapshot.success).toBe(true)
-    expect(snapshot.groupAccess).toEqual({ kind: "not-applicable" })
+    expect(snapshot.groupAccess).toEqual({
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE,
+    })
     expect(snapshot.groupRatios).toEqual({})
     expect(snapshot.model_list_source).toMatchObject({
       kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,

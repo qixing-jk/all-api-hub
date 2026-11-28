@@ -3,6 +3,7 @@ import { expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { loadAccountCatalogSource } from "~/services/modelCatalog/loader"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { modelPricingCache } from "~/services/models/modelPricingCache"
 import { server } from "~~/tests/msw/server"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
@@ -18,7 +19,9 @@ it("refreshes an old AIMLAPI HTML snapshot instead of reusing it after the struc
       ? {
           success: true,
           data: [],
-          groupAccess: { kind: "not-applicable" },
+          groupAccess: {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE,
+          },
           groupRatios: {},
         }
       : null,

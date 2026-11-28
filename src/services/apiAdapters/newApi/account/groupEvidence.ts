@@ -1,5 +1,8 @@
 import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import { MODEL_PRICE_PRECISION_KINDS } from "~/services/modelList/pricingModel"
 
 /**
@@ -11,7 +14,8 @@ export function applyFamilyGroupEvidence(
   catalog: ModelCatalogSnapshot,
 ): ModelCatalogSnapshot {
   if (
-    catalog.groupAccess.kind === "authoritative" &&
+    catalog.groupAccess.kind ===
+      MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE &&
     catalog.groupAccess.usableGroups.length > 0
   )
     return catalog
@@ -25,7 +29,10 @@ export function applyFamilyGroupEvidence(
         priced.has(group),
       )
     return insufficient
-      ? { ...model, groupAccess: { kind: "unavailable" as const } }
+      ? {
+          ...model,
+          groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
+        }
       : model
   })
   const isEmptyUnpricedCatalog =
@@ -40,7 +47,7 @@ export function applyFamilyGroupEvidence(
     ...catalog,
     data,
     ...(isEmptyUnpricedCatalog
-      ? { groupAccess: { kind: "unavailable" as const } }
+      ? { groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE } }
       : {}),
   }
 }

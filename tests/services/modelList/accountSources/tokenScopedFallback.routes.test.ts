@@ -5,6 +5,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
 } from "~/services/accounts/accountSiteProfile/contracts"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -171,7 +172,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
       success: true,
       data: [{ model_name: "runtime-only-model", model_price: 7 }],
       groupRatios: {},
-      groupAccess: { kind: "not-applicable" },
+      groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     }
     const enrichPricing = vi.fn().mockResolvedValue(snapshot)
     getSiteTypeCapabilitiesMock.mockReturnValue({

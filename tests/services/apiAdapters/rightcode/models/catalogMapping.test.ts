@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { buildRightCodePricingResponse } from "~/services/apiAdapters/rightcode/models/catalogMapping"
 import type { RightCodeEffectiveUpstream } from "~/services/apiService/rightcode/type"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const upstream = (
@@ -36,7 +37,9 @@ describe("buildRightCodePricingResponse", () => {
     const snapshot = buildRightCodePricingResponse([upstream()])
 
     expect(snapshot.success).toBe(true)
-    expect(snapshot.groupAccess).toEqual({ kind: "not-applicable" })
+    expect(snapshot.groupAccess).toEqual({
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE,
+    })
     expect(snapshot.groupRatios).toEqual({})
     expect(snapshot.data).toEqual([
       expect.objectContaining({

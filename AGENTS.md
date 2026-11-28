@@ -19,8 +19,8 @@ Single-context layout: read root `CONTEXT.md` and root `docs/adr/` when present.
 Read only the guidance relevant to the current task; reuse unchanged material already read. These links are task routes, not a startup reading list.
 
 - Adding or extending account/managed site support, improving a native editor or comparing its UX, adding site-specific check-in, or deciding site-type boundaries: use the project [`add-site-integration` skill](.agents/skills/add-site-integration/SKILL.md) and only its relevant workflow references. The [integration guide](docs/agents/site-integrations.md) explains type relationships, links upstream material and locates code/documentation owners; for an isolated bug fix, start with the owning adapter and tests.
-- Dependencies, UI primitives, settings navigation, analytics, or user-facing errors: [product guidance](docs/agents/product.md).
-- Persistent stores, storage keys, or writes that cross extension contexts: [storage guidance](docs/agents/storage.md).
+- Integration defaults and frontend validation, UI design, dependencies, settings navigation, analytics, or user-facing errors: [product guidance](docs/agents/product.md).
+- Persistent stores, data migrations or compatibility, storage keys, or writes that cross extension contexts: [storage guidance](docs/agents/storage.md).
 - Translation keys, resources, or language behavior: [i18n guidance](docs/agents/i18n.md). Use `add-app-language` only when adding a supported application language.
 - Sponsor catalog changes or audits use the project `sponsor-catalog` skill, not ordinary documentation edits.
 - Live extension UI automation, real accounts, desktop CDP, or Android Firefox/Edge/Lemur diagnostics and hot updates: use the [`live-extension-ui-automation` skill](.agents/skills/live-extension-ui-automation/SKILL.md).

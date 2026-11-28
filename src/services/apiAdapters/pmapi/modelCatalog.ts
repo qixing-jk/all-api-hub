@@ -6,7 +6,10 @@ import {
   fetchPmApiData,
   invalidPmApiResponse,
 } from "~/services/apiService/pmapi/transport"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -119,12 +122,18 @@ export const pmApiModelPricing: ModelPricingCapability = {
       const usableGroups = (await fetchPmApiTokenGroups(request)).map(
         (group) => group.name,
       )
-      groupAccess = { kind: "authoritative", usableGroups }
+      groupAccess = {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups,
+      }
     } catch {
       const candidateGroups = Object.keys(groupRatios)
       groupAccess = candidateGroups.length
-        ? { kind: "compatible-priced-fallback", candidateGroups }
-        : { kind: "unavailable" }
+        ? {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
+            candidateGroups,
+          }
+        : { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE }
     }
     return {
       success: true,

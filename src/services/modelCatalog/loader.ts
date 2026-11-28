@@ -12,6 +12,7 @@ import {
   fetchApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   loadAccountRuntimeKeyFallbackPricingResponse,
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
@@ -512,7 +513,10 @@ export async function loadProfileModelCatalog(
   const catalog = buildApiCredentialProfilePricingResponse(
     await fetchApiCredentialModelIds(params),
   )
-  return { ...catalog, groupAccess: { kind: "not-applicable" } }
+  return {
+    ...catalog,
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
+  }
 }
 
 type ModelListAccountSourceReadiness = ReturnType<

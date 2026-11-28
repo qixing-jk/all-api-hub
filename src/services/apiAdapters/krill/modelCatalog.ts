@@ -17,7 +17,10 @@ import {
 import { withKrillSession } from "~/services/apiService/krill/transport"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { PRICING_SOURCE_NOTE_KINDS } from "~/services/modelPricing/pricingConstants"
 import type {
@@ -70,8 +73,9 @@ function planFor(
     ? 1
     : Number(
         (
-          (context.route ? entry.routeMultipliers[context.route.key] ?? 1 : 1) *
-          (channel?.billingMultiplier ?? 1)
+          (context.route
+            ? (entry.routeMultipliers[context.route.key] ?? 1)
+            : 1) * (channel?.billingMultiplier ?? 1)
         ).toFixed(4),
       )
   const token = (amount: number): PriceRate => ({
@@ -239,7 +243,7 @@ function snapshot(
     data: buildKrillPricing(entries, baseUrl, context, channels),
     groupRatios: {},
     // Channels gate billing routes, not model access, so no group policy applies.
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     model_list_source: {
       kind: "user-scoped",
       provider: SITE_TYPES.KRILL,

@@ -2,6 +2,14 @@
 
 Read the section that matches the change.
 
+## Integration defaults, validation and UI
+
+Start from the user's task and the closest established project workflow. Within verified backend constraints, follow explicit user choices and use consistent project conventions for defaults, validation, language and interaction. Reuse suitable shared components and policies; depart from them when the task or provider contract warrants it, and explain the benefit. Preserve existing saved values when editing.
+
+Use the official experience to discover capabilities, constraints and usability opportunities. Distinguish verified backend requirements from frontend choices, and choose the extension's behavior for consistent, effective task completion. Local validation should protect correctness and provide useful feedback; use backend validation for changing business rules when it reliably rejects invalid requests. Retain the project's identity, data integrity, secret-handling and write-recovery safeguards.
+
+Judge the result by task completion, clarity, effort and recovery across the actual UI states. Keep useful capabilities discoverable and communicate uncertainty where it affects decisions. Record deliberate differences and verify the intended outcome against both the existing project experience and the upstream contract.
+
 ## Dependency selection
 
 - For dependencies bundled with the extension, make size decisive only when measured output, startup, memory, or distribution impact is material; bundled code adds no per-use network request.

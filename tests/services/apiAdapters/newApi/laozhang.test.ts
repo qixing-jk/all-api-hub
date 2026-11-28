@@ -8,6 +8,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 
@@ -288,7 +289,10 @@ describe("LaoZhang protocol dispatch", () => {
       ),
     ).resolves.toMatchObject({
       groupRatios: { vip: 0.5 },
-      groupAccess: { kind: "authoritative", usableGroups: ["vip"] },
+      groupAccess: {
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+        usableGroups: ["vip"],
+      },
       data: [{ vendorEvidence: { name: "OpenAI" } }],
     })
   })

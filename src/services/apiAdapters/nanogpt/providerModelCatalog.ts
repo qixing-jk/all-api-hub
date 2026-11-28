@@ -4,6 +4,7 @@ import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/cont
 import { createNanoGptCatalogModel } from "~/services/apiAdapters/nanogpt/modelPresentation"
 import { fetchNanoGptDetailedModelCatalog } from "~/services/apiService/nanogpt/catalog"
 import { ApiError } from "~/services/apiTransport/errors"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -62,7 +63,7 @@ export const nanoGptProviderModelCatalog: ProviderModelCatalogCapability = {
         data: models.map(createNanoGptCatalogModel),
         groupRatios: {},
         success: true,
-        groupAccess: { kind: "not-applicable" },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
         model_list_source: {
           kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
           provider: SITE_TYPES.NANOGPT,

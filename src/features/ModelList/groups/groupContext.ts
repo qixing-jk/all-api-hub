@@ -3,9 +3,10 @@ import {
   type ModelListGroupSemantics,
 } from "~/features/ModelList/catalog/modelManagementSources"
 import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
-import type {
-  ModelCatalogModel,
-  ModelGroupAccessEvidence,
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogModel,
+  type ModelGroupAccessEvidence,
 } from "~/services/modelCatalog/snapshot"
 
 export const MODEL_GROUP_ACCESS_STATES = {
@@ -59,9 +60,10 @@ export function createModelGroupResolver(params: {
 }) {
   const groupsForEvidence = (evidence: ModelGroupAccessEvidence) =>
     new Set(
-      evidence.kind === "authoritative"
+      evidence.kind === MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE
         ? normalizeGroupNames(evidence.usableGroups)
-        : evidence.kind === "compatible-priced-fallback"
+        : evidence.kind ===
+            MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK
           ? normalizeGroupNames(evidence.candidateGroups)
           : [],
     )
@@ -81,7 +83,7 @@ export function createModelGroupResolver(params: {
     const supportedGroups = normalizeGroupNames(model.enable_groups)
     if (
       params.groupSemantics === MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE ||
-      evidence.kind === "not-applicable"
+      evidence.kind === MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE
     ) {
       return {
         accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
@@ -93,9 +95,10 @@ export function createModelGroupResolver(params: {
     const usableGroups = supportedGroups.filter((group) => usable.has(group))
     return {
       accessState:
-        evidence.kind === "unavailable"
+        evidence.kind === MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE
           ? MODEL_GROUP_ACCESS_STATES.UNKNOWN
-          : evidence.kind === "compatible-priced-fallback" &&
+          : evidence.kind ===
+                MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK &&
               usableGroups.length > 0
             ? MODEL_GROUP_ACCESS_STATES.COMPATIBLE_PRICED_FALLBACK
             : MODEL_GROUP_ACCESS_STATES.KNOWN,

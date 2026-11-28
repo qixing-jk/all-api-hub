@@ -54,8 +54,8 @@ For a new provider-specific representation or capability, include the consumer t
 ### Keys and exports
 
 - [ ] **Key inventory and scopes**: verify pagination, groups/projects/organizations, identity and empty states. Compare list/detail payloads to find omitted writable settings.
-- [ ] **Native editor workflow parity**: follow [the editor comparison](native-editor-parity.md) for affected account-key tasks and type/mode variants before choosing fields/layout and during built-UI validation. Keep account credentials and operations distinct from managed resources.
-- [ ] **Key creation**: inspect native defaults, options, conditional and role-limited fields. Map ordinary-account fields into the existing editor; verify disposable create/readback. Preserve name-only creation when supported.
+- [ ] **Native editor task design**: follow [the editor comparison](native-editor-parity.md) for affected account-key tasks and type/mode variants before choosing fields/layout and during built-UI validation. Keep account credentials and operations distinct from managed resources.
+- [ ] **Key creation**: distinguish backend requirements from official defaults and frontend restrictions; choose defaults and validation through [product guidance](../../../../docs/agents/product.md#integration-defaults-validation-and-ui). Map ordinary-account fields into the existing editor; verify disposable create/readback. Preserve name-only creation when supported.
 - [ ] **Key editing**: compare every ordinary-account native field with the plugin editor, including visibility, validation and wire representation. Hydrate detail where needed; verify reopen, changed values and untouched settings/secrets. PUT preservation alone is not editable support; enumerate missing fields.
 - [ ] **Key deletion and status**: check delete and enable/disable/expiry separately. Respect ownership and read back mutations; inventory alone does not prove CRUD.
 - [ ] **Key detail usefulness**: compare the rendered summary with expanded details. Declare a complete inventory only when it supplies all display details, and hide its trigger when there are no additional facts. For lazy details, preserve the trigger and expanded panel through loading, error/retry and successful empty results; show explicit no-additional-details feedback rather than making the clicked control disappear. The shared card removes repeated summary facts after loading. Test an ordinary key with few settings as well as a key with extra restrictions. Distinguish revoke (disable while retaining the record), destroy, and rotation when the native console exposes them separately.
@@ -65,7 +65,7 @@ For a new provider-specific representation or capability, include the consumer t
 ### Models and pricing
 
 - [ ] **Model catalog and access**: distinguish account/key, personalized and provider-wide scopes, groups and availability. Reuse catalog/pricing seams; disclose scope-changing fallback. One key's list is not the provider catalog.
-- [ ] **Model pricing**: verify currency/units, token/request/media modes and group/plan effects against native display. Follow [native meaning through shared workflows](account-sites.md#preserve-native-meaning-through-shared-workflows), including billing badges, filters, rates and offered model actions. Map understood prices; explain unsupported expressions instead of guessing.
+- [ ] **Model pricing**: verify currency/units, token/request/media modes and group/plan effects against source/API evidence; native display is a comparison, not the authority for a disputed unit. Follow [native meaning through shared workflows](account-sites.md#preserve-native-meaning-through-shared-workflows), including billing badges, filters, rates and offered model actions. Map understood prices; explain unsupported expressions instead of guessing.
 
 ### Invitations, announcements and grants
 

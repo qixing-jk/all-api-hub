@@ -18,7 +18,10 @@ import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupCont
 import { getModelItemKey } from "~/features/ModelList/presentation/modelListItems"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import type { ModelPriceComparisonWeights } from "~/features/ModelList/pricing/priceComparison"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   createAccountRuntimeKeyModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
@@ -106,7 +109,7 @@ const createPricingResponse = (
     success: true,
     // Access and pricing are independent facts; scenarios override each explicitly.
     groupAccess: {
-      kind: "authoritative",
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
       usableGroups: ["default"],
     },
     ...overrides,
@@ -169,7 +172,7 @@ describe("useFilteredModels", () => {
       ],
       {
         groupAccess: {
-          kind: "authoritative",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["default", "vip"],
         },
         groupRatios: { default: 1, vip: 3 },
@@ -908,7 +911,7 @@ describe("useFilteredModels", () => {
         {
           groupRatios: { vip: 2, "": 5 },
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["vip"],
           },
         },
@@ -999,7 +1002,10 @@ describe("useFilteredModels", () => {
         ],
         {
           groupRatios: {},
-          groupAccess: { kind: "authoritative", usableGroups: [] },
+          groupAccess: {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups: [],
+          },
           model_list_source: {
             kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
             provider: SITE_TYPES.OPENROUTER,
@@ -1291,7 +1297,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { vip: 1 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
             },
@@ -1336,7 +1342,7 @@ describe("useFilteredModels", () => {
             ],
             {
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["default", "vip"],
               },
               groupRatios: { default: 1, vip: 1 },
@@ -1777,7 +1783,7 @@ describe("useFilteredModels", () => {
             data: null,
             success: true,
             groupAccess: {
-              kind: "authoritative",
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
               usableGroups: [],
             },
           } as any,
@@ -1827,7 +1833,10 @@ describe("useFilteredModels", () => {
         ],
         {
           groupRatios: {},
-          groupAccess: { kind: "authoritative", usableGroups: [] },
+          groupAccess: {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups: [],
+          },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -1880,7 +1889,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: {},
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: [],
               },
             },
@@ -2435,7 +2444,7 @@ describe("useFilteredModels", () => {
         ],
         {
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["alpha", "beta"],
           },
           groupRatios: { alpha: 1, beta: 1 },
@@ -2472,7 +2481,7 @@ describe("useFilteredModels", () => {
         ],
         {
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["a", "B"],
           },
           groupRatios: { a: 1, B: 1 },
@@ -2810,7 +2819,7 @@ describe("useFilteredModels", () => {
           ],
           {
             groupAccess: {
-              kind: "authoritative",
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
               usableGroups: ["default", "vip"],
             },
             groupRatios: { default: 1, vip: 0.5 },
@@ -2938,7 +2947,7 @@ describe("useFilteredModels", () => {
             ],
             {
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: [],
               },
               groupRatios: {},
@@ -3067,7 +3076,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: {},
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: [],
               },
               model_list_source: {
@@ -3290,7 +3299,7 @@ describe("useFilteredModels", () => {
             ],
             {
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
               groupRatios: { vip: 0.5 },
@@ -3368,7 +3377,7 @@ describe("useFilteredModels", () => {
             ],
             {
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
               groupRatios: { vip: 0.5 },
@@ -3388,7 +3397,7 @@ describe("useFilteredModels", () => {
             ],
             {
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
               groupRatios: { vip: 0.8 },
@@ -3471,7 +3480,7 @@ describe("useFilteredModels", () => {
             ],
             {
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
               groupRatios: { vip: 0.5 },
@@ -3529,7 +3538,7 @@ describe("useFilteredModels", () => {
         ],
         {
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["default", "vip"],
           },
           groupRatios: { default: 1, vip: 2 },
@@ -4110,7 +4119,7 @@ describe("useFilteredModels", () => {
         {
           groupRatios: { default: 1 },
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["default"],
           },
         },
@@ -4150,7 +4159,7 @@ describe("useFilteredModels", () => {
         {
           groupRatios: { default: 1 },
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["default", "vip"],
           },
         },
@@ -4190,7 +4199,7 @@ describe("useFilteredModels", () => {
         {
           groupRatios: { default: 1 },
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["default", "vip"],
           },
         },
@@ -4246,7 +4255,7 @@ describe("useFilteredModels", () => {
         selectedSource,
         pricingData: createPricingResponse([model], {
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["all", "default"],
           },
           groupRatios: { all: 0.25, default: 1 },
@@ -4312,7 +4321,12 @@ describe("useFilteredModels", () => {
                 },
               },
             ],
-            { groupAccess: { kind: "unavailable" }, groupRatios: {} },
+            {
+              groupAccess: {
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE,
+              },
+              groupRatios: {},
+            },
           ),
         },
       ],
@@ -4360,7 +4374,10 @@ describe("useFilteredModels", () => {
         [{ model_name: "shared-model", enable_groups: ["default"] }],
         {
           groupRatios: {},
-          groupAccess: { kind: "authoritative", usableGroups: [] },
+          groupAccess: {
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+            usableGroups: [],
+          },
         },
       ),
       selectedSource: createAccountSource(account),
@@ -4404,7 +4421,10 @@ describe("useFilteredModels", () => {
             },
           },
         ],
-        { groupAccess: { kind: "unavailable" }, groupRatios: {} },
+        {
+          groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
+          groupRatios: {},
+        },
       ),
     }
     const { result, rerender } = renderUseFilteredModels(inputs)
@@ -4440,7 +4460,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { default: 1 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["default"],
               },
             },
@@ -4478,7 +4498,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { default: 1, vip: 0.1 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["default"],
               },
             },
@@ -4497,7 +4517,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { team: 0.5 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["team"],
               },
             },
@@ -4554,7 +4574,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { " vip ": 0.5 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: [" vip "],
               },
             },
@@ -4592,7 +4612,7 @@ describe("useFilteredModels", () => {
         {
           groupRatios: { " vip ": 0.5 },
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: [" vip "],
           },
         },
@@ -4614,7 +4634,7 @@ describe("useFilteredModels", () => {
       {
         groupRatios: { " vip ": 0.5 },
         groupAccess: {
-          kind: "authoritative",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: [" vip "],
         },
       },
@@ -4650,7 +4670,7 @@ describe("useFilteredModels", () => {
       {
         groupRatios: { vip: 0.5 },
         groupAccess: {
-          kind: "authoritative",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
           usableGroups: ["vip"],
         },
       },
@@ -4659,7 +4679,7 @@ describe("useFilteredModels", () => {
       [{ model_name: "other-model", enable_groups: ["team"] }],
       {
         groupRatios: {},
-        groupAccess: { kind: "unavailable" },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
         model_list_source: {
           kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
           supportsPricing: false,
@@ -4690,7 +4710,9 @@ describe("useFilteredModels", () => {
             [{ model_name: "unknown-model", enable_groups: ["vip"] }],
             {
               groupRatios: { team: 0.8 },
-              groupAccess: { kind: "unavailable" },
+              groupAccess: {
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE,
+              },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
                 supportsPricing: false,
@@ -4723,7 +4745,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { vip: 0.5 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
             },
@@ -4740,7 +4762,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: {},
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
             },
@@ -4774,7 +4796,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { vip: 0.5 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
             },
@@ -4791,7 +4813,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { vip: 0.8 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
             },
@@ -4819,7 +4841,7 @@ describe("useFilteredModels", () => {
         {
           groupRatios: { vip: 1 },
           groupAccess: {
-            kind: "authoritative",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
             usableGroups: ["vip"],
           },
         },
@@ -4836,7 +4858,7 @@ describe("useFilteredModels", () => {
         {
           groupRatios: { vip: 1 },
           groupAccess: {
-            kind: "compatible-priced-fallback",
+            kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
             candidateGroups: ["vip"],
           },
         },
@@ -4852,7 +4874,7 @@ describe("useFilteredModels", () => {
         [{ model_name: "unknown-model", enable_groups: ["vip"] }],
         {
           groupRatios: {},
-          groupAccess: { kind: "unavailable" },
+          groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
           model_list_source: {
             kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
             supportsPricing: false,
@@ -4878,7 +4900,7 @@ describe("useFilteredModels", () => {
         [{ model_name: "profile-model", enable_groups: ["vip"] }],
         {
           groupRatios: {},
-          groupAccess: { kind: "unavailable" },
+          groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
           model_list_source: {
             kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
             supportsPricing: false,
@@ -4894,7 +4916,10 @@ describe("useFilteredModels", () => {
       ),
       pricing: createPricingResponse([], {
         groupRatios: {},
-        groupAccess: { kind: "authoritative", usableGroups: [] },
+        groupAccess: {
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+          usableGroups: [],
+        },
       }),
       expected: true,
     },
@@ -4905,7 +4930,7 @@ describe("useFilteredModels", () => {
       ),
       pricing: createPricingResponse([], {
         groupRatios: {},
-        groupAccess: { kind: "unavailable" },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
         model_list_source: {
           kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
           supportsPricing: false,
@@ -4940,7 +4965,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { vip: 1 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
             },
@@ -4956,7 +4981,9 @@ describe("useFilteredModels", () => {
             [{ model_name: "unknown-context", enable_groups: ["vip"] }],
             {
               groupRatios: {},
-              groupAccess: { kind: "unavailable" },
+              groupAccess: {
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE,
+              },
               model_list_source: {
                 kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
                 supportsPricing: false,
@@ -4971,7 +4998,7 @@ describe("useFilteredModels", () => {
             {
               groupRatios: { vip: 1 },
               groupAccess: {
-                kind: "authoritative",
+                kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
                 usableGroups: ["vip"],
               },
             },
@@ -5042,7 +5069,7 @@ it("reverses same-model rankings across context thresholds using one shared quot
           ],
           {
             groupAccess: {
-              kind: "authoritative",
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
               usableGroups: ["default", "half", "third", "fourth"],
             },
             groupRatios: { default: 1, half: 0.5, third: 2, fourth: 3 },

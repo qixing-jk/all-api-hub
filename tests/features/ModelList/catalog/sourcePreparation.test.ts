@@ -12,7 +12,10 @@ import {
   prepareModelListSources,
 } from "~/features/ModelList/catalog/sourcePreparation"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupContext"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import { createAccountRuntimeKeyModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -49,7 +52,7 @@ const pricing = (
     },
   ],
   groupAccess: {
-    kind: "authoritative",
+    kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
     usableGroups: ["default"],
   },
   groupRatios: { default: 1 },
@@ -66,7 +69,7 @@ describe("model list source preparation", () => {
   it("separates support, access, and priceability without mutating inputs", () => {
     const response = pricing({
       groupAccess: {
-        kind: "authoritative",
+        kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
         usableGroups: [" vip ", "default"],
       },
       groupRatios: { " vip ": 0, default: Infinity },
@@ -96,7 +99,7 @@ describe("model list source preparation", () => {
       name: "empty catalog fallback",
       response: pricing({
         data: [],
-        groupAccess: { kind: "unavailable" },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
         model_list_source: fallback,
       }),
       evidence: false,
@@ -104,7 +107,10 @@ describe("model list source preparation", () => {
     {
       name: "known empty access",
       response: pricing({
-        groupAccess: { kind: "authoritative", usableGroups: [] },
+        groupAccess: {
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+          usableGroups: [],
+        },
         groupRatios: {},
       }),
       evidence: true,
@@ -112,7 +118,7 @@ describe("model list source preparation", () => {
     {
       name: "unknown catalog access",
       response: pricing({
-        groupAccess: { kind: "unavailable" },
+        groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
         groupRatios: {},
         model_list_source: fallback,
       }),
@@ -122,7 +128,7 @@ describe("model list source preparation", () => {
       name: "compatible priced fallback",
       response: pricing({
         groupAccess: {
-          kind: "compatible-priced-fallback",
+          kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.COMPATIBLE_PRICED_FALLBACK,
           candidateGroups: ["default"],
         },
       }),
@@ -234,7 +240,7 @@ describe("model list source preparation", () => {
           sourceIdentity: runtimeKey,
           pricing: pricing({
             groupAccess: {
-              kind: "authoritative",
+              kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
               usableGroups: ["vip"],
             },
             groupRatios: { vip: 0.5 },

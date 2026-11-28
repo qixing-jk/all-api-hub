@@ -5,7 +5,10 @@ import {
   type EmRankCatalogModel,
 } from "~/services/apiService/emrank/catalog"
 import { EMRANK_TOKEN_ASSET } from "~/services/apiService/emrank/constants"
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import { MODEL_LIST_PRICING_KINDS } from "~/services/modelList/pricingModel"
 import {
   QUOTA_COMPARISON_SCOPES,
@@ -151,7 +154,7 @@ export async function fetchEmRankPricing(
   const origin = new URL(request.baseUrl).origin
   return {
     success: true,
-    groupAccess: { kind: "not-applicable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.NOT_APPLICABLE },
     groupRatios: {},
     data: models.map((model) => ({
       model_name: model.id,

@@ -16,6 +16,7 @@ import {
 } from "~/features/ModelList/groups/groupContext"
 import { ModelDisplay } from "~/features/ModelList/presentation/ModelDisplay"
 import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
+import { MODEL_GROUP_ACCESS_EVIDENCE_KINDS } from "~/services/modelCatalog/snapshot"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
   CALCULATED_PRICE_KINDS,
@@ -310,7 +311,10 @@ const createCalculatedModel = (
   )
   const groupContext = createModelGroupResolver({
     groupSemantics: source.groupSemantics,
-    groupAccess: { kind: "authoritative", usableGroups: model.enable_groups },
+    groupAccess: {
+      kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.AUTHORITATIVE,
+      usableGroups: model.enable_groups,
+    },
     groupRatios,
   })(model)
   const activeGroupContext = resolveActiveModelGroupContext({

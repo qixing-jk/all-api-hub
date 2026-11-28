@@ -1,4 +1,7 @@
-import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import {
+  MODEL_GROUP_ACCESS_EVIDENCE_KINDS,
+  type ModelCatalogSnapshot,
+} from "~/services/modelCatalog/snapshot"
 import {
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
@@ -76,6 +79,6 @@ export function buildModelListCatalogPricingResponse({
     groupRatios: {},
     model_list_source: source,
     success: true,
-    groupAccess: { kind: "unavailable" },
+    groupAccess: { kind: MODEL_GROUP_ACCESS_EVIDENCE_KINDS.UNAVAILABLE },
   }
 }
