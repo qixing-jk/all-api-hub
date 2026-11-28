@@ -13,6 +13,10 @@ import { ForeignCheckInContractError } from "~/services/apiService/sub2api/check
 import { parseFreeApiDailyCheckInStatusResponse } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
 import { parseGeniusProgrammerDailyCheckInStatusResponse } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import {
+  SUB2API_CHECK_IN_RECOVERY_REASONS,
+  Sub2ApiCheckInRecoveryBlockedError,
+} from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import {
   fetchXingchiDailyCheckInStatus,
   parseXingchiDailyCheckInMutationResponse,
   parseXingchiDailyCheckInStatusResponse,
@@ -270,7 +274,7 @@ describe("Xingchi check-in contract", () => {
         auth: expect.objectContaining({ accessToken: "renewed-fixture" }),
       }),
       expect.objectContaining({
-        options: { method: "POST", cache: "no-store" },
+        options: { method: "POST", cache: "no-store", redirect: "error" },
       }),
     )
     expect(fetchApiResponse).toHaveBeenCalledTimes(2)
@@ -300,6 +304,52 @@ describe("Xingchi check-in contract", () => {
     expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
   })
 
+  it("submits once only after the last admission check permits the claim", async () => {
+    const beforeRecoveredMutation = vi.fn(async () => {
+      expect(fetchApiResponse).not.toHaveBeenCalled()
+      return true
+    })
+    vi.mocked(fetchApiResponse).mockResolvedValue(
+      response({ amount: 300, status }),
+    )
+
+    await expect(
+      performXingchiDailyCheckIn(request, { beforeRecoveredMutation }),
+    ).resolves.toEqual({ rewardAmount: 300 })
+
+    expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
+    expect(fetchApiResponse).toHaveBeenCalledOnce()
+  })
+
+  it("does not submit when the last admission check revokes the claim", async () => {
+    const beforeRecoveredMutation = vi.fn().mockResolvedValue(false)
+
+    await expect(
+      performXingchiDailyCheckIn(request, { beforeRecoveredMutation }),
+    ).rejects.toEqual(
+      new Sub2ApiCheckInRecoveryBlockedError(
+        SUB2API_CHECK_IN_RECOVERY_REASONS.PreconditionFailed,
+      ),
+    )
+
+    expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
+    expect(fetchApiResponse).not.toHaveBeenCalled()
+    expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+    expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+  })
+
+  it("preserves a failed admission check without submitting", async () => {
+    const error = new Error("Account was removed")
+    const beforeRecoveredMutation = vi.fn().mockRejectedValue(error)
+
+    await expect(
+      performXingchiDailyCheckIn(request, { beforeRecoveredMutation }),
+    ).rejects.toBe(error)
+
+    expect(beforeRecoveredMutation).toHaveBeenCalledOnce()
+    expect(fetchApiResponse).not.toHaveBeenCalled()
+  })
+
   it("submits without a body and never replays a lost response", async () => {
     vi.mocked(fetchApiResponse).mockRejectedValue(
       new TypeError("Failed to fetch"),
@@ -311,8 +361,17 @@ describe("Xingchi check-in contract", () => {
       expect.anything(),
       {
         endpoint: "/api/v1/user/checkin",
-        options: { method: "POST", cache: "no-store" },
+        options: { method: "POST", cache: "no-store", redirect: "error" },
       },
     )
   })
+  it.each(["2026-11-28", "2026-02-30", "unknown", undefined])(
+    "retains only a valid native day: %s",
+    (today) => {
+      const status = parseXingchiDailyCheckInStatusResponse(
+        response({ enabled: true, claimed_today: false, today }),
+      )
+      expect(status.day).toBe(today === "2026-11-28" ? today : undefined)
+    },
+  )
 })

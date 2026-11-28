@@ -17,6 +17,8 @@ const inputVariants = cva(
         default: "",
         error:
           "border-destructive-border focus:ring-destructive-text focus:border-destructive-text focus-visible:border-destructive-text focus-visible:ring-destructive-text/40",
+        warning:
+          "border-warning-text/65 focus:ring-warning-text focus:border-warning-text focus-visible:border-warning-text focus-visible:ring-warning-text/40",
         success:
           "border-success-border focus:ring-success-text focus:border-success-text focus-visible:border-success-text focus-visible:ring-success-text/40",
       },

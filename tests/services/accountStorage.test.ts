@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { ACCOUNT_USAGE_SCOPES } from "~/constants/accountUsage"
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { CURRENCIES, QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/checkInStatus"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import {
   accountBalanceScope,
@@ -45,6 +47,7 @@ import * as dailyBalanceCapture from "~/services/history/dailyBalanceHistory/cap
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { tagStorage } from "~/services/tags/tagStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -882,6 +885,74 @@ describe("accountStorage core behaviors", () => {
       ),
     ).toBeNull()
   })
+
+  it("remembers a verified native destination separately and drops it after a manual path edit", async () => {
+    const account = createAccount({
+      site_type: SITE_TYPES.NEW_API,
+      checkIn: { ...createCanonicalCheckIn(), nativePagePath: "/broken" },
+    })
+    seedStorage([account])
+    expect(
+      await accountCheckInState.rememberNativeCheckInPage(
+        account,
+        account.site_url + "/invite",
+      ),
+    ).toBe(true)
+    const saved = await accountStorage.getAccountById(account.id)
+    expect(saved?.checkIn).toMatchObject({
+      nativePagePath: "/broken",
+      nativePageHint: {
+        path: "/invite",
+        configuredPath: "/broken",
+        origin: account.site_url,
+        userId: account.account_info.id,
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+    await accountMutations.updateAccountWithCheckInDraft(
+      account.id,
+      {},
+      { ...saved!.checkIn, nativePagePath: "/manual" },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    expect(
+      (await accountStorage.getAccountById(account.id))?.checkIn.nativePageHint,
+    ).toBeUndefined()
+    expect(
+      await accountCheckInState.rememberNativeCheckInPage(
+        account,
+        account.site_url + "/late",
+      ),
+    ).toBe(false)
+    expect(
+      (await accountStorage.getAccountById(account.id))?.checkIn.nativePageHint,
+    ).toBeUndefined()
+  })
+
+  it("stores a same-origin destination without a configured path and refuses cross-origin updates", async () => {
+    const account = createAccount({ site_type: SITE_TYPES.NEW_API })
+    seedStorage([account])
+    expect(
+      await accountCheckInState.rememberNativeCheckInPage(
+        account,
+        account.site_url + "/rewards?tab=daily#/checkin",
+      ),
+    ).toBe(true)
+    for (const invalidUrl of [
+      "/relative",
+      "https://other.example.test/confirm",
+    ])
+      expect(
+        await accountCheckInState.rememberNativeCheckInPage(
+          account,
+          invalidUrl,
+        ),
+      ).toBe(false)
+    const hint = (await accountStorage.getAccountById(account.id))?.checkIn
+      .nativePageHint
+    expect(hint?.path).toBe("/rewards?tab=daily#/checkin")
+    expect(hint).not.toHaveProperty("configuredPath")
+  })
   it("preserves newly configured credentials when saving an old check-in draft", async () => {
     const login = {
       methodId: ACCOUNT_LOGIN_METHODS.Password,
@@ -1577,6 +1648,48 @@ describe("accountStorage core behaviors", () => {
       storageHooks.afterGet = async () => {}
     }
   })
+
+  it.each(["config", "tags"])(
+    "keeps readable accounts visible when %s migration cannot be persisted",
+    async (kind) => {
+      const account = createAccount({
+        id: "readable-legacy",
+        ...(kind === "config" ? { configVersion: 5 } : { tags: ["Work"] }),
+      })
+      seedStorage([account])
+      const original = structuredClone(
+        storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS),
+      )
+      storageHooks.beforeSet = async () => {
+        throw new Error("write unavailable")
+      }
+      try {
+        const accounts = await accountStorage.getAllAccounts()
+        expect(accounts).toEqual([
+          expect.objectContaining({ id: account.id, configVersion: 9 }),
+        ])
+        expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)).toEqual(original)
+        expect(await accountStorage.getEnabledAccounts()).toHaveLength(1)
+      } finally {
+        storageHooks.beforeSet = async () => {}
+      }
+      // A later successful read retries the migration without discarding accounts.
+      const recoveredAccounts = await accountStorage.getAllAccounts()
+      expect(recoveredAccounts).toHaveLength(1)
+      const persistedConfig = storageData.get(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ) as AccountStorageConfig
+      const persistedAccount = atIndex(persistedConfig.accounts, 0)
+      expect(persistedAccount.configVersion).toBe(9)
+      if (kind === "tags") {
+        const tags = await tagStorage.listTags()
+        expect(tags.map(({ name }) => name)).toEqual(["Work"])
+        const workTag = atIndex(tags, 0)
+        expect(atIndex(recoveredAccounts, 0).tagIds).toEqual([workTag.id])
+        expect(persistedAccount.tagIds).toEqual([workTag.id])
+      }
+    },
+  )
 
   it("canonicalizes legacy accounts before unrelated storage mutations", async () => {
     const legacyAccount = createAccount({
@@ -3086,6 +3199,54 @@ describe("accountStorage core behaviors", () => {
     ).resolves.toBe(false)
   })
 
+  it.each(["selection", "identity"] as const)(
+    "keeps a completed claim scoped to its original method and identity after a concurrent %s edit",
+    async (edit) => {
+      const methodId = AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn
+      const other = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
+      const matched = {
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 100 },
+        },
+      } as const
+      const account = createAccount({
+        site_type: SITE_TYPES.SUB2API,
+        site_url: "https://apikey.casa",
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "manual", methodId },
+          methodKnowledge: {
+            methods: { [methodId]: matched, [other]: matched },
+          },
+        },
+      })
+      const updated = structuredClone(account)
+      if (edit === "selection")
+        updated.checkIn.selection = { mode: "manual", methodId: other }
+      else updated.site_url = "https://replacement.example"
+      seedStorage([updated])
+      const saved = await accountStorage.markAccountAsSiteCheckedIn(
+        account.id,
+        200,
+        { methodId, account },
+      )
+      const methods = (await accountStorage.getAccountById(account.id))?.checkIn
+        .methodKnowledge.methods
+      expect(methods?.[other]?.status).toBeUndefined()
+      if (edit === "selection") {
+        expect(saved).toBe(true)
+        expect(methods?.[methodId]?.status).toMatchObject({
+          today: "checked",
+          evidence: { observedAt: 200 },
+        })
+      } else {
+        expect(saved).toBe(false)
+        expect(methods?.[methodId]?.status).toBeUndefined()
+      }
+    },
+  )
+
   it("markAccountAsSiteCheckedIn returns false without a selected method", async () => {
     const account = createAccount({
       id: "no-selected-method",
@@ -3512,6 +3673,41 @@ describe("accountStorage core behaviors", () => {
     )
     return account.account_info.balance
   }
+
+  it.each(["/api/log/self/stat:quota", "/api/log/self:consumption"])(
+    "reconciles the persisted Shell usage contract for %s with a verified USD wallet",
+    (operation) => {
+      const account = createAccount({ site_type: SITE_TYPES.SHELL_API })
+      const { positions } = setReportedUsd(account, "3", {
+        consumption: "1",
+        income: "0.5",
+      })
+      const wallet = positions[0]!
+      const usage = account.account_info.settledConsumption![0]!
+      usage.scope = wallet.scope
+      Object.assign(wallet.amount.source, {
+        adapter: SITE_TYPES.SHELL_API,
+        operation: "/api/user/self:balance",
+        contractVersion: "usd-balance/v1",
+      })
+      Object.assign(usage.amount.source, {
+        adapter: SITE_TYPES.SHELL_API,
+        operation,
+        contractVersion: "standard-usd/v1",
+      })
+
+      const result = migrateAccountFinancialInfo(account.account_info, {
+        accountId: account.id,
+        siteType: account.site_type,
+        siteUrl: account.site_url,
+        capturedAt: 100,
+      })
+      expect(result.settledConsumption?.[0]?.amount).toMatchObject({
+        value: "1",
+        source: { contractVersion: "usd-balance/v1" },
+      })
+    },
+  )
 
   it("getAccountStats should aggregate numeric fields across accounts", async () => {
     const accountA = createAccount({
@@ -5416,6 +5612,28 @@ describe("accountStorage core behaviors", () => {
           .routeOverrides?.["new-api:daily-checkin"],
       ).toEqual(edit)
     }
+  })
+
+  it("persists a native page edit and clear through the atomic account editor save", async () => {
+    const account = createAccount({ site_type: SITE_TYPES.NEW_API })
+    seedStorage([account])
+    await accountStorage.updateAccountWithCheckInDraft(
+      account.id,
+      {},
+      { ...account.checkIn, nativePagePath: "/invite" },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    const saved = await accountStorage.getAccountById(account.id)
+    expect(saved?.checkIn.nativePagePath).toBe("/invite")
+    await accountStorage.updateAccountWithCheckInDraft(
+      account.id,
+      {},
+      { ...saved!.checkIn, nativePagePath: undefined },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
+    expect(
+      (await accountStorage.getAccountById(account.id))?.checkIn.nativePagePath,
+    ).toBeUndefined()
   })
 
   it("keeps account fields and the check-in draft unchanged when their atomic save fails", async () => {

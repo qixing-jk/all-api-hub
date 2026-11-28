@@ -111,6 +111,13 @@ vi.mock(
   }),
 )
 
+vi.mock("~/services/apiService/sub2api/checkin/bizdecipherCheckIn", () => ({
+  fetchBizDecipherDailyCheckInStatus: vi
+    .fn()
+    .mockRejectedValue(new ApiError("unsupported BizDecipher protocol", 404)),
+  performBizDecipherDailyCheckIn: vi.fn(),
+}))
+
 vi.mock(
   "~/services/apiService/sub2api/checkin/clawhudCheckIn",
   async (importOriginal) => ({
@@ -166,6 +173,18 @@ vi.mock(
 )
 
 vi.mock(
+  "~/services/apiService/sub2api/checkin/linxiCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/linxiCheckIn")
+    >()),
+    fetchLinxiStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported Linxi protocol", 404)),
+  }),
+)
+
+vi.mock(
   "~/services/apiService/sub2api/checkin/nexavlinksCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<
@@ -174,6 +193,19 @@ vi.mock(
     fetchNexaVlinksDailyCheckInStatus: vi
       .fn()
       .mockRejectedValue(new ApiError("unsupported NexaVlinks protocol", 404)),
+  }),
+)
+
+vi.mock(
+  "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn")
+    >()),
+    fetchApiKeyCasaDailyCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported ApiKey Casa protocol", 404)),
+    performApiKeyCasaDailyCheckIn: vi.fn(),
   }),
 )
 

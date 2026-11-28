@@ -5,6 +5,7 @@ import {
 } from "~/constants/siteType"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import { findAccountSiteProfileForHostname } from "~/services/accounts/accountSiteProfile/urls"
+import { getDeploymentCheckInPagePath } from "~/services/accountSiteDefinitions"
 import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import {
   ACCOUNT_BOOTSTRAP_ROUTE_KINDS,
@@ -12,11 +13,29 @@ import {
   type AccountBootstrapRouteTarget,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import { joinUrl } from "~/utils/core/url"
 
 export const SITE_ROUTE_KINDS = ACCOUNT_BOOTSTRAP_ROUTE_KINDS
 
 type SiteRouteKind = AccountBootstrapRouteKind
+
+/** Resolve the account path first, then the registered deployment default. */
+function getConfiguredCheckInPageUrl(
+  target: AccountBootstrapRouteTarget,
+  route: SiteRouteKind,
+): string | null {
+  if (route !== SITE_ROUTE_KINDS.CheckIn) return null
+  const path =
+    normalizeCheckInPagePath(target.checkIn?.nativePagePath) ??
+    getDeploymentCheckInPagePath(target.siteType, target.baseUrl)
+  if (!path) return null
+  try {
+    return new URL(path, target.baseUrl).href
+  } catch {
+    return null
+  }
+}
 
 /**
  * Normalize a configured account site URL so resolved route URLs are stable.
@@ -34,6 +53,8 @@ export function getStaticAccountSiteRouteUrl(
   customUrl?: string,
 ): string | null {
   if (customUrl) return customUrl
+  const nativePageUrl = getConfiguredCheckInPageUrl(target, route)
+  if (nativePageUrl) return nativePageUrl
   const path = resolveStaticAccountRoutePath(target, route)
   return path === null ? null : joinUrl(normalizeBaseUrl(target.baseUrl), path)
 }
@@ -102,6 +123,8 @@ export async function resolveAccountSiteRouteUrl(
   customUrl?: string,
 ): Promise<string | null> {
   if (customUrl) return customUrl
+  const nativePageUrl = getConfiguredCheckInPageUrl(target, route)
+  if (nativePageUrl) return nativePageUrl
   const baseUrl = normalizeBaseUrl(target.baseUrl)
   const path = await resolveAccountSiteRoutePath(target, route)
   if (route === SITE_ROUTE_KINDS.Login && path === null) {

@@ -21,10 +21,15 @@ export type BrowserIdentityObservation = {
   verify: (read: BrowserIdentityRead) => Promise<unknown>
 }
 
-/** Passive browser capability, separate from account bootstrap and session recovery. */
+/** Browser identity evidence; passive reads remain separate from session recovery. */
 export type AccountBrowserIdentityCapability = {
   canObserve: (context: AccountBrowserIdentityContext) => boolean
   observe: (
     context: AccountBrowserIdentityContext,
   ) => BrowserIdentityObservation | null
+  /** Explicit mutations only. Undefined uses a fresh ordinary verification. */
+  verifyFreshSession?: (
+    context: AccountBrowserIdentityContext,
+    signal?: AbortSignal,
+  ) => Promise<string | null | undefined>
 }

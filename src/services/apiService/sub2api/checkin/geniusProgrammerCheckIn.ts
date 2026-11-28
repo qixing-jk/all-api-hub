@@ -1,7 +1,7 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   classifySiblingStatusDto,
   SIBLING_DTO_VERDICTS,
@@ -15,12 +15,18 @@ import {
   resolveUserCheckInTimezone,
   USER_CHECK_IN_STATUS_ENDPOINT,
 } from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
+import { readSub2ApiSessionBindingMismatch } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 export const GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
 
@@ -58,6 +64,7 @@ const parseData = (
           : response.status === 429
             ? API_ERROR_CODES.HTTP_429
             : API_ERROR_CODES.HTTP_OTHER,
+      readSub2ApiSessionBindingMismatch(response.body),
     )
   }
   const envelope = toRecord(response.body)
@@ -150,9 +157,10 @@ export function parseGeniusProgrammerDailyCheckInMutationResponse(
 /** Reads deployment status with the same timezone query as its dashboard. */
 export async function fetchGeniusProgrammerDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
   const endpoint = createUserCheckInStatusEndpoint(resolveUserCheckInTimezone())
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     USER_CHECK_IN_STATUS_ENDPOINT,
     async (authenticatedRequest) => {
@@ -162,11 +170,7 @@ export async function fetchGeniusProgrammerDailyCheckInStatus(
       })
       return parseGeniusProgrammerDailyCheckInStatusResponse(response)
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    auth,
   )
 }
 
@@ -183,10 +187,10 @@ export async function performGeniusProgrammerDailyCheckIn(
     request,
     GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT,
+      )
       return parseGeniusProgrammerDailyCheckInMutationResponse(response)
     },
     fetchGeniusProgrammerDailyCheckInStatus,

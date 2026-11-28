@@ -1,20 +1,26 @@
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import {
   createDaiguaCheckInStatusEndpoint,
   DAIGUA_CHECK_IN_ENDPOINT,
   DAIGUA_CHECK_IN_STATUS_ENDPOINT,
   resolveDaiguaCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/daiguaCheckInProtocol"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import { readSub2ApiFailureEnvelope } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 const record = (value: unknown): Record<string, unknown> | null =>
   value !== null && typeof value === "object" && !Array.isArray(value)
@@ -40,6 +46,7 @@ function parseData(response: ApiTransportResponse<unknown>, endpoint: string) {
   )
     throw invalidResponse(endpoint)
   if (!response.ok || (envelope && envelope.code !== 0)) {
+    const failure = !response.ok ? readSub2ApiFailureEnvelope(envelope) : null
     throw new ApiError(
       "DaiGua check-in request failed",
       response.ok ? undefined : response.status,
@@ -53,7 +60,9 @@ function parseData(response: ApiTransportResponse<unknown>, endpoint: string) {
             : response.ok
               ? API_ERROR_CODES.BUSINESS_ERROR
               : API_ERROR_CODES.HTTP_OTHER,
-      typeof envelope?.reason === "string" ? envelope.reason : undefined,
+      failure?.reason ??
+        failure?.upstreamCode ??
+        (typeof envelope?.reason === "string" ? envelope.reason : undefined),
     )
   }
   if (envelope?.code !== 0 || typeof envelope.message !== "string")
@@ -85,11 +94,12 @@ function parseStatus(data: Record<string, unknown>) {
   }
 }
 
-/** Discovery must not refresh, recover or persist credentials. */
+/** Discovery is passive; the first execution status read may renew credentials. */
 export async function fetchDaiguaDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     DAIGUA_CHECK_IN_STATUS_ENDPOINT,
     async (authenticatedRequest) => {
@@ -101,11 +111,7 @@ export async function fetchDaiguaDailyCheckInStatus(
       })
       return parseStatus(parseData(response, DAIGUA_CHECK_IN_STATUS_ENDPOINT))
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    auth,
   )
 }
 
@@ -118,10 +124,11 @@ export async function performDaiguaDailyCheckIn(
     request,
     DAIGUA_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: DAIGUA_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store", body: "{}" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        DAIGUA_CHECK_IN_ENDPOINT,
+        { body: "{}" },
+      )
       return parseDaiguaDailyCheckInMutationResponse(response)
     },
     fetchDaiguaDailyCheckInStatus,

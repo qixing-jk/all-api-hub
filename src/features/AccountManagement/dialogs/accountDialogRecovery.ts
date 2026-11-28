@@ -1,14 +1,20 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { isAccountSiteType } from "~/constants/siteType"
 import {
+  ACCOUNT_DIALOG_RECOVERY_ACTIONS,
   createEmptyAccountDialogDraft,
   type AccountDialogDraft,
+  type AccountDialogRecoveryAction,
   type AccountDialogRecoveryState,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_ROUTE_PARAMS } from "~/features/AccountManagement/routeParams"
-import { supportsAccountCookieRecovery } from "~/services/accountCredentialRecovery/policy"
+import {
+  supportsAccountCookieRecovery,
+  supportsAccountCredentialRecovery,
+} from "~/services/accountCredentialRecovery/policy"
 import { normalizeAccountLogin } from "~/services/accountLogin/configCodec"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import { supportsNewApiTokenSetup } from "~/services/apiService/newApiFamily/accessTokens/validation"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS,
@@ -40,20 +46,32 @@ const recoveryChannel = createUiHandoffChannel({
   normalize: normalizeRecoveryState,
 })
 
+const VALID_RECOVERY_ACTIONS = Object.values(ACCOUNT_DIALOG_RECOVERY_ACTIONS)
+
+const isNewApiTokenRecoveryAction = (
+  action: AccountDialogRecoveryAction | undefined,
+) =>
+  action === ACCOUNT_DIALOG_RECOVERY_ACTIONS.NewApiTokenCreate ||
+  action === ACCOUNT_DIALOG_RECOVERY_ACTIONS.NewApiTokenSite
+
 /** Validates only account-owned form facts; delivery metadata belongs to the shared channel. */
 function normalizeRecoveryState(
   state: unknown,
 ): AccountDialogRecoveryState | null {
+  if (!isRecord(state)) return null
+  const recoveryAction = VALID_RECOVERY_ACTIONS.find(
+    (action) => action === state.recoveryAction,
+  )
+
   if (
-    !isRecord(state) ||
     typeof state.url !== "string" ||
     !isHttpUrl(state.url) ||
     !isRecord(state.draft) ||
     !isAccountSiteType(state.draft.siteType) ||
-    (state.recoveryAction !== undefined && state.recoveryAction !== "cookie") ||
+    (state.recoveryAction !== undefined && recoveryAction === undefined) ||
     (state.draft.authType !== AuthTypeEnum.AccessToken &&
       !(
-        state.recoveryAction === "cookie" &&
+        recoveryAction === ACCOUNT_DIALOG_RECOVERY_ACTIONS.Cookie &&
         state.draft.authType === AuthTypeEnum.Cookie
       )) ||
     typeof state.checkInSelectionChanged !== "boolean" ||
@@ -107,7 +125,7 @@ function normalizeRecoveryState(
   if (typeof rawDraft.loginChanged === "boolean")
     draft.loginChanged = rawDraft.loginChanged
   if (
-    state.recoveryAction === "cookie" &&
+    recoveryAction === ACCOUNT_DIALOG_RECOVERY_ACTIONS.Cookie &&
     !supportsAccountCookieRecovery({
       site_type: draft.siteType,
       site_url: state.url,
@@ -117,9 +135,28 @@ function normalizeRecoveryState(
     })
   )
     return null
+  if (
+    isNewApiTokenRecoveryAction(recoveryAction) &&
+    (!supportsNewApiTokenSetup(draft.siteType) ||
+      draft.authType !== AuthTypeEnum.AccessToken ||
+      !draft.userId.trim())
+  )
+    return null
   if (typeof rawDraft.siteNameEdited === "boolean") {
     draft.siteNameEdited = rawDraft.siteNameEdited
   }
+  if (
+    recoveryAction === ACCOUNT_DIALOG_RECOVERY_ACTIONS.Sub2ApiLogin &&
+    (draft.authType !== AuthTypeEnum.AccessToken ||
+      !supportsAccountCredentialRecovery({
+        site_type: draft.siteType,
+        site_url: state.url,
+        authType: draft.authType,
+        account_info: { id: draft.userId },
+        login,
+      }))
+  )
+    return null
   if (
     rawDraft.novitaCredentialMode === "console" ||
     rawDraft.novitaCredentialMode === "api-key"
@@ -130,9 +167,7 @@ function normalizeRecoveryState(
 
   return {
     ...(detectionError ? { detectionError } : {}),
-    ...(state.recoveryAction === "cookie"
-      ? { recoveryAction: "cookie" as const }
-      : {}),
+    ...(recoveryAction ? { recoveryAction } : {}),
     url: state.url,
     draft,
     ...(typeof state.accountId === "string"
@@ -187,10 +222,41 @@ type AccountDialogRecoveryDestination =
 /** Opens the native sidebar in the click turn, with a draft-preserving tab fallback. */
 export async function openAccountDialogRecovery(
   prepared: PreparedAccountDialogRecovery,
+  options?: {
+    recoveryAction?: AccountDialogRecoveryAction
+    state?: AccountDialogRecoveryState
+  },
 ): Promise<AccountDialogRecoveryDestination> {
+  const recoveryAction = options?.recoveryAction
+  const applyRecoveryAction = (state: AccountDialogRecoveryState) => ({
+    ...state,
+    recoveryAction:
+      recoveryAction ??
+      (isNewApiTokenRecoveryAction(state.recoveryAction)
+        ? undefined
+        : state.recoveryAction),
+  })
+  const latestState = options?.state && applyRecoveryAction(options.state)
+  if (latestState && !normalizeRecoveryState(latestState))
+    throw new Error("Invalid account recovery draft")
+
+  let actionUpdate: Promise<void> | undefined
+  const ensureRecoveryAction = () => {
+    actionUpdate ??= (
+      latestState
+        ? recoveryChannel
+            .prepare(latestState, prepared.windowId, prepared.id)
+            .then(() => {})
+        : recoveryChannel.update(prepared.id, applyRecoveryAction)
+    ).catch(() => {
+      throw new Error("Account recovery handoff unavailable")
+    })
+    return actionUpdate
+  }
   const destination = await openSidePanelWithFallback(
     prepared.tab,
     async () => {
+      await ensureRecoveryAction()
       try {
         await openOptionsMenuItemInNewTab(MENU_ITEM_IDS.ACCOUNT, {
           [ACCOUNT_MANAGEMENT_ROUTE_PARAMS.AccountDialogRecovery]: prepared.id,
@@ -203,6 +269,7 @@ export async function openAccountDialogRecovery(
       enabled: canUseAccountDialogRecoverySidePanel(),
       handoff: {
         publish: async () => {
+          await ensureRecoveryAction()
           try {
             return await recoveryChannel.publish(prepared.id, prepared.windowId)
           } catch {

@@ -755,6 +755,18 @@ export function applySiteAccountUpdates(params: {
       params.updates.checkIn,
     ).routeOverrides
   }
+  // An explicit clear is authoritative; deep merge otherwise retains the old page.
+  if (
+    params.updates.checkIn &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.checkIn,
+      "nativePagePath",
+    )
+  ) {
+    merged.checkIn.nativePagePath = normalizeCheckInConfigV7(
+      params.updates.checkIn,
+    ).nativePagePath
+  }
   const result = normalizeSiteAccount(merged)
   if (!hasSameAccountRequestIdentity(result, normalized)) {
     if (result.account_info.legacyFinancial?.cashflow)
@@ -807,6 +819,21 @@ export function applySiteAccountUpdates(params: {
         staleBalancePosition(position, BALANCE_IDENTITY_CHANGED_REASON),
       ),
     }
+  }
+  // Learned destinations are execution observations, not fields to deep-merge.
+  if (
+    result.checkIn.nativePagePath !== normalized.checkIn.nativePagePath ||
+    result.site_url !== normalized.site_url ||
+    result.site_type !== normalized.site_type ||
+    result.account_info.id !== normalized.account_info.id ||
+    (params.updates.checkIn &&
+      Object.prototype.hasOwnProperty.call(
+        params.updates.checkIn,
+        "nativePageHint",
+      ) &&
+      params.updates.checkIn.nativePageHint === undefined)
+  ) {
+    delete result.checkIn.nativePageHint
   }
   if (
     !Object.prototype.hasOwnProperty.call(params.updates, "login") &&

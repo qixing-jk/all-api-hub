@@ -8,6 +8,7 @@ import {
   handleGetLocalStorage,
   handleGetRenderedTitle,
   handleGetUserFromLocalStorage,
+  handleInspectCheckinPage,
   handleOpenRouterManagementKeyAction,
   handlePerformTempWindowFetch,
   handlePrepareAgentRouterOAuth,
@@ -18,6 +19,10 @@ import {
   handleWaitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/handlers"
 import { synchronizeDahlWebsiteKeyNames } from "~/services/apiService/dahl/keyNamePage"
+import {
+  isTokenSessionContentErrorCode,
+  NewApiTokenSessionError,
+} from "~/services/apiService/newApiFamily/accessTokens/sessionError"
 import {
   handleClearNewApiOAuthEvidence,
   handleCompleteNewApiOAuth,
@@ -41,6 +46,7 @@ import {
   handleCompleteSub2ApiOAuth,
   handlePrepareSub2ApiOAuth,
 } from "~/services/apiService/sub2api/oauth/content"
+import { showAccessTokenCue } from "~/services/browsingContext/newApiAccessTokenPage/cue"
 import { showGitHubFeedbackHint } from "~/services/checkin/feedback/githubHint"
 import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
@@ -54,6 +60,48 @@ import { handleInspectCredentialPage } from "./handlers/credentialPage"
  */
 export function setupContentMessageHandlers() {
   return onRuntimeMessage((request, _sender, sendResponse) => {
+    if (
+      request.action === RuntimeActionIds.ContentPrepareNewApiTokenSession ||
+      request.action === RuntimeActionIds.ContentNewApiTokenPasskey ||
+      request.action === RuntimeActionIds.ContentCancelNewApiTokenPasskey
+    ) {
+      void import("~/services/apiService/newApiFamily/accessTokens/content")
+        .then(async (module) => {
+          if (
+            request.action === RuntimeActionIds.ContentCancelNewApiTokenPasskey
+          ) {
+            module.cancelNewApiTokenPasskey(
+              request.expectedOrigin,
+              request.requestId,
+            )
+            sendResponse({ success: true })
+            return
+          }
+          const data =
+            request.action === RuntimeActionIds.ContentPrepareNewApiTokenSession
+              ? await module.prepareNewApiTokenSession(
+                  request.expectedOrigin,
+                  request.expectedIdentity,
+                )
+              : await module.requestNewApiTokenPasskey(
+                  request.expectedOrigin,
+                  request.options,
+                  request.requestId,
+                )
+          sendResponse({ success: true, data })
+        })
+        .catch((error: unknown) => {
+          const code =
+            request.action ===
+              RuntimeActionIds.ContentPrepareNewApiTokenSession &&
+            error instanceof NewApiTokenSessionError &&
+            isTokenSessionContentErrorCode(error.code)
+              ? error.code
+              : undefined
+          sendResponse(code ? { success: false, code } : { success: false })
+        })
+      return true
+    }
     if (request.action === RuntimeActionIds.ContentNewApiDashboardSessionAuth) {
       sendResponse(readNewApiDashboardSessionAuth(request.expectedOrigin))
       return false
@@ -160,6 +208,15 @@ export function setupContentMessageHandlers() {
       return handleGetUserFromLocalStorage(request, sendResponse)
     }
 
+    if (request.action === RuntimeActionIds.ContentGetDocumentState) {
+      sendResponse({
+        url: window.location.href,
+        readyState: document.readyState,
+        timeOrigin: performance.timeOrigin,
+      })
+      return false
+    }
+
     if (request.action === RuntimeActionIds.ContentCheckCapGuard) {
       return handleCheckCapGuard(request, sendResponse)
     }
@@ -178,6 +235,9 @@ export function setupContentMessageHandlers() {
     if (request.action === RuntimeActionIds.ContentTriggerCheckinPageAction) {
       return handleTriggerCheckinPageAction(request, sendResponse)
     }
+    if (request.action === RuntimeActionIds.ContentInspectCheckinPage) {
+      return handleInspectCheckinPage(request, sendResponse)
+    }
 
     if (request.action === RuntimeActionIds.ContentWaitAndGetUserInfo) {
       return handleWaitAndGetUserInfo(request, sendResponse)
@@ -189,6 +249,15 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentInspectCredentialPage) {
       void handleInspectCredentialPage(request, sendResponse)
+      return true
+    }
+    if (
+      request.action === RuntimeActionIds.ContentHighlightAccessTokenSection
+    ) {
+      void showAccessTokenCue(request.openedSite).then(
+        () => sendResponse({ success: true }),
+        () => sendResponse({ success: false }),
+      )
       return true
     }
     if (request.action === RuntimeActionIds.ContentGetRenderedTitle) {

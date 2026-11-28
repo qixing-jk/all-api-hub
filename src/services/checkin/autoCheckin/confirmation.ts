@@ -2,7 +2,10 @@ import { CHECK_IN_METHOD_STATUS_OUTCOMES } from "~/constants/checkIn"
 import type { ConfirmedAward } from "~/services/amounts/awards"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import { reconcileCheckInResult } from "~/services/checkin/autoCheckin/resultReconciliation"
-import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
+import {
+  isCheckInObservationCurrent,
+  readDayStableCheckInObservation,
+} from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASON,
@@ -63,6 +66,7 @@ type ConfirmationEvidence =
       kind: typeof CHECK_IN_CONFIRMATION_KINDS.Response
       /** Protocol date attribution, independent of when the response arrived. */
       completedAt?: number
+      resetTimeZone?: string
     }
   | {
       kind:
@@ -174,9 +178,11 @@ export function completeSessionCheckIn(
 
 /** Read while a provider-owned session is alive, or reuse evidence it already obtained. */
 export async function confirmCheckInAttempt(input: {
+  timeZone?: string
   account: SiteAccount
   result: AutoCheckinProviderOutcome
   startedAt: number
+  mutationStartedAt?: number
   readStatus?: () => Promise<
     | {
         status: CheckInMethodStatus
@@ -219,6 +225,17 @@ export async function confirmCheckInAttempt(input: {
     result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
     result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
   let confirmation = fresh ? supplied : undefined
+  // An undated grant proves success but cannot identify today's status across a site reset.
+  const needsDayReadback =
+    confirmedResponse &&
+    confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Response &&
+    confirmation.completedAt === undefined &&
+    input.timeZone !== undefined &&
+    !isCheckInObservationCurrent(
+      input.startedAt,
+      input.timeZone,
+      confirmation.observedAt,
+    )
   if (
     confirmation?.kind === CHECK_IN_CONFIRMATION_KINDS.Response &&
     !confirmedResponse
@@ -229,9 +246,9 @@ export async function confirmCheckInAttempt(input: {
     result.status !== CHECKIN_RESULT_STATUS.SKIPPED
   )
     confirmation = undefined
-  if (!confirmation) {
+  if (!confirmation || needsDayReadback) {
     const scope = getConfirmationScope(input.account)
-    if (confirmedResponse) {
+    if (confirmedResponse && !needsDayReadback) {
       confirmation = { ...scope, kind: CHECK_IN_CONFIRMATION_KINDS.Response }
     } else if (result.status === CHECKIN_RESULT_STATUS.SKIPPED) {
       confirmation = { ...scope, kind: CHECK_IN_CONFIRMATION_KINDS.NotRequired }
@@ -239,7 +256,10 @@ export async function confirmCheckInAttempt(input: {
       confirmation = { ...scope, kind: CHECK_IN_CONFIRMATION_KINDS.Unsupported }
     } else {
       try {
-        const stable = await readDayStableCheckInObservation(input.readStatus)
+        const stable = await readDayStableCheckInObservation(
+          input.readStatus,
+          input.timeZone,
+        )
         const observation = stable?.observation
         confirmation = observation
           ? {
@@ -262,21 +282,24 @@ export async function confirmCheckInAttempt(input: {
       }
     }
   }
+  // A new day's checked/unchecked flag cannot resolve a lost receipt for the previous day.
+  const observation =
+    confirmation.kind === CHECK_IN_CONFIRMATION_KINDS.Observed &&
+    (result.status !== CHECKIN_RESULT_STATUS.UNCERTAIN ||
+      !input.timeZone ||
+      isCheckInObservationCurrent(
+        input.mutationStartedAt ?? input.startedAt,
+        input.timeZone,
+        confirmation.observedAt,
+      ))
+      ? confirmation
+      : undefined
   return {
     result: reconcileCheckInResult({
       result,
-      status:
-        confirmation.kind === CHECK_IN_CONFIRMATION_KINDS.Observed
-          ? confirmation.status
-          : undefined,
-      reward:
-        confirmation.kind === CHECK_IN_CONFIRMATION_KINDS.Observed
-          ? confirmation.reward
-          : undefined,
-      awards:
-        confirmation.kind === CHECK_IN_CONFIRMATION_KINDS.Observed
-          ? confirmation.awards
-          : undefined,
+      status: observation?.status,
+      reward: observation?.reward,
+      awards: observation?.awards,
     }),
     confirmation,
   }

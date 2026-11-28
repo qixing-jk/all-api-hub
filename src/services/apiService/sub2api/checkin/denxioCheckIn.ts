@@ -1,5 +1,5 @@
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   SUB2API_CHECK_IN_RECOVERY_REASONS,
@@ -7,6 +7,7 @@ import {
   type Sub2ApiCheckInRecoveryOptions,
   type Sub2ApiCheckInRecoveryReason,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
+import { readSub2ApiSessionBindingMismatch } from "~/services/apiService/sub2api/responseError"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   fetchApiResponse,
@@ -16,6 +17,11 @@ import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 export const DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT =
   "/api/v1/tbe-sponsor-checkin/status"
@@ -109,7 +115,8 @@ const parseEnvelopeData = (
 
   if (
     (typeof envelope.code !== "string" && typeof envelope.code !== "number") ||
-    typeof envelope.message !== "string"
+    (typeof envelope.message !== "string" &&
+      !(response.status === 401 && readSub2ApiSessionBindingMismatch(envelope)))
   ) {
     throw createInvalidResponseError(endpoint)
   }
@@ -230,14 +237,15 @@ const fetchStatusWithRequest = async (
 /** Reads status without turning a passive probe into browser-auth recovery. */
 export async function fetchDenxioDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ): Promise<DenxioDailyCheckInStatus> {
   const timezone = resolveTimezone()
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT,
     (authenticatedRequest) =>
       fetchStatusWithRequest(authenticatedRequest, timezone),
-    { proactiveRefresh: false, recoverUnauthorized: false },
+    auth,
   )
 }
 
@@ -292,14 +300,11 @@ export async function performDenxioDailyCheckIn(
       request,
       DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT,
       async (authenticatedRequest) => {
-        const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-          endpoint: `${DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT}?timezone=${encodeURIComponent(timezone)}`,
-          options: {
-            method: "POST",
-            cache: "no-store",
-            body: JSON.stringify({ timezone }),
-          },
-        })
+        const response = await postSub2ApiCheckIn(
+          authenticatedRequest,
+          `${DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT}?timezone=${encodeURIComponent(timezone)}`,
+          { body: JSON.stringify({ timezone }) },
+        )
         return {
           challenge: parseDenxioDailyCheckInBeginResponse(response),
           request: authenticatedRequest,
@@ -330,17 +335,16 @@ export async function performDenxioDailyCheckIn(
       beginSession.request,
       DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
       async (authenticatedRequest) => {
-        const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-          endpoint: DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
-          options: {
-            method: "POST",
-            cache: "no-store",
+        const response = await postSub2ApiCheckIn(
+          authenticatedRequest,
+          DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
+          {
             body: JSON.stringify({
               token: beginSession.challenge.token,
               timezone,
             }),
           },
-        })
+        )
         return parseDenxioDailyCheckInClaimResponse(response)
       },
       (recoveredRequest) => fetchStatusWithRequest(recoveredRequest, timezone),

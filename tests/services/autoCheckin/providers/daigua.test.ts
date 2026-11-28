@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfile/sub2apiAuthSession"
+import * as browserAuth from "~/services/apiService/sub2api/auth/browserAuth"
+import * as tokenRefresh from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { API_TRANSPORT_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -11,6 +16,7 @@ import { createAutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -70,9 +76,9 @@ const response = (data: unknown) => ({
   headers: {},
   body: { code: 0, message: "success", data },
 })
-const run = () =>
+const run = (siteAccount = account()) =>
   executeSelectedCheckIn({
-    account: account(),
+    account: siteAccount,
     globalAutomaticExecutionEnabled: true,
     context: {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -83,6 +89,104 @@ const run = () =>
   })
 
 describe("registered DaiGua daily check-in", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("returns a failure if account credentials disappeared before the claim", async () => {
+    const saved = account()
+    saved.account_info.access_token = ""
+    await expect(
+      daiguaProvider.checkIn(saved, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
+        statusProof: {
+          outcome: "known",
+          availability: "enabled",
+          today: "not_checked",
+          evidence: { source: "probe", observedAt: Date.now() },
+        },
+      }),
+    ).resolves.toMatchObject({ status: "failed" })
+    expect(fetchApiResponse).not.toHaveBeenCalled()
+  })
+
+  it("keeps a recovered tab for the ordinary claim and readback and leaves verification to that tab", async () => {
+    const saved = account()
+    let token = saved.account_info.access_token
+    vi.spyOn(accountSub2ApiAuthSession, "getLatestAuth").mockImplementation(
+      async () => ({
+        origin: saved.site_url,
+        userId: "42",
+        accessToken: token,
+        sub2apiAuth: { refreshToken: "fixture-refresh" },
+      }),
+    )
+    vi.spyOn(accountSub2ApiAuthSession, "persistAuthUpdate").mockImplementation(
+      async (_, update) => {
+        token = update.accessToken
+        return { status: "persisted" }
+      },
+    )
+    const tab = {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+      tabId: 7,
+      origin: saved.site_url,
+    }
+    const refresh = vi
+      .spyOn(tokenRefresh, "refreshSub2ApiTokens")
+      .mockRejectedValue(new Error("unexpected rotation"))
+    const recover = vi
+      .spyOn(browserAuth, "recoverSub2ApiBrowserAuth")
+      .mockResolvedValue({
+        accessToken: "renewed",
+        userId: "42",
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+        fetchContext: tab,
+      })
+    vi.mocked(fetchApiResponse)
+      .mockResolvedValueOnce({
+        ...response(null),
+        ok: false,
+        status: 401,
+        body: { code: "SESSION_BINDING_MISMATCH", message: "session mismatch" },
+      })
+      .mockResolvedValueOnce(response(statusData()))
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        headers: {},
+        body: {
+          code: 400,
+          message: "verification failed",
+          reason: "TURNSTILE_VERIFICATION_FAILED",
+        },
+      })
+      .mockResolvedValue(response(statusData()))
+
+    await expect(run()).resolves.toMatchObject({
+      kind: "executed",
+      result: { status: "failed", reasonCode: "manual_verification_required" },
+    })
+    expect(recover).toHaveBeenCalledTimes(1)
+    expect(refresh).not.toHaveBeenCalled()
+    const calls = vi.mocked(fetchApiResponse).mock.calls
+    expect(calls.map(([, options]) => options.options?.method)).toEqual([
+      "GET",
+      "GET",
+      "POST",
+      "GET",
+    ])
+    for (const [request] of calls.slice(1)) {
+      expect(request).toMatchObject({
+        fetchContext: tab,
+        currentTabFallback: "forbid",
+        auth: { accessToken: "renewed" },
+      })
+    }
+    expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+  })
+
   it("does not replay a verification rejection when both assisted admission reads cross midnight", async () => {
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
@@ -207,31 +311,42 @@ describe("registered DaiGua daily check-in", () => {
     )
   })
 
-  it("reports mandatory Turnstile as manual verification without retrying", async () => {
-    vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(response(statusData()))
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        headers: {},
-        body: {
-          code: 400,
-          message: "turnstile verification failed",
-          reason: "TURNSTILE_VERIFICATION_FAILED",
+  it.each([undefined, "https://api.daigua.icu/rewards?tab=daily"])(
+    "reports mandatory verification at the resolved page without retrying (%s)",
+    async (pageUrl) => {
+      if (pageUrl)
+        vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+          success: false,
+          pageUrl,
+          turnstile: { status: "timeout", hasTurnstile: true },
+        })
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(response(statusData()))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "turnstile verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockResolvedValueOnce(response(statusData()))
+      await expect(run()).resolves.toMatchObject({
+        kind: "executed",
+        retryable: false,
+        result: {
+          status: "failed",
+          reasonCode: "manual_verification_required",
+          messageParams: {
+            checkInUrl: pageUrl ?? "https://api.daigua.icu/checkin",
+          },
         },
       })
-      .mockResolvedValueOnce(response(statusData()))
-    await expect(run()).resolves.toMatchObject({
-      kind: "executed",
-      retryable: false,
-      result: {
-        status: "failed",
-        reasonCode: "manual_verification_required",
-        messageParams: { checkInUrl: "https://api.daigua.icu/checkin" },
-      },
-    })
-    expect(fetchApiResponse).toHaveBeenCalledTimes(4)
-  })
+      expect(fetchApiResponse).toHaveBeenCalledTimes(4)
+    },
+  )
 
   it.each(["timeout", "not_present", "rejected"] as const)(
     "confirms native completion after verification %s without another claim",
@@ -371,65 +486,70 @@ describe("registered DaiGua daily check-in", () => {
     })
   })
 
-  it("tries shared browser assistance once with a body token after explicit rejection", async () => {
-    vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(response(statusData()))
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        headers: {},
-        body: {
-          code: 400,
-          message: "turnstile verification failed",
-          reason: "TURNSTILE_VERIFICATION_FAILED",
+  it.each([undefined, "/rewards?tab=daily#/claim"])(
+    "tries shared assistance using native page override %s",
+    async (nativePagePath) => {
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(response(statusData()))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "turnstile verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockResolvedValueOnce(response(statusData()))
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValue({
+        success: true,
+        status: 200,
+        data: {
+          code: 0,
+          message: "success",
+          data: { reward_amount: 0.29, checkin_type: "normal" },
+        },
+        turnstile: { status: "token_obtained", hasTurnstile: true },
+      })
+      const siteAccount = account()
+      siteAccount.checkIn.nativePagePath = nativePagePath
+      await expect(run(siteAccount)).resolves.toMatchObject({
+        kind: "executed",
+        result: {
+          status: "success",
+          awards: [
+            {
+              asset: { kind: "currency", code: "USD" },
+              amount: { status: "known", value: "0.29" },
+            },
+          ],
         },
       })
-      .mockResolvedValueOnce(response(statusData()))
-    vi.mocked(tempWindowTurnstileFetch).mockResolvedValue({
-      success: true,
-      status: 200,
-      data: {
-        code: 0,
-        message: "success",
-        data: { reward_amount: 0.29, checkin_type: "normal" },
-      },
-      turnstile: { status: "token_obtained", hasTurnstile: true },
-    })
-    await expect(run()).resolves.toMatchObject({
-      kind: "executed",
-      result: {
-        status: "success",
-        awards: [
-          {
-            asset: { kind: "currency", code: "USD" },
-            amount: { status: "known", value: "0.29" },
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          pageUrl: `https://api.daigua.icu${nativePagePath ?? "/checkin"}`,
+          fetchUrl: "https://api.daigua.icu/api/v1/checkin",
+          turnstileTokenPlacement: "json-body",
+          turnstileParamName: "turnstile_token",
+          turnstilePreTrigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: '[data-testid="header-normal-checkin"]',
+            throttle: { maxAttempts: 1 },
           },
-        ],
-      },
-    })
-    expect(tempWindowTurnstileFetch).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        pageUrl: "https://api.daigua.icu/checkin",
-        fetchUrl: "https://api.daigua.icu/api/v1/checkin",
-        turnstileTokenPlacement: "json-body",
-        turnstileParamName: "turnstile_token",
-        turnstilePreTrigger: {
-          kind: "clickSelector",
-          selector: '[data-testid="header-normal-checkin"]',
-          throttle: { maxAttempts: 1 },
-        },
-        fetchOptions: expect.objectContaining({
-          method: "POST",
-          body: "{}",
-          credentials: "omit",
-          headers: {
-            Authorization: "Bearer example-token",
-            "Content-Type": "application/json",
-          },
+          fetchOptions: expect.objectContaining({
+            method: "POST",
+            body: "{}",
+            credentials: "omit",
+            headers: {
+              Authorization: "Bearer example-token",
+              "Content-Type": "application/json",
+            },
+          }),
         }),
-      }),
-    )
-  })
+      )
+    },
+  )
 
   it("preserves the USD award through registered execution", async () => {
     vi.mocked(fetchApiResponse)

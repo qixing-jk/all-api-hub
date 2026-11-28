@@ -1,4 +1,4 @@
-import type { AccountSiteType } from "~/constants/siteType"
+import type { AccountSiteType, SiteType } from "~/constants/siteType"
 import type { ApiErrorCode } from "~/services/apiTransport/errors"
 import type { ApiOperationSemantics } from "~/services/apiTransport/type"
 import type {
@@ -6,9 +6,10 @@ import type {
   TempWindowFetchTaskKind,
 } from "~/services/protectionBypass/contracts"
 import type { AuthTypeEnum } from "~/types/index"
-import type {
-  CheckinPageActionTriggerResult,
-  TurnstilePreTrigger,
+import {
+  TURNSTILE_TOKEN_WAIT_STATUSES,
+  type CheckinPageActionTriggerResult,
+  type TurnstilePreTrigger,
 } from "~/types/turnstile"
 
 export const TEMP_WINDOW_REQUEST_SOURCES = {
@@ -46,6 +47,7 @@ export interface ApiTransportRemoteLifecycleObserver {
 }
 
 export interface TempWindowFetchParams {
+  siteType?: SiteType
   originUrl: string
   fetchUrl: string
   fetchOptions?: RequestInit
@@ -65,7 +67,7 @@ export interface TempWindowFetchParams {
   cookieAuthSessionCookie?: string
   /** Open the temporary context in an incognito/private window. */
   useIncognito?: boolean
-  /** Browser cookie store to use when reading cookies for injected requests. */
+  /** Browser cookie store for a scoped page or for reading injected cookies. */
   cookieStoreId?: string
 }
 
@@ -90,9 +92,7 @@ export interface TempWindowOctopusApiFetchParams {
 }
 
 export const TEMP_WINDOW_TURNSTILE_STATUSES = {
-  NotPresent: "not_present",
-  TokenObtained: "token_obtained",
-  Timeout: "timeout",
+  ...TURNSTILE_TOKEN_WAIT_STATUSES,
   Error: "error",
 } as const
 
@@ -105,6 +105,8 @@ export interface TempWindowTurnstileMeta {
 }
 
 export interface TempWindowTurnstileFetchParams extends TempWindowFetchParams {
+  /** Explore same-site links only when the default page has no check-in target. */
+  discoverCheckInPage?: boolean
   /** Page URL used to render Turnstile in the temporary context. */
   pageUrl: string
   /**
@@ -145,6 +147,9 @@ export interface TempWindowPageAccountIdentity {
 }
 
 export interface TempWindowCheckinPageActionParams {
+  discoverCheckInPage?: boolean
+  /** Previously verified same-origin path; inspect it again before any action. */
+  learnedPagePath?: string
   originUrl: string
   pageUrl: string
   requestId?: string
@@ -165,16 +170,24 @@ export interface TempWindowFetch {
   success: boolean
   status?: number
   code?: ApiErrorCode
+  /** Error raised within the content script, separate from the HTTP result. */
+  localError?: {
+    statusCode?: number
+    upstreamCode?: string
+  }
   headers?: Record<string, string>
   data?: any
   error?: string
 }
 
 export interface TempWindowTurnstileFetch extends TempWindowFetch {
+  pageUrl?: string
   turnstile: TempWindowTurnstileMeta
 }
 
 export interface TempWindowCheckinPageAction {
+  /** Actual page used after a uniquely verified default-route fallback. */
+  pageUrl?: string
   success: boolean
   reason: TempWindowCheckinPageActionReason
   identity?: TempWindowPageAccountIdentity | null
@@ -209,6 +222,7 @@ export interface TempWindowFallbackAllowlist {
 }
 
 export interface TempWindowFallbackContext {
+  siteType?: SiteType
   baseUrl: string
   url: string
   endpoint: string

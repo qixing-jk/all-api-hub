@@ -92,6 +92,34 @@ describe("webdavService", () => {
     },
   }
 
+  it.each([
+    ["connection", testWebdavConnection],
+    ["download", downloadBackupRaw],
+  ] as const)(
+    "uses configured authorization without browser credentials during a %s challenge",
+    async (_name, request) => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch.mockResolvedValue(
+        new Response("Unauthorized", {
+          status: 401,
+          headers: { "WWW-Authenticate": 'Basic realm="fixture"' },
+        }),
+      )
+      await expect(request(basePrefs.webdav)).rejects.toMatchObject({
+        statusCode: 401,
+      })
+      expect(globalAny.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          credentials: "omit",
+          headers: expect.objectContaining({
+            Authorization: `Basic ${btoa("user:pass")}`,
+          }),
+        }),
+      )
+    },
+  )
+
   describe("isWebdavFileNotFoundError", () => {
     it("recognizes both typed errors and serialized error objects", () => {
       expect(isWebdavFileNotFoundError(new WebdavFileNotFoundError())).toBe(

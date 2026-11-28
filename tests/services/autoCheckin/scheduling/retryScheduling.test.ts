@@ -677,87 +677,92 @@ describe("autoCheckinScheduler retry scheduling", () => {
     vi.useRealTimers()
   })
 
-  it("marks missing retry accounts as skipped and clears the retry queue", async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+  it.each([null, { id: "missing", disabled: true }])(
+    "skips a removed or concurrently disabled retry account and falls back to its ID: %j",
+    async (currentAccount) => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
 
-    mockedUserPreferences.getPreferences.mockResolvedValue({
-      autoCheckin: {
-        ...(DEFAULT_PREFERENCES as any).autoCheckin,
-        globalEnabled: true,
-        notifyUiOnCompletion: true,
-        retryStrategy: {
-          enabled: true,
-          intervalMinutes: 30,
-          maxAttemptsPerDay: 3,
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...(DEFAULT_PREFERENCES as any).autoCheckin,
+          globalEnabled: true,
+          notifyUiOnCompletion: true,
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
         },
-      },
-    })
+      })
 
-    schedulerTestState.storedStatus = {
-      lastDailyRunDay: "2024-01-01",
-      retryState: {
-        day: "2024-01-01",
-        pendingAccountIds: ["missing"],
-        attemptsByAccount: {},
-      },
-      perAccount: {
-        missing: {
-          accountId: "missing",
-          accountName: "Missing Site",
-          status: "failed",
-          timestamp: Date.now(),
+      schedulerTestState.storedStatus = {
+        lastDailyRunDay: "2024-01-01",
+        retryState: {
+          day: "2024-01-01",
+          pendingAccountIds: ["missing"],
+          attemptsByAccount: {},
         },
-      },
-      summary: {
+        perAccount: {
+          missing: {
+            accountId: "missing",
+            accountName: "Missing Site",
+            status: "failed",
+            timestamp: Date.now(),
+          },
+        },
+        summary: {
+          totalEligible: 1,
+          executed: 1,
+          successCount: 0,
+          failedCount: 1,
+          skippedCount: 0,
+          needsRetry: true,
+        },
+        pendingRetry: true,
+      } as any
+
+      mockedAccountStorage.getAllAccounts.mockResolvedValue([])
+      mockedAccountStorage.getAccountById.mockResolvedValue(
+        currentAccount as any,
+      )
+
+      await (autoCheckinScheduler as any).runRetryCheckins()
+
+      expect(resolveProviderForTest).not.toHaveBeenCalled()
+      expect(schedulerTestState.storedStatus.perAccount.missing).toMatchObject({
+        accountId: "missing",
+        accountName: "missing",
+        status: "skipped",
+        reasonCode: "account_disabled",
+      })
+      expect(schedulerTestState.storedStatus.summary).toMatchObject({
         totalEligible: 1,
-        executed: 1,
+        executed: 0,
         successCount: 0,
-        failedCount: 1,
-        skippedCount: 0,
-        needsRetry: true,
-      },
-      pendingRetry: true,
-    } as any
-
-    mockedAccountStorage.getAllAccounts.mockResolvedValue([])
-    mockedAccountStorage.getAccountById.mockResolvedValue(null)
-
-    await (autoCheckinScheduler as any).runRetryCheckins()
-
-    expect(resolveProviderForTest).not.toHaveBeenCalled()
-    expect(schedulerTestState.storedStatus.perAccount.missing).toMatchObject({
-      accountId: "missing",
-      accountName: "missing",
-      status: "skipped",
-      reasonCode: "account_disabled",
-    })
-    expect(schedulerTestState.storedStatus.summary).toMatchObject({
-      totalEligible: 1,
-      executed: 0,
-      successCount: 0,
-      failedCount: 0,
-      skippedCount: 1,
-      needsRetry: false,
-    })
-    // This run attempted nothing, so the day has nothing left to remember.
-    expect(schedulerTestState.storedStatus.retryState).toBeUndefined()
-    expect(schedulerTestState.storedStatus.pendingRetry).toBe(false)
-    expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.AutoCheckinRunCompleted,
-        runKind: "retry",
-        updatedAccountIds: [],
-        summary: expect.objectContaining({
-          skippedCount: 1,
-          needsRetry: false,
+        failedCount: 0,
+        skippedCount: 1,
+        needsRetry: false,
+      })
+      // This run attempted nothing, so the day has nothing left to remember.
+      expect(schedulerTestState.storedStatus.retryState).toBeUndefined()
+      expect(schedulerTestState.storedStatus.pendingRetry).toBe(false)
+      expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: RuntimeActionIds.AutoCheckinRunCompleted,
+          runKind: "retry",
+          updatedAccountIds: [],
+          summary: expect.objectContaining({
+            skippedCount: 1,
+            needsRetry: false,
+          }),
         }),
-      }),
-      { maxAttempts: 1 },
-    )
+        { maxAttempts: 1 },
+      )
 
-    vi.useRealTimers()
-  })
+      vi.useRealTimers()
+    },
+  )
 
   it("marks retry accounts that are no longer auto-checkin eligible as skipped", async () => {
     vi.useFakeTimers()

@@ -379,6 +379,34 @@ describe("apiTransport request helpers", () => {
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps a temporary page's signing failure distinct from an HTTP response", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: false,
+      error: "The website signing key changed",
+      code: ApiErrorCodes.HTTP_401,
+      localError: { statusCode: 401, upstreamCode: "PANEL_PROOF_KEY_MISMATCH" },
+      transportLifecycle: {
+        upstreamRequestDispatched: false,
+        upstreamResponseReceived: false,
+      },
+    })
+    await expect(
+      fetchApiResponse(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          protectionBypassExecution: backgroundProtectionBypassExecution,
+          forceTempWindow: true,
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      code: ApiErrorCodes.HTTP_401,
+      upstreamCode: "PANEL_PROOF_KEY_MISMATCH",
+    })
+  })
+
   it.each(["POST", "GET"] as const)(
     "does not replay a %s mutation after a WAF response",
     async (method) => {
@@ -558,6 +586,51 @@ describe("apiTransport request helpers", () => {
     expect(request.baseUrl).toBe(accountUrl)
     expect(request.fetchContext.origin).toBe(accountUrl)
   })
+
+  it.each([
+    { policy: "direct", incognito: false },
+    { policy: "authorized recovery", incognito: false },
+    { policy: "authorized recovery", incognito: true },
+  ])(
+    "keeps an AI-ROUTER console-bound claim off the split API origin ($policy, incognito=$incognito)",
+    async ({ policy, incognito }) => {
+      const consoleOrigin = "https://ai-router.dev"
+      const endpoint = "/api/v1/user/daily-checkin"
+      const upstream = vi.fn(() => HttpResponse.json({ code: 0 }))
+      server.use(http.post(`https://api.ai-router.dev${endpoint}`, upstream))
+      mockSendRuntimeMessage.mockResolvedValue({ success: true, data: {} })
+
+      await expect(
+        fetchApiResponse(
+          {
+            baseUrl: consoleOrigin,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+            fetchContext: {
+              kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+              tabId: 7,
+              origin: consoleOrigin,
+              incognito,
+            },
+            currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
+            ...(policy === "direct"
+              ? {
+                  directRequestReason: API_DIRECT_REQUEST_REASONS.CallerManaged,
+                }
+              : {
+                  protectionBypassExecution:
+                    backgroundProtectionBypassExecution,
+                }),
+          },
+          { endpoint, options: { method: "POST" } },
+        ),
+      ).rejects.toMatchObject({
+        code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+      })
+      expect(upstream).not.toHaveBeenCalled()
+      expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    },
+  )
 
   it("leaves unregistered request origins byte-for-byte unchanged", async () => {
     const calls: string[] = []
@@ -1441,6 +1514,7 @@ describe("apiTransport request helpers", () => {
         fetchUrl: API_URL,
         responseType: "json",
       }),
+      expect.any(Object),
     )
     expect(
       atIndex(mockSendTabMessageWithRetry.mock.calls, 0)[1].fetchOptions,
@@ -1645,6 +1719,88 @@ describe("apiTransport request helpers", () => {
     expect(observer.onDispatch).toHaveBeenCalledTimes(1)
     expect(observer.onResponse).toHaveBeenCalledTimes(1)
   })
+
+  it.each([{ incognito: true }, { cookieStoreId: "firefox-container-2" }])(
+    "submits in the pinned tab when its session has a browser partition %j",
+    async (partition) => {
+      mockSendTabMessageWithRetry.mockResolvedValue({
+        success: true,
+        data: { claimed: true },
+      })
+      mockSendRuntimeMessage.mockResolvedValue({
+        success: false,
+        error: "The pinned tab already owns this session",
+      })
+      const upstream = vi.fn(() => HttpResponse.json({ claimed: false }))
+      server.use(http.post(API_URL, upstream))
+
+      await expect(
+        fetchApiResponse(
+          {
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+            protectionBypassExecution: backgroundProtectionBypassExecution,
+            fetchContext: {
+              kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+              tabId: 7,
+              origin: "https://example.com",
+              ...partition,
+            },
+            currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
+          },
+          { endpoint: ENDPOINT, options: { method: "POST" } },
+        ),
+      ).resolves.toMatchObject({ body: { claimed: true } })
+      expect(mockSendTabMessageWithRetry).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({ fetchUrl: API_URL }),
+        expect.any(Object),
+      )
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+      expect(upstream).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    { requestHeaders: { "X-Client": "fixture" } },
+    {
+      cookieSession: {
+        origin: "https://example.com",
+        cookieHeader: "s=fixture",
+      },
+    },
+  ])(
+    "stops before dispatch when a pinned request needs direct-only credentials %j",
+    async (isolation) => {
+      const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
+      const upstream = vi.fn(() => HttpResponse.json({ success: true }))
+      server.use(http.get(API_URL, upstream))
+      await expect(
+        fetchApiResponse(
+          {
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+            protectionBypassExecution: backgroundProtectionBypassExecution,
+            fetchContext: {
+              kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+              tabId: 7,
+              origin: "https://example.com",
+            },
+            currentTabFallback: API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES.Forbid,
+            ...isolation,
+            observer,
+          },
+          { endpoint: ENDPOINT },
+        ),
+      ).rejects.toMatchObject({
+        code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+      })
+      expect(upstream).not.toHaveBeenCalled()
+      expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+      expect(observer.onDispatch).not.toHaveBeenCalled()
+    },
+  )
 
   it("does not leave a required current-tab context after a pre-dispatch receiver failure", async () => {
     const receiverUnavailable = new Error(
@@ -2323,6 +2479,7 @@ describe("apiTransport request helpers", () => {
         fetchUrl: API_URL,
         responseType: "json",
       }),
+      expect.any(Object),
     )
     expect(
       atIndex(mockSendTabMessageWithRetry.mock.calls, 0)[1].fetchOptions,
@@ -3633,6 +3790,7 @@ describe("apiTransport request helpers", () => {
       expect.objectContaining({
         responseType: "text",
       }),
+      expect.any(Object),
     )
   })
 

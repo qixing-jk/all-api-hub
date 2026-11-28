@@ -1,5 +1,10 @@
 import { readSub2ApiFailureEnvelope } from "~/services/apiService/sub2api/responseError"
-import { SUB2API_SESSION_BINDING_MISMATCH_CODE } from "~/services/apiService/sub2api/type"
+import {
+  SUB2API_AUTH_REFRESH_ENDPOINT,
+  SUB2API_PANEL_KEY_ERRORS,
+  SUB2API_SESSION_BINDING_MISMATCH_CODE,
+} from "~/services/apiService/sub2api/type"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
@@ -7,8 +12,6 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
  * Match upstream buffer: refresh ~2 minutes before expiry.
  */
 export const SUB2API_TOKEN_REFRESH_BUFFER_MS = 120 * 1000
-
-const SUB2API_AUTH_REFRESH_ENDPOINT = "/api/v1/auth/refresh"
 
 type Sub2ApiEnvelope<T> = {
   code: number | string
@@ -97,7 +100,13 @@ export async function refreshSub2ApiTokens(params: {
     )
     responseStatus = response.status
     payload = response.body
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.upstreamCode === SUB2API_PANEL_KEY_ERRORS.Mismatch ||
+        error.code === API_ERROR_CODES.REQUEST_PROOF_INVALID)
+    )
+      throw error
     throw new Sub2ApiTokenRefreshError(
       SUB2API_TOKEN_REFRESH_FAILURE_REASONS.UNCERTAIN_ROTATION,
     )

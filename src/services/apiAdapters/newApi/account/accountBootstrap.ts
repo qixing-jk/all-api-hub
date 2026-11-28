@@ -1,4 +1,5 @@
 import { type AccountSiteType } from "~/constants/siteType"
+import { getCompatibleAccountVariant } from "~/services/apiAdapters/compatibleAccountVariant"
 import type {
   AccountBootstrapCapability,
   AccountBootstrapFacts,
@@ -6,7 +7,6 @@ import type {
 import { resolveNewApiAccountCredentialVariant } from "~/services/apiAdapters/newApi/account/accountCredentialVariant"
 import { resolveNewApiAccountRoutePath } from "~/services/apiAdapters/newApi/account/accountRoutes"
 import type { AccountBootstrapMetadataImplementation } from "~/services/apiAdapters/newApi/variantOperations/bootstrap"
-import { getNewApiVariantRegistration } from "~/services/apiAdapters/newApi/variantRegistration"
 import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
 
 type NewApiAccountBootstrapOptions = Parameters<
@@ -28,7 +28,7 @@ export function createNewApiAccountBootstrap(
       accountBootstrap.defaultAccountBootstrapImplementation
         .extractDefaultExchangeRate,
     extractCheckInSupport: accountBootstrap.extractCheckInSupport,
-    ...getNewApiVariantRegistration(siteType).bootstrap,
+    ...getCompatibleAccountVariant(siteType).bootstrap,
   }
 
   const loadBootstrapFacts: AccountBootstrapCapability["loadBootstrapFacts"] =

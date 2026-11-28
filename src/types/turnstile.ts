@@ -66,20 +66,28 @@ export type TurnstilePreTrigger =
       throttle?: TurnstilePreTriggerThrottle
     }
 
+export const CHECKIN_PAGE_ACTION_STATUSES = {
+  Clicked: "clicked",
+  TargetNotFound: "target_not_found",
+  Throttled: "throttled",
+  Error: "error",
+} as const
+
 export type CheckinPageActionTriggerStatus =
-  | "clicked"
-  | "target_not_found"
-  | "throttled"
-  | "error"
+  (typeof CHECKIN_PAGE_ACTION_STATUSES)[keyof typeof CHECKIN_PAGE_ACTION_STATUSES]
+
+export const CHECKIN_PAGE_ACTION_REASONS = {
+  Clicked: "clicked",
+  Disabled: "disabled",
+  MaxAttempts: "maxAttempts",
+  MissingRequestId: "missingRequestId",
+  NoTarget: "noTarget",
+  Throttled: "throttled",
+  UnexpectedError: "unexpectedError",
+} as const
 
 export type CheckinPageActionTriggerReason =
-  | "clicked"
-  | "disabled"
-  | "maxAttempts"
-  | "missingRequestId"
-  | "noTarget"
-  | "throttled"
-  | "unexpectedError"
+  (typeof CHECKIN_PAGE_ACTION_REASONS)[keyof typeof CHECKIN_PAGE_ACTION_REASONS]
 
 export type CheckinPageActionTriggerResult = {
   status: CheckinPageActionTriggerStatus
@@ -94,12 +102,29 @@ export type CheckinPageActionTriggerResult = {
   verification?: PageVerificationResult
 }
 
+export const PAGE_VERIFICATION_STATUSES = {
+  NotPresent: "not_present",
+  Completed: "completed",
+  Required: "required",
+} as const
+
+export const PAGE_VERIFICATION_PROVIDERS = {
+  Turnstile: "turnstile",
+  Recaptcha: "recaptcha",
+  Hcaptcha: "hcaptcha",
+  Altcha: "altcha",
+  Image: "image",
+  Interactive: "interactive",
+} as const
+
 /** Evidence from observing a native page action, without exporting captcha tokens. */
 export type PageVerificationResult =
-  | { status: "not_present" }
+  | { status: typeof PAGE_VERIFICATION_STATUSES.NotPresent }
   | {
-      status: "completed" | "required"
-      provider: "turnstile" | "recaptcha" | "hcaptcha" | "image" | "interactive"
+      status:
+        | typeof PAGE_VERIFICATION_STATUSES.Completed
+        | typeof PAGE_VERIFICATION_STATUSES.Required
+      provider: (typeof PAGE_VERIFICATION_PROVIDERS)[keyof typeof PAGE_VERIFICATION_PROVIDERS]
     }
 
 /**
@@ -114,10 +139,14 @@ export type TurnstileWidgetDetection = {
   url: string | null
 }
 
+export const TURNSTILE_TOKEN_WAIT_STATUSES = {
+  NotPresent: "not_present",
+  TokenObtained: "token_obtained",
+  Timeout: "timeout",
+} as const
+
 export type TurnstileTokenWaitStatus =
-  | "not_present"
-  | "token_obtained"
-  | "timeout"
+  (typeof TURNSTILE_TOKEN_WAIT_STATUSES)[keyof typeof TURNSTILE_TOKEN_WAIT_STATUSES]
 
 /**
  * Serializable result produced by content script Turnstile token waits.

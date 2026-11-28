@@ -21,6 +21,7 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { tempWindowTriggerCheckinPageAction } from "~/utils/browser/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -470,6 +471,7 @@ describe("pmApiProvider", () => {
     vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue({
       success: true,
       reason: "clicked",
+      pageUrl: `${origin}/#/console/wallet?tab=daily`,
     })
     mockVerificationRefusal()
     await expect(
@@ -477,7 +479,7 @@ describe("pmApiProvider", () => {
     ).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
-      messageParams: { checkInUrl: `${origin}/#/console/wallet` },
+      messageParams: { checkInUrl: `${origin}/#/console/wallet?tab=daily` },
     })
     expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledOnce()
   })
@@ -551,57 +553,65 @@ describe("pmApiProvider", () => {
     expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
   })
 
-  it("uses the opted-in identity-checked page action and confirms the grant", async () => {
-    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
-      autoCheckin: { continueWhenVerificationRequired: true },
-    } as never)
-    let checked = false
-    vi.mocked(tempWindowTriggerCheckinPageAction).mockImplementation(
-      async () => {
-        checked = true
-        return { success: true, reason: "clicked" }
-      },
-    )
-    server.use(
-      http.get(`${origin}/api/status`, () =>
-        HttpResponse.json(envelope({ checkin_enabled: true })),
-      ),
-      http.get(`${origin}/api/me`, () =>
-        HttpResponse.json(envelope(identity(checked))),
-      ),
-      http.post(`${origin}/api/me/checkin`, () =>
-        HttpResponse.json(
-          { success: false, message: "请先完成人机验证" },
-          { status: 400 },
-        ),
-      ),
-    )
-    const context = {
-      tempWindowRequestSource: { source: "test" } as never,
-      protectionBypassExecution: { kind: "user_command" } as never,
-    }
-    await expect(
-      pmApiProvider.checkIn(account, context),
-    ).resolves.toMatchObject({
-      status: CHECKIN_RESULT_STATUS.SUCCESS,
-    })
-    expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        originUrl: origin,
-        pageUrl: `${origin}/#/console/wallet`,
-        siteType: SITE_TYPES.PMAPI,
-        expectedUserId: "10171",
-        accountId: account.id,
-        trigger: {
-          kind: "clickSelector",
-          selector: "#ckBtn:not(:disabled)",
-          targetWaitMs: 10_000,
-          throttle: { maxAttempts: 1 },
+  it.each([undefined, "/rewards?tab=daily#/claim"])(
+    "confirms the native grant using page override %s",
+    async (nativePagePath) => {
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        autoCheckin: { continueWhenVerificationRequired: true },
+      } as never)
+      let checked = false
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockImplementation(
+        async () => {
+          checked = true
+          return { success: true, reason: "clicked" }
         },
-        ...context,
-      }),
-    )
-  })
+      )
+      server.use(
+        http.get(`${origin}/api/status`, () =>
+          HttpResponse.json(envelope({ checkin_enabled: true })),
+        ),
+        http.get(`${origin}/api/me`, () =>
+          HttpResponse.json(envelope(identity(checked))),
+        ),
+        http.post(`${origin}/api/me/checkin`, () =>
+          HttpResponse.json(
+            { success: false, message: "请先完成人机验证" },
+            { status: 400 },
+          ),
+        ),
+      )
+      const context = {
+        tempWindowRequestSource: { source: "test" } as never,
+        protectionBypassExecution: { kind: "user_command" } as never,
+      }
+      await expect(
+        pmApiProvider.checkIn(
+          { ...account, checkIn: { ...account.checkIn, nativePagePath } },
+          context,
+        ),
+      ).resolves.toMatchObject({
+        status: CHECKIN_RESULT_STATUS.SUCCESS,
+      })
+      expect(
+        tempWindowTriggerCheckinPageAction,
+      ).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          originUrl: origin,
+          pageUrl: `${origin}${nativePagePath ?? "/#/console/wallet"}`,
+          siteType: SITE_TYPES.PMAPI,
+          expectedUserId: "10171",
+          accountId: account.id,
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#ckBtn:not(:disabled)",
+            targetWaitMs: 10_000,
+            throttle: { maxAttempts: 1 },
+          },
+          ...context,
+        }),
+      )
+    },
+  )
 
   it("reads the tool's own readiness from the stored console token", () => {
     expect(pmApiProvider.getReadiness(account)).toEqual({ ready: true })

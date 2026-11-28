@@ -57,6 +57,7 @@ export function getNewApiRealSiteSkipReason(
 export async function loginToRealNewApiSite(
   page: Page,
   config: CompatibleApiRealSiteConfig,
+  ownedScopedTokenName?: string,
 ): Promise<CompatibleApiRealSiteLoginResult> {
   return await loginToCompatibleApiRealSite(page, config, {
     label: NEW_API_LABEL,
@@ -64,5 +65,6 @@ export async function loginToRealNewApiSite(
     authBundle: true,
     logSessionDiagnostics: true,
     pruneStaleSessions: true,
+    ownedScopedTokenName,
   })
 }

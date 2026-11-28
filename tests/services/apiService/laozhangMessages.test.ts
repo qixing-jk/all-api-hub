@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   fetchLaoZhangMessages,
   markLaoZhangMessageRead,
-} from "~/services/apiService/newApiFamily/variants/laozhangMessages"
+} from "~/services/apiService/shellApiFamily/laozhangMessages"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 

@@ -20,6 +20,7 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/checkin/checkInPresentation"
 import englishAccountDialog from "~/locales/en/accountDialog.json"
 import englishAutoCheckin from "~/locales/en/autoCheckin.json"
+import simplifiedChineseAutoCheckin from "~/locales/zh-CN/autoCheckin.json"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
@@ -146,9 +147,6 @@ describe("check-in presentation", () => {
           expect(presentation.label).toContain(
             translate(metadata.sourceNameKey, { ns: "autoCheckin" }),
           )
-          expect(presentation.disclosure).toContain(
-            translate(metadata.sourceNameKey, { ns: "autoCheckin" }),
-          )
         }
       }
     },
@@ -172,6 +170,41 @@ describe("check-in presentation", () => {
     expect(presentation.disclosure).toContain("Genius Programmer Relay")
     expect(presentation.label).not.toContain("天才程序员")
   })
+  it.each([
+    {
+      language: "zh-CN",
+      methods: simplifiedChineseAutoCheckin,
+      label: "BizDecipher 每日免费礼物",
+      disclosure: "仅领取每日免费礼物。消耗积分或余额的抽奖需在站内手动参与。",
+    },
+    {
+      language: "en",
+      methods: englishAutoCheckin,
+      label: "BizDecipher daily free gift",
+      disclosure:
+        "Only claims the daily free gift. Draws that cost points or balance are available on the site.",
+    },
+  ])(
+    "explains the BizDecipher gift and draw scope in $language",
+    async ({ language, methods, label, disclosure }) => {
+      const instance = createInstance()
+      await instance.init({
+        lng: language,
+        fallbackLng: false,
+        resources: {
+          [language]: {
+            autoCheckin: methods,
+          },
+        },
+      })
+      expect(
+        getCheckInMethodPresentation(
+          instance.getFixedT(language, "accountDialog"),
+          AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+        ),
+      ).toEqual({ label, disclosure })
+    },
+  )
   it("distinguishes the Xingya protocol from the generic daily method", () => {
     const generic = getCheckInMethodPresentation(
       t,
@@ -252,7 +285,8 @@ describe("check-in presentation", () => {
     ).toMatchObject({
       selectedMethodId: methodId,
       triggerLabel: "methods.generic.name",
-      helperText: "form.checkInSelectionStale",
+      attentionMessage: "form.checkInSelectionStale",
+      redetectionHint: null,
     })
   })
 
@@ -292,9 +326,10 @@ describe("check-in presentation", () => {
       expect(presentation.triggerLabel).toContain(
         "form.checkInMethodNeedsConfirmation:methods.generic.name",
       )
-      expect(presentation.helperText).toBe(
-        "form.checkInSelectionUnconfirmed:methods.generic.name",
+      expect(presentation.attentionMessage).toBe(
+        "form.checkInSelectionUnconfirmed",
       )
+      expect(presentation.redetectionHint).toBeNull()
     },
   )
 
@@ -338,10 +373,10 @@ describe("check-in presentation", () => {
       }),
     ).toMatchObject({
       selectedMethodId: undefined,
-      selectedMethodDisclosure: null,
+      description: null,
       triggerLabel:
         "form.automaticCheckInSelectionWithDetail:form.checkInMethodNeedsChoice",
-      helperText: "form.checkInSelectionAutomaticNeedsChoice",
+      attentionMessage: "form.checkInSelectionAutomaticNeedsChoice",
     })
   })
 

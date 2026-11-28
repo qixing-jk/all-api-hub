@@ -24,21 +24,7 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
   storageData: new Map<string, unknown>(),
   storageSet: vi.fn(),
-  detectors: [
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-    vi.fn(),
-  ],
+  detectors: Array.from({ length: 16 }, () => vi.fn()),
   checkIn: vi.fn(),
 }))
 
@@ -77,8 +63,11 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
         // BaiApi is declared after Emrank in the real registry, but this
         // fixture only covers Sub2API candidates; order still maps to
-        // detectors by index, so it stays last.
+        // detectors by index, so preserve existing detector indexes.
         AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],

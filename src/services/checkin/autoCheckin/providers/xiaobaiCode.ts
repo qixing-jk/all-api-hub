@@ -5,6 +5,7 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import {
   performXiaobaiCodeDailyCheckIn,
   probeXiaobaiCodeCheckInStatus,
@@ -21,10 +22,8 @@ import {
 } from "~/types/autoCheckin"
 import type { CheckInMethodUnknownReason } from "~/types/checkIn"
 
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderReadContext,
-} from "./contracts"
+import type { AutoCheckinProviderReadContext } from "./contracts"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -64,10 +63,14 @@ const unknownDetection = (
     attemptedAt,
   }) as const
 
-const readStatus = async (context: AutoCheckinProviderReadContext) => {
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) => {
   try {
     const probe = await probeXiaobaiCodeCheckInStatus(
       createSub2ApiCheckInReadRequest(context),
+      auth,
     )
     if (probe.outcome !== XIAOBAI_CODE_STATUS_OUTCOMES.Matched) {
       return unknownStatus(
@@ -86,15 +89,16 @@ const readStatus = async (context: AutoCheckinProviderReadContext) => {
   }
 }
 
-export const xiaobaiCodeProvider: AutoCheckinProvider = {
+export const xiaobaiCodeProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
 
-  async detect(context) {
+  async detect(context, auth) {
     try {
       const probe = await probeXiaobaiCodeCheckInStatus(
         createSub2ApiCheckInReadRequest(context),
+        auth,
       )
       if (probe.outcome === XIAOBAI_CODE_STATUS_OUTCOMES.Matched) {
         return {
@@ -121,7 +125,7 @@ export const xiaobaiCodeProvider: AutoCheckinProvider = {
 
   getStatus: readStatus,
 
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const status = context.statusProof
     if (
       status?.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -132,8 +136,12 @@ export const xiaobaiCodeProvider: AutoCheckinProvider = {
 
     try {
       const result = await performXiaobaiCodeDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       switch (result.kind) {
         case XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS.Applied:
@@ -174,4 +182,4 @@ export const xiaobaiCodeProvider: AutoCheckinProvider = {
       )
     }
   },
-}
+})

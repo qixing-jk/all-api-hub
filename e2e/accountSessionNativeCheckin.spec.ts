@@ -23,7 +23,11 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 for (const mode of [
   "pow",
   "turnstile",
+  "turnstile-closed-root",
+  "pending-subresource",
+  "load-handler",
   "shared-mismatch",
+  "swapped-identities",
   "legacy-refresh-401",
   "legacy-refresh-405",
 ] as const) {
@@ -32,14 +36,30 @@ for (const mode of [
     extensionId,
     page,
   }, testInfo) => {
+    const identityMismatch =
+      mode === "shared-mismatch" || mode === "swapped-identities"
+    const turnstile = mode === "turnstile" || mode === "turnstile-closed-root"
+    const confirmedIdentities = new Set<string>()
     const logins: string[] = [],
       claims: string[] = [],
       challenges: string[] = []
     let directPosts = 0
+    let pendingResourceRequests = 0
     const checked = new Set<string>()
     const server = createServer(async (req, res) => {
       const url = new URL(req.url || "/", "http://fixture")
       const path = url.pathname
+      if (path === "/pending-analytics.js") {
+        pendingResourceRequests++
+        res.writeHead(200, { "content-type": "application/javascript" })
+        res.flushHeaders()
+        return
+      }
+      if (path === "/delayed-script.js") {
+        await new Promise((resolve) => setTimeout(resolve, 4_000))
+        res.writeHead(200, { "content-type": "application/javascript" })
+        return res.end("")
+      }
       const cookieId = /session=(\d+)/.exec(req.headers.cookie || "")?.[1]
       const id =
         /^Bearer api-(\d+)$/.exec(req.headers.authorization || "")?.[1] ||
@@ -67,7 +87,16 @@ for (const mode of [
       if (path === "/api/user/login") {
         const user = JSON.parse(body).username.replace("user-", "")
         logins.push(user)
-        res.setHeader("set-cookie", `session=${user}; Path=/; SameSite=Lax`)
+        const sessionUser =
+          mode === "swapped-identities"
+            ? user === "101"
+              ? "202"
+              : "101"
+            : user
+        res.setHeader(
+          "set-cookie",
+          `session=${sessionUser}; Path=/; SameSite=Lax`,
+        )
         return json({
           success: true,
           data: { id: Number(user), username: `user-${user}` },
@@ -83,7 +112,10 @@ for (const mode of [
           : json({ success: false }, 401)
       if (path === "/api/user/checkin") {
         if (!id) return json({ success: false }, 401)
-        if (req.method !== "POST")
+        if (req.method !== "POST") {
+          const targetId = req.headers["new-api-user"]
+          if (cookieId && checked.has(id) && typeof targetId === "string")
+            confirmedIdentities.add(`${targetId}:${cookieId}`)
           return json({
             success: true,
             data: {
@@ -91,26 +123,25 @@ for (const mode of [
               stats: { checked_in_today: checked.has(id) },
             },
           })
+        }
         const challenge = `native-${id}`
         const nonce = Number(url.searchParams.get("pow_nonce"))
-        const valid =
-          mode === "turnstile"
-            ? url.searchParams.get("turnstile") === "check-in-widget-token"
-            : url.searchParams.get("pow_challenge") === challenge &&
-              url.searchParams.has("pow_nonce") &&
-              Number.isInteger(nonce) &&
-              createHash("sha256")
-                .update(`${challenge}:${nonce}`)
-                .digest("hex")
-                .startsWith("00")
+        const valid = turnstile
+          ? url.searchParams.get("turnstile") === "check-in-widget-token"
+          : url.searchParams.get("pow_challenge") === challenge &&
+            url.searchParams.has("pow_nonce") &&
+            Number.isInteger(nonce) &&
+            createHash("sha256")
+              .update(`${challenge}:${nonce}`)
+              .digest("hex")
+              .startsWith("00")
         if (!valid || !cookieId) {
           directPosts++
           return json({
             success: false,
-            message:
-              mode === "turnstile"
-                ? "Turnstile token invalid"
-                : "Proof of work required",
+            message: turnstile
+              ? "Turnstile token invalid"
+              : "Proof of work required",
           })
         }
         claims.push(cookieId)
@@ -137,17 +168,24 @@ for (const mode of [
       }
       if (path === "/console/personal") {
         res.writeHead(200, { "content-type": "text/html" })
-        return res.end(`<!doctype html><title>Native check-in fixture</title><main><h1>Daily check-in</h1><div class="cf-turnstile"><input name="cf-turnstile-response" value="unrelated-login-token"></div><button id="check-in">Check in</button><div id="challenge" hidden><div class="cf-turnstile"><input name="cf-turnstile-response" value=""></div><button id="complete">Complete check-in verification</button></div></main><script>
+        const widget =
+          mode === "turnstile-closed-root"
+            ? '<div id="widget-host"></div><input type="hidden" name="cf-turnstile-response">'
+            : '<div class="cf-turnstile"><input name="cf-turnstile-response" value=""></div>'
+        return res.end(`<!doctype html><title>Native check-in fixture</title><main><h1>Daily check-in</h1><div class="cf-turnstile"><input name="cf-turnstile-response" value="unrelated-login-token"></div><button id="check-in">Check in</button><div id="challenge" role="dialog" hidden>${widget}<button id="complete">Complete check-in verification</button></div></main><script>
+          const host=document.querySelector('#widget-host');
+          if(host)host.attachShadow({mode:'closed'}).innerHTML='<iframe title="Synthetic verification" src="about:blank"></iframe>';
           const submit=async payload=>{await fetch('/api/user/checkin?'+new URLSearchParams(payload),{method:'POST'});document.querySelector('#challenge').hidden=true};
-          document.querySelector('#check-in').onclick=async()=>{
+          const bindCheckin=()=>document.querySelector('#check-in').onclick=async()=>{
             document.querySelector('#check-in').disabled=true;
-            if(${mode === "turnstile"}){document.querySelector('#challenge').hidden=false;return}
+            if(${turnstile}){document.querySelector('#challenge').hidden=false;return}
             const {data:{challenge_id,prefix}}=await (await fetch('/api/user/pow/challenge?action=checkin')).json();let nonce=0;
             for(;;nonce++){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(prefix+nonce));if(new Uint8Array(hash)[0]===0)break}
             await submit({pow_challenge:challenge_id,pow_nonce:nonce});
           };
+          if(${mode === "load-handler"})window.addEventListener('load',bindCheckin);else bindCheckin();
           document.querySelector('#complete').onclick=async()=>{const token='check-in-widget-token';document.querySelector('#challenge input').value=token;await submit({turnstile:token})};
-        </script>`)
+        </script>${mode === "pending-subresource" ? '<script async src="/pending-analytics.js"></script>' : mode === "load-handler" ? '<script async src="/delayed-script.js"></script>' : ""}`)
       }
       json({}, 404)
     })
@@ -202,10 +240,13 @@ for (const mode of [
           turnstileAssistPresentation: "page",
         },
       })
-      const ids = mode === "pow" ? ["101", "202"] : ["101"]
+      const ids =
+        mode === "pow" || mode === "swapped-identities"
+          ? ["101", "202"]
+          : ["101"]
       await seedStoredAccounts(
         worker,
-        ids.map((id) =>
+        [...ids].reverse().map((id) =>
           createStoredAccount({
             id: `native-${id}`,
             site_name: `Target ${id}`,
@@ -261,7 +302,7 @@ for (const mode of [
       })
       await expect(runButton).toBeVisible()
       await runButton.click()
-      if (mode === "turnstile") {
+      if (turnstile) {
         // The reminder must retain and reveal the post-login check-in window.
         await expect(
           options.getByRole("button", {
@@ -306,7 +347,7 @@ for (const mode of [
         perAccount: Object.fromEntries(
           ids.map((id) => [
             `native-${id}`,
-            mode === "shared-mismatch"
+            identityMismatch
               ? {
                   status: "failed",
                   reasonCode: "authentication_required",
@@ -320,7 +361,7 @@ for (const mode of [
       const status = await readStatus()
       for (const id of ids)
         expect(status?.perAccount?.[`native-${id}`]).toMatchObject(
-          mode === "shared-mismatch"
+          identityMismatch
             ? {
                 status: "failed",
                 reasonCode: "authentication_required",
@@ -329,17 +370,26 @@ for (const mode of [
               }
             : { status: "success" },
         )
-      expect(claims).toEqual(mode === "shared-mismatch" ? [] : ids)
-      expect(logins).toEqual(mode === "shared-mismatch" ? [] : ids)
-      expect(challenges).toEqual(
-        mode !== "turnstile" && mode !== "shared-mismatch" ? ids : [],
+      // Account sessions may finish in either order; still require each identity
+      // exactly once so duplicates and cross-account requests cannot pass.
+      expect([...claims].sort()).toEqual(identityMismatch ? [] : ids)
+      expect([...logins].sort()).toEqual(mode === "shared-mismatch" ? [] : ids)
+      expect([...challenges].sort()).toEqual(
+        !turnstile && !identityMismatch ? ids : [],
+      )
+      // Readback carries the target account header and the actual native Cookie.
+      // Keep each pair intact so two successful accounts cannot swap identities.
+      expect([...confirmedIdentities].sort()).toEqual(
+        identityMismatch ? [] : ids.map((id) => `${id}:${id}`),
       )
       expect(directPosts).toBe(ids.length)
+      if (mode === "pending-subresource")
+        expect(pendingResourceRequests).toBeGreaterThan(0)
       for (const id of ids) {
         const row = options.getByRole("row").filter({ hasText: `Target ${id}` })
         await expect(row).toBeVisible()
         await expect(row).toContainText(
-          mode === "shared-mismatch" ? /different account/i : /success/i,
+          identityMismatch ? /different account/i : /success/i,
         )
       }
       await expect
@@ -360,6 +410,7 @@ for (const mode of [
             logins,
             claims,
             challenges,
+            confirmedIdentities: [...confirmedIdentities],
             directPosts,
             perAccount: status?.perAccount,
           },

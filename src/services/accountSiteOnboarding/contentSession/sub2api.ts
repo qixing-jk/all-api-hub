@@ -1,8 +1,14 @@
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  fetchSub2ApiBrowserSessionIdentity,
+  probeSub2ApiBrowserPanelMiddleware,
+  SUB2API_PANEL_MIDDLEWARE_OUTCOMES,
+} from "~/services/apiService/sub2api/auth/browserPanelProof"
 import { SUB2API_AUTH_STORAGE_KEYS } from "~/services/apiService/sub2api/auth/browserSession"
+import { readSub2ApiPanelTokenBinding } from "~/services/apiService/sub2api/auth/panelProofProtocol"
 import { parseSub2ApiUserIdentity } from "~/services/apiService/sub2api/parsing"
-import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
+import { SUB2API_AUTH_REFRESH_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { isRecord } from "~/utils/core/object"
 
 import {
@@ -104,10 +110,10 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
   const endpoint =
     typeof baseUrl === "string" && baseUrl.trim()
       ? new URL(
-          "/api/v1/auth/refresh",
+          SUB2API_AUTH_REFRESH_ENDPOINT,
           resolveDeploymentApiOrigin(baseUrl),
         ).toString()
-      : "/api/v1/auth/refresh"
+      : SUB2API_AUTH_REFRESH_ENDPOINT
 
   let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null
   try {
@@ -192,14 +198,9 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
     }
     let body: unknown
     try {
-      const response = await fetch(
-        new URL(SUB2API_AUTH_ME_ENDPOINT, resolveDeploymentApiOrigin(origin)),
-        {
-          method: "GET",
-          cache: "no-store",
-          credentials: "omit",
-          headers: { Authorization: `Bearer ${accessToken}` },
-        },
+      const { response } = await fetchSub2ApiBrowserSessionIdentity(
+        resolveDeploymentApiOrigin(origin),
+        accessToken,
       )
       if (response.status >= 500 || response.status === 429) {
         throw new Error("Sub2API session probe unavailable")
@@ -257,6 +258,51 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
 
     let { refreshToken, tokenExpiresAt } = readStoredTokenState()
     const baseUrl = typeof context.url === "string" ? context.url : null
+
+    // The website owns renewal for its bound session. Exporting its refresh
+    // token would let two independent clients rotate the same family.
+    // A cnf hint alone does not enable signing. Validate it before exporting
+    // credentials so a cleared native key cannot masquerade as an ordinary JWT.
+    if (readSub2ApiPanelTokenBinding(accessToken)) {
+      const apiOrigin = resolveDeploymentApiOrigin(location.origin)
+      const { response, browserOwnsSession } =
+        await fetchSub2ApiBrowserSessionIdentity(apiOrigin, accessToken)
+      // The browser protocol already rejects explicit proof middleware errors.
+      // A plain 401 without native-key evidence can still be an ordinary expired
+      // JWT; retain its established refresh path below.
+      if (browserOwnsSession || response.status !== 401) {
+        const body = await response.json()
+        const expected = assertStoredUserUnchanged(authUserRaw)
+        if (
+          !response.ok ||
+          body?.code !== 0 ||
+          parseSub2ApiUserIdentity(body.data).userId !== expected.userId ||
+          localStorage
+            .getItem(SUB2API_AUTH_STORAGE_KEYS.accessToken)
+            ?.trim() !== accessToken
+        )
+          throw new Sub2ApiContentSessionLoginRequiredError()
+        if (browserOwnsSession)
+          return {
+            userId: expected.userId,
+            user: {
+              id: expected.userId,
+              username: expected.username,
+              balance: expected.balanceUsd,
+            },
+            accessToken,
+            siteTypeHint: SITE_TYPES.SUB2API,
+            sub2apiWebsiteSessionBound: true,
+          }
+      } else if (
+        (await probeSub2ApiBrowserPanelMiddleware(apiOrigin)) !==
+        SUB2API_PANEL_MIDDLEWARE_OUTCOMES.VerifiedOrdinary
+      ) {
+        // Some deployments reject expired bearer tokens before proof middleware.
+        // Discover that middleware without sending the website's refresh token.
+        throw new Sub2ApiContentSessionLoginRequiredError()
+      }
+    }
 
     try {
       const refreshed = await refreshSub2ApiTokensIfNeeded({

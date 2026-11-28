@@ -3,6 +3,14 @@ name: E2E Browser Compatibility
 on:
   workflow_dispatch:
     inputs:
+      chrome_versions:
+        description: Chrome versions (all or comma-separated, e.g. 114,stable)
+        default: all
+        type: string
+      shards:
+        description: Shard numbers (all or comma-separated from 1,2,3)
+        default: all
+        type: string
       workers:
         description: Workers per browser compatibility shard
         required: true
@@ -19,39 +27,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  browser-compat-matrix:
+    name: Prepare browser compatibility matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Select Chrome versions and shards
+        id: matrix
+        env:
+          CHROME_VERSIONS: ${{ inputs.chrome_versions || 'all' }}
+          SHARDS: ${{ inputs.shards || 'all' }}
+        run: node scripts/github-browser-compat-matrix.mjs "$CHROME_VERSIONS" "$SHARDS"
+
   e2e-build:
+    needs: browser-compat-matrix
     uses: ./.github/workflows/e2e-build.yml
+    with:
+      include_duration_profile: true
 
   chrome-compat:
     name: Chrome ${{ matrix.chrome_version }} compatibility (${{ matrix.shard }}/3)
-    needs: e2e-build
+    needs: [browser-compat-matrix, e2e-build]
     runs-on: ubuntu-latest
     # Covers the 35-minute test budget plus setup, the failure report, and
     # artifact upload, so a timeout never truncates the evidence.
     timeout-minutes: 50
     strategy:
       fail-fast: false
-      matrix:
-        # All Chrome versions and shards reuse the same extension build.
-        shard: [1, 2, 3]
-        chrome_version:
-          # 114 is the current Chromium support floor for this build: the
-          # manifest declares sidePanel, and chrome.sidePanel starts at 114.
-          - "114"
-          # 116 adds sidePanel.open and major MV3 service worker lifetime fixes.
-          - "116"
-          # 120 aligns chrome.alarms with the 30s MV3 service worker lifecycle.
-          - "120"
-          # 122 is a broad promise-support checkpoint for asynchronous extension APIs.
-          - "122"
-          # 144 has known community reports around extension messaging behavior.
-          - "144"
-          # 147 is the last pre-148 checkpoint before native browser namespace rollout.
-          - "147"
-          # 148 introduces native browser namespace and Promise-returning onMessage support.
-          - "148"
-          # stable catches the browser version users are most likely to auto-update to.
-          - "stable"
+      matrix: ${{ fromJSON(needs.browser-compat-matrix.outputs.matrix) }}
 
     steps:
       - name: Checkout code
@@ -101,6 +109,13 @@ jobs:
           chrome-version: ${{ matrix.chrome_version }}
           install-dependencies: true
 
+      - name: Restore E2E spec durations
+        # Every version and retry uses the same profile frozen by this run's build.
+        uses: actions/download-artifact@v7
+        with:
+          path: .e2e-durations
+          name: e2e-shard-duration-profile
+
       - name: Run browser compatibility E2E
         timeout-minutes: 40
         env:
@@ -111,12 +126,21 @@ jobs:
           # Scheduled runs use two contexts; manual trials can compare four
           # without changing the scheduled default or shard assignments.
           AAH_E2E_WORKERS: ${{ inputs.workers || '2' }}
+          AAH_E2E_SHARD_INDEX: ${{ matrix.shard }}
+          AAH_E2E_SHARD_TOTAL: "3"
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/compatibility
         # Playwright finishes its report before the step or job is cancelled.
         # The list reporter preserves per-test progress even during a timeout.
-        # Retain the budget for slow versions and retries until the new
-        # concurrency has been measured across every version in CI.
-        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --grep-invert="major pages with" --output=test-results/compatibility --global-timeout=2100000 --fail-on-flaky-tests --reporter=list,github,html
+        run: |
+          set -euo pipefail
+          planned_list="$(node scripts/e2e-shard-plan.mjs --index "${AAH_E2E_SHARD_INDEX}" --total "${AAH_E2E_SHARD_TOTAL}")"
+          if [ -n "${planned_list}" ]; then
+            mapfile -t spec_args <<< "${planned_list}"
+            echo "Duration-balanced shard ${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}: ${#spec_args[@]} specs"
+          else
+            spec_args=("--shard=${AAH_E2E_SHARD_INDEX}/${AAH_E2E_SHARD_TOTAL}")
+          fi
+          pnpm run e2e:default "${spec_args[@]}" --grep-invert="major pages with" --output=test-results/compatibility --global-timeout=2100000 --fail-on-flaky-tests --reporter=list,github,html
 
       # Performance measurements need a single browser context on the runner.
       # Execute the complete file once per Chrome version, outside the sharded

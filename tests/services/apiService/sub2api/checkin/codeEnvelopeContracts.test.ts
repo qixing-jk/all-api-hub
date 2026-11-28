@@ -45,6 +45,18 @@ describe.each([
     }
   })
 
+  it.each([401, 403, 404, 405, 429, 500])(
+    "keeps an unrecognized JSON status envelope inconclusive on HTTP %s",
+    (status) => {
+      expect(() => parse(response({}, status))).toThrow(
+        expect.objectContaining({
+          code: API_ERROR_CODES.JSON_PARSE_ERROR,
+          endpoint,
+        }),
+      )
+    },
+  )
+
   it.each([
     ["CHECKIN_DISABLED", "CHECKIN_DISABLED"],
     ["", "12"],

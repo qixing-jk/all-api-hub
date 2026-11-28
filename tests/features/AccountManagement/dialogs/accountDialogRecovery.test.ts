@@ -80,6 +80,64 @@ const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
 })
 
 describe("account dialog recovery handoff", () => {
+  it("rejects a Sub2API login handoff for an unsupported account type", async () => {
+    await expect(
+      prepareAccountDialogRecovery({
+        ...recoveryState(SITE_TYPES.UNKNOWN),
+        recoveryAction: "sub2api-login",
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+  })
+  it.each([AuthTypeEnum.Cookie, AuthTypeEnum.None])(
+    "rejects Sub2API login handoff with incompatible auth %s",
+    async (authType) => {
+      const state = {
+        ...recoveryState(SITE_TYPES.SUB2API),
+        recoveryAction: "sub2api-login" as const,
+      }
+      state.draft.authType = authType
+      await expect(prepareAccountDialogRecovery(state)).rejects.toThrow(
+        "Invalid account recovery draft",
+      )
+    },
+  )
+  it("rejects an edited invalid URL before opening either recovery surface", async () => {
+    const state = recoveryState()
+    const prepared = await prepareAccountDialogRecovery(state)
+    await expect(
+      openAccountDialogRecovery(prepared, {
+        state: { ...state, url: "https://" },
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+    expect(openSidePanel).not.toHaveBeenCalled()
+    expect(createTab).not.toHaveBeenCalled()
+  })
+  it("retains configured Sub2API acquisition when a popup hands its draft to a persistent view", async () => {
+    const state = {
+      ...recoveryState(SITE_TYPES.SUB2API),
+      recoveryAction: "sub2api-login" as const,
+    }
+    state.draft.login = {
+      methodId: "password",
+      credentials: { username: "member@example.com", password: "secret" },
+    }
+    const prepared = await prepareAccountDialogRecovery(state)
+    await openAccountDialogRecovery(prepared)
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recoveryAction: "sub2api-login",
+        draft: expect.objectContaining({
+          login: state.draft.login,
+          accessToken: state.draft.accessToken,
+          userId: "42",
+        }),
+      }),
+    )
+  })
   it.each([
     null,
     { type: "invalid", message: "failure" },
@@ -140,6 +198,57 @@ describe("account dialog recovery handoff", () => {
       receiveAccountDialogRecovery(prepared.id, accept),
     ).resolves.toBe(true)
     expect(accept).toHaveBeenCalledWith(state)
+  })
+  it.each(["new-api-token-create", "new-api-token-site"] as const)(
+    "applies %s recovery intent during open while preserving synchronous side-panel activation",
+    async (recoveryAction) => {
+      const original = recoveryState(SITE_TYPES.NEW_API)
+      const prepared = await prepareAccountDialogRecovery(original)
+
+      const opening = openAccountDialogRecovery(prepared, { recoveryAction })
+      // Native open must still run before yielding user activation to async storage.
+      expect(openSidePanel).toHaveBeenCalledWith(activeTab)
+      await expect(opening).resolves.toBe("sidepanel")
+
+      const accept = vi.fn(() => true)
+      await expect(
+        receiveAccountDialogRecovery(prepared.id, accept, activeTab.windowId),
+      ).resolves.toBe(true)
+      expect(accept).toHaveBeenCalledWith({
+        ...original,
+        recoveryAction,
+      })
+    },
+  )
+  it("applies a New API token recovery intent before opening the full-page fallback", async () => {
+    supportsSidePanel.mockReturnValue(false)
+    const original = recoveryState(SITE_TYPES.NEW_API)
+    const prepared = await prepareAccountDialogRecovery(original)
+
+    await expect(
+      openAccountDialogRecovery(prepared, {
+        recoveryAction: "new-api-token-site",
+      }),
+    ).resolves.toBe("tab")
+
+    const accept = vi.fn(() => true)
+    await expect(
+      receiveAccountDialogRecovery(prepared.id, accept),
+    ).resolves.toBe(true)
+    expect(accept).toHaveBeenCalledWith({
+      ...original,
+      recoveryAction: "new-api-token-site",
+    })
+  })
+  it("rejects a New API token recovery intent for unsupported sites", async () => {
+    const original = recoveryState(SITE_TYPES.APIYI)
+    await expect(
+      prepareAccountDialogRecovery({
+        ...original,
+        recoveryAction: "new-api-token-create",
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+    expect(sessionValues.size).toBe(0)
   })
   it("retains an explicit API-key method before any credential is pasted", async () => {
     const original = recoveryState(SITE_TYPES.NOVITA)
@@ -323,9 +432,8 @@ describe("account dialog recovery handoff", () => {
     const first = await prepareAccountDialogRecovery(recoveryState())
     await openAccountDialogRecovery(first)
     vi.resetModules()
-    const otherContext = await import(
-      "~/features/AccountManagement/dialogs/accountDialogRecovery"
-    )
+    const otherContext =
+      await import("~/features/AccountManagement/dialogs/accountDialogRecovery")
     const second =
       await otherContext.prepareAccountDialogRecovery(recoveryState())
     const cleanupRead = createDeferred<void>()
@@ -390,10 +498,11 @@ describe("account dialog recovery handoff", () => {
       draft: { ...original.draft, notes: "Latest notes", userId: "99" },
       transientAuth: { token: "private-dashboard-auth" },
     }
-    const updated = await prepareAccountDialogRecovery(edited, prepared)
-    expect(updated.id).toBe(prepared.id)
+    const opening = openAccountDialogRecovery(prepared, { state: edited })
+    expect(openSidePanel).toHaveBeenCalledWith(activeTab)
+    await expect(opening).resolves.toBe("sidepanel")
     const accept = vi.fn(() => true)
-    await receiveAccountDialogRecovery(updated.id, accept)
+    await receiveAccountDialogRecovery(prepared.id, accept, activeTab.windowId)
     expect(accept).toHaveBeenCalledWith({
       ...original,
       draft: { ...original.draft, notes: "Latest notes", userId: "99" },
@@ -492,6 +601,22 @@ describe("account dialog recovery handoff", () => {
       receiveAccountDialogRecovery(prepared.id, accept),
     ).resolves.toBe(true)
     expect(accept).toHaveBeenCalledWith(original)
+  })
+
+  it("drops a failed token action when the same draft is opened generically", async () => {
+    supportsSidePanel.mockReturnValue(false)
+    createTab.mockResolvedValueOnce(undefined)
+    const original = recoveryState()
+    const prepared = await prepareAccountDialogRecovery(original)
+    await expect(
+      openAccountDialogRecovery(prepared, {
+        recoveryAction: "new-api-token-create",
+      }),
+    ).rejects.toThrow("Account recovery tab unavailable")
+    await expect(openAccountDialogRecovery(prepared)).resolves.toBe("tab")
+    const accept = vi.fn(() => true)
+    await receiveAccountDialogRecovery(prepared.id, accept)
+    expect(accept).toHaveBeenCalledExactlyOnceWith(original)
   })
 
   it("restores the edited account identity and the user's check-in selection", async () => {

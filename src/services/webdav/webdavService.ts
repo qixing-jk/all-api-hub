@@ -13,6 +13,7 @@ import {
   PROGRAM_NAME,
   WebdavHttpError,
 } from "~/services/webdav/backup/webdavBackupTransport"
+import { webdavFetch } from "~/services/webdav/webdavFetch"
 import type { WebDAVConfig } from "~/types/webdav"
 import { t } from "~/utils/i18n/core"
 
@@ -208,7 +209,7 @@ export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
   const targetUrl = resolveConnectionTestUrl(cfg.url)
   const usesFileProbe = isExplicitWebdavJsonFileUrl(targetUrl)
 
-  const res = await fetch(targetUrl, {
+  const res = await webdavFetch(targetUrl, {
     method: usesFileProbe ? "GET" : "PROPFIND",
     headers: {
       Authorization: buildAuthHeader(cfg.username, cfg.password),
@@ -246,7 +247,7 @@ export async function downloadBackupRaw(
     await prepareWebdavBackupTargetForWrite(context)
   }
 
-  const res = await fetch(targetUrl, {
+  const res = await webdavFetch(targetUrl, {
     method: "GET",
     headers: {
       Authorization: buildAuthHeader(cfg.username, cfg.password),

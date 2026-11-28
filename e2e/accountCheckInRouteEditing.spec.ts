@@ -115,11 +115,39 @@ test("validates, saves and clears a deployment check-in route", async ({
     extensionDir,
   })
 
+  const pagePath = dialog.getByLabel("Check-in page path (optional)", {
+    exact: true,
+  })
   await input.fill("/api/user/manual")
+  await pagePath.fill("//elsewhere.example/rewards")
+  await expect(pagePath).toHaveAttribute("aria-invalid", "true")
+  await save.click()
+  await expect(dialog).toBeVisible()
+  await captureVisualViews({
+    page,
+    ready: pagePath,
+    id: "checkin-page-invalid",
+    extensionDir,
+  })
+  await pagePath.fill("/invite?tab=daily#/claim")
+  await expect(pagePath).toHaveAttribute("aria-invalid", "false")
   await expect(error).toHaveCount(0)
   await save.click()
   await expect(dialog).toBeHidden()
   await openEditor()
+  await expect(input).toHaveValue("/api/user/manual")
+  await expect(pagePath).toHaveValue("/invite?tab=daily#/claim")
+  await captureVisualViews({
+    page,
+    ready: pagePath,
+    id: "checkin-page-saved",
+    extensionDir,
+  })
+  await pagePath.clear()
+  await save.click()
+  await expect(dialog).toBeHidden()
+  await openEditor()
+  await expect(pagePath).toHaveValue("")
   await expect(input).toHaveValue("/api/user/manual")
   await input.clear()
   await save.click()

@@ -1,9 +1,9 @@
 import * as anyrouter from "~/services/apiService/newApiFamily/variants/anyrouter"
 
+import type { CompatibleAccountVariant } from "../../compatibleAccountVariantContract"
 import { compatibleTokenInventoryOverrides } from "../variantOperations/key"
-import type { NewApiVariantRegistration } from "../variantRegistration"
 
-export const anyrouterVariant: NewApiVariantRegistration = {
+export const anyrouterVariant: CompatibleAccountVariant = {
   key: { transport: compatibleTokenInventoryOverrides },
   data: {
     fetchAccountData: anyrouter.fetchAccountData,

@@ -10,6 +10,7 @@ import {
   type ProductAnalyticsDistributionContext,
   type ProductAnalyticsEventName,
 } from "~/services/productAnalytics/contracts"
+import { reserveStorageFailureReport } from "~/services/productAnalytics/runtime/storageFailureCooldown"
 import { getExtensionVersion } from "~/utils/browser/runtime"
 import { detectBrowserFamily } from "~/utils/browser/userAgent"
 import { getDistributionChannel } from "~/utils/core/distributionChannel"
@@ -258,6 +259,13 @@ class ProductAnalyticsClient {
 
       const capture = prepareCapture(eventName, rawProperties)
       if (!capture) return false
+
+      if (
+        eventName === PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed &&
+        !(await reserveStorageFailureReport(capture.properties))
+      ) {
+        return false
+      }
 
       return await captureWithAnonymousId(eventName, capture)
     } catch (error) {

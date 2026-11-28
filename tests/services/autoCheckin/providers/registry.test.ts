@@ -5,9 +5,11 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { aiRouterProvider } from "~/services/checkin/autoCheckin/providers/aiRouter"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
+import { apiKeyCasaProvider } from "~/services/checkin/autoCheckin/providers/apiKeyCasa"
 import { baiApiProvider } from "~/services/checkin/autoCheckin/providers/baiApi"
 import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
+import { freeggProvider } from "~/services/checkin/autoCheckin/providers/freegg"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
@@ -107,7 +109,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(26)
+    expect(registrationContracts).toHaveLength(30)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -129,6 +131,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "new-api:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.MODELFLARE],
           provider: newApiProvider,
+        },
+        {
+          id: "freegg:daily-allowance",
+          candidateSiteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN],
+          provider: freeggProvider,
         },
         {
           id: "voapi-v2:daily-checkin",
@@ -159,6 +166,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "bai-api:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: baiApiProvider,
+        },
+        {
+          id: "apikey-casa:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.SUB2API],
+          provider: apiKeyCasaProvider,
         },
         {
           id: "nexavlinks:daily-checkin",
@@ -389,10 +401,12 @@ describe("autoCheckinMethodRegistry", () => {
         .map(({ id }) => id),
     ).toEqual([
       AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
       AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
@@ -401,6 +415,7 @@ describe("autoCheckinMethodRegistry", () => {
       AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
     ])
     expect(
       autoCheckinMethodRegistry
@@ -432,6 +447,22 @@ describe("autoCheckinMethodRegistry", () => {
       expect(candidatesFor(siteUrl)).not.toContain(
         AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn,
       )
+    }
+  })
+
+  it("offers the Linxi method for discovery on any Sub2API origin", () => {
+    for (const siteUrl of [
+      "https://sub.100xlabs.space",
+      "https://k40.shengqainbang.cn/home",
+      "http://k40.linxigzs.top:8080",
+      "https://k40.linxigzs.top:8080",
+      "https://other-sub2api.example",
+    ]) {
+      expect(
+        autoCheckinMethodRegistry
+          .getCandidates(SITE_TYPES.SUB2API, siteUrl)
+          .map(({ id }) => id),
+      ).toContain(AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn)
     }
   })
 

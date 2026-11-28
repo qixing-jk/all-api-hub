@@ -21,7 +21,7 @@ import {
   detectAccountSiteType,
 } from "~~/scripts/flows/auto-detect.mjs"
 
-test("scoped-token New API detection preserves identity and guides the missing Access Token", async ({
+test("scoped-token New API detection from the URL field preserves identity and guides the missing Access Token", async ({
   context,
   page,
   extensionId,
@@ -71,27 +71,35 @@ test("scoped-token New API detection preserves identity and guides the missing A
   await openAccountManagementPage({ page, extensionId })
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
   const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
-  await dialog
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
-    .fill(baseUrl)
-  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
-  await assertAccountDetectionOutcome({
-    page,
-    expectedType: SITE_TYPES.NEW_API,
-    fields: {
-      userIdInput: "1",
-      usernameInput: "e2e-user",
-      siteUrlInput: baseUrl,
-      accessTokenInput: "",
-    },
-    guidance: "Enter an Access Token manually",
-    saveState: "absent",
-  })
+  const siteUrlInput = dialog.getByRole("combobox", { name: "Site URL" })
   await expect(
-    dialog.getByText(/profile, account settings, or token management page/),
+    dialog.getByRole("button", { name: "Choose from recently active tabs" }),
   ).toBeVisible()
+  await siteUrlInput.fill(baseUrl)
+  await expect(siteUrlInput).toHaveAttribute("aria-expanded", "true")
+  await siteUrlInput.press("Escape")
+  await expect(siteUrlInput).toHaveAttribute("aria-expanded", "false")
+  await siteUrlInput.press("Enter")
+  await expect(
+    dialog.getByRole("heading", { name: /Add an Access Token for/ }),
+  ).toBeVisible({ timeout: 30_000 })
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage),
+  ).toContainText(`e2e-user · ${new URL(baseUrl).host}`)
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+  ).toHaveValue("")
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
+  ).toHaveCount(0)
+  await dialog.getByRole("button", { name: "Token instructions" }).click()
+  await expect(
+    page.getByText(/open your profile or security settings on the site/),
+  ).toBeVisible()
+  await page.keyboard.press("Escape")
+
   const openSecurity = dialog.getByRole("button", {
-    name: "Open token page",
+    name: "Get from site",
     exact: true,
   })
   await expect(openSecurity).toBeEnabled()
@@ -121,9 +129,21 @@ test("scoped-token New API detection preserves identity and guides the missing A
   await expect(
     security.getByRole("heading", { name: "Security settings" }),
   ).toBeVisible()
-  await expect(
-    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
-  ).toHaveValue("1")
+  await page.bringToFront()
+  await dialog.getByRole("button", { name: "Open full form" }).click()
+  await assertAccountDetectionOutcome({
+    page,
+    expectedType: SITE_TYPES.NEW_API,
+    fields: {
+      userIdInput: "1",
+      usernameInput: "e2e-user",
+      siteUrlInput: baseUrl,
+      accessTokenInput: "",
+    },
+    guidance:
+      "Create a scoped token in the extension, or copy an existing token from the site.",
+    saveState: "enabled",
+  })
   expect(credentialWrites).toBe(0)
   expect(scopedProbes).toBeGreaterThan(0)
   expect(

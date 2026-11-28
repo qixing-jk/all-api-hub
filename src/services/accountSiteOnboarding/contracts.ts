@@ -9,6 +9,8 @@ import type { KimiOpenPlatformAuthConfig } from "~/types"
 import type { AccountDetectionDiagnostics } from "./diagnostics"
 
 export type ContentSessionExtractionContext = {
+  /** Local request cancellation; never serialized into content messages. */
+  abortSignal?: AbortSignal
   url?: string
   siteTypeHint?: AccountSiteType
   /** Allows explicit onboarding to try registered session probes for unknown sites. */
@@ -38,8 +40,7 @@ export type AimlApiConsoleTransientAuth = {
 }
 export const AIMLAPI_CONSOLE_TRANSIENT_AUTH_KIND = "aimlapi_console"
 export type ContentSessionTransientAuth =
-  | NewApiDashboardTransientAuth
-  | AimlApiConsoleTransientAuth
+  NewApiDashboardTransientAuth | AimlApiConsoleTransientAuth
 
 export type ContentSessionExtractionResult = {
   userId: string | number
@@ -51,6 +52,8 @@ export type ContentSessionExtractionResult = {
     refreshToken: string
     tokenExpiresAt?: number
   }
+  /** A verified website session whose refresh credential stays in the browser. */
+  sub2apiWebsiteSessionBound?: true
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
 }
 

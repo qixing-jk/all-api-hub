@@ -1,8 +1,8 @@
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/contracts/resourceNative"
-import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
+import { postSub2ApiCheckIn } from "~/services/apiService/sub2api/checkin/mutationRequest"
 import {
   executeSub2ApiCheckInWithRecovery,
   type Sub2ApiCheckInRecoveryOptions,
@@ -22,6 +22,10 @@ import {
   classifySiblingStatusDto,
   SIBLING_DTO_VERDICTS,
 } from "./siblingStatusContracts"
+import {
+  readAuthenticatedCheckInStatus,
+  type Sub2ApiCheckInStatusAuth,
+} from "./statusAuthentication"
 
 export const CLAWHUD_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
 
@@ -115,9 +119,10 @@ export function parseClawhudDailyCheckInMutationResponse(
 /** Reads deployment status with the same timezone query as its dashboard. */
 export async function fetchClawhudDailyCheckInStatus(
   request: ApiServiceRequest,
+  auth?: Sub2ApiCheckInStatusAuth,
 ) {
   const endpoint = createUserCheckInStatusEndpoint(resolveUserCheckInTimezone())
-  return executeAuthenticatedSub2ApiRequest(
+  return readAuthenticatedCheckInStatus(
     request,
     USER_CHECK_IN_STATUS_ENDPOINT,
     async (authenticatedRequest) => {
@@ -127,11 +132,7 @@ export async function fetchClawhudDailyCheckInStatus(
       })
       return parseClawhudDailyCheckInStatusResponse(response)
     },
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    auth,
   )
 }
 
@@ -149,10 +150,10 @@ export async function performClawhudDailyCheckIn(
     request,
     CLAWHUD_DAILY_CHECK_IN_ENDPOINT,
     async (authenticatedRequest) => {
-      const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: CLAWHUD_DAILY_CHECK_IN_ENDPOINT,
-        options: { method: "POST", cache: "no-store" },
-      })
+      const response = await postSub2ApiCheckIn(
+        authenticatedRequest,
+        CLAWHUD_DAILY_CHECK_IN_ENDPOINT,
+      )
       return parseClawhudDailyCheckInMutationResponse(response)
     },
     fetchClawhudDailyCheckInStatus,

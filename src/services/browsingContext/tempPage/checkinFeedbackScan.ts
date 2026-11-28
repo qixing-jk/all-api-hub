@@ -5,8 +5,8 @@ import {
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
 import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
+import { CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/discovery/evidence/scanTypes"
 import { createFeedbackScanRegistry } from "~/services/checkin/feedback/scanRegistry"
-import { FEEDBACK_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/feedback/scanTypes"
 import {
   type TEMP_CONTEXT_TASK_KINDS,
   type TempContextTask,
@@ -46,14 +46,18 @@ export async function executeTempCheckinFeedbackScan(
   }
   const timeout = setTimeout(
     () => controller.abort(),
-    FEEDBACK_SCAN_SESSION_TIMEOUT_MS,
+    CHECK_IN_EVIDENCE_SCAN_SESSION_TIMEOUT_MS,
   )
   let result: unknown = { success: false }
   try {
     await tempWindowBackgroundRuntime.run(originUrl, {}, async () => {
       controller.signal.throwIfAborted()
       const route = await resolveAccountSiteRouteUrl(
-        { baseUrl: originUrl, siteType: input.siteType },
+        {
+          baseUrl: originUrl,
+          siteType: input.siteType,
+          checkIn: { nativePagePath: input.nativePagePath },
+        },
         SITE_ROUTE_KINDS.CheckIn,
       ).catch(() => null)
       const pageUrl =

@@ -11,6 +11,11 @@
 export const I18NEXT_LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
 export const LINKED_CHANNEL_CLEANUP_STORAGE_KEY = "linkedChannelCleanupTasks"
 export const AIMLAPI_ONBOARDING_STORAGE_KEY = "aimlapiConnectionCredentials_v1"
+/** Non-secret issuance markers prevent duplicate PAT creation after response loss. */
+export const NEW_API_TOKEN_ISSUANCE_KEY_PREFIX = "newApiTokenIssuance:"
+/** Extension-owned non-exportable Sub2API panel keys, scoped by target origin. */
+export const SUB2API_PANEL_PROOF_DATABASE_NAME =
+  "all-api-hub-sub2api-panel-proof-v2"
 /**
  * Browser session that currently owns the extension's temporary pages.
  *
@@ -32,6 +37,7 @@ export const STORAGE_LOCKS = {
   /** Serializes account login recovery across extension contexts. */
   ACCOUNT_CREDENTIAL_RECOVERY: "all-api-hub:account-credential-recovery",
   AIMLAPI_ONBOARDING: "all-api-hub:aimlapi-onboarding",
+  NEW_API_TOKEN_ISSUANCE: "all-api-hub:new-api-token-issuance",
   /** Serializes sponsor creation handoffs between popup and side panels. */
   SPONSOR_WORKFLOW: "all-api-hub:sponsor-workflow",
   /** Serializes local Dahl key names and website-sync acknowledgements. */
@@ -90,6 +96,9 @@ export const STORAGE_LOCKS = {
    * analytics preferences and cadence state.
    */
   PRODUCT_ANALYTICS: "all-api-hub:product-analytics",
+  /** Session-only diagnostic admission; never nest the analytics state lock. */
+  PRODUCT_ANALYTICS_STORAGE_FAILURE_REPORT:
+    "all-api-hub:product-analytics-storage-failure-report",
   /**
    * Best-effort lock used to serialize the WebDAV auto-sync apply/rollback
    * section itself. Individual storage services still enforce their own
@@ -220,6 +229,9 @@ export const AUTO_CHECKIN_STORAGE_KEYS = {
 } as const
 
 export const PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS = {
+  STORAGE_FAILURE_REPORTED_AT: "productAnalytics_storageFailureReportedAt_v1",
+  SETTINGS_SNAPSHOT_AT: "productAnalytics_settingsSnapshotAt_v1",
+  SITE_ECOSYSTEM_SNAPSHOT_AT: "productAnalytics_siteEcosystemSnapshotAt_v1",
   AUTO_CHECKIN_CONFIG_SNAPSHOT_AT:
     "productAnalytics_autoCheckinConfigSnapshotAt_v1",
 } as const

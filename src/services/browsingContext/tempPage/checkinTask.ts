@@ -1,6 +1,11 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
+import {
+  discoverNativeCheckInPage,
+  type NativeCheckInPageProbe,
+} from "~/services/checkin/discovery/nativePageDiscovery"
+import { scanNativeCheckInPageSources } from "~/services/checkin/discovery/nativePageScan"
 import { type TEMP_CONTEXT_TASK_KINDS } from "~/services/protectionBypass/contracts"
 import {
   TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
@@ -35,6 +40,7 @@ interface TempPageAccountIdentityContentResponse {
     userId?: unknown
     user?: unknown
     siteTypeHint?: unknown
+    identityVerified?: unknown
   }
 }
 
@@ -55,7 +61,11 @@ async function resolveTempPageAccountIdentity(params: {
           action: RuntimeActionIds.ContentGetUserFromLocalStorage,
           url: params.url,
           siteType: params.siteType,
+          verifyIdentity: true,
+          requireFreshIdentity: true,
         },
+        // A lost response must not replay a possibly rotating refresh.
+        { maxAttempts: 1 },
       )
   } catch (error) {
     logger.warn("Temporary page account identity lookup failed", {
@@ -64,7 +74,7 @@ async function resolveTempPageAccountIdentity(params: {
     return null
   }
 
-  if (!userResponse || !userResponse.success) {
+  if (!userResponse?.success || userResponse.data?.identityVerified !== true) {
     logger.warn("Temporary page account identity lookup failed", {
       reason: userResponse?.error ?? null,
     })
@@ -125,7 +135,7 @@ export async function executeTempWindowCheckinPageAction(
       pageUrl,
       tempRequestId,
       suppressMinimize,
-      {},
+      { allowInteractive: true },
       authorizeAtAcquire,
     )
     const { tabId } = context
@@ -161,6 +171,68 @@ export async function executeTempWindowCheckinPageAction(
       return
     }
 
+    let resolvedPageUrl = pageUrl
+    let discoveryNavigated = false
+    if (
+      request.discoverCheckInPage &&
+      trigger?.kind !== TURNSTILE_PRE_TRIGGER_KINDS.None
+    ) {
+      const discovered = await discoverNativeCheckInPage({
+        pageUrl,
+        learnedPath: request.learnedPagePath,
+        navigate: (url) => {
+          discoveryNavigated ||= url !== pageUrl
+          return context.navigate(url, {
+            requestId: tempRequestId,
+            origin: normalizeOrigin(originUrl),
+          })
+        },
+        inspect: () =>
+          sendTabMessageWithRetry<NativeCheckInPageProbe>(tabId, {
+            action: RuntimeActionIds.ContentInspectCheckinPage,
+            trigger: trigger ?? {
+              kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
+            },
+          }),
+        scan: () =>
+          scanNativeCheckInPageSources({
+            originUrl: normalizeOrigin(originUrl),
+            siteType,
+            requestId: tempRequestId,
+            send: (action, details) =>
+              sendTabMessageWithRetry(tabId, { action, ...details }),
+          }),
+      })
+      if (!discovered) {
+        sendResponse({
+          success: false,
+          reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound,
+          identity,
+        })
+        return
+      }
+      resolvedPageUrl = discovered
+      if (discoveryNavigated || resolvedPageUrl !== pageUrl) {
+        const currentIdentity = await resolveTempPageAccountIdentity({
+          tabId,
+          url: resolvedPageUrl,
+          siteType,
+        })
+        if (currentIdentity?.userId !== normalizedExpectedUserId) {
+          sendResponse({
+            success: false,
+            reason: currentIdentity
+              ? TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMismatch
+              : TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.IdentityMissing,
+            identity: currentIdentity,
+            expectedUserId: normalizedExpectedUserId,
+            pageUrl: resolvedPageUrl,
+          })
+          return
+        }
+      }
+    }
+
     const triggerResponse = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentTriggerCheckinPageAction,
       requestId: tempRequestId,
@@ -173,6 +245,7 @@ export async function executeTempWindowCheckinPageAction(
         reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TriggerFailed,
         identity,
         error: triggerResponse?.error ?? TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR,
+        ...(resolvedPageUrl !== pageUrl ? { pageUrl: resolvedPageUrl } : {}),
       })
       return
     }
@@ -193,6 +266,7 @@ export async function executeTempWindowCheckinPageAction(
 
     sendResponse({
       success: triggerResult.clicked,
+      ...(resolvedPageUrl !== pageUrl ? { pageUrl: resolvedPageUrl } : {}),
       reason,
       identity,
       trigger: {

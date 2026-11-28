@@ -42,6 +42,7 @@ export type AccountSiteManualAddGuideAnchor =
 
 export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   NewApiFamily: "newApiFamily",
+  ShellApiFamily: "shellApiFamily",
   Sub2Api: "sub2api",
   VoApiV2: "voapiV2",
   Aihubmix: "aihubmix",
@@ -70,6 +71,16 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
 
 export type AccountSiteBackendFamily =
   (typeof ACCOUNT_SITE_ADAPTER_FAMILIES)[keyof typeof ACCOUNT_SITE_ADAPTER_FAMILIES]
+
+/** Shared protocol membership does not imply interchangeable credentials. */
+export function isCompatibleAccountFamily(
+  family: AccountSiteBackendFamily | undefined,
+): boolean {
+  return (
+    family === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily ||
+    family === ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily
+  )
+}
 
 export const ACCOUNT_SITE_DEFINITION_SCOPES = {
   Account: "account",
@@ -133,16 +144,20 @@ export interface ManagedResourceProductPolicy {
   }
 }
 
+export const ACCOUNT_SITE_ACCESS_TOKEN_GUIDES = {
+  Security: "security",
+  ApiYi: "apiyi",
+  ShellApi: "shellApi",
+  LaoZhang: "laozhang",
+  Vercel: "vercel",
+  Novita: "novita",
+  AiMlApi: "aimlapi",
+  NanoGpt: "nanogpt",
+} as const
+
 /** Presentation choices for completing site-owned account credential verification. */
 export interface AccountSiteAccessTokenVerificationGuide {
-  copy:
-    | "security"
-    | "apiyi"
-    | "laozhang"
-    | "vercel"
-    | "novita"
-    | "aimlapi"
-    | "nanogpt"
+  copy: (typeof ACCOUNT_SITE_ACCESS_TOKEN_GUIDES)[keyof typeof ACCOUNT_SITE_ACCESS_TOKEN_GUIDES]
   showRotationWarning: boolean
 }
 
@@ -216,6 +231,8 @@ export interface AccountSiteDefinition {
   accountLogin?: AccountSiteLoginConfig
   managedResource?: ManagedResourceProductPolicy
   onboarding?: AccountSiteDefinitionOnboardingMetadata
+  /** Verified check-in page defaults for individual console origins. */
+  checkInPathsByOrigin?: Readonly<Partial<Record<string, AccountSitePagePath>>>
   productProfile?: AccountSiteProductProfileOverride
 }
 

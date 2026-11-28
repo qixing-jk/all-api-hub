@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/account/accountData"
-import { LAOZHANG_TODAY_LOG_QUERY_CONFIG } from "~/services/apiService/newApiFamily/variants/laozhang"
+import { SHELL_LOG_QUERY_CONFIG } from "~/services/apiService/shellApiFamily/usageLogs"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createCheckInConfig } from "~~/tests/services/apiAdapters/checkInFixtures"
@@ -163,7 +163,7 @@ describe("createNewApiAccountData", () => {
     ).resolves.toBe(accountData)
     expect(mockFetchAccountData).toHaveBeenCalledWith(
       { ...request, siteType: SITE_TYPES.LAOZHANG },
-      LAOZHANG_TODAY_LOG_QUERY_CONFIG,
+      SHELL_LOG_QUERY_CONFIG,
     )
   })
 })

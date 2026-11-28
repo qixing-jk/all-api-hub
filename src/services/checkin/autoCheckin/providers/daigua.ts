@@ -10,12 +10,17 @@ import {
   performDaiguaDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
 import { DAIGUA_CHECK_IN_ENDPOINT } from "~/services/apiService/sub2api/checkin/daiguaCheckInProtocol"
+import {
+  PASSIVE_CHECK_IN_AUTH,
+  type Sub2ApiCheckInStatusAuth,
+} from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { ApiError } from "~/services/apiTransport/errors"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
   withCheckInConfirmation,
 } from "~/services/checkin/autoCheckin/confirmation"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import { readDayStableCheckInObservation } from "~/services/checkin/statusObservation"
 import type { SiteAccount } from "~/types"
@@ -24,13 +29,18 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
+import { TEMP_WINDOW_TURNSTILE_STATUSES } from "~/types/tempWindowFetch"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
 
 import type {
-  AutoCheckinProvider,
   AutoCheckinProviderContext,
   AutoCheckinProviderReadContext,
 } from "./contracts"
+import {
+  getBoundCheckInPageHandoff,
+  withSub2ApiCheckInExecution,
+} from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -41,10 +51,14 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) =>
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) =>
   toSub2ApiCheckInStatus(
     await fetchDaiguaDailyCheckInStatus(
       createSub2ApiCheckInReadRequest(context),
+      auth,
     ),
     context.observedAt,
   )
@@ -63,14 +77,20 @@ const success = (account: SiteAccount, data: { rewardAmount: number }) => ({
 async function assistTurnstile(
   account: SiteAccount,
   context: AutoCheckinProviderContext,
+  request: ApiServiceRequest,
 ) {
-  const checkInUrl = new URL("/checkin", account.site_url).href
+  let checkInUrl = new URL(
+    normalizeCheckInPagePath(account.checkIn.nativePagePath) ?? "/checkin",
+    account.site_url,
+  ).href
   const manual = () => ({
     status: CHECKIN_RESULT_STATUS.FAILED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
     messageKey: "autoCheckin:providerFallback.nativePageVerificationRequired",
     messageParams: { checkInUrl },
   })
+  const handoff = getBoundCheckInPageHandoff(request, checkInUrl)
+  if (handoff) return handoff
   if (
     context.beforeRecoveredMutation &&
     !(await context.beforeRecoveredMutation())
@@ -79,9 +99,7 @@ async function assistTurnstile(
   }
   // Another native action may have completed the shared ordinary/lucky day.
   const observation = await readDayStableCheckInObservation(() =>
-    fetchDaiguaDailyCheckInStatus(
-      createSub2ApiCheckInReadRequest({ account, observedAt: Date.now() }),
-    ),
+    fetchDaiguaDailyCheckInStatus({ ...request, observer: undefined }),
   )
   if (!observation) return manual()
   const status = toSub2ApiCheckInStatus(
@@ -98,12 +116,15 @@ async function assistTurnstile(
   if (status.availability !== CHECK_IN_METHOD_AVAILABILITIES.Enabled)
     return manual()
   const response = await executeAuthenticatedSub2ApiRequest(
-    createSub2ApiCheckInMutationRequest(account, context),
+    request,
     DAIGUA_CHECK_IN_ENDPOINT,
     (authenticatedRequest) =>
       tempWindowTurnstileFetch({
         originUrl: account.site_url,
         pageUrl: checkInUrl,
+        discoverCheckInPage: !normalizeCheckInPagePath(
+          account.checkIn.nativePagePath,
+        ),
         fetchUrl: new URL(DAIGUA_CHECK_IN_ENDPOINT, account.site_url).href,
         fetchOptions: {
           method: "POST",
@@ -121,20 +142,20 @@ async function assistTurnstile(
         turnstileTokenPlacement: "json-body",
         turnstileTimeoutMs: TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
         turnstilePreTrigger: {
-          kind: "clickSelector",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
           selector: '[data-testid="header-normal-checkin"]',
           throttle: { maxAttempts: 1 },
         },
         tempWindowRequestSource: context.tempWindowRequestSource,
         protectionBypassExecution: context.protectionBypassExecution,
       }),
-    {
-      proactiveRefresh: false,
-      recoverMissingAccessToken: false,
-      recoverUnauthorized: false,
-    },
+    PASSIVE_CHECK_IN_AUTH,
   )
-  if (response.turnstile?.status !== "token_obtained") return manual()
+  if (response.pageUrl) checkInUrl = response.pageUrl
+  if (
+    response.turnstile?.status !== TEMP_WINDOW_TURNSTILE_STATUSES.TokenObtained
+  )
+    return manual()
   if (
     !response.success &&
     response.status === 400 &&
@@ -150,12 +171,11 @@ async function assistTurnstile(
   return success(account, result)
 }
 
-export const daiguaProvider: AutoCheckinProvider = {
+export const daiguaProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
   getReadiness: getSub2ApiCheckInReadiness,
-  detect: (context) => detectWithStatusReadback(context, readStatus),
   getStatus: readStatus,
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     if (
       context.statusProof?.availability !==
         CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -163,21 +183,27 @@ export const daiguaProvider: AutoCheckinProvider = {
     ) {
       return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE)
     }
+    let request = attempt?.request
     try {
-      const data = await performDaiguaDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+      request ??= createSub2ApiCheckInMutationRequest(
+        account as SiteAccount,
+        context,
       )
+      const data = await performDaiguaDailyCheckIn(request, {
+        ...attempt?.recovery,
+        beforeRecoveredMutation: context.beforeRecoveredMutation,
+      })
       return success(account as SiteAccount, data)
     } catch (error) {
       // The native verifier posts a body token, unlike New API's query token.
       // An explicit verification rejection is the only safe assisted retry.
       if (
+        request &&
         error instanceof ApiError &&
         error.upstreamCode === "TURNSTILE_VERIFICATION_FAILED"
       ) {
         try {
-          return await assistTurnstile(account as SiteAccount, context)
+          return await assistTurnstile(account as SiteAccount, context, request)
         } catch (assistError) {
           return mapSub2ApiCheckInMutationError(
             assistError,
@@ -193,4 +219,4 @@ export const daiguaProvider: AutoCheckinProvider = {
       )
     }
   },
-}
+})

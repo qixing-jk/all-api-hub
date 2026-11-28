@@ -3,7 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum } from "~/types"
+import {
+  CHECKIN_PAGE_ACTION_REASONS,
+  CHECKIN_PAGE_ACTION_STATUSES,
+  TURNSTILE_PRE_TRIGGER_KINDS,
+} from "~/types/turnstile"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+import { createTempPageTabFixture } from "./tempPageTabFixture"
 
 const originalBrowser = (globalThis as any).browser
 
@@ -44,7 +51,7 @@ describe("tempWindowPool native check-in page action", () => {
       ) => Promise<Record<string, unknown> | undefined>
     >
   >
-  let tabsGetMock: ReturnType<typeof vi.fn>
+  let tabFixture: ReturnType<typeof createTempPageTabFixture<RuntimeMessage>>
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -55,7 +62,6 @@ describe("tempWindowPool native check-in page action", () => {
     hasWindowsApiMock = vi.fn(() => true)
     onTabRemovedMock = vi.fn(() => () => {})
     onWindowRemovedMock = vi.fn(() => () => {})
-    tabsGetMock = vi.fn().mockResolvedValue({ status: "complete" })
     sendMessageMock = vi.fn(async (_tabId: number, message: RuntimeMessage) => {
       switch (message.action) {
         case RuntimeActionIds.ContentShowShieldBypassUi:
@@ -69,6 +75,7 @@ describe("tempWindowPool native check-in page action", () => {
             success: true,
             data: {
               userId: "target-user",
+              identityVerified: true,
               user: { id: "target-user", username: "Target" },
               siteTypeHint: SITE_TYPES.NEW_API,
             },
@@ -76,9 +83,9 @@ describe("tempWindowPool native check-in page action", () => {
         case RuntimeActionIds.ContentTriggerCheckinPageAction:
           return {
             success: true,
-            status: "clicked",
+            status: CHECKIN_PAGE_ACTION_STATUSES.Clicked,
             clicked: true,
-            reason: "clicked",
+            reason: CHECKIN_PAGE_ACTION_REASONS.Clicked,
             detection: {
               hasTurnstile: false,
               reasons: [],
@@ -91,16 +98,19 @@ describe("tempWindowPool native check-in page action", () => {
           throw new Error(`Unexpected action: ${message.action}`)
       }
     })
+    tabFixture = createTempPageTabFixture(
+      vi.fn().mockResolvedValue({ status: "complete" }),
+      vi.fn().mockResolvedValue(undefined),
+      sendMessageMock,
+    )
     ;(globalThis as any).browser = {
       storage: originalBrowser.storage,
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
       },
       tabs: {
-        get: tabsGetMock,
+        ...tabFixture,
         query: vi.fn().mockResolvedValue([]),
-        update: vi.fn().mockResolvedValue(undefined),
-        sendMessage: sendMessageMock,
       },
       windows: {
         get: vi.fn(),
@@ -152,10 +162,161 @@ describe("tempWindowPool native check-in page action", () => {
     vi.restoreAllMocks()
   })
 
-  it("refuses invalid native page action requests before opening a context", async () => {
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+  it.each(["target-user", "another-user"])(
+    "rechecks identity on the discovered page (%s)",
+    async (pageUser) => {
+      let inspections = 0
+      let identities = 0
+      const original = sendMessageMock.getMockImplementation()!
+      sendMessageMock.mockImplementation(async (tabId, message) => {
+        if (message.action === RuntimeActionIds.ContentInspectCheckinPage) {
+          inspections++
+          return {
+            success: true,
+            hasTarget: inspections > 1,
+            candidates: inspections === 1 ? ["/rewards/daily"] : [],
+          }
+        }
+        if (
+          message.action === RuntimeActionIds.ContentGetUserFromLocalStorage &&
+          ++identities > 1
+        )
+          return {
+            success: true,
+            data: { userId: pageUser, identityVerified: true },
+          }
+        return original(tabId, message)
+      })
+      const { handleTempWindowCheckinPageAction } =
+        await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
+      const sendResponse = vi.fn()
+      const request = handleTempWindowCheckinPageAction(
+        {
+          originUrl: "https://example.invalid",
+          pageUrl: "https://example.invalid/console/personal",
+          expectedUserId: "target-user",
+          siteType: SITE_TYPES.NEW_API,
+          requestId: "req-discovery",
+          discoverCheckInPage: true,
+          trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
+        },
+        sendResponse,
+      )
+      await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled(), {
+        timeout: 10_000,
+      })
+      await request
+      expect(identities).toBe(2)
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: pageUser === "target-user",
+          pageUrl: "https://example.invalid/rewards/daily",
+          reason: pageUser === "target-user" ? "clicked" : "identity_mismatch",
+        }),
+      )
+      const clicks = sendMessageMock.mock.calls.filter(
+        ([, message]) =>
+          message.action === RuntimeActionIds.ContentTriggerCheckinPageAction,
+      )
+      expect(clicks).toHaveLength(pageUser === "target-user" ? 1 : 0)
+    },
+  )
+
+  it("rechecks identity after a stale learned page returns to the original destination", async () => {
+    let inspections = 0
+    let identities = 0
+    const original = sendMessageMock.getMockImplementation()!
+    sendMessageMock.mockImplementation(async (tabId, message) => {
+      if (message.action === RuntimeActionIds.ContentInspectCheckinPage)
+        return { success: true, hasTarget: ++inspections > 1, candidates: [] }
+      if (
+        message.action === RuntimeActionIds.ContentGetUserFromLocalStorage &&
+        ++identities > 1
+      )
+        return {
+          success: true,
+          data: { userId: "another-user", identityVerified: true },
+        }
+      return original(tabId, message)
+    })
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
+    const sendResponse = vi.fn()
+    const request = handleTempWindowCheckinPageAction(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/console/personal",
+        expectedUserId: "target-user",
+        siteType: SITE_TYPES.NEW_API,
+        requestId: "req-stale-learned",
+        discoverCheckInPage: true,
+        learnedPagePath: "/old",
+        trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
+      },
+      sendResponse,
     )
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalled(), {
+      timeout: 10_000,
+    })
+    await request
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, reason: "identity_mismatch" }),
+    )
+    expect(
+      sendMessageMock.mock.calls.filter(
+        ([, message]) =>
+          message.action === RuntimeActionIds.ContentTriggerCheckinPageAction,
+      ),
+    ).toHaveLength(0)
+  })
+
+  it("does not dispatch a click when source scanning cannot verify a unique page", async () => {
+    const original = sendMessageMock.getMockImplementation()!
+    sendMessageMock.mockImplementation(async (tabId, message) => {
+      if (message.action === RuntimeActionIds.ContentInspectCheckinPage)
+        return { success: true, hasTarget: false, candidates: [] }
+      if (message.action === RuntimeActionIds.ContentCheckinFeedbackScan)
+        return {
+          success: true,
+          data: {
+            status: "partial",
+            pageCandidates: [{ path: "/daily", sources: ["script"] }],
+          },
+        }
+      return original(tabId, message)
+    })
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
+    const reply = vi.fn()
+    const pending = handleTempWindowCheckinPageAction(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/profile",
+        expectedUserId: "target-user",
+        siteType: SITE_TYPES.NEW_API,
+        requestId: "req-incomplete-scan",
+        discoverCheckInPage: true,
+      },
+      reply,
+    )
+    await vi.waitFor(() => expect(reply).toHaveBeenCalled(), {
+      timeout: 10_000,
+    })
+    await pending
+    expect(reply).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ success: false, reason: "target_not_found" }),
+    )
+    expect(sendMessageMock).not.toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentTriggerCheckinPageAction,
+      }),
+    )
+  })
+
+  it("refuses invalid native page action requests before opening a context", async () => {
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const sendResponse = vi.fn()
     await handleTempWindowCheckinPageAction(
@@ -193,9 +354,8 @@ describe("tempWindowPool native check-in page action", () => {
             : result
         },
       )
-      const { handleTempWindowCheckinPageAction } = await import(
-        "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-      )
+      const { handleTempWindowCheckinPageAction } =
+        await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
       const sendResponse = vi.fn()
       const request = handleTempWindowCheckinPageAction(
@@ -206,7 +366,7 @@ describe("tempWindowPool native check-in page action", () => {
           siteType: SITE_TYPES.NEW_API,
           requestId: "req-native-match",
           authType: AuthTypeEnum.AccessToken,
-          trigger: { kind: "checkinButton" },
+          trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
         },
         sendResponse,
       )
@@ -220,6 +380,8 @@ describe("tempWindowPool native check-in page action", () => {
           action: RuntimeActionIds.ContentGetUserFromLocalStorage,
           url: "https://example.invalid/console/personal",
           siteType: SITE_TYPES.NEW_API,
+          verifyIdentity: true,
+          requireFreshIdentity: true,
         }),
       )
       expect(sendMessageMock).toHaveBeenCalledWith(
@@ -227,7 +389,7 @@ describe("tempWindowPool native check-in page action", () => {
         expect.objectContaining({
           action: RuntimeActionIds.ContentTriggerCheckinPageAction,
           requestId: "req-native-match",
-          trigger: { kind: "checkinButton" },
+          trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
         }),
       )
       expect(sendResponse).toHaveBeenCalledWith(
@@ -240,7 +402,7 @@ describe("tempWindowPool native check-in page action", () => {
             siteTypeHint: SITE_TYPES.NEW_API,
           },
           trigger: expect.objectContaining({
-            status: "clicked",
+            status: CHECKIN_PAGE_ACTION_STATUSES.Clicked,
             clicked: true,
           }),
         }),
@@ -250,6 +412,42 @@ describe("tempWindowPool native check-in page action", () => {
       else expect(forwarded).not.toHaveProperty("verification")
     },
   )
+
+  it("does not click when a matching stored identity is unverified", async () => {
+    const original = sendMessageMock.getMockImplementation()!
+    sendMessageMock.mockImplementation(async (tabId, message) => {
+      if (message.action === RuntimeActionIds.ContentGetUserFromLocalStorage)
+        return { success: true, data: { userId: "target-user" } }
+      return original(tabId, message)
+    })
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
+    const sendResponse = vi.fn()
+    const pending = handleTempWindowCheckinPageAction(
+      {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/profile",
+        expectedUserId: "target-user",
+        siteType: SITE_TYPES.NEW_API,
+        trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
+      },
+      sendResponse,
+    )
+    await settleTempContextReadiness()
+    await pending
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        reason: "identity_missing",
+      }),
+    )
+    expect(
+      sendMessageMock.mock.calls.filter(
+        ([, message]) =>
+          message.action === RuntimeActionIds.ContentTriggerCheckinPageAction,
+      ),
+    ).toHaveLength(0)
+  })
 
   it("does not click when page identity is missing", async () => {
     sendMessageMock.mockImplementation(
@@ -269,9 +467,8 @@ describe("tempWindowPool native check-in page action", () => {
       },
     )
 
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const sendResponse = vi.fn()
     const request = handleTempWindowCheckinPageAction(
@@ -319,9 +516,8 @@ describe("tempWindowPool native check-in page action", () => {
       },
     )
 
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const sendResponse = vi.fn()
     const request = handleTempWindowCheckinPageAction(
@@ -366,6 +562,7 @@ describe("tempWindowPool native check-in page action", () => {
               success: true,
               data: {
                 userId: "other-user",
+                identityVerified: true,
                 user: { id: "other-user" },
               },
             }
@@ -375,9 +572,8 @@ describe("tempWindowPool native check-in page action", () => {
       },
     )
 
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const sendResponse = vi.fn()
     const request = handleTempWindowCheckinPageAction(
@@ -420,6 +616,7 @@ describe("tempWindowPool native check-in page action", () => {
               success: true,
               data: {
                 userId: "target-user",
+                identityVerified: true,
                 user: { id: "target-user" },
               },
             }
@@ -443,9 +640,8 @@ describe("tempWindowPool native check-in page action", () => {
       },
     )
 
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const sendResponse = vi.fn()
     const request = handleTempWindowCheckinPageAction(
@@ -478,9 +674,8 @@ describe("tempWindowPool native check-in page action", () => {
     const {
       handleTempWindowCheckinPageAction,
       handleTempWindowTurnstileFetch,
-    } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
+    } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const firstRequest = handleTempWindowCheckinPageAction(
       {
@@ -524,15 +719,16 @@ describe("tempWindowPool native check-in page action", () => {
               success: true,
               data: {
                 userId: "target-user",
+                identityVerified: true,
                 user: { id: "target-user" },
               },
             }
           case RuntimeActionIds.ContentTriggerCheckinPageAction:
             return {
               success: true,
-              status: "clicked",
+              status: CHECKIN_PAGE_ACTION_STATUSES.Clicked,
               clicked: true,
-              reason: "clicked",
+              reason: CHECKIN_PAGE_ACTION_REASONS.Clicked,
               detection: {
                 hasTurnstile: false,
                 reasons: [],
@@ -610,9 +806,8 @@ describe("tempWindowPool native check-in page action", () => {
   })
 
   it("verifies the live tab url before reusing a cached temp context page", async () => {
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const firstRequest = handleTempWindowCheckinPageAction(
       {
@@ -627,7 +822,7 @@ describe("tempWindowPool native check-in page action", () => {
     await settleTempContextReadiness()
     await firstRequest
 
-    tabsGetMock.mockResolvedValue({ status: "complete", url: "about:blank" })
+    tabFixture.setDocument(701, "about:blank")
 
     const secondResponse = vi.fn()
     const secondRequest = handleTempWindowCheckinPageAction(
@@ -669,6 +864,7 @@ describe("tempWindowPool native check-in page action", () => {
               success: true,
               data: {
                 userId: "target-user",
+                identityVerified: true,
                 user: { id: "target-user" },
               },
             }
@@ -692,9 +888,8 @@ describe("tempWindowPool native check-in page action", () => {
       },
     )
 
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const sendResponse = vi.fn()
     const request = handleTempWindowCheckinPageAction(
@@ -738,6 +933,7 @@ describe("tempWindowPool native check-in page action", () => {
               success: true,
               data: {
                 userId: "target-user",
+                identityVerified: true,
                 user: { id: "target-user" },
               },
             }
@@ -751,9 +947,8 @@ describe("tempWindowPool native check-in page action", () => {
       },
     )
 
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
+    const { handleTempWindowCheckinPageAction } =
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const noResponse = vi.fn()
     const noResponseRequest = handleTempWindowCheckinPageAction(

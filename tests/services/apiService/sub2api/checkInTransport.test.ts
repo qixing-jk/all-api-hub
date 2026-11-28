@@ -19,6 +19,8 @@ import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
+import { expiredCheckInJwt } from "./checkin/jwtFixture"
+
 const { getLatestAuth, persistAuthUpdate } = vi.hoisted(() => ({
   getLatestAuth: vi.fn(),
   persistAuthUpdate: vi.fn(),
@@ -171,7 +173,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       const token = request.auth.accessToken
       order.push(`${method}:${token}`)
       if (method === "POST" && token === "expired-access-token") {
-        return response(401, { code: 401, message: "unauthorized" })
+        return response(401, expiredCheckInJwt)
       }
       if (method === "GET") return response(200, statusBody(false))
       return response(200, mutationBody)
@@ -228,7 +230,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       status: SUB2API_AUTH_PERSISTENCE_STATUSES.WRITE_FAILED,
     })
     vi.mocked(fetchApiResponse).mockResolvedValue(
-      response(401, { code: 401, message: "unauthorized" }),
+      response(401, expiredCheckInJwt),
     )
 
     await expect(
@@ -244,7 +246,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       new Sub2ApiAuthIdentityMismatchError(),
     )
     vi.mocked(fetchApiResponse).mockResolvedValue(
-      response(401, { code: 401, message: "unauthorized" }),
+      response(401, expiredCheckInJwt),
     )
 
     await expect(
@@ -275,7 +277,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       new TypeError("Failed to fetch"),
     )
     vi.mocked(fetchApiResponse).mockResolvedValue(
-      response(401, { code: 401, message: "unauthorized" }),
+      response(401, expiredCheckInJwt),
     )
 
     await expect(
@@ -298,7 +300,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
     const authenticationError = new TypeError("Failed to fetch")
     vi.mocked(resyncSub2ApiAuthToken).mockRejectedValue(authenticationError)
     vi.mocked(fetchApiResponse).mockResolvedValue(
-      response(401, { code: 401, message: "unauthorized" }),
+      response(401, expiredCheckInJwt),
     )
 
     await expect(
@@ -315,9 +317,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(
-        response(401, { code: 401, message: "unauthorized" }),
-      )
+      .mockResolvedValueOnce(response(401, expiredCheckInJwt))
       .mockResolvedValueOnce(response(200, statusBody(true)))
 
     await expect(
@@ -340,9 +340,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(
-        response(401, { code: 401, message: "unauthorized" }),
-      )
+      .mockResolvedValueOnce(response(401, expiredCheckInJwt))
       .mockResolvedValueOnce(
         response(200, {
           ...statusBody(false),
@@ -363,9 +361,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(
-        response(401, { code: 401, message: "unauthorized" }),
-      )
+      .mockResolvedValueOnce(response(401, expiredCheckInJwt))
       .mockResolvedValueOnce(response(200, statusBody(false)))
 
     await expect(
@@ -386,9 +382,7 @@ describe("Sub2API Pro daily check-in authenticated transport", () => {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
     })
     vi.mocked(fetchApiResponse)
-      .mockResolvedValueOnce(
-        response(401, { code: 401, message: "unauthorized" }),
-      )
+      .mockResolvedValueOnce(response(401, expiredCheckInJwt))
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
 
     await expect(

@@ -33,7 +33,10 @@ import {
   seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
-import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import {
+  getServiceWorker,
+  getStoredUserPreferences,
+} from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { buildFinancialPeriodFact } from "~~/tests/test-utils/accountTodayStats"
 
@@ -245,6 +248,14 @@ for (const { path, width } of [
           })
       }
     }
+    // Row order updates optimistically. Reload only after the asynchronous
+    // preference write completes, otherwise navigation can cancel that write.
+    await expect
+      .poll(async () => {
+        const { sortField, sortOrder } = await getStoredUserPreferences(worker)
+        return { sortField, sortOrder }
+      })
+      .toEqual({ sortField: DATA_TYPE_INCOME, sortOrder: "desc" })
     await page.reload()
     await waitForExtensionRoot(page)
     await assertOrder([

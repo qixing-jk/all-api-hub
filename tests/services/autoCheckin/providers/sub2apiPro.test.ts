@@ -124,6 +124,13 @@ vi.mock(
   }),
 )
 
+vi.mock("~/services/apiService/sub2api/checkin/bizdecipherCheckIn", () => ({
+  fetchBizDecipherDailyCheckInStatus: vi
+    .fn()
+    .mockRejectedValue(new ApiError("unsupported BizDecipher protocol", 404)),
+  performBizDecipherDailyCheckIn: vi.fn(),
+}))
+
 vi.mock(
   "~/services/apiService/sub2api/checkin/clawhudCheckIn",
   async (importOriginal) => ({
@@ -179,6 +186,18 @@ vi.mock(
 )
 
 vi.mock(
+  "~/services/apiService/sub2api/checkin/linxiCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/linxiCheckIn")
+    >()),
+    fetchLinxiStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported Linxi protocol", 404)),
+  }),
+)
+
+vi.mock(
   "~/services/apiService/sub2api/checkin/nexavlinksCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<
@@ -187,6 +206,19 @@ vi.mock(
     fetchNexaVlinksDailyCheckInStatus: vi
       .fn()
       .mockRejectedValue(new ApiError("unsupported NexaVlinks protocol", 404)),
+  }),
+)
+
+vi.mock(
+  "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn")
+    >()),
+    fetchApiKeyCasaDailyCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported ApiKey Casa protocol", 404)),
+    performApiKeyCasaDailyCheckIn: vi.fn(),
   }),
 )
 
@@ -483,6 +515,29 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
       evidence: { source: "probe", observedAt: 300 },
     })
+  })
+
+  it("keeps a healthy Pro status request direct and authorizes transport recovery on demand", async () => {
+    vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockResolvedValue({
+      enabled: true,
+      checkedInToday: true,
+    })
+    const result = await executeSelectedCheckIn({
+      account: createAccount(),
+      globalAutomaticExecutionEnabled: true,
+      context: executionContext(),
+    })
+    expect(result).toMatchObject({ kind: "skipped", reason: "already_checked" })
+    const request = vi.mocked(fetchSub2ApiProDailyCheckInStatus).mock
+      .calls[0]?.[0]
+    expect(request).toBeDefined()
+    expect(request?.protectionBypassExecution).toBeUndefined()
+    const auth = vi.mocked(fetchSub2ApiProDailyCheckInStatus).mock.calls[0]?.[1]
+    expect(auth?.allowAuthenticationRecovery).toBe(true)
+    expect(
+      auth?.prepareRecoveryRequest?.(request!)?.protectionBypassExecution,
+    ).toEqual(executionContext().protectionBypassExecution)
+    expect(performSub2ApiProDailyCheckIn).not.toHaveBeenCalled()
   })
 
   it("preserves disabled and already-checked status dimensions", async () => {

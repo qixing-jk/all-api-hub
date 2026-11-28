@@ -10,6 +10,7 @@ import {
   hasSameAccountRequestIdentity,
   hasSameCheckInRequestCredentials,
 } from "~/services/accounts/identity/accountIdentity"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/domain"
 import {
@@ -21,9 +22,10 @@ import {
   mergeCheckInRouteOverrides,
   mergeDiscoveredCheckInDraft,
   mergeRefreshedCheckInStatus,
+  replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
 import type { SiteAccount } from "~/types"
-import type { CheckInMethodId } from "~/types/checkIn"
+import type { CheckInMethodId, CheckInMethodStatus } from "~/types/checkIn"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 
@@ -77,6 +79,60 @@ export const isAutomaticCheckInDiscoveryCurrent = (
     snapshot.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt
 
 class AccountCheckInState {
+  /** Persist only a verified execution destination while its source is still current under the account lock. */
+  async rememberNativeCheckInPage(
+    snapshot: SiteAccount,
+    pageUrl: string,
+  ): Promise<boolean> {
+    let url: URL
+    try {
+      url = new URL(pageUrl)
+    } catch {
+      return false
+    }
+    const path = normalizeCheckInPagePath(url.pathname + url.search + url.hash)
+    if (
+      !path ||
+      url.origin !== new URL(snapshot.site_url).origin ||
+      url.username ||
+      url.password
+    )
+      return false
+    try {
+      return (
+        (await accountConfigStore.mutateAccount(snapshot.id, (account) => {
+          if (
+            !hasSameCheckInRequestCredentials(account, snapshot) ||
+            account.checkIn.nativePagePath !==
+              snapshot.checkIn.nativePagePath ||
+            account.disabled
+          ) {
+            return { nextAccount: account, result: false, changed: false }
+          }
+          const now = Date.now()
+          const nativePageHint = {
+            path,
+            origin: url.origin,
+            siteType: account.site_type,
+            userId: String(account.account_info.id).trim(),
+            observedAt: now,
+            ...(account.checkIn.nativePagePath
+              ? { configuredPath: account.checkIn.nativePagePath }
+              : {}),
+          }
+          const nextAccount = applySiteAccountUpdates({
+            account,
+            updates: { checkIn: { ...account.checkIn, nativePageHint } },
+            now,
+            userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+          })
+          return { nextAccount, result: true, changed: true }
+        })) ?? false
+      )
+    } catch {
+      return false
+    }
+  }
   /** Commits a detected choice only while the dialog's identity, facts and selection remain current. */
   async selectDetectedCheckInMethod(
     snapshot: SiteAccount,
@@ -267,7 +323,12 @@ class AccountCheckInState {
 
   async prepareAccountForSelectedCheckIn(
     id: string,
-    refreshedConfig?: SiteAccount["checkIn"],
+    refreshed?:
+      | SiteAccount["checkIn"]
+      | {
+          methodId: CheckInMethodId
+          status: CheckInMethodStatus
+        },
     requestSnapshot?: SiteAccount,
   ): Promise<SiteAccount | null> {
     try {
@@ -280,9 +341,25 @@ class AccountCheckInState {
           ) {
             return { nextAccount: account, result: null, changed: false }
           }
+          const config = account.checkIn
+          let refreshedConfig: SiteAccount["checkIn"] | undefined
+          if (refreshed && "methodId" in refreshed) {
+            // An imported method may gain its first detection during this run.
+            if (
+              account.disabled ||
+              !config.methodKnowledge.methods[refreshed.methodId]
+            )
+              return { nextAccount: account, result: null, changed: false }
+            refreshedConfig = replaceCheckInMethodStatus({
+              config,
+              ...refreshed,
+            })
+          } else {
+            refreshedConfig = refreshed
+          }
           const checkIn = refreshedConfig
             ? mergeRefreshedCheckInStatus({
-                latest: account.checkIn,
+                latest: config,
                 refreshed: refreshedConfig,
               })
             : account.checkIn
@@ -312,18 +389,29 @@ class AccountCheckInState {
   async markAccountAsSiteCheckedIn(
     id: string,
     observedAt?: number,
+    execution?: {
+      account: SiteAccount
+      methodId: CheckInMethodId
+      resetTimeZone?: string
+    },
   ): Promise<boolean> {
     try {
       return await accountConfigStore.mutateAccount(id, (account) => {
-        if (account.disabled) {
+        if (
+          account.disabled ||
+          (execution &&
+            !hasSameAccountRequestIdentity(account, execution.account))
+        ) {
           return { nextAccount: account, result: false, changed: false }
         }
-        const selectedMethodId = account.checkIn.selection.methodId
-        const nextCheckIn = isCheckInMethodId(selectedMethodId)
+        const methodId =
+          execution?.methodId ?? account.checkIn.selection.methodId
+        const nextCheckIn = isCheckInMethodId(methodId)
           ? markCheckInMethodExecuted({
               config: account.checkIn,
-              methodId: selectedMethodId,
+              methodId,
               observedAt: observedAt ?? Date.now(),
+              resetTimeZone: execution?.resetTimeZone,
             })
           : account.checkIn
         if (nextCheckIn === account.checkIn) {

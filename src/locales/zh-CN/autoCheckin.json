@@ -166,9 +166,17 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "仅领取每日免费礼物。消耗积分或余额的抽奖需在站内手动参与。",
+      "name": "{{source}} 每日免费礼物"
+    },
     "daily": {
       "description": "此方式使用 {{source}} 的第三方签到协议，仅适用于支持该协议的部署。",
       "name": "{{source}} 签到"
+    },
+    "freeGgAllowance": {
+      "description": "领取每日额度，每天 UTC+8 零点重置。访问站点或刷新账号也可能触发领取；执行前会先检查额度日志，已领取则跳过。",
+      "name": "{{source}} 每日额度"
     },
     "generic": {
       "name": "每日签到"
@@ -180,13 +188,17 @@
     "sources": {
       "agentRouter": "Agent Router",
       "aiRouter": "AI-ROUTER",
+      "apiKeyCasa": "ApiKey Casa",
       "baiApi": "柏API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "詞元公益站",
       "daigua": "DaiGua",
       "denxio": "登仙公益站",
       "freeApi": "露娜",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "天才程序员中转站",
       "hiyo": "Hiyo Free",
+      "linxi": "100xLabs",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

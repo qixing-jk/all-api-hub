@@ -128,6 +128,311 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledTimes(1)
   })
 
+  describe("full passive analytics collection", () => {
+    const passiveEvents = [
+      [
+        PRODUCT_ANALYTICS_EVENTS.AutoCheckinRunSummaryCaptured,
+        { run_kind: "daily", entrypoint: "background", total_accounts: 2 },
+      ],
+      [
+        PRODUCT_ANALYTICS_EVENTS.AutoCheckinAccountGroupCaptured,
+        {
+          run_kind: "daily",
+          entrypoint: "background",
+          site_type: "new-api",
+          total_accounts: 2,
+        },
+      ],
+      [
+        PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+        { entrypoint: "background", account_auto_refresh_enabled: false },
+      ],
+      [
+        PRODUCT_ANALYTICS_EVENTS.SiteEcosystemSnapshot,
+        { total_account_count: 2 },
+      ],
+      [
+        PRODUCT_ANALYTICS_EVENTS.SiteTypePresent,
+        { site_type: "new-api", account_count: 2 },
+      ],
+      [
+        PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
+        { entrypoint: "background", shield_bypass_prompt_shown_count: 1 },
+      ],
+      [
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          action_id: "run_auto_checkin_now",
+          entrypoint: "options",
+          source_kind: "auto",
+          result: "success",
+        },
+      ],
+      [
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionStarted,
+        { action_id: "show_star_promotion_prompt", entrypoint: "popup" },
+      ],
+    ] as const
+
+    beforeEach(() => {
+      vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+      vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+    })
+
+    it.each(["installation-0", "installation-1", "installation-12"])(
+      "captures every passive and foreground event for %s across worker reloads",
+      async (anonymousId) => {
+        preferenceMocks.withAnonymousIdIfEnabled.mockImplementation(
+          async (work) => work(anonymousId),
+        )
+        for (let restart = 0; restart < 3; restart++) {
+          vi.resetModules()
+          const client = await importClient()
+          for (const [event, properties] of passiveEvents) {
+            await expect(client.capture(event, properties)).resolves.toBe(true)
+          }
+          for (const [event, properties] of [
+            [PRODUCT_ANALYTICS_EVENTS.AppOpened, { entrypoint: "options" }],
+            [
+              PRODUCT_ANALYTICS_EVENTS.PageViewed,
+              { entrypoint: "options", page_id: "options_account_management" },
+            ],
+            [
+              PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+              {
+                entrypoint: "options",
+                action_id: "create_account",
+                result: "success",
+              },
+            ],
+            [
+              PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+              {
+                entrypoint: "options",
+                action_id: "run_account_auto_detect",
+                result: "action_required",
+              },
+            ],
+            [
+              PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+              {
+                entrypoint: "options",
+                action_id: "run_auto_checkin_now",
+                result: "success",
+              },
+            ],
+          ] as const) {
+            await expect(client.capture(event, properties)).resolves.toBe(true)
+          }
+        }
+        expect(posthogMocks.capture).toHaveBeenCalledTimes(39)
+      },
+    )
+
+    it("strips caller-provided collection metadata from passive events", async () => {
+      preferenceMocks.withAnonymousIdIfEnabled.mockImplementation(
+        async (work) => work("installation-1"),
+      )
+      const client = await importClient()
+      for (const [event, properties] of passiveEvents) {
+        await expect(
+          client.capture(event, {
+            ...properties,
+            analytics_sample_rate: 999,
+            analytics_policy_version: "private",
+          }),
+        ).resolves.toBe(true)
+      }
+      expect(posthogMocks.capture).toHaveBeenCalledTimes(passiveEvents.length)
+      for (const [, properties] of posthogMocks.capture.mock.calls) {
+        expect(properties).not.toHaveProperty("analytics_sample_rate")
+        expect(properties).not.toHaveProperty("analytics_policy_version")
+      }
+    })
+  })
+
+  describe("storage failure reporting across worker lifetimes", () => {
+    let sessionValues: Record<string, unknown>
+    const session = {
+      get: vi.fn(async () => structuredClone(sessionValues)),
+      set: vi.fn(async (values: Record<string, unknown>) => {
+        Object.assign(sessionValues, structuredClone(values))
+      }),
+    }
+    const failure = {
+      storage_area: "local",
+      storage_operation: "auto_checkin_status",
+      storage_failure_stage: "write",
+      error_name: "Error",
+    }
+
+    beforeEach(() => {
+      sessionValues = {}
+      session.get.mockClear()
+      session.set.mockClear()
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date("2026-11-10T00:00:00Z"))
+      vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+      vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+      vi.stubGlobal("browser", { storage: { session } })
+    })
+
+    afterEach(() => vi.useRealTimers())
+
+    it("keeps the daily cooldown after every background restart", async () => {
+      for (let minute = 0; minute < 10; minute++) {
+        vi.resetModules()
+        vi.setSystemTime(new Date(`2026-11-10T00:0${minute}:00Z`))
+        const client = await importClient()
+        await client.capture(
+          PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed,
+          failure,
+        )
+      }
+      expect(posthogMocks.capture).toHaveBeenCalledTimes(1)
+
+      vi.resetModules()
+      vi.setSystemTime(new Date("2026-11-11T00:00:00Z"))
+      const client = await importClient()
+      await expect(
+        client.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, failure),
+      ).resolves.toBe(true)
+      expect(posthogMocks.capture).toHaveBeenCalledTimes(2)
+    })
+
+    it("does not spend the diagnostic budget repeatedly throughout one day", async () => {
+      for (let hour = 0; hour < 24; hour++) {
+        vi.resetModules()
+        vi.setSystemTime(
+          new Date("2026-11-10T00:00:00Z").getTime() + hour * 3600000,
+        )
+        await (
+          await importClient()
+        ).capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, failure)
+      }
+      expect(posthogMocks.capture).toHaveBeenCalledTimes(1)
+      vi.setSystemTime(new Date("2026-11-11T00:00:00Z"))
+      await (
+        await importClient()
+      ).capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, failure)
+      expect(posthogMocks.capture).toHaveBeenCalledTimes(2)
+    })
+
+    it("admits concurrent duplicates once and preserves independent operation and stage slots", async () => {
+      const client = await importClient()
+      const results = await Promise.all(
+        Array.from({ length: 20 }, (_, index) =>
+          client.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, {
+            ...failure,
+            error_name: index % 2 === 0 ? "Error" : "QuotaExceededError",
+          }),
+        ),
+      )
+      expect(results.filter(Boolean)).toHaveLength(1)
+
+      await Promise.all([
+        client.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, {
+          ...failure,
+          storage_operation: "product_analytics_state",
+        }),
+        client.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, {
+          ...failure,
+          storage_failure_stage: "read",
+        }),
+      ])
+      vi.resetModules()
+      const restarted = await importClient()
+      for (const properties of [
+        failure,
+        { ...failure, storage_operation: "product_analytics_state" },
+        { ...failure, storage_failure_stage: "read" },
+      ]) {
+        await expect(
+          restarted.capture(
+            PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed,
+            properties,
+          ),
+        ).resolves.toBe(false)
+      }
+      expect(posthogMocks.capture).toHaveBeenCalledTimes(3)
+    })
+
+    it.each(["read", "write", "unsupported"])(
+      "suppresses diagnostics when session storage is %s, without blocking foreground analytics",
+      async (mode) => {
+        if (mode === "read") {
+          session.get.mockRejectedValueOnce(new Error("session read failed"))
+        } else if (mode === "write") {
+          session.set.mockRejectedValueOnce(new Error("session write failed"))
+        } else {
+          vi.stubGlobal("browser", { storage: {} })
+        }
+        const client = await importClient()
+        await expect(
+          client.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, failure),
+        ).resolves.toBe(false)
+        expect(posthogMocks.capture).not.toHaveBeenCalled()
+        expect(posthogMocks.init).not.toHaveBeenCalled()
+        if (mode === "read") expect(session.set).not.toHaveBeenCalled()
+
+        await expect(
+          client.capture(PRODUCT_ANALYTICS_EVENTS.AppOpened, {
+            entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+          }),
+        ).resolves.toBe(true)
+        expect(posthogMocks.capture).toHaveBeenCalledTimes(1)
+      },
+    )
+
+    it("retains admission if the SDK fails after reservation", async () => {
+      posthogMocks.capture.mockImplementationOnce(() => {
+        throw new Error("SDK capture failed")
+      })
+      const client = await importClient()
+      await expect(
+        client.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, failure),
+      ).resolves.toBe(false)
+      vi.resetModules()
+      const restarted = await importClient()
+      await expect(
+        restarted.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, failure),
+      ).resolves.toBe(false)
+      expect(posthogMocks.capture).toHaveBeenCalledTimes(1)
+    })
+
+    it("starts fresh after browser session storage is cleared", async () => {
+      const client = await importClient()
+      await client.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, failure)
+      sessionValues = {}
+      vi.resetModules()
+      const restarted = await importClient()
+      await expect(
+        restarted.capture(PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed, failure),
+      ).resolves.toBe(true)
+      expect(posthogMocks.capture).toHaveBeenCalledTimes(2)
+    })
+
+    it.each(["disabled", "unconfigured", "invalid payload"])(
+      "does not reserve admission when capture is %s",
+      async (mode) => {
+        if (mode === "disabled")
+          preferenceMocks.isEnabled.mockResolvedValue(false)
+        if (mode === "unconfigured")
+          vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "")
+        const client = await importClient()
+        await expect(
+          client.capture(
+            PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed,
+            mode === "invalid payload" ? { error_name: "Error" } : failure,
+          ),
+        ).resolves.toBe(false)
+        expect(session.get).not.toHaveBeenCalled()
+        expect(session.set).not.toHaveBeenCalled()
+        expect(posthogMocks.capture).not.toHaveBeenCalled()
+      },
+    )
+  })
+
   it("no-ops when analytics is disabled", async () => {
     preferenceMocks.isEnabled.mockResolvedValue(false)
     vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")

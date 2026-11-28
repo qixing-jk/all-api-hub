@@ -5,6 +5,7 @@ import {
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { loginAccount } from "~/services/accountLogin"
 import { resolveAccountLogin } from "~/services/accountLogin/configCodec"
+import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import type { AccountAuthenticatedSession } from "~/services/apiAdapters/contracts/accountLogin"
 import {
@@ -12,10 +13,12 @@ import {
   NewApiSessionIdentityError,
 } from "~/services/apiAdapters/newApi/account/authenticatedSession"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { readNativeCheckInPageHint } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/providers/contracts"
 import {
   fetchCheckedInTodayStatus,
   getProviderErrorMessage,
+  NEW_API_AWARD_SOURCES,
   readNewApiAwards,
   resolveCheckInUrl,
   resolveNewApiCheckInReadback,
@@ -30,6 +33,11 @@ import {
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
+import {
+  discoverNativeCheckInPage,
+  type NativeCheckInPageProbe,
+} from "~/services/checkin/discovery/nativePageDiscovery"
+import { scanNativeCheckInPageSources } from "~/services/checkin/discovery/nativePageScan"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import {
@@ -41,8 +49,12 @@ import {
   type TempWindowCheckinPageAction,
   type TempWindowRequestSource,
 } from "~/types/tempWindowFetch"
-import type { CheckinPageActionTriggerResult } from "~/types/turnstile"
-import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
+import {
+  CHECKIN_PAGE_ACTION_STATUSES,
+  PAGE_VERIFICATION_STATUSES,
+  TURNSTILE_PRE_TRIGGER_KINDS,
+  type CheckinPageActionTriggerResult,
+} from "~/types/turnstile"
 import { tempWindowTriggerCheckinPageAction } from "~/utils/browser/tempWindowFetch"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
@@ -120,6 +132,9 @@ async function checkInWithAccountSession(
             attempted = true
             params.mutationLifecycle?.onDispatch()
           },
+          (url) => {
+            checkInUrl = url
+          },
         )
       } catch (error) {
         if (attempted) {
@@ -165,10 +180,45 @@ async function performNativeSessionCheckin(
   checkInUrl: string,
   session: AccountAuthenticatedSession,
   onDispatch: () => void,
+  onPageResolved: (url: string) => void,
 ): Promise<CheckinResult> {
-  await session.navigate(checkInUrl)
+  await session.navigate(checkInUrl, { reuseCurrentPage: true })
   await session.waitForReadyPage(checkInUrl)
   const pageTrigger = resolveTurnstilePreTrigger(params.account)
+  if (pageTrigger.kind !== TURNSTILE_PRE_TRIGGER_KINDS.None) {
+    const discovered = await discoverNativeCheckInPage({
+      pageUrl: checkInUrl,
+      learnedPath: readNativeCheckInPageHint(params.account),
+      signal: session.abortSignal,
+      navigate: async (url) => {
+        await session.navigate(url, { reuseCurrentPage: true })
+        await session.waitForReadyPage(url)
+      },
+      inspect: () =>
+        session.sendSiteAction<NativeCheckInPageProbe>(
+          RuntimeActionIds.ContentInspectCheckinPage,
+          { trigger: pageTrigger },
+        ),
+      scan: () =>
+        scanNativeCheckInPageSources({
+          originUrl: new URL(params.account.site_url).origin,
+          siteType: params.account.site_type,
+          requestId: safeRandomUUID("native-page-sources"),
+          send: (action, details) => session.sendSiteAction(action, details),
+        }),
+    })
+    if (!discovered)
+      return resolveNativePageFailureResult({
+        action: {
+          success: false,
+          reason: TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound,
+        },
+        checkInUrl,
+      })
+    checkInUrl = discovered
+    onPageResolved(checkInUrl)
+  }
+
   if (pageTrigger.kind === TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector) {
     const prepared = await session.sendSiteAction<{ success: boolean }>(
       RuntimeActionIds.ContentTriggerCheckinPageAction,
@@ -208,9 +258,8 @@ async function performNativeSessionCheckin(
               status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
               awards: readNewApiAwards(
                 params.account,
-                status.todayQuotaAwarded,
-                status.todayCheckinDate,
-                "stats.records[].quota_awarded",
+                status.todayRecord,
+                NEW_API_AWARD_SOURCES.Status,
               ),
             },
             status,
@@ -258,7 +307,7 @@ async function performNativeSessionCheckin(
       action: {
         success: false,
         reason:
-          trigger.status === "target_not_found"
+          trigger.status === CHECKIN_PAGE_ACTION_STATUSES.TargetNotFound
             ? TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TargetNotFound
             : TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.TriggerFailed,
         trigger,
@@ -277,13 +326,19 @@ async function performNativeSessionCheckin(
     status: CHECKIN_RESULT_STATUS.SUCCESS,
     data: trigger,
   })
-  if (confirmed) return confirmed
+  if (confirmed) {
+    await accountCheckInState.rememberNativeCheckInPage(
+      params.account,
+      checkInUrl,
+    )
+    return confirmed
+  }
   return withNewApiStatusConfirmation(
     params.account,
     {
       status: CHECKIN_RESULT_STATUS.UNCERTAIN,
       reasonCode:
-        trigger?.verification?.status === "required"
+        trigger?.verification?.status === PAGE_VERIFICATION_STATUSES.Required
           ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
           : AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
       data: trigger,
@@ -296,7 +351,7 @@ async function performNativeSessionCheckin(
 export async function resolveNativePageCheckinResult(
   params: NativePageParams,
 ): Promise<CheckinResult> {
-  const checkInUrl = await resolveCheckInUrl(params.account)
+  let checkInUrl = await resolveCheckInUrl(params.account)
   if (!checkInUrl) {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
@@ -326,6 +381,8 @@ export async function resolveNativePageCheckinResult(
     action = await tempWindowTriggerCheckinPageAction({
       originUrl: params.account.site_url,
       pageUrl: checkInUrl,
+      discoverCheckInPage: true,
+      learnedPagePath: readNativeCheckInPageHint(params.account),
       requestId: safeRandomUUID(`native-checkin-${params.account.id}`),
       accountId: params.account.id,
       authType: getEffectiveAuthType(params.account),
@@ -348,6 +405,7 @@ export async function resolveNativePageCheckinResult(
     }
   }
 
+  if (action.pageUrl) checkInUrl = action.pageUrl
   if (
     !action.success ||
     action.reason !== TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.Clicked
@@ -362,12 +420,19 @@ export async function resolveNativePageCheckinResult(
   )
   const confirmed = resolveNewApiCheckInReadback(observedAfterNativeAction, {
     account: params.account,
+    status: CHECKIN_RESULT_STATUS.SUCCESS,
     data: action,
   })
-  if (confirmed) return confirmed
+  if (confirmed) {
+    await accountCheckInState.rememberNativeCheckInPage(
+      params.account,
+      checkInUrl,
+    )
+    return confirmed
+  }
 
   const verificationRequired =
-    action.trigger?.verification?.status === "required"
+    action.trigger?.verification?.status === PAGE_VERIFICATION_STATUSES.Required
   return withNewApiStatusConfirmation(
     params.account,
     {

@@ -6,6 +6,7 @@ import {
   checkTempContextProtectionGuards,
   ProtectionPageTimeoutError,
 } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
+import { createDeploymentProbeMemory } from "~/services/core/deploymentProbeMemory"
 import {
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
   type TempWindowFallbackPreferences,
@@ -28,6 +29,7 @@ import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 import { getTab, updateTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
+import { tryParseHttpUrl } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 
 import { type TempContext, type TempContextTabSnapshot } from "./contracts"
@@ -257,7 +259,12 @@ export async function prepareTempContextFetchOptions(params: {
 export async function navigateTempContextToPage(
   context: TempContext,
   url: string,
-  meta: { requestId: string; origin: string; signal?: AbortSignal },
+  meta: {
+    requestId: string
+    origin: string
+    signal?: AbortSignal
+    allowInteractive?: boolean
+  },
 ) {
   meta.signal?.throwIfAborted()
   const currentTab = await getTempContextTabSnapshot(context.tabId)
@@ -272,7 +279,12 @@ export async function navigateTempContextToPage(
     context.currentUrl = url
   }
 
-  await waitForTabComplete(context.tabId, meta)
+  await (meta.allowInteractive
+    ? waitForTabDocumentReady(context.tabId, url, {
+        ...meta,
+        allowLoadedRedirect: true,
+      })
+    : waitForTabComplete(context.tabId, meta))
   context.currentUrl =
     (await getTempContextTabSnapshot(context.tabId))?.url ?? url
 }
@@ -301,7 +313,12 @@ export async function getTempContextTabSnapshot(
 /** Probe only read-only handlers before reusing a tab; an open tab can have a dead content receiver. */
 export async function isTempContextContentReady(
   tabId: number,
-  meta: { requestId: string; origin: string; signal?: AbortSignal },
+  meta: {
+    requestId: string
+    origin: string
+    signal?: AbortSignal
+    interactiveUrl?: string
+  },
 ): Promise<boolean> {
   try {
     const guards = await startAbortableTask(
@@ -315,7 +332,14 @@ export async function isTempContextContentReady(
       !guards.aliyun?.success
     )
       return false
-    if (!guards.passed) await waitForTabComplete(tabId, meta)
+    if (!guards.passed) {
+      await (meta.interactiveUrl
+        ? waitForTabDocumentReady(tabId, meta.interactiveUrl, {
+            ...meta,
+            allowLoadedRedirect: true,
+          })
+        : waitForTabComplete(tabId, meta))
+    }
     return true
   } catch {
     meta.signal?.throwIfAborted()
@@ -323,14 +347,85 @@ export async function isTempContextContentReady(
   }
 }
 
-/**
- * Wait for the temp-context tab to finish loading and clear any protection pages
- * (Cloudflare, CAP or Aliyun). Rejects on timeout or errors.
- */
+type ProtectedTabWaitOptions = {
+  requestId?: string
+  origin?: string
+  signal?: AbortSignal
+}
+
+const TAB_LOAD_TIMEOUT_MS = 20_000
+const DOCUMENT_FALLBACK_BUDGET_MS = 3_000
+const admittedDocuments = createDeploymentProbeMemory<{
+  url: string
+  timeOrigin: number
+}>({ ttlMs: 120_000 })
+
+/** Wait for full tab load and clear any protection pages. */
 export function waitForTabComplete(
   tabId: number,
-  meta?: { requestId?: string; origin?: string; signal?: AbortSignal },
+  meta?: ProtectedTabWaitOptions,
+) {
+  return waitForProtectedTab(tabId, meta)
+}
+
+/** Wait for a committed target document and clear any protection pages. */
+export function waitForTabDocumentReady(
+  tabId: number,
+  url: string,
+  meta?: ProtectedTabWaitOptions & {
+    allowLoadedRedirect?: boolean
+    timeoutMs?: number
+  },
+) {
+  const target = tryParseHttpUrl(url)
+  if (!target) return Promise.reject(new Error("Invalid document URL"))
+  return waitForProtectedTab(tabId, meta, {
+    target,
+    allowLoadedRedirect: meta?.allowLoadedRedirect,
+    timeoutMs: meta?.timeoutMs,
+  })
+}
+
+/** Reads the top-level document's identity after it reaches the required state. */
+async function readDocumentTime(
+  tabId: number,
+  url: string,
+  minimumReadyState: "complete" | "interactive",
+) {
+  try {
+    const response = await sendTabMessageWithRetry<{
+      url: string
+      readyState: string
+      timeOrigin: number
+    }>(
+      tabId,
+      { action: RuntimeActionIds.ContentGetDocumentState },
+      { frameId: 0, maxAttempts: 1 },
+    )
+    if (
+      response?.url === url &&
+      (response.readyState === "complete" ||
+        (minimumReadyState === "interactive" &&
+          response.readyState === "interactive")) &&
+      Number.isFinite(response.timeOrigin)
+    )
+      return response.timeOrigin
+  } catch {
+    return undefined
+  }
+}
+
+/** Share protection checks and timeouts across both readiness modes. */
+function waitForProtectedTab(
+  tabId: number,
+  meta?: ProtectedTabWaitOptions,
+  document?: { target: URL; allowLoadedRedirect?: boolean; timeoutMs?: number },
 ): Promise<void> {
+  const loadTimeout = document?.timeoutMs ?? TAB_LOAD_TIMEOUT_MS
+  const fallbackAt = Date.now() + loadTimeout
+  const documentKey =
+    document && meta?.requestId ? `${tabId}:${meta.requestId}` : undefined
+  const cached = documentKey ? admittedDocuments.read(documentKey) : undefined
   return new Promise((resolve, reject) => {
     let settled = false
     let verificationRequired = false
@@ -345,20 +440,23 @@ export function waitForTabComplete(
       else resolve()
     }
     const cancel = () => finish(new Error("Temporary page cancelled"))
-    const timeout = setTimeout(() => {
-      logTempWindow("waitForTabCompleteTimeout", {
-        tabId,
-        requestId: meta?.requestId ?? null,
-        origin: meta?.origin ?? null,
-      })
-      finish(
-        verificationRequired
-          ? new ProtectionPageTimeoutError(
-              t("messages:background.pageLoadTimeout"),
-            )
-          : new Error(t("messages:background.pageLoadTimeout")),
-      )
-    }, 20000) // 20秒超时
+    const timeout = setTimeout(
+      () => {
+        logTempWindow("waitForTabCompleteTimeout", {
+          tabId,
+          requestId: meta?.requestId ?? null,
+          origin: meta?.origin ?? null,
+        })
+        finish(
+          verificationRequired
+            ? new ProtectionPageTimeoutError(
+                t("messages:background.pageLoadTimeout"),
+              )
+            : new Error(t("messages:background.pageLoadTimeout")),
+        )
+      },
+      loadTimeout + (document ? DOCUMENT_FALLBACK_BUDGET_MS : 0),
+    )
 
     meta?.signal?.addEventListener("abort", cancel, { once: true })
     if (meta?.signal?.aborted) {
@@ -382,7 +480,8 @@ export function waitForTabComplete(
     const checkStatus = async () => {
       if (settled) return
       try {
-        const tab = await getTab(tabId)
+        const tab: browser.tabs.Tab & { pendingUrl?: string } =
+          await getTab(tabId)
 
         if (settled) return
         attempts += 1
@@ -397,7 +496,45 @@ export function waitForTabComplete(
           })
         }
 
-        if (tab.status === "complete") {
+        const current = document && tryParseHttpUrl(tab.url)
+        const loaded =
+          tab.status === "complete" &&
+          (!document ||
+            (!tab.pendingUrl &&
+              (document.allowLoadedRedirect ||
+                (current?.origin === document.target.origin &&
+                  current.pathname === document.target.pathname))))
+        const canProbeInteractive =
+          document &&
+          tab.status === "loading" &&
+          !tab.pendingUrl &&
+          current?.href === document.target.href &&
+          (Date.now() >= fallbackAt || cached?.url === current.href)
+        const readyState =
+          loaded && current
+            ? "complete"
+            : canProbeInteractive
+              ? "interactive"
+              : undefined
+        const documentTime =
+          current && readyState
+            ? await readDocumentTime(tabId, current.href, readyState)
+            : undefined
+        if (settled) return
+        const observedDocument =
+          current &&
+          readyState &&
+          documentTime !== undefined &&
+          (readyState === "complete" ||
+            Date.now() >= fallbackAt ||
+            cached?.timeOrigin === documentTime)
+            ? ({
+                url: current.href,
+                readyState,
+                timeOrigin: documentTime,
+              } as const)
+            : undefined
+        if ((loaded && !document) || observedDocument) {
           let capPassed = false
           let cloudflarePassed = false
           let aliyunPassed = false
@@ -441,8 +578,42 @@ export function waitForTabComplete(
             })
           }
           if (passed) {
-            clearTimeout(timeout)
-            retry = setTimeout(() => finish(), 500) // 再等待半秒，确保页面 JS 执行完
+            if (observedDocument) {
+              retry = setTimeout(async () => {
+                try {
+                  const latest: browser.tabs.Tab & { pendingUrl?: string } =
+                    await getTab(tabId)
+                  if (
+                    latest.url === observedDocument.url &&
+                    latest.status === tab.status &&
+                    !latest.pendingUrl &&
+                    (await readDocumentTime(
+                      tabId,
+                      observedDocument.url,
+                      observedDocument.readyState,
+                    )) === observedDocument.timeOrigin
+                  ) {
+                    if (settled) return
+                    if (
+                      observedDocument.readyState === "interactive" &&
+                      documentKey
+                    )
+                      admittedDocuments.remember(documentKey, {
+                        url: observedDocument.url,
+                        timeOrigin: observedDocument.timeOrigin,
+                      })
+                    finish()
+                    return
+                  }
+                } catch {
+                  // Recheck under the normal timeout if the document was replaced.
+                }
+                void checkStatus()
+              }, 500)
+            } else {
+              clearTimeout(timeout)
+              retry = setTimeout(() => finish(), 500)
+            }
           } else {
             // 盾页面未通过，继续轮询
             retry = setTimeout(checkStatus, 500)

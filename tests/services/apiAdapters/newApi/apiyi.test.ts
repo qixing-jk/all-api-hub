@@ -11,7 +11,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   fetchAccountAvailableModels,
   fetchUserGroups,
-} from "~/services/apiService/newApiFamily/variants/apiyi"
+} from "~/services/apiService/shellApiFamily/shared"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
@@ -645,7 +645,7 @@ describe("APIyi account capabilities", () => {
         auth: { authType: AuthTypeEnum.Cookie, userId: "42" },
       }),
     ).rejects.toMatchObject({
-      message: "APIyi model pricing request failed",
+      message: "Shell API model pricing request failed",
       endpoint: "/api/pricing",
     })
   })

@@ -263,25 +263,39 @@ it("accepts generated context checkpoint IDs in custom workflow baselines", () =
         ],
       }),
     )
-    const result = spawnSync(
+    const args = [
+      cli,
+      "--spec",
+      spec,
+      "--grep",
+      grep,
+      "--fixture",
+      "context-test",
+      "--baseline",
+      directory,
+      "--variant",
+      "dnr-required",
+    ]
+    const result = spawnSync(process.execPath, args, { encoding: "utf8" })
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain("Baseline build variant differs")
+    const incomplete = spawnSync(
       process.execPath,
       [
-        cli,
-        "--spec",
-        spec,
-        "--grep",
-        grep,
-        "--fixture",
-        "context-test",
-        "--baseline",
-        directory,
-        "--variant",
-        "dnr-required",
+        ...args,
+        "--expect-checkpoint",
+        "pricing-desktop.context",
+        "--expect-checkpoint",
+        "pricing-narrow",
+        "--expect-checkpoint",
+        "pricing-narrow.context",
       ],
       { encoding: "utf8" },
     )
-    expect(result.status).toBe(1)
-    expect(result.stderr).toContain("Baseline build variant differs")
+    expect(incomplete.status).toBe(1)
+    expect(incomplete.stderr).toContain(
+      "Missing expected checkpoints: pricing-narrow, pricing-narrow.context.",
+    )
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }
@@ -370,6 +384,45 @@ it("respects an active capture in the same worktree without replacing its lock",
 })
 
 it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
+  "fails a first capture that omits a declared checkpoint",
+  () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        cli,
+        "--spec",
+        "e2e/sidepanelUserFlows.spec.ts",
+        "--grep",
+        "sidepanel receives apiCredential sponsor setup while already mounted$",
+        "--fixture",
+        "generic-api-hint-missing-v1",
+        "--view",
+        "light:360x640",
+        "--expect-checkpoint",
+        "hint-light-360x640",
+        "--expect-checkpoint",
+        "hint-dark-320x700",
+      ],
+      { encoding: "utf8", timeout: 180_000 },
+    )
+    expect(result.status, result.stderr).toBe(1)
+    expect(result.stderr).toContain(
+      "Missing expected checkpoints: hint-dark-320x700.",
+    )
+    const directory = /Evidence directory: ([^\r\n]+)/u.exec(result.stderr)?.[1]
+    expect(directory).toBeDefined()
+    expect(existsSync(path.join(directory!, "hint-light-360x640.png"))).toBe(
+      true,
+    )
+    expect(existsSync(path.join(directory!, "capture.json"))).toBe(false)
+    expect(
+      JSON.parse(readFileSync(path.join(directory!, "failure.json"), "utf8")),
+    ).toMatchObject({ status: "failed" })
+  },
+  200_000,
+)
+
+it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
   "captures asserted real extension states with reproducible metadata",
   () => {
     const result = JSON.parse(
@@ -387,6 +440,10 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
           "dark:410x720",
           "--view",
           "light:360x640",
+          "--expect-checkpoint",
+          "hint-dark-410x720",
+          "--expect-checkpoint",
+          "hint-light-360x640",
         ],
         {
           encoding: "utf8",
@@ -400,6 +457,9 @@ it.runIf(process.env.AAH_VISUAL_CAPTURE_INTEGRATION === "1")(
     expect(capture).toMatchObject({
       status: "captured",
       fixture: "generic-api-hint-v1",
+      workflow: {
+        expectedCheckpoints: ["hint-dark-410x720", "hint-light-360x640"],
+      },
     })
     expect(capture.checkpoints).toHaveLength(2)
     const preview = readFileSync(result.report, "utf8")

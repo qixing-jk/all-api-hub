@@ -179,9 +179,21 @@ for (const method of ["linuxdo", "password"] as const) {
       await expect(checkInSection).toHaveAttribute("data-layout", "continuous")
       await expect(loginSection).toHaveAttribute("data-layout", "continuous")
     }
-    await expect(
-      loginSection.getByRole("combobox", { name: "Login method", exact: true }),
-    ).toHaveText("GitHub")
+    const savedMethod = loginSection.getByRole("combobox", {
+      name: "Login method",
+      exact: true,
+    })
+    await expect(savedMethod).toHaveText("GitHub")
+    const methodDescriptionGap = await savedMethod.evaluate((element) => {
+      const description = element
+        .closest('[data-slot="field"]')!
+        .querySelector('[data-slot="field-description"]')!
+      return (
+        description.getBoundingClientRect().top -
+        element.getBoundingClientRect().bottom
+      )
+    })
+    expect(methodDescriptionGap).toBeCloseTo(8, 0)
     await expect(
       dialog
         .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn)
@@ -283,20 +295,30 @@ for (const method of ["linuxdo", "password"] as const) {
     const restoreAutomatic = dialog.getByRole("button", {
       name: "Restore automatic selection",
     })
+    const detectMethod = dialog.getByRole("button", {
+      name: "Detect method",
+      exact: true,
+    })
     await expect(restoreAutomatic).toBeVisible()
     for (const width of [1280, 390]) {
       await setFormViewport({ width, height: 900 })
       await expect(async () => {
         const actionBounds = await restoreAutomatic.boundingBox()
         const selectBounds = await checkInMethod.boundingBox()
+        const detectBounds = await detectMethod.boundingBox()
         expect(actionBounds).not.toBeNull()
         expect(selectBounds).not.toBeNull()
+        expect(detectBounds).not.toBeNull()
         expect(actionBounds!.y + actionBounds!.height).toBeLessThanOrEqual(
           selectBounds!.y,
         )
         expect(actionBounds!.x).toBeGreaterThanOrEqual(selectBounds!.x)
+        const methodControlsRight = Math.max(
+          selectBounds!.x + selectBounds!.width,
+          detectBounds!.x + detectBounds!.width,
+        )
         expect(actionBounds!.x + actionBounds!.width).toBeLessThanOrEqual(
-          selectBounds!.x + selectBounds!.width + 1,
+          methodControlsRight + 1,
         )
       }).toPass({ timeout: 10_000 })
     }
@@ -377,9 +399,13 @@ for (const method of ["linuxdo", "password"] as const) {
         id: "account-login-dependency-missing",
         extensionDir,
       })
+      await dialog
+        .getByRole("button", { name: "Save Changes", exact: true })
+        .click()
+      await expect(dialog).toBeVisible()
       await expect(
-        dialog.getByRole("button", { name: "Save Changes", exact: true }),
-      ).toBeDisabled()
+        loginSection.getByLabel("Login username or email"),
+      ).toBeFocused()
       await loginSection
         .getByLabel("Login username or email")
         .fill("native-member")

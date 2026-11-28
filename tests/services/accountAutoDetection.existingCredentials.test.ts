@@ -7,6 +7,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { findSavedAccountAccessTokens } from "~/services/accounts/autoDetect/existingCredentials"
 import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -60,6 +61,21 @@ beforeEach(() => {
 })
 
 describe("account detection with existing credentials", () => {
+  it("does not read saved compatible credentials for an independent account family", async () => {
+    const query = vi.spyOn(accountQueries, "getAllAccountsOrThrow")
+    try {
+      await expect(
+        findSavedAccountAccessTokens(baseUrl, {
+          siteType: SITE_TYPES.SUB2API,
+          userId: "7",
+        }),
+      ).resolves.toEqual([])
+      expect(query).not.toHaveBeenCalled()
+    } finally {
+      query.mockRestore()
+    }
+  })
+
   it.each([
     { url: baseUrl, userId: "8" },
     { url: "https://another.example.invalid", userId: "7" },
@@ -95,9 +111,24 @@ describe("account detection with existing credentials", () => {
     },
   )
 
-  it.each([SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.APIYI])(
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.ONE_API,
+    SITE_TYPES.APIYI,
+    SITE_TYPES.LAOZHANG,
+    SITE_TYPES.SHELL_API,
+  ])(
     "reuses a valid %s form credential without reading account storage",
     async (siteType) => {
+      detectBrowserAccount.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "7",
+          user: { id: 7, username: "alice" },
+          siteType:
+            siteType === SITE_TYPES.ONE_API ? SITE_TYPES.NEW_API : siteType,
+        },
+      })
       const storageArea: {
         get(keys: string[]): Promise<Record<string, unknown>>
       } = browser.storage.local

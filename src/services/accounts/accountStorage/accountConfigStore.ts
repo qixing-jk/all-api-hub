@@ -68,14 +68,24 @@ class AccountConfigStore {
   }
 
   async readMigratedEnvelope(): Promise<AccountStorageConfig> {
-    await ensureAccountTagsStorageMigrated(this.storage)
+    try {
+      await ensureAccountTagsStorageMigrated(this.storage)
+    } catch (error) {
+      // A failed upgrade write must not hide accounts that remain readable.
+      // Read again below; a genuine read failure still propagates to the caller.
+      logger.warn("Account tag migration deferred", error)
+    }
 
     const { config, migratedCount } = await this.readSnapshot()
     if (migratedCount > 0) {
       logger.info("Accounts migrated; persisting updated accounts", {
         migratedCount,
       })
-      await this.persistReadMigration()
+      try {
+        await this.persistReadMigration()
+      } catch (error) {
+        logger.warn("Account migration persistence deferred", error)
+      }
     }
 
     return config

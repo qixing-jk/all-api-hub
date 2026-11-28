@@ -16,6 +16,11 @@ import {
   type Sub2ApiBrowserAuth,
 } from "~/services/apiService/sub2api/auth/browserAuth"
 import {
+  hasSub2ApiPanelBinding,
+  hasSub2ApiPanelProof,
+} from "~/services/apiService/sub2api/auth/panelProofCapability"
+import { readSub2ApiPanelTokenBinding } from "~/services/apiService/sub2api/auth/panelProofProtocol"
+import {
   refreshSub2ApiTokens,
   SUB2API_TOKEN_REFRESH_BUFFER_MS,
   SUB2API_TOKEN_REFRESH_FAILURE_REASONS,
@@ -24,6 +29,7 @@ import {
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import {
   SUB2API_AUTH_ME_ENDPOINT,
+  SUB2API_PANEL_KEY_ERRORS,
   SUB2API_SESSION_BINDING_MISMATCH_CODE,
 } from "~/services/apiService/sub2api/type"
 import {
@@ -69,6 +75,10 @@ type HydratedSub2ApiAuth<
 type AuthenticatedSub2ApiRunner<T> = (request: ApiServiceRequest) => Promise<T>
 
 type AuthenticatedSub2ApiRequestOptions = {
+  /** Stop after the first credential repair, even if its replacement token is rejected. */
+  singleRecovery?: boolean
+  /** Bind the authorized transport only when credentials actually need recovery. */
+  prepareRecoveryRequest?: (request: ApiServiceRequest) => ApiServiceRequest
   proactiveRefresh?: boolean
   /** Allow read-only probes to skip refresh and browser recovery for absent tokens. */
   recoverMissingAccessToken?: boolean
@@ -134,7 +144,9 @@ export const didSub2ApiAuthChange = (
 
 const createLoginRequiredError = (endpoint: string, cause?: ApiError) =>
   new ApiError(
-    t("messages:sub2api.loginRequired"),
+    isPanelKeyMismatch(cause)
+      ? t("messages:errors.api.browserProofLoginRequired")
+      : t("messages:sub2api.loginRequired"),
     401,
     endpoint,
     API_ERROR_CODES.HTTP_401,
@@ -149,6 +161,25 @@ const createRefreshTokenInvalidError = (endpoint: string) =>
     endpoint,
     API_ERROR_CODES.HTTP_401,
     SUB2API_AUTH_ERROR_CODES.REFRESH_TOKEN_INVALID,
+  )
+
+const isPanelKeyMismatch = (error: unknown): error is ApiError =>
+  error instanceof ApiError &&
+  error.upstreamCode === SUB2API_PANEL_KEY_ERRORS.Mismatch
+
+const hasBoundRefreshCredential = (request: ApiServiceRequest): boolean =>
+  Boolean(
+    normalizeSub2ApiRefreshToken(request.auth.refreshToken) &&
+    readSub2ApiPanelTokenBinding(request.auth.accessToken ?? ""),
+  )
+
+const createManagedPanelLoginRequiredError = (endpoint: string) =>
+  new ApiError(
+    t("messages:sub2api.independentSessionRequired"),
+    401,
+    endpoint,
+    API_ERROR_CODES.HTTP_401,
+    SUB2API_PANEL_KEY_ERRORS.IndependentSessionRequired,
   )
 
 export const isSub2ApiRefreshTokenInvalidError = (
@@ -175,6 +206,28 @@ const isSub2ApiSessionBindingMismatch = (error: unknown): boolean =>
 const throwIfSub2ApiAuthPersistenceFailed = (error: unknown): void => {
   if (error instanceof Sub2ApiAuthPersistenceError) {
     throw error
+  }
+}
+
+/** Preserve failures that must not fall through to ordinary refresh recovery. */
+function throwIfTerminalSub2ApiRefreshError(
+  refreshError: unknown,
+  request: ApiServiceRequest,
+  endpoint: string,
+  hasPanelBinding: boolean,
+): void {
+  throwIfSub2ApiAuthPersistenceFailed(refreshError)
+  if (isPanelKeyMismatch(refreshError) && hasBoundRefreshCredential(request))
+    throw createManagedPanelLoginRequiredError(endpoint)
+  if (
+    refreshError instanceof ApiError &&
+    refreshError.code === API_ERROR_CODES.REQUEST_PROOF_INVALID
+  )
+    throw refreshError
+  if (hasPanelBinding) {
+    if (isSub2ApiRefreshTokenContractError(refreshError))
+      throw createRefreshTokenInvalidError(endpoint)
+    throw refreshError
   }
 }
 
@@ -470,6 +523,7 @@ const recoverSub2ApiRequestAuth = async <
   authSession?: Sub2ApiAuthSession
   /** Original renewal failure; browser absence cannot establish its rejection. */
   refreshError?: unknown
+  authError?: ApiError
 }): Promise<TRequest> =>
   withSub2ApiAuthMutationLock(params.request, async () => {
     const latestHydrated = await hydrateSub2ApiAuthRequest(params.request)
@@ -478,11 +532,38 @@ const recoverSub2ApiRequestAuth = async <
     if (didSub2ApiAuthChange(params.request, latestRequest))
       return latestRequest
 
+    if (
+      (await hasSub2ApiPanelBinding(
+        latestRequest.baseUrl,
+        latestRequest.auth.accessToken ?? "",
+      )) ||
+      (!latestRequest.auth.accessToken &&
+        normalizeSub2ApiRefreshToken(latestRequest.auth.refreshToken) &&
+        (await hasSub2ApiPanelProof(latestRequest.baseUrl)))
+    ) {
+      if (isSub2ApiRefreshTokenContractError(params.refreshError))
+        throw createRefreshTokenInvalidError(params.endpoint)
+      if (params.refreshError) throw params.refreshError
+      throw createLoginRequiredError(params.endpoint, params.authError)
+    }
+
+    // A confirmed proof origin and a saved bound pair establish ownership even
+    // when a restored account no longer has a matching extension signing key.
+    if (
+      hasBoundRefreshCredential(latestRequest) &&
+      (isPanelKeyMismatch(params.refreshError) ||
+        (await hasSub2ApiPanelProof(latestRequest.baseUrl)))
+    )
+      throw createManagedPanelLoginRequiredError(params.endpoint)
+
     const expectedUserId = normalizeAccountIdentity(latestRequest.auth?.userId)
     let resynced: Sub2ApiBrowserAuth | null
     try {
       resynced = await recoverSub2ApiBrowserAuth({
         baseUrl: latestRequest.baseUrl,
+        ...(latestRequest.fetchContext
+          ? { fetchContext: latestRequest.fetchContext }
+          : {}),
         ...(expectedUserId ? { expectedUserId } : {}),
         ...(latestRequest.tempWindowRequestSource
           ? {
@@ -507,7 +588,7 @@ const recoverSub2ApiRequestAuth = async <
     if (!resynced) {
       if (isUncertainSub2ApiRefreshRotation(params.refreshError))
         throw params.refreshError
-      throw createLoginRequiredError(params.endpoint)
+      throw createLoginRequiredError(params.endpoint, params.authError)
     }
 
     logger.info("Retrying Sub2API authenticated request after JWT re-sync", {
@@ -546,6 +627,7 @@ const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
   request: ApiServiceRequest
   endpoint: string
   authSession?: Sub2ApiAuthSession
+  authError?: ApiError
   runner: AuthenticatedSub2ApiRunner<T>
   beforeUnauthorizedRetry?: (request: ApiServiceRequest) => Promise<void>
 }): Promise<T> => {
@@ -553,6 +635,7 @@ const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
     request: params.request,
     endpoint: params.endpoint,
     authSession: params.authSession,
+    authError: params.authError,
   })
   return await runRecoveredSub2ApiRequest({
     request: updatedRequest,
@@ -568,7 +651,7 @@ const retrySub2ApiRunnerWithResyncedAuth = async <T>(params: {
  * unauthorized recovery hidden behind one interface.
  */
 async function executeSub2ApiAuthLifecycle<T>(
-  state: { request: ApiServiceRequest },
+  state: { request: ApiServiceRequest; recoveryStarted?: boolean },
   endpoint: string,
   runner: AuthenticatedSub2ApiRunner<T>,
   options: AuthenticatedSub2ApiRequestOptions = {},
@@ -578,8 +661,14 @@ async function executeSub2ApiAuthLifecycle<T>(
   const accessToken = normalizeSub2ApiAccessToken(
     state.request.auth?.accessToken,
   )
+  const startRecovery = () => {
+    state.recoveryStarted = true
+    state.request =
+      options.prepareRecoveryRequest?.(state.request) ?? state.request
+  }
 
   if (!accessToken && options.recoverMissingAccessToken !== false) {
+    startRecovery()
     if (normalizeSub2ApiRefreshToken(state.request.auth?.refreshToken)) {
       try {
         const refreshed = await refreshSub2ApiRequestAuth({
@@ -589,6 +678,11 @@ async function executeSub2ApiAuthLifecycle<T>(
         state.request = refreshed
       } catch (refreshError) {
         throwIfSub2ApiAuthPersistenceFailed(refreshError)
+        if (
+          refreshError instanceof ApiError &&
+          refreshError.code === API_ERROR_CODES.REQUEST_PROOF_INVALID
+        )
+          throw refreshError
         state.request = await recoverSub2ApiRequestAuth({
           request: state.request,
           endpoint,
@@ -612,12 +706,19 @@ async function executeSub2ApiAuthLifecycle<T>(
   const tokenExpiresAt = normalizeSub2ApiTokenExpiresAt(
     state.request.auth.tokenExpiresAt,
   )
+  const hasPanelBinding = await hasSub2ApiPanelBinding(
+    state.request.baseUrl,
+    state.request.auth.accessToken ?? "",
+  )
+  let rejectedPanelRenewal: ApiError | undefined
   if (
     options.proactiveRefresh !== false &&
+    !(options.singleRecovery && state.recoveryStarted) &&
     refreshToken &&
     typeof tokenExpiresAt === "number" &&
     isCloseToExpiry(tokenExpiresAt)
   ) {
+    startRecovery()
     try {
       const refreshed = await refreshSub2ApiRequestAuth({
         request: state.request,
@@ -626,25 +727,36 @@ async function executeSub2ApiAuthLifecycle<T>(
       state.request = refreshed
       refreshToken = normalizeSub2ApiRefreshToken(refreshed.auth.refreshToken)
     } catch (refreshError) {
-      throwIfSub2ApiAuthPersistenceFailed(refreshError)
-      if (
-        isUncertainSub2ApiRefreshRotation(refreshError) ||
-        isSub2ApiSessionBindingMismatch(refreshError)
-      ) {
-        state.request = await recoverSub2ApiRequestAuth({
-          request: state.request,
-          endpoint,
-          authSession: hydrated.authSession,
-          refreshError,
-        })
-        refreshToken = normalizeSub2ApiRefreshToken(
-          state.request.auth?.refreshToken,
-        )
+      // A rejected renewal does not invalidate a still-usable access token.
+      // Remember it so an unauthorized request cannot replay the refresh family.
+      if (hasPanelBinding && isSub2ApiRefreshTokenContractError(refreshError)) {
+        rejectedPanelRenewal = createRefreshTokenInvalidError(endpoint)
       } else {
-        logger.warn("Sub2API proactive auth refresh failed", {
+        throwIfTerminalSub2ApiRefreshError(
+          refreshError,
+          state.request,
           endpoint,
-          error: getSafeErrorMessage(refreshError),
-        })
+          hasPanelBinding,
+        )
+        if (
+          isUncertainSub2ApiRefreshRotation(refreshError) ||
+          isSub2ApiSessionBindingMismatch(refreshError)
+        ) {
+          state.request = await recoverSub2ApiRequestAuth({
+            request: state.request,
+            endpoint,
+            authSession: hydrated.authSession,
+            refreshError,
+          })
+          refreshToken = normalizeSub2ApiRefreshToken(
+            state.request.auth?.refreshToken,
+          )
+        } else {
+          logger.warn("Sub2API proactive auth refresh failed", {
+            endpoint,
+            error: getSafeErrorMessage(refreshError),
+          })
+        }
       }
     }
   }
@@ -653,11 +765,44 @@ async function executeSub2ApiAuthLifecycle<T>(
     return await runner(state.request)
   } catch (error) {
     if (!isAuthenticationRequiredError(error)) throw error
+    if (rejectedPanelRenewal) throw rejectedPanelRenewal
+    const recoveryLimitReached = options.singleRecovery && state.recoveryStarted
+    // A pre-dispatch key mismatch can reuse the original website context.
+    // Recovery verifies origin/identity before replacing any saved credential.
+    if (isPanelKeyMismatch(error)) {
+      if (options.recoverUnauthorized === false || recoveryLimitReached)
+        throw error
+      notifyApiTransportObserver(
+        state.request.observer,
+        "onPreHandlerUnauthorized",
+      )
+      if (hasBoundRefreshCredential(state.request))
+        throw createManagedPanelLoginRequiredError(endpoint)
+      startRecovery()
+      return await retrySub2ApiRunnerWithResyncedAuth({
+        request: state.request,
+        endpoint,
+        authSession: hydrated.authSession,
+        authError: error,
+        runner,
+        beforeUnauthorizedRetry: options.beforeUnauthorizedRetry,
+      })
+    }
+    if (
+      isSub2ApiSessionBindingMismatch(error) &&
+      (await hasSub2ApiPanelBinding(
+        state.request.baseUrl,
+        state.request.auth.accessToken ?? "",
+      ))
+    )
+      throw error
     notifyApiTransportObserver(
       state.request.observer,
       "onPreHandlerUnauthorized",
     )
-    if (options.recoverUnauthorized === false) throw error
+    if (options.recoverUnauthorized === false || recoveryLimitReached)
+      throw error
+    startRecovery()
 
     if (isSub2ApiSessionBindingMismatch(error)) {
       return await retrySub2ApiRunnerWithResyncedAuth({
@@ -677,7 +822,15 @@ async function executeSub2ApiAuthLifecycle<T>(
           authSession: hydrated.authSession,
         })
       } catch (refreshError) {
-        throwIfSub2ApiAuthPersistenceFailed(refreshError)
+        throwIfTerminalSub2ApiRefreshError(
+          refreshError,
+          state.request,
+          endpoint,
+          await hasSub2ApiPanelBinding(
+            state.request.baseUrl,
+            state.request.auth.accessToken ?? "",
+          ),
+        )
         logger.warn(
           "Failed to restore Sub2API authenticated request via refresh token",
           { endpoint, error: getSafeErrorMessage(refreshError) },
@@ -699,6 +852,13 @@ async function executeSub2ApiAuthLifecycle<T>(
           })
         } catch (resyncError) {
           throwIfSub2ApiAuthPersistenceFailed(resyncError)
+          if (
+            isSub2ApiRefreshTokenInvalidError(resyncError) ||
+            (resyncError instanceof ApiError &&
+              resyncError.upstreamCode ===
+                SUB2API_PANEL_KEY_ERRORS.IndependentSessionRequired)
+          )
+            throw resyncError
           throw refreshError
         }
         return await runRecoveredSub2ApiRequest({
@@ -719,6 +879,7 @@ async function executeSub2ApiAuthLifecycle<T>(
         })
       } catch (retryError) {
         if (
+          options.singleRecovery ||
           !isAuthenticationRequiredError(retryError) ||
           state.request.allowAccountCredentialRecovery !== true
         )
@@ -754,12 +915,17 @@ export async function executeAuthenticatedSub2ApiRequest<T>(
 ): Promise<T> {
   // Preparation can fail before runner executes; recovery must still compare
   // against the hydrated/current credential, not the caller's older snapshot.
-  const state = { request }
+  const state = {
+    request,
+    recoveryStarted: false,
+    attemptedAfterRecovery: false,
+  }
   try {
     return await executeSub2ApiAuthLifecycle(
       state,
       endpoint,
       (next) => {
+        if (state.recoveryStarted) state.attemptedAfterRecovery = true
         state.request = next
         return runner(next)
       },
@@ -773,12 +939,27 @@ export async function executeAuthenticatedSub2ApiRequest<T>(
   } catch (error) {
     if (
       request.allowAccountCredentialRecovery !== true ||
+      (options.singleRecovery && state.attemptedAfterRecovery) ||
       options.recoverUnauthorized === false
     )
       throw error
-    const rejected = isSub2ApiRefreshTokenContractError(error)
+    let rejected = isSub2ApiRefreshTokenContractError(error)
       ? createRefreshTokenInvalidError(endpoint)
       : error
+    if (
+      error instanceof ApiError &&
+      error.upstreamCode === SUB2API_PANEL_KEY_ERRORS.WebsiteKeyMissing
+    ) {
+      // Keep website resync skipped above and admit configured login here.
+      rejected = new ApiError(
+        error.message,
+        401,
+        endpoint,
+        API_ERROR_CODES.HTTP_401,
+        error.upstreamCode,
+        error,
+      )
+    }
     const { executeWithAccountCredentialRecovery } =
       await import("~/services/accountCredentialRecovery")
     let initial = true

@@ -3,16 +3,22 @@ import { TURNSTILE_DEFAULT_QUERY_PARAM_NAME } from "~/constants/turnstile"
 import { type ApiErrorCode } from "~/services/apiTransport/errors"
 import { applyLocalRemoteFetchResultEvidence } from "~/services/apiTransport/remoteLifecycle"
 import {
+  discoverNativeCheckInPage,
+  type NativeCheckInPageProbe,
+} from "~/services/checkin/discovery/nativePageDiscovery"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import { type TEMP_CONTEXT_TASK_KINDS } from "~/services/protectionBypass/contracts"
+import { AuthTypeEnum } from "~/types"
 import {
   TEMP_WINDOW_TURNSTILE_STATUSES,
   type TempWindowFetch,
   type TempWindowTurnstileFetch,
   type TempWindowTurnstileMeta,
 } from "~/types/tempWindowFetch"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { removeTempWindowCookieRule } from "~/utils/browser/dnrCookieInjector"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
@@ -134,7 +140,13 @@ export async function executeTempWindowFetch(
       contextPageUrl,
       tempRequestId,
       suppressMinimize,
-      { incognito: Boolean(useIncognito) },
+      {
+        incognito: Boolean(useIncognito),
+        // Bearers can depend on a signing key or session in this partition.
+        ...(resolvedAuthType === AuthTypeEnum.AccessToken && cookieStoreId
+          ? { cookieStoreId }
+          : {}),
+      },
       authorizeAtAcquire,
     )
     const { tabId } = context
@@ -171,6 +183,7 @@ export async function executeTempWindowFetch(
 
     const response = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentPerformTempWindowFetch,
+      ...("siteType" in request ? { siteType: request.siteType } : {}),
       requestId: tempRequestId,
       expectedOrigin: normalizeOrigin(originUrl),
       fetchUrl,
@@ -291,6 +304,7 @@ export async function executeTempWindowTurnstileFetch(
     responseType,
   })
 
+  let resolvedPageUrl = pageUrl
   const ruleIds = new Set<number>()
 
   const rawOptions = (fetchOptions ?? {}) as RequestInit
@@ -338,6 +352,36 @@ export async function executeTempWindowTurnstileFetch(
       origin: normalizeOrigin(originUrl),
     })
 
+    if (
+      request.discoverCheckInPage &&
+      turnstilePreTrigger?.kind !== TURNSTILE_PRE_TRIGGER_KINDS.None
+    ) {
+      const discovered = await discoverNativeCheckInPage({
+        pageUrl,
+        navigate: (url) =>
+          context.navigate(url, {
+            requestId: tempRequestId,
+            origin: normalizeOrigin(originUrl),
+          }),
+        inspect: () =>
+          sendTabMessageWithRetry<NativeCheckInPageProbe>(tabId, {
+            action: RuntimeActionIds.ContentInspectCheckinPage,
+            trigger: turnstilePreTrigger,
+            acceptVerificationWidget: true,
+          }),
+      })
+      if (!discovered) {
+        turnstile.status = TEMP_WINDOW_TURNSTILE_STATUSES.NotPresent
+        sendResponse({
+          success: false,
+          error: TURNSTILE_TOKEN_UNAVAILABLE_ERROR,
+          turnstile,
+        })
+        return
+      }
+      resolvedPageUrl = discovered
+    }
+
     const turnstileResponse = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentWaitForTurnstileToken,
       requestId: tempRequestId,
@@ -371,6 +415,7 @@ export async function executeTempWindowTurnstileFetch(
         success: false,
         error: TURNSTILE_TOKEN_UNAVAILABLE_ERROR,
         turnstile,
+        ...(resolvedPageUrl !== pageUrl ? { pageUrl: resolvedPageUrl } : {}),
       })
       trackTempWindowFetchCompleted({
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch,
@@ -438,6 +483,7 @@ export async function executeTempWindowTurnstileFetch(
     const responseWithTurnstile = {
       ...response,
       turnstile,
+      ...(resolvedPageUrl !== pageUrl ? { pageUrl: resolvedPageUrl } : {}),
     } satisfies TempWindowTurnstileFetch
     sendResponse(responseWithTurnstile)
     const result = getTempWindowAnalyticsResult(response)

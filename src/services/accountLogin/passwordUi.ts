@@ -15,6 +15,7 @@ import {
   hasPageVerification,
   waitForPageVerification,
 } from "~/services/checkin/pageVerification"
+import { PAGE_VERIFICATION_STATUSES } from "~/types/turnstile"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
 import {
@@ -180,7 +181,7 @@ export function handlePasswordUi(
       if (JSON.parse(sessionStorage.getItem(FLOW_KEY) || "null")?.submitted)
         return { kind: PASSWORD_UI_KINDS.Submitted }
       if (
-        verification.status === "required" ||
+        verification.status === PAGE_VERIFICATION_STATUSES.Required ||
         !fields.form.isConnected ||
         fields.identity.disabled ||
         fields.password.disabled ||

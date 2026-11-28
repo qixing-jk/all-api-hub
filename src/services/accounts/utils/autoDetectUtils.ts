@@ -31,6 +31,7 @@ import {
   hasUnattributedMessage,
   isAuthenticationRequiredError,
 } from "~/services/apiTransport/errors"
+import { reloadSiteTabAndWait } from "~/services/browsingContext/siteTabRecovery"
 import { createTab, queryTabs, reloadTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
@@ -346,17 +347,20 @@ export async function openLoginTab(
 }
 
 /**
- * Reload the currently active page so a freshly installed or updated content
- * script can attach before the next auto-detect attempt.
+ * Refresh the site's content scripts before retrying detection. Callers without
+ * a site URL can still reload the active page directly.
  */
-export async function reloadCurrentTab(): Promise<void> {
+export async function reloadCurrentTab(siteUrl?: string): Promise<void> {
+  if (siteUrl) {
+    await reloadSiteTabAndWait({ siteUrl, createIfMissing: false })
+    return
+  }
   const tabs = await queryTabs({
     active: true,
     currentWindow: true,
   })
 
   const activeTab = tabs[0]
-  if (typeof activeTab?.id === "number") {
-    await reloadTab(activeTab.id)
-  }
+  if (typeof activeTab?.id !== "number") return
+  await reloadTab(activeTab.id)
 }

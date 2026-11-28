@@ -256,6 +256,38 @@ describe("product analytics runtime", () => {
     expect(stateMocks.setLastSettingsSnapshotAt).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+    ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+  ])(
+    "bounds concurrent and restarted %s captures during a local write outage",
+    async (type) => {
+      stateMocks.setLastSettingsSnapshotAt.mockResolvedValue(false)
+      stateMocks.setLastSiteEcosystemSnapshotAt.mockResolvedValue(false)
+      const responses = await Promise.all(
+        Array.from({ length: 10 }, () =>
+          handleProductAnalyticsMessage(type, {}),
+        ),
+      )
+      expect(responses.filter((response) => response.success)).toHaveLength(1)
+      expect(captureMock).toHaveBeenCalledTimes(1)
+
+      vi.resetModules()
+      const restarted =
+        await import("~/services/productAnalytics/runtime/runtime")
+      await expect(
+        restarted.handleProductAnalyticsMessage(type, {}),
+      ).resolves.toEqual({ success: false })
+      expect(captureMock).toHaveBeenCalledTimes(1)
+
+      vi.advanceTimersByTime(3 * 24 * 60 * 60 * 1000)
+      await expect(
+        restarted.handleProductAnalyticsMessage(type, {}),
+      ).resolves.toEqual({ success: true })
+      expect(captureMock).toHaveBeenCalledTimes(2)
+    },
+  )
+
   it("captures only one auto check-in config snapshot for concurrent requests", async () => {
     let capturedAt: number | undefined
     stateMocks.getState.mockImplementation(async () => ({
@@ -667,6 +699,16 @@ describe("product analytics runtime", () => {
 
     expect(captureMock).toHaveBeenCalledTimes(2)
     expect(stateMocks.setLastSiteEcosystemSnapshotAt).not.toHaveBeenCalled()
+    vi.resetModules()
+    const restarted =
+      await import("~/services/productAnalytics/runtime/runtime")
+    await expect(
+      restarted.handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+        {},
+      ),
+    ).resolves.toEqual({ success: false })
+    expect(captureMock).toHaveBeenCalledTimes(2)
   })
 
   it("logs startup site ecosystem snapshot failures in dev builds", async () => {
@@ -740,6 +782,57 @@ describe("product analytics runtime", () => {
       "Product analytics sponsor recommendations summary failed",
       expect.any(Error),
     )
+  })
+
+  it("restarts account observation independently of the preference listener", async () => {
+    const addListener = vi.spyOn(fakeBrowser.storage.onChanged, "addListener")
+    const cleanupAccount = setupProductAnalyticsAccountChangeListener()
+    const cleanupPreferences = setupProductAnalyticsPreferencesChangeListener()
+    const oldAccountHandler = atIndex(addListener.mock.calls, 0)[0]
+    const preferencesHandler = atIndex(addListener.mock.calls, 1)[0]
+    oldAccountHandler({ site_accounts: {} }, "local")
+    preferencesHandler({ user_preferences: {} }, "local")
+    cleanupAccount()
+    const cleanupRestartedAccount = setupProductAnalyticsAccountChangeListener()
+    const restartedHandler = atIndex(addListener.mock.calls, 2)[0]
+    cleanupAccount()
+    expect(setupProductAnalyticsAccountChangeListener()).toBe(
+      cleanupRestartedAccount,
+    )
+    expect(addListener).toHaveBeenCalledTimes(3)
+    oldAccountHandler({ site_accounts: {} }, "local")
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(captureMock).toHaveBeenCalledTimes(1)
+    expect(captureMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      expect.any(Object),
+    )
+    restartedHandler({ site_accounts: {} }, "local")
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(captureMock).toHaveBeenCalledTimes(2)
+    expect(captureMock).toHaveBeenLastCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.SiteEcosystemSnapshot,
+      expect.any(Object),
+    )
+    cleanupPreferences()
+    cleanupRestartedAccount()
+  })
+
+  it("can start observing accounts after the storage event API becomes available", () => {
+    const addListener = vi.spyOn(fakeBrowser.storage.onChanged, "addListener")
+    ;(globalThis as any).browser = { storage: {} }
+    const cleanupUnavailable = setupProductAnalyticsAccountChangeListener()
+    expect(addListener).not.toHaveBeenCalled()
+
+    ;(globalThis as any).browser = originalBrowser
+    const cleanup = setupProductAnalyticsAccountChangeListener()
+    try {
+      cleanupUnavailable()
+      expect(addListener).toHaveBeenCalledOnce()
+      expect(setupProductAnalyticsAccountChangeListener()).toBe(cleanup)
+    } finally {
+      cleanup()
+    }
   })
 
   it("debounces local account storage changes and cleanup removes the listener", async () => {

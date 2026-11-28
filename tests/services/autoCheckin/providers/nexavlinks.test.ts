@@ -13,6 +13,7 @@ import {
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { fetchNexaVlinksDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/nexavlinksCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
+import { API_TRANSPORT_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
@@ -24,6 +25,7 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { tempWindowTriggerCheckinPageAction } from "~/utils/browser/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -145,6 +147,85 @@ const checkInWithStatusProof = () =>
   })
 
 describe("NexaVlinks check-in integration", () => {
+  it.each([
+    {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+      origin: CONSOLE_ORIGIN,
+      tabId: 7,
+    },
+    {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+      incognito: true,
+    },
+    {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+      cookieStoreId: "firefox-container-2",
+    },
+  ] as const)(
+    "leaves the claim to its signed-in page when the native action cannot open %j",
+    async (fetchContext) => {
+      const status = vi
+        .mocked(fetchNexaVlinksDailyCheckInStatus)
+        .mockImplementationOnce(async (_, auth) => {
+          expect(auth?.allowAuthenticationRecovery).toBe(true)
+          auth?.onAuthenticatedTransport?.({ fetchContext })
+          return notCheckedStatus
+        })
+      const outcome = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      })
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        result: {
+          status: "failed",
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+          messageParams: { checkInUrl: CHECK_IN_URL },
+        },
+      })
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+      expect(status.mock.calls.at(-1)?.[0]).toMatchObject({ fetchContext })
+    },
+  )
+
+  it("verifies the expected user on a default temporary page and polls through the admitted transport", async () => {
+    const fetchContext = {
+      kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+    }
+    const status = vi
+      .mocked(fetchNexaVlinksDailyCheckInStatus)
+      .mockImplementationOnce(async (_, auth) => {
+        auth?.onAuthenticatedTransport?.({
+          forceTempWindow: true,
+          fetchContext,
+        })
+        return notCheckedStatus
+      })
+      .mockResolvedValueOnce({ enabled: true, checkedInToday: true })
+    await expect(
+      executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      }),
+    ).resolves.toMatchObject({
+      kind: "executed",
+      result: { status: "success" },
+    })
+    expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        expectedUserId: "6262",
+        pageUrl: CHECK_IN_URL,
+      }),
+    )
+    expect(status.mock.calls.at(-1)?.[0]).toMatchObject({
+      forceTempWindow: true,
+      fetchContext,
+      observer: undefined,
+    })
+  })
+
   it("keeps a native click unconfirmed when both final reads cross a day boundary", async () => {
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date(2026, 0, 31, 23, 59, 59))
@@ -317,34 +398,47 @@ describe("NexaVlinks check-in integration", () => {
     expect(fetchNexaVlinksDailyCheckInStatus).not.toHaveBeenCalled()
   })
 
-  it("opens the site's own check-in page with a scoped button trigger", async () => {
-    vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(
-      clickedAction({ status: "completed", provider: "interactive" }) as never,
-    )
-    vi.mocked(fetchNexaVlinksDailyCheckInStatus).mockResolvedValue({
-      enabled: true,
-      checkedInToday: true,
-    })
+  it.each([undefined, "/rewards?tab=daily#/claim"])(
+    "opens the native page override %s with a scoped button trigger",
+    async (nativePagePath) => {
+      vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(
+        clickedAction({
+          status: "completed",
+          provider: "interactive",
+        }) as never,
+      )
+      vi.mocked(fetchNexaVlinksDailyCheckInStatus).mockResolvedValue({
+        enabled: true,
+        checkedInToday: true,
+      })
 
-    await checkInWithStatusProof()
+      const account = createAccount()
+      account.checkIn.nativePagePath = nativePagePath
+      await nexavlinksProvider.checkIn(account, {
+        ...executionContext(),
+        statusProof: notCheckedStatusProof,
+      })
 
-    // The site's sidebar also links "Check In", and the generic text trigger
-    // prefers the shortest label, so the trigger is scoped to the page body.
-    expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        originUrl: CONSOLE_ORIGIN,
-        pageUrl: CHECK_IN_URL,
-        siteType: SITE_TYPES.SUB2API,
-        expectedUserId: "6262",
-        accountId: "nexavlinks-account",
-        trigger: {
-          kind: "clickText",
-          candidateSelector: "main button",
-          positivePattern: "check\\s*in|签到",
-        },
-      }),
-    )
-  })
+      // The site's sidebar also links "Check In", and the generic text trigger
+      // prefers the shortest label, so the trigger is scoped to the page body.
+      expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          originUrl: CONSOLE_ORIGIN,
+          pageUrl: nativePagePath
+            ? `${CONSOLE_ORIGIN}${nativePagePath}`
+            : CHECK_IN_URL,
+          siteType: SITE_TYPES.SUB2API,
+          expectedUserId: "6262",
+          accountId: "nexavlinks-account",
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
+            candidateSelector: "main button",
+            positivePattern: "check\\s*in|签到",
+          },
+        }),
+      )
+    },
+  )
 
   it("confirms a check-in the page completed and reports it as done today", async () => {
     vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(
@@ -430,9 +524,11 @@ describe("NexaVlinks check-in integration", () => {
   )
 
   it("hands an unfinished verification back to the person on the page", async () => {
-    vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(
-      clickedAction({ status: "required", provider: "interactive" }) as never,
-    )
+    const pageUrl = `${CONSOLE_ORIGIN}/rewards?tab=daily`
+    vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue({
+      ...clickedAction({ status: "required", provider: "interactive" }),
+      pageUrl,
+    } as never)
 
     vi.useFakeTimers()
     try {
@@ -443,7 +539,7 @@ describe("NexaVlinks check-in integration", () => {
         reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
         messageKey:
           "autoCheckin:providerFallback.nativePageVerificationRequired",
-        messageParams: { checkInUrl: CHECK_IN_URL },
+        messageParams: { checkInUrl: pageUrl },
       })
     } finally {
       vi.useRealTimers()

@@ -4,11 +4,13 @@ import {
 } from "~/constants/checkIn"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { fetchNexaVlinksDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/nexavlinksCheckIn"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
 import {
   CHECK_IN_CONFIRMATION_KINDS,
   withCheckInConfirmation,
 } from "~/services/checkin/autoCheckin/confirmation"
-import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   getEffectiveAuthType,
@@ -20,15 +22,21 @@ import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
-import type { TurnstilePreTrigger } from "~/types/turnstile"
+import { TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS } from "~/types/tempWindowFetch"
+import {
+  PAGE_VERIFICATION_STATUSES,
+  TURNSTILE_PRE_TRIGGER_KINDS,
+  type TurnstilePreTrigger,
+} from "~/types/turnstile"
 import { tempWindowTriggerCheckinPageAction } from "~/utils/browser/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderReadContext,
-} from "./contracts"
+import type { AutoCheckinProviderReadContext } from "./contracts"
+import {
+  getBoundCheckInPageHandoff,
+  withSub2ApiCheckInExecution,
+} from "./sub2apiExecution"
 import {
   createSub2ApiCheckInReadRequest,
   failedSub2ApiCheckIn,
@@ -50,14 +58,18 @@ const NATIVE_PAGE_STATUS_POLL_INTERVAL_MS = 1_000
  * https://asia.nexavlinks.com/check-in, 2026-10-17.
  */
 const NEXAVLINKS_CHECK_IN_TRIGGER: TurnstilePreTrigger = {
-  kind: "clickText",
+  kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
   candidateSelector: "main button",
   positivePattern: "check\\s*in|签到",
 }
 
 const resolveCheckInUrl = (account: SiteAccount): string | null => {
   try {
-    return new URL(NEXAVLINKS_CHECK_IN_PATH, account.site_url).href
+    return new URL(
+      normalizeCheckInPagePath(account.checkIn.nativePagePath) ??
+        NEXAVLINKS_CHECK_IN_PATH,
+      account.site_url,
+    ).href
   } catch {
     return null
   }
@@ -68,10 +80,14 @@ const resolveTrigger = (account: SiteAccount): TurnstilePreTrigger =>
   account.checkIn?.customCheckIn?.turnstilePreTrigger ??
   NEXAVLINKS_CHECK_IN_TRIGGER
 
-const readStatus = async (context: AutoCheckinProviderReadContext) =>
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) =>
   toSub2ApiCheckInStatus(
     await fetchNexaVlinksDailyCheckInStatus(
       createSub2ApiCheckInReadRequest(context),
+      auth,
     ),
     context.observedAt,
   )
@@ -80,7 +96,7 @@ const readStatus = async (context: AutoCheckinProviderReadContext) =>
  * Polls the read-only status until the page's own claim lands or the budget
  * ends. A read that throws leaves the outcome to the caller's catch.
  */
-async function pollCheckedInToday(account: SiteAccount) {
+async function pollCheckedInToday(request: ApiServiceRequest) {
   const deadline = Date.now() + NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS
   let lastStatus:
     | {
@@ -92,9 +108,7 @@ async function pollCheckedInToday(account: SiteAccount) {
     | undefined
   while (Date.now() <= deadline) {
     const status = await readDayStableCheckInObservation(() =>
-      fetchNexaVlinksDailyCheckInStatus(
-        createSub2ApiCheckInReadRequest({ account, observedAt: Date.now() }),
-      ),
+      fetchNexaVlinksDailyCheckInStatus(request),
     )
     lastStatus = status
     if (status?.observation.checkedInToday) return status
@@ -110,12 +124,10 @@ async function pollCheckedInToday(account: SiteAccount) {
   return lastStatus
 }
 
-export const nexavlinksProvider: AutoCheckinProvider = {
+export const nexavlinksProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
 
   getReadiness: getSub2ApiCheckInReadiness,
-
-  detect: (context) => detectWithStatusReadback(context, readStatus),
 
   getStatus: readStatus,
 
@@ -125,7 +137,7 @@ export const nexavlinksProvider: AutoCheckinProvider = {
    * person finish the challenge in the opened window, and confirms the result
    * through the read-only status.
    */
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     const siteAccount = account as SiteAccount
     if (
       context.statusProof?.availability !==
@@ -135,7 +147,7 @@ export const nexavlinksProvider: AutoCheckinProvider = {
       return failedSub2ApiCheckIn(AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE)
     }
 
-    const checkInUrl = resolveCheckInUrl(siteAccount)
+    let checkInUrl = resolveCheckInUrl(siteAccount)
     if (!checkInUrl) {
       return failedSub2ApiCheckIn(
         AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
@@ -154,11 +166,17 @@ export const nexavlinksProvider: AutoCheckinProvider = {
       }
     }
 
+    const handoff = getBoundCheckInPageHandoff(attempt?.request, checkInUrl)
+    if (handoff) return handoff
+
     let action: Awaited<ReturnType<typeof tempWindowTriggerCheckinPageAction>>
     try {
       action = await tempWindowTriggerCheckinPageAction({
         originUrl: siteAccount.site_url,
         pageUrl: checkInUrl,
+        discoverCheckInPage: !normalizeCheckInPagePath(
+          siteAccount.checkIn.nativePagePath,
+        ),
         requestId: safeRandomUUID(`nexavlinks-checkin-${siteAccount.id}`),
         accountId: siteAccount.id,
         authType: getEffectiveAuthType(siteAccount),
@@ -180,13 +198,24 @@ export const nexavlinksProvider: AutoCheckinProvider = {
       }
     }
 
-    if (!action.success || action.reason !== "clicked") {
+    if (action.pageUrl) checkInUrl = action.pageUrl
+    if (
+      !action.success ||
+      action.reason !== TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS.Clicked
+    ) {
       return resolveNativePageFailureResult({ action, checkInUrl })
     }
 
     let observation: Awaited<ReturnType<typeof pollCheckedInToday>>
     try {
-      observation = await pollCheckedInToday(siteAccount)
+      observation = await pollCheckedInToday(
+        attempt?.request
+          ? { ...attempt.request, observer: undefined }
+          : createSub2ApiCheckInReadRequest({
+              account: siteAccount,
+              observedAt: Date.now(),
+            }),
+      )
       if (observation?.observation.checkedInToday) {
         // The page completed the claim inside this run and the read-only status
         // confirms it. The award is credit-denominated on this deployment, so
@@ -222,7 +251,8 @@ export const nexavlinksProvider: AutoCheckinProvider = {
     }
 
     const verificationRequired =
-      action.trigger?.verification?.status === "required"
+      action.trigger?.verification?.status ===
+      PAGE_VERIFICATION_STATUSES.Required
     const result = {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: verificationRequired
@@ -245,4 +275,4 @@ export const nexavlinksProvider: AutoCheckinProvider = {
         })
       : result
   },
-}
+})

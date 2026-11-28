@@ -7,7 +7,9 @@ import type { CheckInMethodId } from "~/types/checkIn"
 
 import { aiRouterProvider } from "./aiRouter"
 import { anyrouterProvider } from "./anyrouter"
+import { apiKeyCasaProvider } from "./apiKeyCasa"
 import { baiApiProvider } from "./baiApi"
+import { bizDecipherProvider } from "./bizdecipher"
 import { clawhudProvider } from "./clawhud"
 import type { AutoCheckinProvider } from "./contracts"
 import { daiguaProvider } from "./daigua"
@@ -15,8 +17,10 @@ import { dayaProvider } from "./daya"
 import { denxioProvider } from "./denxio"
 import { emRankProvider } from "./emrank"
 import { freeApiProvider } from "./freeApi"
+import { freeggProvider } from "./freegg"
 import { geniusProgrammerProvider } from "./geniusProgrammer"
 import { hiyoProvider } from "./hiyo"
+import { linxiProvider } from "./linxiCheckIn"
 import { nexavlinksProvider } from "./nexavlinks"
 import { pmApiProvider } from "./pmapi"
 import {
@@ -37,12 +41,14 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn]: sidruneProvider,
   [AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn]: xiaoenProvider,
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: agentRouterProvider,
+  [AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance]: freeggProvider,
   [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: anyrouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: veloeraProvider,
   [AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn]: wongGongyiProvider,
   [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: newApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn]: voApiV2Provider,
   [AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn]: sub2apiProProvider,
+  [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: linxiProvider,
   [AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn]:
     geniusProgrammerProvider,
   [AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn]: denxioProvider,
@@ -50,6 +56,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn]: aiRouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn]: toolcodeProvider,
   [AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn]: hiyoProvider,
+  [AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn]: bizDecipherProvider,
   [AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn]: clawhudProvider,
   [AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn]: daiguaProvider,
   [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn]: freeApiProvider,
@@ -60,6 +67,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn]: dayaProvider,
   [AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn]: pmApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.BaiApiDailyCheckIn]: baiApiProvider,
+  [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: apiKeyCasaProvider,
   [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: xingyaProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 

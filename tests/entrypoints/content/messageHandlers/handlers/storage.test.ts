@@ -33,6 +33,89 @@ vi.mock("~/utils/i18n/core", () => ({
 }))
 
 describe("content storage handler", () => {
+  it("checks fresh native identity instead of reusing a cached legacy user", async () => {
+    setupAccountBrowserIdentityRateLimitMessaging()
+    const origin = "https://native-fresh.example.invalid"
+    vi.stubGlobal("location", new URL(`${origin}/profile`))
+    localStorage.setItem("user", JSON.stringify({ id: 1 }))
+    let currentUser = 2
+    const fetchMock = vi.fn(async (url: string) =>
+      new URL(url).pathname === "/api/user/auth/refresh"
+        ? new Response(null, { status: 404 })
+        : new Response(
+            JSON.stringify({ success: true, data: { id: currentUser } }),
+            { status: 200 },
+          ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    const read = (fresh: boolean) =>
+      new Promise<unknown>((resolve) =>
+        handleGetUserFromLocalStorage(
+          {
+            url: origin,
+            siteType: "new-api",
+            verifyIdentity: true,
+            requireFreshIdentity: fresh,
+          },
+          resolve,
+        ),
+      )
+    expect(await read(false)).toMatchObject({ data: { userId: "2" } })
+    currentUser = 3
+    expect(await read(true)).toMatchObject({
+      data: { userId: "3", identityVerified: true },
+    })
+    expect(
+      fetchMock.mock.calls.filter(
+        ([url]) => new URL(url).pathname === "/api/user/self",
+      ),
+    ).toHaveLength(2)
+  })
+
+  it("uses a fresh AuthBundle identity for native actions without requiring Cookie-only self auth", async () => {
+    mockGetContentSessionExtractors.mockReturnValue([
+      newApiAuthBundleContentSessionExtractor,
+      compatibleUserContentSessionExtractor,
+    ])
+    const origin = "https://native-modern.example.invalid"
+    vi.stubGlobal("location", new URL(`${origin}/profile`))
+    localStorage.setItem("user", JSON.stringify({ id: "stale-user" }))
+    const fetchMock = vi.fn(async (url: string) =>
+      new URL(url).pathname === "/api/user/auth/refresh"
+        ? new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                user: { id: "current-user" },
+                access_token: "fixture-token",
+                token_type: "Bearer",
+                access_expires_at: Math.floor(Date.now() / 1000) + 900,
+                session: { sid: "fixture-session", current: true },
+              },
+            }),
+            { status: 200 },
+          )
+        : new Response(null, { status: 401 }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    const response = await new Promise<unknown>((resolve) =>
+      handleGetUserFromLocalStorage(
+        {
+          url: origin,
+          siteType: "new-api",
+          verifyIdentity: true,
+          requireFreshIdentity: true,
+        },
+        resolve,
+      ),
+    )
+    expect(response).toEqual({
+      success: true,
+      data: { userId: "current-user", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   beforeEach(() => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()

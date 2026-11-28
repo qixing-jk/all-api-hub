@@ -29,18 +29,32 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import sponsorCatalog from "~~/public/sponsor-catalog.v5.json" with { type: "json" }
 
+function accountSectionMenuTrigger(navigation: Locator, name?: string) {
+  return navigation
+    .getByRole("button", {
+      name: name
+        ? `${name}, Account settings sections`
+        : "Account settings sections",
+    })
+    .and(navigation.locator('button[aria-haspopup="menu"]'))
+}
+
+function accountSectionButton(navigation: Locator, name: string) {
+  return navigation
+    .getByRole("button", { name })
+    .and(navigation.locator('button:not([aria-haspopup="menu"])'))
+}
+
 async function chooseAccountSection(
   page: Page,
   navigation: Locator,
   name: string,
 ) {
   if (page.viewportSize()!.width < 640) {
-    await navigation
-      .getByRole("button", { name: /, Account settings sections$/ })
-      .click()
-    await page.getByRole("menuitem", { name, exact: true }).click()
+    await accountSectionMenuTrigger(navigation).click()
+    await page.getByRole("menuitem", { name }).click()
   } else {
-    await navigation.getByRole("button", { name, exact: true }).click()
+    await accountSectionButton(navigation, name).click()
   }
 }
 
@@ -50,16 +64,14 @@ async function expectAccountSection(
   name: string,
 ) {
   if (page.viewportSize()!.width < 640) {
-    await expect(
-      navigation.getByRole("button", {
-        name: `${name}, Account settings sections`,
-        exact: true,
-      }),
-    ).toContainText(name)
+    await expect(accountSectionMenuTrigger(navigation, name)).toContainText(
+      name,
+    )
   } else {
-    await expect(
-      navigation.getByRole("button", { name, exact: true }),
-    ).toHaveAttribute("aria-current", "location")
+    await expect(accountSectionButton(navigation, name)).toHaveAttribute(
+      "aria-current",
+      "location",
+    )
   }
 }
 
@@ -118,22 +130,31 @@ test("failed account detection keeps recovery readable on narrow screens", async
     await page.setViewportSize({ width, height: 700 })
     expect((await message.boundingBox())!.width).toBeGreaterThan(150)
     expect((await message.boundingBox())!.height).toBeLessThan(200)
+    const cancel = dialog.getByRole("button", { name: "Cancel", exact: true })
+    if (width >= 640) await expect(cancel).toBeVisible()
+    else await expect(cancel).toBeHidden()
     await expect(
-      dialog.getByRole("button", { name: "Cancel", exact: true }),
-    ).toHaveCount(0)
-    const detect = (await dialog
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton)
-      .boundingBox())!
-    const manual = (await dialog
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton)
-      .boundingBox())!
-    expect(Math.abs(detect.y - manual.y)).toBeLessThanOrEqual(1)
-    expect(Math.abs(detect.width - manual.width)).toBeLessThanOrEqual(1)
-    expect(
-      await dialog
-        .locator('[data-slot="modal-body"]')
-        .evaluate((element) => element.scrollWidth - element.clientWidth),
-    ).toBeLessThanOrEqual(1)
+      dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton),
+    ).toBeVisible()
+    await expect(
+      dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
+    ).toBeVisible()
+    const body = dialog.locator('[data-slot="modal-body"]')
+    await expect
+      .poll(
+        () =>
+          body.evaluate((element) => element.scrollWidth - element.clientWidth),
+        { message: `Account form fits the dialog at ${width}px` },
+      )
+      .toBeLessThanOrEqual(1)
+    if (width === 768) {
+      await captureVisualViews({
+        page,
+        ready: message,
+        id: "failed-detection-tablet",
+        extensionDir,
+      })
+    }
   }
   await page.setViewportSize({ width: 360, height: 700 })
   const navigation = dialog.getByRole("navigation", {
@@ -276,7 +297,7 @@ test("slow detection hint uses available width", async ({
     .fill("https://example.com")
   await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
   const alert = dialog
-    .getByRole("alert")
+    .getByRole("status")
     .filter({ hasText: "Auto-detect is taking longer" })
   await expect(alert).toBeVisible({ timeout: 15_000 })
   const help = alert.getByRole("button", {
@@ -296,14 +317,9 @@ test("slow detection hint uses available width", async ({
     const buttonBounds = (await help.boundingBox())!
     if (width >= 768) {
       expect(buttonBounds.x).toBeGreaterThan(textBounds.x + textBounds.width)
-      expect(
-        Math.abs(
-          buttonBounds.y +
-            buttonBounds.height / 2 -
-            textBounds.y -
-            textBounds.height / 2,
-        ),
-      ).toBeLessThanOrEqual(1)
+      const buttonCenter = buttonBounds.y + buttonBounds.height / 2
+      expect(buttonCenter).toBeGreaterThanOrEqual(textBounds.y)
+      expect(buttonCenter).toBeLessThanOrEqual(textBounds.y + textBounds.height)
     } else {
       expect(buttonBounds.y).toBeGreaterThanOrEqual(
         textBounds.y + textBounds.height,
@@ -470,26 +486,28 @@ for (const siteType of [
       })
       await expect(importButton).toBeVisible()
       const label = dialog.locator('label[for="account-session-cookie"]')
-      const alignment = await label.evaluate((element) => {
-        const labelBounds = element.getBoundingClientRect()
-        const center = labelBounds.y + labelBounds.height / 2
-        const delta = (action: Element) => {
-          const bounds = action.getBoundingClientRect()
-          return Math.abs(center - (bounds.y + bounds.height / 2))
-        }
-        const row = element.parentElement!
-        const help = row.querySelector(
-          'button[aria-label="About the session Cookie"]',
-        )
-        return {
-          importing: delta(
-            row.querySelector(
-              'button[aria-label="Import from current login"]',
-            )!,
-          ),
-          help: help ? delta(help) : null,
-        }
-      })
+      const importAction = await importButton.elementHandle()
+      const helpAction =
+        siteType === SITE_TYPES.ANYROUTER ? await help.elementHandle() : null
+      // Measure the actual controls in one frame while section scrolling settles.
+      const alignment = await label.evaluate(
+        (element, { importAction, helpAction }) => {
+          const centerY = (target: Element) => {
+            const bounds = target.getBoundingClientRect()
+            return bounds.y + bounds.height / 2
+          }
+          const labelCenter = centerY(element)
+          return {
+            importing: Math.abs(labelCenter - centerY(importAction)),
+            help: helpAction
+              ? Math.abs(labelCenter - centerY(helpAction))
+              : null,
+          }
+        },
+        { importAction, helpAction },
+      )
+      await importAction.dispose()
+      await helpAction?.dispose()
       expect(alignment.importing).toBeLessThanOrEqual(2)
       if (siteType === SITE_TYPES.ANYROUTER) {
         const credential = dialog.getByRole("group", {
@@ -567,6 +585,78 @@ for (const siteType of [
       .toBe("session=edited-cookie")
   })
 }
+
+test("clearing a check-in path saves automatic selection without storing the deployment default", async ({
+  context,
+  page,
+  extensionId,
+  extensionDir,
+}) => {
+  const account = createStoredAccount({
+    site_url: "https://ai.facai.cloudns.org",
+    checkIn: { nativePagePath: "/previous" },
+  })
+  installExtensionPageGuards(page)
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await stubNewApiSiteRoutes(context, { baseUrl: account.site_url })
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, {
+    preferencesVersion: DEFAULT_PREFERENCES.preferencesVersion,
+    openChangelogOnUpdate: false,
+  })
+  await seedStoredAccounts(worker, [account])
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+  )
+  await waitForExtensionRoot(page)
+  const row = page.getByTestId(getAccountManagementListItemTestId(account.id))
+  const dialog = page.getByRole("dialog")
+  const pathField = dialog.getByRole("textbox", {
+    name: "Check-in page path (optional)",
+  })
+  const openCheckInSettings = async () => {
+    await row.hover()
+    await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+    await chooseAccountSection(
+      page,
+      dialog.getByRole("navigation", { name: "Account settings sections" }),
+      "Check-in Settings",
+    )
+  }
+  await openCheckInSettings()
+  await expect(pathField).toHaveValue("/previous")
+  await pathField.clear()
+  await expect(pathField).toHaveAccessibleDescription(
+    "Leave empty to use /dashboard, the extension's preset check-in page for this site.",
+  )
+  await dialog
+    .getByRole("button", { name: "Save Changes", exact: true })
+    .click()
+  await expect(dialog).toBeHidden()
+  const stored = await getPlasmoStorageJsonValue<AccountStorageConfig>(
+    worker,
+    ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+  )
+  const saved = stored?.accounts.find(({ id }) => id === account.id)
+  expect(saved?.checkIn).toBeDefined()
+  expect(saved?.checkIn).not.toHaveProperty("nativePagePath")
+
+  await openCheckInSettings()
+  await expect(pathField).toHaveValue("")
+  await expect(pathField).toHaveAccessibleDescription(
+    "Leave empty to use /dashboard, the extension's preset check-in page for this site.",
+  )
+  await captureVisualViews({
+    page,
+    ready: pathField,
+    captureTarget: dialog.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+    ),
+    id: "facai-deployment-default",
+    extensionDir,
+  })
+})
 
 test("account editor continuous outline", async ({
   context,

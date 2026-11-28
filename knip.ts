@@ -19,6 +19,7 @@ const config: KnipConfig = {
     "src/entrypoints/appearance-bootstrap.ts!",
     "src/entrypoints/background/index.ts!",
     "src/entrypoints/content/index.ts!",
+    "src/entrypoints/new-api-token-callback.content.ts!",
     // Injected by URL as a web-accessible resource, not a static import.
     "src/entrypoints/openrouter-clerk-session.ts!",
     "src/entrypoints/requesty-management-key.ts!",
@@ -46,6 +47,9 @@ const config: KnipConfig = {
     "scripts/sign-crx.mjs",
     // Invoked by the documentation updater as a subprocess.
     "scripts/generate-doc-screenshots.mjs",
+    // Imported by task-local hosted New API acceptance drivers; login and
+    // eligible-account setup remain with those explicit manual runs.
+    "scripts/flows/new-api-native-checkin.mjs",
   ],
   project: [
     "src/**/*.{ts,tsx}!",

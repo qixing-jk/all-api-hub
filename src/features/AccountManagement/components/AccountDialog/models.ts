@@ -27,6 +27,14 @@ export const AUTO_CREATE_ACCESS_TOKEN_STATUSES = {
   Failed: "failed",
 } as const
 
+export const ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES = {
+  Success: "success",
+  Error: "error",
+} as const
+
+export type AccountCredentialVerificationStatus =
+  (typeof ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES)[keyof typeof ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES]
+
 export const ACCOUNT_DIALOG_PHASES = {
   SITE_INPUT: "site-input",
   ACCOUNT_FORM: "account-form",
@@ -76,12 +84,22 @@ export interface AccountDialogDraft {
   aimlApiKey: string
 }
 
-/** Form state carried from a popup into manual New API token recovery. */
+export const ACCOUNT_DIALOG_RECOVERY_ACTIONS = {
+  Cookie: "cookie",
+  Sub2ApiLogin: "sub2api-login",
+  NewApiTokenCreate: "new-api-token-create",
+  NewApiTokenSite: "new-api-token-site",
+} as const
+
+export type AccountDialogRecoveryAction =
+  (typeof ACCOUNT_DIALOG_RECOVERY_ACTIONS)[keyof typeof ACCOUNT_DIALOG_RECOVERY_ACTIONS]
+
+/** Form state carried from a popup into a persistent account editor. */
 export interface AccountDialogRecoveryState {
   /** Local failure feedback retained independently of the recovery action. */
   detectionError?: Pick<AutoDetectError, "type" | "message">
-  /** Resume the user-requested Cookie login only after the draft reaches a persistent view. */
-  recoveryAction?: "cookie"
+  /** Resume the user-requested workflow only after the draft reaches a persistent view. */
+  recoveryAction?: AccountDialogRecoveryAction
   url: string
   draft: AccountDialogDraft
   accountId?: string

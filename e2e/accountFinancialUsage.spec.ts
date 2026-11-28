@@ -1,3 +1,5 @@
+import type { BrowserContext, Page } from "@playwright/test"
+
 import {
   POPUP_PAGE_PATH,
   SIDEPANEL_PAGE_PATH,
@@ -231,7 +233,10 @@ test("keeps expiry, archived components and provider-day figures usable through 
   extensionId,
   extensionDir,
 }, testInfo) => {
-  test.setTimeout(process.env.AAH_VISUAL_CAPTURE_DIR ? 120000 : 60000)
+  const { timeout } = test.info()
+  if (process.env.AAH_VISUAL_CAPTURE_DIR && timeout > 0) {
+    test.setTimeout(timeout + 60_000)
+  }
   await stubLlmMetadataIndex(context)
   const worker = await getServiceWorker(context)
   await forceExtensionLanguage(page, "en")
@@ -682,117 +687,134 @@ test("keeps native balance rows readable and uses available width without repeat
   }
 })
 
-const testInUtc = test.extend({ timezoneId: "UTC" })
+const testInUtc = test.extend({
+  timezoneId: "UTC",
+  viewport: { width: 390, height: 850 },
+})
+
+async function seedNativeFinancialFacts({
+  page,
+  context,
+}: {
+  page: Page
+  context: BrowserContext
+}) {
+  const { timeout } = test.info()
+  if (process.env.AAH_VISUAL_CAPTURE_DIR && timeout > 0) {
+    test.setTimeout(timeout + 60_000)
+  }
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  const worker = await getServiceWorker(context)
+  const start = Date.UTC(2026, 0, 18)
+  const window = { start, end: start + 43_200_000, timeZone: "UTC" }
+  await page.clock.setFixedTime(window.end)
+  const scope = accountBalanceScope(
+    {
+      baseUrl: "https://financial-fixture.invalid",
+      accountId: "native-usage",
+    },
+    { walletId: "wallet" },
+  )
+  scope.keys = scope.models = scope.projects = scope.groups = { kind: "all" }
+  const source = {
+    adapter: "fixture",
+    operation: "usage",
+    contractVersion: "1",
+    kind: "reported" as const,
+  }
+  const usd = { kind: "currency", code: "USD" } as const
+  const credit = {
+    kind: "quota",
+    id: "fixture:credits",
+    label: "Credits",
+    displayScale: 1,
+    displayLabel: "Credits",
+  } as const
+  const amount = (value: string) => ({
+    status: "known" as const,
+    value,
+    observedAt: window.end,
+    source,
+  })
+  const settledConsumption: FinancialConsumptionFact[] = [
+    {
+      scope,
+      asset: usd,
+      amount: amount("0.123456789012345678"),
+      window,
+      settlement: "settled",
+      coverage: "complete",
+    },
+    {
+      scope,
+      asset: credit,
+      amount: {
+        ...amount("12"),
+        source: { ...source, operation: "credit-usage" },
+      },
+      // In January midnight in Paris starts an hour before the UTC day.
+      window: {
+        ...window,
+        start: window.start - 3_600_000,
+        timeZone: "Europe/Paris",
+      },
+      settlement: "settled",
+      coverage: "partial",
+    },
+  ]
+  const reportedIncome: FinancialIncomeFact[] = [
+    {
+      scope,
+      asset: credit,
+      amount: { ...amount("25"), source: { ...source, operation: "grants" } },
+      window,
+      coverage: "complete",
+      classification: "grant",
+    },
+  ]
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "native-usage",
+      site_name: "Native financial facts",
+      site_url: scope.authority,
+      last_sync_time: window.end,
+      account_info: {
+        quota: undefined,
+        balance: accountBalanceSnapshot(
+          scope,
+          [
+            balancePosition({
+              id: "wallet",
+              scope,
+              source,
+              asset: usd,
+              observedAt: window.end,
+              value: "7",
+              nature: "prepaid",
+            }),
+          ],
+          window.end,
+          "complete",
+        ),
+        settledConsumption,
+        reportedIncome,
+      },
+    }),
+  ])
+  await seedUserPreferences(worker, {
+    showTodayCashflow: true,
+    themeMode: "light",
+  })
+  return { worker, window, reportedIncome, settledConsumption }
+}
 
 testInUtc(
-  "keeps native income and consumption units and periods through reload and sharing",
-  async ({ page, context, extensionId, extensionDir }, testInfo) => {
-    test.setTimeout(process.env.AAH_VISUAL_CAPTURE_DIR ? 120_000 : 60_000)
-    await forceExtensionLanguage(page, "en")
-    await stubLlmMetadataIndex(context)
-    await page.emulateMedia({ reducedMotion: "reduce" })
-    const worker = await getServiceWorker(context)
-    const start = Date.UTC(2026, 0, 18)
-    const window = { start, end: start + 43_200_000, timeZone: "UTC" }
-    await page.clock.setFixedTime(window.end)
-    const scope = accountBalanceScope(
-      {
-        baseUrl: "https://financial-fixture.invalid",
-        accountId: "native-usage",
-      },
-      { walletId: "wallet" },
-    )
-    scope.keys = scope.models = scope.projects = scope.groups = { kind: "all" }
-    const source = {
-      adapter: "fixture",
-      operation: "usage",
-      contractVersion: "1",
-      kind: "reported" as const,
-    }
-    const usd = { kind: "currency", code: "USD" } as const
-    const credit = {
-      kind: "quota",
-      id: "fixture:credits",
-      label: "Credits",
-      displayScale: 1,
-      displayLabel: "Credits",
-    } as const
-    const amount = (value: string) => ({
-      status: "known" as const,
-      value,
-      observedAt: window.end,
-      source,
-    })
-    const settledConsumption: FinancialConsumptionFact[] = [
-      {
-        scope,
-        asset: usd,
-        amount: amount("0.123456789012345678"),
-        window,
-        settlement: "settled",
-        coverage: "complete",
-      },
-      {
-        scope,
-        asset: credit,
-        amount: {
-          ...amount("12"),
-          source: { ...source, operation: "credit-usage" },
-        },
-        // In January midnight in Paris starts an hour before the UTC day.
-        window: {
-          ...window,
-          start: window.start - 3_600_000,
-          timeZone: "Europe/Paris",
-        },
-        settlement: "settled",
-        coverage: "partial",
-      },
-    ]
-    const reportedIncome: FinancialIncomeFact[] = [
-      {
-        scope,
-        asset: credit,
-        amount: { ...amount("25"), source: { ...source, operation: "grants" } },
-        window,
-        coverage: "complete",
-        classification: "grant",
-      },
-    ]
-    await seedStoredAccounts(worker, [
-      createStoredAccount({
-        id: "native-usage",
-        site_name: "Native financial facts",
-        site_url: scope.authority,
-        last_sync_time: window.end,
-        account_info: {
-          quota: undefined,
-          balance: accountBalanceSnapshot(
-            scope,
-            [
-              balancePosition({
-                id: "wallet",
-                scope,
-                source,
-                asset: usd,
-                observedAt: window.end,
-                value: "7",
-                nature: "prepaid",
-              }),
-            ],
-            window.end,
-            "complete",
-          ),
-          settledConsumption,
-          reportedIncome,
-        },
-      }),
-    ])
-    await seedUserPreferences(worker, {
-      showTodayCashflow: true,
-      themeMode: "light",
-    })
-    await page.setViewportSize({ width: 390, height: 850 })
+  "keeps native income and consumption units and periods through reload",
+  async ({ page, context, extensionId, extensionDir }) => {
+    const { worker, window, reportedIncome, settledConsumption } =
+      await seedNativeFinancialFacts({ page, context })
     await page.goto(`chrome-extension://${extensionId}/options.html#account`)
     await waitForExtensionRoot(page)
     const row = page.getByTestId(
@@ -948,119 +970,212 @@ testInUtc(
     expect(stored?.accounts[0]?.account_info.settledConsumption).toEqual(
       settledConsumption,
     )
-    for (const width of [320, 390, 1440]) {
-      await page.setViewportSize({ width, height: 900 })
-      await page.goto(`chrome-extension://${extensionId}/options.html#account`)
-      await waitForExtensionRoot(page)
-      await page
-        .getByRole("textbox", {
-          name: "Enter site information or account information to search",
+  },
+)
+
+// Give each responsive scenario its own initial viewport. Resizing an existing
+// headless window stalled older Chrome builds in the compatibility run.
+for (const width of [320, 390, 1440]) {
+  testInUtc.describe(`native cashflow at ${width}px`, () => {
+    testInUtc.use({ viewport: { width, height: 900 } })
+    testInUtc(
+      "keeps filtered native cashflow accessible and aligned",
+      async ({ page, context, extensionId, extensionDir }) => {
+        await seedNativeFinancialFacts({ page, context })
+        await page.goto(
+          `chrome-extension://${extensionId}/options.html#account`,
+        )
+        await waitForExtensionRoot(page)
+        await page
+          .getByRole("textbox", {
+            name: "Enter site information or account information to search",
+          })
+          .fill("Native financial facts")
+        const summary = page.getByRole("region", {
+          name: "1 account",
+          exact: true,
         })
-        .fill("Native financial facts")
-      const summary = page.getByRole("region", {
-        name: "1 account",
-        exact: true,
-      })
-      await expect(summary).toBeVisible()
-      await expect(
-        summary.getByRole("group", { name: "Today's consumption" }),
-      ).toContainText("USD 0.12")
-      await expect(
-        summary.getByRole("group", { name: "Today's income" }),
-      ).toContainText("25 Credits")
-      await expect(
-        summary.getByRole("group", { name: "Today's consumption" }),
-      ).not.toContainText("12 Credits")
-      await expect(
-        summary.getByRole("group", { name: "Usage by site day", exact: true }),
-      ).toContainText("12 Credits")
-      if (width === 1440) {
-        for (const value of ["$7.00", "USD 0.12", "25 Credits"]) {
-          const typography = await summary
-            .getByText(value, { exact: true })
-            .evaluate((element) => {
-              const style = getComputedStyle(element)
-              return {
-                size: Number.parseFloat(style.fontSize),
-                weight: Number.parseInt(style.fontWeight, 10),
-              }
-            })
-          expect
-            .soft(typography.size, "Filtered amounts use compact peer sizing")
-            .toBe(14)
-          expect
-            .soft(typography.weight, "Filtered amounts use restrained emphasis")
-            .toBe(500)
+        await expect(summary).toBeVisible()
+        // Inspect Chrome's actual accessibility tree; DOM role queries alone do
+        // not establish that display: contents retains screen-reader groups.
+        const accessibility = await context.newCDPSession(page)
+        try {
+          const { nodes } = await accessibility.send(
+            "Accessibility.getFullAXTree",
+          )
+          const groups = nodes
+            .filter((node) => !node.ignored && node.role?.value === "group")
+            .map((node) => node.name?.value)
+          for (const name of [
+            "Balance",
+            "Today's consumption",
+            "Today's income",
+          ])
+            expect(
+              groups,
+              `Accessible filtered metric group: ${name}`,
+            ).toContain(name)
+        } finally {
+          await accessibility.detach()
         }
-        for (const label of [
-          "Balance",
-          "Today's consumption",
-          "Today's income",
-        ]) {
-          const separation = await summary
-            .getByRole("group", { name: label, exact: true })
-            .evaluate((element) =>
-              Number.parseFloat(getComputedStyle(element).borderLeftWidth),
-            )
-          expect
-            .soft(separation, "Only the account count boundary uses a divider")
-            .toBe(label === "Balance" ? 1 : 0)
+        await expect(
+          summary.getByRole("group", { name: "Today's consumption" }),
+        ).toContainText("USD 0.12")
+        await expect(
+          summary.getByRole("group", { name: "Today's income" }),
+        ).toContainText("25 Credits")
+        await expect(
+          summary.getByRole("group", { name: "Today's consumption" }),
+        ).not.toContainText("12 Credits")
+        await expect(
+          summary.getByRole("group", {
+            name: "Usage by site day",
+            exact: true,
+          }),
+        ).toContainText("12 Credits")
+        if (width === 1440) {
+          for (const value of ["$7.00", "USD 0.12", "25 Credits"]) {
+            const typography = await summary
+              .getByText(value, { exact: true })
+              .evaluate((element) => {
+                const style = getComputedStyle(element)
+                return {
+                  size: Number.parseFloat(style.fontSize),
+                  weight: Number.parseInt(style.fontWeight, 10),
+                }
+              })
+            expect
+              .soft(typography.size, "Filtered amounts use compact peer sizing")
+              .toBe(14)
+            expect
+              .soft(
+                typography.weight,
+                "Filtered amounts use restrained emphasis",
+              )
+              .toBe(500)
+          }
+          for (const label of [
+            "Balance",
+            "Today's consumption",
+            "Today's income",
+          ]) {
+            const separation = await summary
+              .getByRole("group", { name: label, exact: true })
+              .evaluate((element) =>
+                Number.parseFloat(getComputedStyle(element).borderLeftWidth),
+              )
+            expect
+              .soft(
+                separation,
+                "Only the account count boundary uses a divider",
+              )
+              .toBe(label === "Balance" ? 1 : 0)
+          }
+          const coreBoxes = await Promise.all(
+            ["Balance", "Today's consumption", "Today's income"].map((name) =>
+              summary.getByRole("group", { name, exact: true }).boundingBox(),
+            ),
+          )
+          expect(
+            Math.max(...coreBoxes.map((box) => box!.y + box!.height)) -
+              Math.min(...coreBoxes.map((box) => box!.y)),
+            "Desktop balance, consumption and income retain their compact shared row",
+          ).toBeLessThan(36)
+          const siteDayBox = await summary
+            .getByRole("group", { name: "Usage by site day", exact: true })
+            .boundingBox()
+          expect(siteDayBox!.y).toBeGreaterThanOrEqual(
+            Math.max(...coreBoxes.map((box) => box!.y + box!.height)),
+          )
+          const incomeBox = await summary
+            .getByRole("group", { name: "Today's income" })
+            .boundingBox()
+          const actionBox = await summary
+            .getByRole("button", { name: "Details", exact: true })
+            .boundingBox()
+          const summaryBox = (await summary.boundingBox())!
+          const headerBox = (await page
+            .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader)
+            .boundingBox())!
+          const topInset = actionBox!.y - summaryBox.y - 1
+          const bottomInset = headerBox.y - (siteDayBox!.y + siteDayBox!.height)
+          expect(
+            Math.abs(topInset - bottomInset),
+            "The entire filtered statistics band has equal space above and below its content",
+          ).toBeLessThan(1)
+          expect(
+            actionBox!.x - incomeBox!.x - incomeBox!.width,
+            "Details stays beside the last statistic",
+          ).toBeLessThan(24)
+          expect(actionBox!.x).toBeGreaterThanOrEqual(
+            incomeBox!.x + incomeBox!.width,
+          )
+          const labelBottoms = await Promise.all(
+            [
+              summary.getByText("1 account", { exact: true }),
+              summary.getByText("Balance", { exact: true }),
+              summary.getByText("Today's consumption", { exact: true }),
+              summary.getByText("Today's income", { exact: true }),
+              summary.getByRole("button", { name: "Details", exact: true }),
+            ].map((locator) =>
+              locator.evaluate((element) => {
+                const walker = document.createTreeWalker(
+                  element,
+                  NodeFilter.SHOW_TEXT,
+                )
+                let node = walker.nextNode()
+                while (node && !node.textContent?.trim())
+                  node = walker.nextNode()
+                if (!node) throw new Error("Expected a visible statistic label")
+                const range = document.createRange()
+                range.selectNodeContents(node)
+                return range.getBoundingClientRect().bottom
+              }),
+            ),
+          )
+          expect(
+            Math.max(...labelBottoms) - Math.min(...labelBottoms),
+            "Count, metric names and Details share a text baseline",
+          ).toBeLessThan(1)
         }
-        const coreBoxes = await Promise.all(
-          ["Balance", "Today's consumption", "Today's income"].map((name) =>
-            summary.getByRole("group", { name, exact: true }).boundingBox(),
-          ),
-        )
-        expect(
-          Math.max(...coreBoxes.map((box) => box!.y + box!.height)) -
-            Math.min(...coreBoxes.map((box) => box!.y)),
-          "Desktop balance, consumption and income retain their compact shared row",
-        ).toBeLessThan(36)
-        const siteDayBox = await summary
-          .getByRole("group", { name: "Usage by site day", exact: true })
-          .boundingBox()
-        expect(siteDayBox!.y).toBeGreaterThanOrEqual(
-          Math.max(...coreBoxes.map((box) => box!.y + box!.height)),
-        )
-        const incomeBox = await summary
-          .getByRole("group", { name: "Today's income" })
-          .boundingBox()
-        const actionBox = await summary
-          .getByRole("button", { name: "Details", exact: true })
-          .boundingBox()
-        const summaryBox = (await summary.boundingBox())!
-        const headerBox = (await page
-          .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListHeader)
-          .boundingBox())!
-        const topInset = actionBox!.y - summaryBox.y - 1
-        const bottomInset = headerBox.y - (siteDayBox!.y + siteDayBox!.height)
-        expect(
-          Math.abs(topInset - bottomInset),
-          "The entire filtered statistics band has equal space above and below its content",
-        ).toBeLessThan(1)
-        expect(
-          actionBox!.x - incomeBox!.x - incomeBox!.width,
-          "Details stays beside the last statistic",
-        ).toBeLessThan(24)
-        expect(actionBox!.x).toBeGreaterThanOrEqual(
-          incomeBox!.x + incomeBox!.width,
-        )
-        const labelBottoms = await Promise.all(
-          [
-            summary.getByText("1 account", { exact: true }),
-            summary.getByText("Balance", { exact: true }),
-            summary.getByText("Today's consumption", { exact: true }),
-            summary.getByText("Today's income", { exact: true }),
-            summary.getByRole("button", { name: "Details", exact: true }),
-          ].map((locator) =>
-            locator.evaluate((element) => {
+        // Exercise an additional label line even when the platform font is narrow.
+        const consumptionLabel = summary.getByText("Today's consumption", {
+          exact: true,
+        })
+        if (width === 320) {
+          await consumptionLabel.evaluate((label) => {
+            label.style.display = "inline-block"
+            label.style.maxWidth = "60px"
+            label.style.overflowWrap = "anywhere"
+          })
+        }
+        if (width !== 1440)
+          for (const [label, amount] of [
+            ["Balance", "$7.00"],
+            ["Today's consumption", "USD 0.12"],
+            ["Today's income", "25 Credits"],
+          ] as const) {
+            await expect
+              .poll(async () => {
+                const labelBox = (await summary
+                  .getByText(label, { exact: true })
+                  .boundingBox())!
+                const amountBox = (await summary
+                  .getByText(amount, { exact: true })
+                  .boundingBox())!
+                return amountBox.y - (labelBox.y + labelBox.height)
+              })
+              .toBeGreaterThanOrEqual(0)
+          }
+        const amountBottoms = await Promise.all(
+          ["$7.00", "USD 0.12", "25 Credits"].map((value) =>
+            summary.getByText(value, { exact: true }).evaluate((element) => {
               const walker = document.createTreeWalker(
                 element,
                 NodeFilter.SHOW_TEXT,
               )
-              let node = walker.nextNode()
-              while (node && !node.textContent?.trim()) node = walker.nextNode()
-              if (!node) throw new Error("Expected a visible statistic label")
+              const node = walker.nextNode()
+              if (!node) throw new Error("Expected a visible statistic amount")
               const range = document.createRange()
               range.selectNodeContents(node)
               return range.getBoundingClientRect().bottom
@@ -1068,96 +1183,84 @@ testInUtc(
           ),
         )
         expect(
-          Math.max(...labelBottoms) - Math.min(...labelBottoms),
-          "Count, metric names and Details share a text baseline",
+          Math.max(...amountBottoms) - Math.min(...amountBottoms),
+          "Filtered amount text shares a baseline even when its labels wrap",
         ).toBeLessThan(1)
-      }
-      // Exercise an additional label line even when the platform font is narrow.
-      const consumptionLabel = summary.getByText("Today's consumption", {
-        exact: true,
-      })
-      if (width === 320) {
-        await consumptionLabel.evaluate((label) => {
-          label.style.display = "inline-block"
-          label.style.maxWidth = "60px"
-          label.style.overflowWrap = "anywhere"
+        if (width === 320) {
+          await captureVisualViews({
+            page,
+            ready: summary,
+            captureTarget: summary,
+            id: `filtered-cashflow-wrapped-${width}`,
+            extensionDir,
+            views: [
+              { id: "light", width, height: 900, theme: "light" },
+              { id: "dark", width, height: 900, theme: "dark" },
+            ],
+          })
+          await consumptionLabel.evaluate((label) => {
+            label.style.removeProperty("display")
+            label.style.removeProperty("max-width")
+            label.style.removeProperty("overflow-wrap")
+          })
+        }
+        expect(
+          await summary.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth + 1,
+          ),
+        ).toBe(true)
+        await captureVisualViews({
+          page,
+          ready: summary,
+          captureTarget: summary,
+          id: `filtered-cashflow-default-${width}`,
+          extensionDir,
+          views: [
+            { id: "light", width, height: 900, theme: "light" },
+            { id: "dark", width, height: 900, theme: "dark" },
+          ],
         })
-      }
-      const amountBottoms = await Promise.all(
-        ["$7.00", "USD 0.12", "25 Credits"].map((value) =>
-          summary.getByText(value, { exact: true }).evaluate((element) => {
-            const walker = document.createTreeWalker(
-              element,
-              NodeFilter.SHOW_TEXT,
-            )
-            const node = walker.nextNode()
-            if (!node) throw new Error("Expected a visible statistic amount")
-            const range = document.createRange()
-            range.selectNodeContents(node)
-            return range.getBoundingClientRect().bottom
-          }),
-        ),
-      )
-      expect(
-        Math.max(...amountBottoms) - Math.min(...amountBottoms),
-        "Filtered amount text shares a baseline even when its labels wrap",
-      ).toBeLessThan(1)
-      if (width === 320) {
-        await consumptionLabel.evaluate((label) => {
-          label.style.removeProperty("display")
-          label.style.removeProperty("max-width")
-          label.style.removeProperty("overflow-wrap")
+        await summary
+          .getByRole("button", { name: "Details", exact: true })
+          .click()
+        const totals = page.getByRole("dialog", {
+          name: "Filtered subtotals",
+          exact: true,
         })
-      }
-      expect(
-        await summary.evaluate(
-          (element) => element.scrollWidth <= element.clientWidth + 1,
-        ),
-      ).toBe(true)
-      await captureVisualViews({
-        page,
-        ready: summary,
-        captureTarget: summary,
-        id: `filtered-cashflow-default-${width}`,
-        extensionDir,
-        views: [
-          { id: "light", width, height: 900, theme: "light" },
-          { id: "dark", width, height: 900, theme: "dark" },
-        ],
-      })
-      await summary
-        .getByRole("button", { name: "Details", exact: true })
-        .click()
-      const totals = page.getByRole("dialog", {
-        name: "Filtered subtotals",
-        exact: true,
-      })
-      await expect(
-        totals.getByRole("group", { name: "Today's consumption" }),
-      ).toContainText("USD 0.12")
-      await expect(
-        totals.getByRole("group", { name: "Today's consumption" }),
-      ).not.toContainText("12 Credits")
-      await expect(
-        totals.getByRole("group", { name: "Today's income" }),
-      ).toContainText("25 Credits")
-      expect(
-        await totals.evaluate(
-          (element) => element.scrollWidth <= element.clientWidth + 1,
-        ),
-      ).toBe(true)
-      await captureVisualViews({
-        page,
-        ready: totals,
-        captureTarget: totals,
-        id: `filtered-cashflow-${width}`,
-        extensionDir,
-        views: [
-          { id: "light", width, height: 900, theme: "light" },
-          { id: "dark", width, height: 900, theme: "dark" },
-        ],
-      })
-    }
+        await expect(
+          totals.getByRole("group", { name: "Today's consumption" }),
+        ).toContainText("USD 0.12")
+        await expect(
+          totals.getByRole("group", { name: "Today's consumption" }),
+        ).not.toContainText("12 Credits")
+        await expect(
+          totals.getByRole("group", { name: "Today's income" }),
+        ).toContainText("25 Credits")
+        expect(
+          await totals.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth + 1,
+          ),
+        ).toBe(true)
+        await captureVisualViews({
+          page,
+          ready: totals,
+          captureTarget: totals,
+          id: `filtered-cashflow-${width}`,
+          extensionDir,
+          views: [
+            { id: "light", width, height: 900, theme: "light" },
+            { id: "dark", width, height: 900, theme: "dark" },
+          ],
+        })
+      },
+    )
+  })
+}
+
+testInUtc(
+  "shares native income and consumption with their original units and precision",
+  async ({ page, context, extensionId, extensionDir }, testInfo) => {
+    await seedNativeFinancialFacts({ page, context })
     await page.addInitScript(() =>
       Object.defineProperty(navigator, "clipboard", {
         configurable: true,
@@ -1168,7 +1271,6 @@ testInUtc(
         },
       }),
     )
-    await page.setViewportSize({ width: 390, height: 850 })
     await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
     await waitForExtensionRoot(page)
     const balanceSummary = page.getByRole("region", {
@@ -1233,7 +1335,10 @@ test("keeps the three core totals visible and opens precision and coverage on re
   extensionId,
   extensionDir,
 }) => {
-  test.setTimeout(process.env.AAH_VISUAL_CAPTURE_DIR ? 120_000 : 60_000)
+  const { timeout } = test.info()
+  if (process.env.AAH_VISUAL_CAPTURE_DIR && timeout > 0) {
+    test.setTimeout(timeout + 60_000)
+  }
   await forceExtensionLanguage(page, "zh-CN")
   await stubLlmMetadataIndex(context)
   await page.emulateMedia({ reducedMotion: "reduce" })

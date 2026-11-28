@@ -11,10 +11,13 @@ import type {
   TempWindowRequestyManagementKeyActionParams,
   TempWindowRequestyManagementKeyActionResult,
 } from "~/services/apiAdapters/requesty/keys/managementKeyPageContract"
-import type {
-  CheckInFeedbackClues,
-  CheckInFeedbackScanInput,
-} from "~/services/checkin/feedback/scanTypes"
+import { normalizeCheckInPagePath } from "~/services/checkin/autoCheckin/configuration/nativePagePath"
+import {
+  CHECK_IN_EVIDENCE_SCAN_PURPOSES,
+  type CheckInEvidence,
+  type CheckInEvidenceScanInput,
+} from "~/services/checkin/discovery/evidence/scanTypes"
+import type { NativeCheckInPageExploration } from "~/services/checkin/discovery/nativePageDiscovery"
 import { AuthTypeEnum } from "~/types/auth"
 import {
   OCTOPUS_API_RESOURCE_BINDINGS,
@@ -132,7 +135,9 @@ const PROTECTION_BYPASS_USER_COMMAND_CATALOG = {
   RefreshDisabledAccounts: "refresh_disabled_accounts",
   ManualCheckin: "manual_checkin",
   CheckinFeedback: "checkin_feedback",
+  FindCheckinPage: "find_checkin_page",
   RetryCheckinAccount: "retry_checkin_account",
+  VerifyCheckinStatus: "verify_checkin_status",
   AddAccount: "add_account",
   DetectAccount: "detect_account",
   ReauthenticateAccount: "reauthenticate_account",
@@ -168,9 +173,13 @@ export const PROTECTION_BYPASS_USER_COMMAND_FEATURES = {
     PROTECTION_BYPASS_FEATURES.AccountRefresh,
   [PROTECTION_BYPASS_USER_COMMANDS.CheckinFeedback]:
     PROTECTION_BYPASS_FEATURES.Checkin,
+  [PROTECTION_BYPASS_USER_COMMANDS.FindCheckinPage]:
+    PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin]:
     PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount]:
+    PROTECTION_BYPASS_FEATURES.Checkin,
+  [PROTECTION_BYPASS_USER_COMMANDS.VerifyCheckinStatus]:
     PROTECTION_BYPASS_FEATURES.Checkin,
   [PROTECTION_BYPASS_USER_COMMANDS.AddAccount]:
     PROTECTION_BYPASS_FEATURES.AccountOnboarding,
@@ -411,11 +420,21 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   CredentialPageInspect: "credential_page_inspect",
   RenderedTitle: "rendered_title",
   CheckinFeedbackScan: "checkin_feedback_scan",
+  CheckinPageDiscovery: "checkin_page_discovery",
   SessionRead: "session_read",
   NewApiSessionRead: "new_api_session_read",
   OctopusApiFetch: "octopus_api_fetch",
   OpenContext: "open_context",
 } as const
+
+export const CREDENTIAL_PAGE_STATES = {
+  Credential: "credential",
+  NotFound: "not_found",
+  Unknown: "unknown",
+} as const
+
+export type CredentialPageState =
+  (typeof CREDENTIAL_PAGE_STATES)[keyof typeof CREDENTIAL_PAGE_STATES]
 
 /**
  * Public task-kind contract shared by task dispatch and policy metadata.
@@ -436,11 +455,20 @@ type WithoutProtectionBypassIntent<T> = Omit<
 
 export type TempContextTask =
   | {
+      kind: typeof TEMP_CONTEXT_TASK_KINDS.CheckinPageDiscovery
+      params: {
+        originUrl: string
+        requestId: string
+        siteType: AccountSiteType
+        nativePagePath?: string
+      }
+    }
+  | {
       kind: typeof TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan
       params: {
         originUrl: string
         requestId: string
-        input: CheckInFeedbackScanInput
+        input: CheckInEvidenceScanInput
       }
     }
   | {
@@ -504,9 +532,13 @@ export type ProtectionBypassExecuteRequest<
 }
 
 type TempContextTaskResultMap = {
+  [TEMP_CONTEXT_TASK_KINDS.CheckinPageDiscovery]: {
+    success: boolean
+    data?: NativeCheckInPageExploration
+  }
   [TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan]: {
     success: boolean
-    data?: CheckInFeedbackClues
+    data?: CheckInEvidence
   }
   [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch]: TempWindowFetch
@@ -517,7 +549,7 @@ type TempContextTaskResultMap = {
   [TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction]: TempWindowRequestyManagementKeyActionResult
   [TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect]: {
     success: boolean
-    state?: "credential" | "not_found" | "unknown"
+    state?: CredentialPageState
   }
   [TEMP_CONTEXT_TASK_KINDS.RenderedTitle]: TempWindowRenderedTitleResponse
   [TEMP_CONTEXT_TASK_KINDS.SessionRead]: TempWindowFetch
@@ -657,6 +689,9 @@ function isNativePageActionParams(value: Record<string, unknown>): boolean {
   return (
     isHttpUrl(value.originUrl) &&
     isHttpUrl(value.pageUrl) &&
+    isOptionalBoolean(value.discoverCheckInPage) &&
+    (value.learnedPagePath === undefined ||
+      Boolean(normalizeCheckInPagePath(value.learnedPagePath))) &&
     isAccountSiteType(value.siteType) &&
     isNonEmptyString(value.expectedUserId) &&
     isOptionalRequestId(value.requestId) &&
@@ -814,6 +849,7 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       return (
         hasValidSharedFetchParams(params) &&
         isHttpUrl(params.pageUrl) &&
+        isOptionalBoolean(params.discoverCheckInPage) &&
         isOptionalPositiveNumber(params.turnstileTimeoutMs) &&
         isOptionalString(params.turnstileParamName) &&
         (params.turnstileTokenPlacement === undefined ||
@@ -830,6 +866,20 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       return isRequestyManagementKeyActionParams(params)
     case TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan:
       return isCheckinFeedbackScanParams(params)
+    case TEMP_CONTEXT_TASK_KINDS.CheckinPageDiscovery:
+      return (
+        isHttpUrl(params.originUrl) &&
+        new URL(params.originUrl).origin === params.originUrl &&
+        isNonEmptyString(params.requestId) &&
+        isAccountSiteType(params.siteType) &&
+        Object.keys(params).every((key) =>
+          ["originUrl", "requestId", "siteType", "nativePagePath"].includes(
+            key,
+          ),
+        ) &&
+        (params.nativePagePath === undefined ||
+          Boolean(normalizeCheckInPagePath(params.nativePagePath)))
+      )
     case TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect:
     case TEMP_CONTEXT_TASK_KINDS.RenderedTitle:
       return (
@@ -868,6 +918,10 @@ interface TempContextTaskMetadata {
 }
 
 const TEMP_CONTEXT_TASK_METADATA = {
+  [TEMP_CONTEXT_TASK_KINDS.CheckinPageDiscovery]: {
+    operation: PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
+    cause: PROTECTION_BYPASS_CAUSES.RenderedPageRequired,
+  },
   [TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan]: {
     operation: PROTECTION_BYPASS_OPERATIONS.Fetch,
     cause: PROTECTION_BYPASS_CAUSES.RenderedPageRequired,
@@ -945,6 +999,7 @@ export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
   [PROTECTION_BYPASS_FEATURES.Checkin]: [
+    TEMP_CONTEXT_TASK_KINDS.CheckinPageDiscovery,
     TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
     TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
@@ -1019,8 +1074,28 @@ function isCheckinFeedbackScanParams(params: Record<string, unknown>): boolean {
     return false
   if (
     Object.keys(input).some(
-      (key) => !["baseUrl", "siteType", "auth", "routePaths"].includes(key),
+      (key) =>
+        ![
+          "baseUrl",
+          "siteType",
+          "auth",
+          "routePaths",
+          "nativePagePath",
+          "purpose",
+        ].includes(key),
     )
+  )
+    return false
+  if (
+    input.purpose !== undefined &&
+    (input.purpose !== CHECK_IN_EVIDENCE_SCAN_PURPOSES.NativePage ||
+      input.auth !== undefined ||
+      input.routePaths !== undefined)
+  )
+    return false
+  if (
+    input.nativePagePath !== undefined &&
+    !normalizeCheckInPagePath(input.nativePagePath)
   )
     return false
   if (

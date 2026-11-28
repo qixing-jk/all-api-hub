@@ -53,13 +53,16 @@ export async function sendRuntimeActionMessage<TResponse>(
 export interface SendMessageRetryOptions {
   /** Local cancellation; never serialized into the message or tab targeting options. */
   abortSignal?: AbortSignal
+  /** Cancels unsent attempts while allowing an in-flight message to settle. */
+  retrySignal?: AbortSignal
+  /** True after a receiver rejection, false when the next send begins. */
+  onReceiverRetryWait?: (waiting: boolean) => void
   maxAttempts?: number
   delayMs?: number
 }
 
 export interface SendTabMessageRetryOptions
-  extends SendMessageRetryOptions,
-    browser.tabs._SendMessageOptions {
+  extends SendMessageRetryOptions, browser.tabs._SendMessageOptions {
   documentId?: string
 }
 
@@ -112,7 +115,14 @@ async function withMessageRetry<T>(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     options?.abortSignal?.throwIfAborted()
     try {
-      return await runAbortableTask(work, { signals: [options?.abortSignal] })
+      return await runAbortableTask(
+        () => {
+          options?.retrySignal?.throwIfAborted()
+          if (attempt > 0) options?.onReceiverRetryWait?.(false)
+          return work()
+        },
+        { signals: [options?.abortSignal] },
+      )
     } catch (error) {
       const shouldRetry =
         attempt < maxAttempts - 1 && isRecoverableMessageError(error)
@@ -121,6 +131,7 @@ async function withMessageRetry<T>(
         throw error
       }
 
+      options?.onReceiverRetryWait?.(true)
       let timer: ReturnType<typeof setTimeout> | undefined
       try {
         await runAbortableTask(
@@ -128,7 +139,7 @@ async function withMessageRetry<T>(
             new Promise<void>((resolve) => {
               timer = setTimeout(resolve, delayMs * Math.pow(2, attempt))
             }),
-          { signals: [options?.abortSignal] },
+          { signals: [options?.abortSignal, options?.retrySignal] },
         )
       } finally {
         clearTimeout(timer)

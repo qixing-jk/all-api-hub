@@ -18,6 +18,7 @@ import type {
   CheckInMethodDetection,
   CheckInMethodId,
 } from "~/types/checkIn"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 
 const NEW_API_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
 const VELOERA_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn
@@ -25,6 +26,23 @@ const ANYROUTER_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn
 const XINGYA_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn
 
 describe("check-in selection policy", () => {
+  it("retains a native page path independently of API routes and external bookmarks", () => {
+    const config = normalizeCheckInConfigV7({
+      ...createConfig({}),
+      nativePagePath: "/rewards?tab=daily#/claim",
+      customCheckIn: { url: "https://welfare.example/" },
+      routeOverrides: {
+        [NEW_API_METHOD_ID]: {
+          path: "/api/daily",
+          source: "manual",
+          observedAt: 1,
+        },
+      },
+    })
+    expect(config.nativePagePath).toBe("/rewards?tab=daily#/claim")
+    expect(config.customCheckIn?.url).toBe("https://welfare.example/")
+    expect(config.routeOverrides?.[NEW_API_METHOD_ID]?.path).toBe("/api/daily")
+  })
   it.each([
     CHECK_IN_SELECTION_MODES.Manual,
     CHECK_IN_SELECTION_MODES.Automatic,
@@ -110,6 +128,60 @@ const unknown: CheckInMethodDetection = {
   reason: "network",
   attemptedAt: 100,
 }
+
+describe("check-in reset timezone of imported status", () => {
+  it.each([
+    {
+      methodId: AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+      importedZone: "UTC",
+      eligible: true,
+    },
+    {
+      methodId: NEW_API_METHOD_ID,
+      importedZone: "Asia/Shanghai",
+      eligible: false,
+    },
+    {
+      methodId: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+      importedZone: undefined,
+      eligible: true,
+    },
+  ])("preserves the existing calendar for $methodId", (scenario) => {
+    const { methodId, importedZone, eligible } = scenario
+    const config = normalizeCheckInConfigV7({
+      automaticExecutionEnabled: true,
+      selection: { mode: "automatic", methodId },
+      methodKnowledge: {
+        methods: {
+          [methodId]: {
+            detection: matched,
+            status: {
+              outcome: "known",
+              availability: "enabled",
+              today: "checked",
+              resetTimeZone: importedZone,
+              evidence: {
+                source: "probe",
+                observedAt: Date.parse("2026-11-24T15:59:00Z"),
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const state = inspectCheckInMethods({
+      config,
+      candidateMethodIds: [methodId],
+      now: Date.parse("2026-11-24T16:01:00Z"),
+      timeZone: "UTC",
+    })
+    expect(state.executionEligibility.eligible).toBe(eligible)
+    expect(config.methodKnowledge.methods[methodId]?.status).not.toHaveProperty(
+      "resetTimeZone",
+    )
+  })
+})
 
 describe("automatic check-in discovery policy", () => {
   it.each([
@@ -994,19 +1066,19 @@ describe("normalizeCheckInConfigV7", () => {
 
   it.each([
     {
-      turnstilePreTrigger: { kind: "none" },
-      expected: { kind: "none" },
+      turnstilePreTrigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.None },
+      expected: { kind: TURNSTILE_PRE_TRIGGER_KINDS.None },
     },
     {
       turnstilePreTrigger: {
-        kind: "checkinButton",
+        kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
         positivePattern: "claim",
         negativePattern: "claimed",
         candidateSelector: "#claim",
         throttle: { maxAttempts: 2, minIntervalMs: 300 },
       },
       expected: {
-        kind: "checkinButton",
+        kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
         positivePattern: "claim",
         negativePattern: "claimed",
         candidateSelector: "#claim",
@@ -1015,14 +1087,14 @@ describe("normalizeCheckInConfigV7", () => {
     },
     {
       turnstilePreTrigger: {
-        kind: "clickText",
+        kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
         positivePattern: "check in",
         negativePattern: "checked in",
         candidateSelector: "button",
         label: "daily check-in",
       },
       expected: {
-        kind: "clickText",
+        kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
         positivePattern: "check in",
         negativePattern: "checked in",
         candidateSelector: "button",
@@ -1044,8 +1116,8 @@ describe("normalizeCheckInConfigV7", () => {
 
   it.each([
     { kind: "unknown" },
-    { kind: "clickSelector" },
-    { kind: "clickText", positivePattern: 12 },
+    { kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector },
+    { kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText, positivePattern: 12 },
   ])("rejects malformed custom Turnstile trigger %#", (turnstilePreTrigger) => {
     const normalized = normalizeCheckInConfigV7({
       methodKnowledge: { methods: {} },
@@ -1067,7 +1139,7 @@ describe("normalizeCheckInConfigV7", () => {
       selection: { mode: "automatic" as const },
       customCheckIn: {
         turnstilePreTrigger: {
-          kind: "clickSelector",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
           selector: "#check-in",
           label: 10,
           throttle: {
@@ -1079,7 +1151,7 @@ describe("normalizeCheckInConfigV7", () => {
     })
 
     expect(normalized.customCheckIn?.turnstilePreTrigger).toEqual({
-      kind: "clickSelector",
+      kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
       selector: "#check-in",
       throttle: { minIntervalMs: 250 },
     })
@@ -1208,7 +1280,7 @@ describe("normalizeCheckInConfigV7", () => {
     const normalized = normalizeCheckInConfigV7({
       customCheckIn: {
         turnstilePreTrigger: {
-          kind: "checkinButton",
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
           throttle: {
             maxAttempts: -1,
             minIntervalMs: Number.POSITIVE_INFINITY,
@@ -1218,7 +1290,7 @@ describe("normalizeCheckInConfigV7", () => {
     })
 
     expect(normalized.customCheckIn?.turnstilePreTrigger).toEqual({
-      kind: "checkinButton",
+      kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
     })
   })
 

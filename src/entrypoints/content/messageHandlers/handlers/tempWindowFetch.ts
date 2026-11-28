@@ -1,9 +1,20 @@
+import type { SiteType } from "~/constants/siteType"
+import { getRequestProtocol } from "~/services/apiAdapters/requestProtocol"
+import { ApiError } from "~/services/apiTransport/errors"
 import { announceRemoteFetchDispatch } from "~/services/apiTransport/remoteLifecycle"
-import type { ApiTransportRemoteLifecycleEvidence } from "~/types/tempWindowFetch"
+import type {
+  ApiTransportRemoteLifecycleEvidence,
+  TempWindowFetch,
+  TempWindowResponseType,
+} from "~/types/tempWindowFetch"
 import {
   EXTENSION_HEADER_NAME,
   EXTENSION_HEADER_VALUE,
 } from "~/utils/browser/cookieHelper"
+import {
+  assertFetchDispatchDeadline,
+  type DispatchBoundRequestInit,
+} from "~/utils/browser/requestInitMessage"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
@@ -12,7 +23,6 @@ import { logCloudflareGuard } from "../utils/cloudflareGuard"
 import {
   normalizeFetchOptions,
   parseResponseData,
-  type TempWindowResponseType,
 } from "../utils/tempFetchUtils"
 
 /**
@@ -20,13 +30,23 @@ import {
  */
 const logger = createLogger("TempWindowFetchHandler")
 
+interface TempWindowContentFetchRequest {
+  expectedOrigin?: string
+  fetchUrl?: string
+  fetchOptions?: DispatchBoundRequestInit
+  requestId?: string
+  responseType?: TempWindowResponseType
+  siteType?: SiteType
+}
+
 /**
  * Handles temporary window fetch requests.
  */
 export function handlePerformTempWindowFetch(
-  request: any,
-  sendResponse: (res: any) => void,
+  message: unknown,
+  sendResponse: (res: TempWindowFetch) => void,
 ) {
+  const request = message as TempWindowContentFetchRequest
   const transportLifecycle: ApiTransportRemoteLifecycleEvidence = {
     upstreamRequestDispatched: false,
     upstreamResponseReceived: false,
@@ -66,19 +86,31 @@ export function handlePerformTempWindowFetch(
       normalizedOptions.headers = Object.fromEntries(requestHeaders.entries())
 
       const normalizedExpectedOrigin = new URL(expectedOrigin).origin
-      if (
-        globalThis.location.origin !== normalizedExpectedOrigin ||
-        new URL(fetchUrl).origin !== normalizedExpectedOrigin
-      ) {
-        throw new Error("Temporary context origin changed before fetch")
+      const assertDispatchAllowed = () => {
+        if (
+          globalThis.location.origin !== normalizedExpectedOrigin ||
+          new URL(fetchUrl).origin !== normalizedExpectedOrigin
+        ) {
+          throw new Error("Temporary context origin changed before fetch")
+        }
+        assertFetchDispatchDeadline(normalizedOptions)
       }
-
-      transportLifecycle.upstreamRequestDispatched = true
-      if (typeof requestId === "string" && requestId.length > 0) {
-        announceRemoteFetchDispatch(requestId)
+      assertDispatchAllowed()
+      const dispatch = async (options: RequestInit) => {
+        // Preparation may fail before fetch; report only actual dispatches.
+        assertDispatchAllowed()
+        transportLifecycle.upstreamRequestDispatched = true
+        if (typeof requestId === "string" && requestId.length > 0) {
+          announceRemoteFetchDispatch(requestId)
+        }
+        const response = await fetch(fetchUrl, options)
+        transportLifecycle.upstreamResponseReceived = true
+        return response
       }
-      const response = await fetch(fetchUrl, normalizedOptions)
-      transportLifecycle.upstreamResponseReceived = true
+      const protocol = await getRequestProtocol(request.siteType)
+      const response = protocol?.fetchInBrowser
+        ? await protocol.fetchInBrowser(fetchUrl, normalizedOptions, dispatch)
+        : await dispatch(normalizedOptions)
 
       const headers: Record<string, string> = {}
       response.headers.forEach((value, key) => {
@@ -87,10 +119,7 @@ export function handlePerformTempWindowFetch(
 
       let data: any = null
       try {
-        data = await parseResponseData(
-          response,
-          responseType as TempWindowResponseType,
-        )
+        data = await parseResponseData(response, responseType)
       } catch (parseError) {
         logger.warn("Failed to parse response", parseError)
       }
@@ -121,19 +150,29 @@ export function handlePerformTempWindowFetch(
         })
       }
     } catch (error) {
+      const message = getErrorMessage(error)
       if (request.requestId) {
         logCloudflareGuard("tempFetchError", {
           requestId: request.requestId,
           fetchUrl: request.fetchUrl
             ? sanitizeUrlForLog(String(request.fetchUrl))
             : null,
-          error: getErrorMessage(error),
+          error: message,
         })
       }
       sendResponse({
         transportLifecycle,
         success: false,
-        error: getErrorMessage(error),
+        error: message,
+        ...(error instanceof ApiError
+          ? {
+              code: error.code,
+              localError: {
+                statusCode: error.statusCode,
+                upstreamCode: error.upstreamCode,
+              },
+            }
+          : {}),
       })
     }
   }

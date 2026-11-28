@@ -61,6 +61,7 @@ import {
 import { AuthTypeEnum } from "~/types/auth"
 
 import {
+  ACCOUNT_SITE_ACCESS_TOKEN_GUIDES,
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   ACCOUNT_SITE_DEFINITION_SCOPES,
   ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS,
@@ -227,6 +228,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.NEW_API,
   SITE_TYPES.APIYI,
   SITE_TYPES.LAOZHANG,
+  SITE_TYPES.SHELL_API,
   SITE_TYPES.MODELFLARE,
   SITE_TYPES.ANYROUTER,
   SITE_TYPES.VELOERA,
@@ -787,7 +789,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     onboarding: {
       manualAddGuideAnchor: ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.NewApi,
       accessTokenVerificationGuide: {
-        copy: "security",
+        copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Security,
         showRotationWarning: true,
       },
       detection: {
@@ -807,18 +809,22 @@ const ACCOUNT_SITE_DEFINITIONS = [
         siteAnnouncementsPath: "/",
       },
     },
+    checkInPathsByOrigin: {
+      // The custom console serves its native check-in on /dashboard (#1785).
+      "https://ai.facai.cloudns.org": "/dashboard",
+    },
   },
   {
     siteType: SITE_TYPES.APIYI,
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
-    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily,
     legacyAccountTokenScope: "account",
     onboarding: {
       detection: { hostnames: [APIYI_HOSTNAME] },
       browserUserStorage: "apiyi",
       accessTokenVerificationGuide: {
-        copy: "apiyi",
+        copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.ApiYi,
         showRotationWarning: false,
       },
       routes: {
@@ -839,13 +845,13 @@ const ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.LAOZHANG,
     tokenKey: { optionalSkPrefix: true },
     scopes: ACCOUNT_SCOPE,
-    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily,
     legacyAccountTokenScope: "account",
     onboarding: {
       displayName: "LaoZhang API",
       browserUserStorage: "apiyi",
       accessTokenVerificationGuide: {
-        copy: "laozhang",
+        copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.LaoZhang,
         showRotationWarning: false,
       },
       detection: {
@@ -873,6 +879,37 @@ const ACCOUNT_SITE_DEFINITIONS = [
         recognizedHostnames: LAOZHANG_HOSTNAMES,
         inferFromHostname: true,
         duplicateOrigin: "https://api.laozhang.ai",
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.SHELL_API,
+    tokenKey: { optionalSkPrefix: true },
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.ShellApiFamily,
+    legacyAccountTokenScope: "account",
+    onboarding: {
+      displayName: "Shell API",
+      browserUserStorage: "apiyi",
+      accessTokenVerificationGuide: {
+        copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.ShellApi,
+        showRotationWarning: true,
+      },
+      routes: {
+        loginPath: "/login",
+        pricingPath: "/account/pricing",
+        usagePath: "/log",
+        checkInPath: null,
+        adminCredentialsPath: "/account/profile",
+        accessTokenPath: "/account/profile",
+        redeemPath: "/account/topup/recharge",
+        siteAnnouncementsPath: "/",
+      },
+    },
+    productProfile: {
+      auth: {
+        usesBrowserCookieSession: true,
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
       },
     },
   },
@@ -1593,7 +1630,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
     onboarding: {
       displayName: AIMLAPI_DISPLAY_NAME,
       accessTokenVerificationGuide: {
-        copy: "aimlapi",
+        copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.AiMlApi,
         showRotationWarning: false,
       },
       accountForm: {
@@ -1724,7 +1761,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
         ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.VercelAiGateway,
       // The token page issues a fresh token; it never rotates an existing one.
       accessTokenVerificationGuide: {
-        copy: "vercel",
+        copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Vercel,
         showRotationWarning: false,
       },
       detection: { hostnames: VERCEL_AI_GATEWAY_HOSTNAMES },
@@ -2027,7 +2064,7 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
         accessTokenGuidanceKey: "form.novitaApiKeyGuidance",
       },
       accessTokenVerificationGuide: {
-        copy: "novita",
+        copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.Novita,
         showRotationWarning: false,
       },
       detection: { hostnames: NOVITA_HOSTNAMES },
@@ -2292,7 +2329,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         accessTokenGuidanceKey: "form.nanoGptApiKeyGuidance",
       },
       accessTokenVerificationGuide: {
-        copy: "nanogpt",
+        copy: ACCOUNT_SITE_ACCESS_TOKEN_GUIDES.NanoGpt,
         showRotationWarning: false,
       },
       detection: { hostnames: NANOGPT_HOSTNAMES },

@@ -17,6 +17,7 @@ import {
   SELF_UPDATE_CHANNELS,
 } from "./scripts/crx-self-update.mjs"
 import { APP_SHORT_NAME } from "./src/constants/branding"
+import { CHROMIUM_FAVICON_PERMISSION } from "./src/constants/extensionPermissions"
 import { APP_LOCALE_ASSET_GLOB } from "./src/constants/i18n"
 import {
   OPENROUTER_WEB_ORIGIN,
@@ -63,6 +64,7 @@ const CORE_EXTENSION_PERMISSIONS = [
 ] as const
 const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = [
   "sidePanel",
+  CHROMIUM_FAVICON_PERMISSION,
   // Chromium must initialize its rule engine when the extension loads.
   // A first optional grant can leave native updates pending and rules inactive.
   // Cookie reads remain optional; this uses the existing host permissions.

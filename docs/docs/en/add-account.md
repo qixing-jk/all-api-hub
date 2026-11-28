@@ -14,6 +14,13 @@ This is the simplest way to add an account. First sign in to the target site in 
 
 If the site uses Cloudflare verification, the extension will open a helper window and continue detection after verification is complete. If auto-detection fails, see the [FAQ](./faq.md) to check your sign-in state, authentication method, and site compatibility, or use manual addition below.
 
+::: tip Security verification during auto-detection
+If auto detection asks for an access token, the extension keeps the detected account details.
+
+- **New API**. Paste a complete token if you already have one. In the toolbar popup, **Create token in extension** and **Get from site** carry your form into the side panel. The extension opens the form in a full page if the side panel is unavailable or fails to open. See [Create a New API management token in the extension](#new-api-token-in-extension) for the next steps.
+- **Other sites**. In the toolbar popup, choose **Continue in side panel**, or **Continue in full page** if the side panel is unavailable. Then open the site, copy the token, and return to the form to paste it.
+:::
+
 <a id="manual-addition"></a>
 ## 2. Manual Addition
 
@@ -31,12 +38,6 @@ Quick links:
 ### 2.1 New API
 
 > Page layouts, button labels, and feature locations may differ between customized New API sites. Follow the interface shown by the site you use.
-
-::: tip Security verification during auto-detection
-Newer New API versions require verification on the site before generating an Access Token. When **"Enter an Access Token manually"** appears, the extension keeps detected account details and switches to Access Token authentication.
-
-In the extension popup, click **"Continue in side panel"** to carry your current form into the side panel. If side panels are not supported, click **"Continue in full page"**. The form also opens in a full page if the side panel fails to open. Then select **"Open site security settings"**, complete verification on the site, copy the token, and return to the preserved form to paste it and save.
-:::
 
 1. Sign in to your New API site.
 2. Click the **All API Hub** extension icon in the browser toolbar. Opening it in the side panel is recommended so you can compare both interfaces while filling in the form.
@@ -76,6 +77,8 @@ In the extension popup, click **"Continue in side panel"** to carry your current
 
    If you have already saved a valid, complete Access Token, you can enter it directly.
 
+   If the form offers token creation, you can also [create a management token in the extension](#new-api-token-in-extension).
+
    Check the token page and buttons on your deployment before choosing a workflow below. The release version is only a guide: forks and backports may use a different workflow.
 
    Newer New API sites (from `v1.0.0-rc.41`) keep every token on the **Security → Access Tokens** page (usually `/security`): choose **Create access token**, pick the permissions and expiry the site asks for, and complete its security verification. The full token is shown only once. Copy it immediately and paste it into the extension's **Access Token** field. Grant all the permissions the dialog lists — a token with too few returns 403 later, when reading usage, balance or managing API keys. Each token is a separate entry that can be revoked on its own, and creating one does **not** invalidate the others.
@@ -102,6 +105,20 @@ Prefer **Access Token Authentication**. If the account cannot refresh after savi
 ::: warning Protect your account information
 Access Tokens and Cookies are sensitive information. Do not share their full contents or expose them in public screenshots or issue reports.
 :::
+
+<a id="new-api-token-in-extension"></a>
+#### Create a New API management token in the extension
+
+If auto detection identifies a New API account and asks for an access token, choose **Create token in extension**. This works on sites that can issue scoped management tokens even when their own token management page is unavailable. Creating a token and saving an account were verified on AI Facai with Linux DO.
+
+![Choosing Create token in extension after auto detection](../static/image/en/new-api-token-creation-entry.png)
+
+1. Choose the token permissions and expiration. Click **Verify and create token** and follow the verification steps offered by the site.
+2. The extension verifies the token and fills it into the account form. Review the account details and click **Save Account**.
+
+![Confirming the account after the extension verifies and fills in the token](../static/image/en/new-api-token-ready-to-save.png)
+
+While the token is valid and has the required permissions, the extension can refresh the account after you sign out of the site. You can also paste a complete token you already have, or choose **Get from site** to copy or create one there and paste it back.
 
 <a id="manual-sub2api"></a>
 ### 2.2 Sub2API
@@ -158,16 +175,16 @@ Access Tokens and Cookies are sensitive information. Do not share their full con
 
    > This token is used to sign in to the site. It is not an API key from the API Keys page used to call models.
 
-   ::: warning Token expiry and extension-managed sessions
-   Sub2API Access Tokens expire. To let the extension renew the session independently in the background, import or enter a `refresh_token` as follows:
+   ::: tip Choosing a session
+   With the default **Browser session** mode, the extension uses your website sign-in. After you close the site, it can resync through a temporary window. If your sign-in expires, the website key is cleared, or you switch accounts, sign in to the matching account on the site again.
 
-   1. We recommend signing in to the target Sub2API site in an incognito or private window first.
-   2. Enable **"Extension-managed session (multiple accounts)"** in the account form.
-   3. Click **"Import from currently signed-in account"**. The extension reads `refresh_token` from the current session's Local Storage and also fills in any available Access Token, User ID, and username.
-   4. If automatic import fails, open **Application** → **Local Storage** → the site domain in developer tools, copy `refresh_token`, and paste it into the form's **"Refresh Token"** field.
-   5. Confirm that the Refresh Token is filled in, save the account, and close the incognito or private window used for import. This prevents the site console and extension from rotating the same Refresh Token in parallel.
+   To use multiple accounts on one site or renew an account independently of the website, select **Independent session** under **Session mode**.
 
-   You cannot save with managed sessions enabled and an empty Refresh Token. When managed sessions are disabled, the extension does not store a Refresh Token. It may only resynchronize through a temporary window while the corresponding account is still signed in to the browser; after that sign-in expires, you must sign in again or update the credentials.
+   1. Enter the **User ID**. If you have not configured Account Login, choose **Set up login** and enter your login details.
+   2. In Account Login, choose **Get session** and complete any verification. When **Independent session ready.** appears, save the account. If you need a new session, choose **Re-sign in** under **Session mode**. Turning on **Automatic login recovery** also lets the extension sign in again in the background if the session expires.
+   3. If you already have a Refresh Token, expand **Manual import or paste Refresh Token**. Choose **Import from site** on sites that support it, or paste the token. Import uses the website session. Using that session in multiple browsers or tools can interrupt renewal. When the site keeps its renewal credential in the browser, the extension directs you to the login option above.
+
+   With **Independent session** selected, you need a renewal credential before you can save. The credential is included in account backups and exports. Keep these files private.
    :::
 
 6. Enter a **Recharge Amount Ratio** (`CNY/USD`, greater than 0), then save the account.

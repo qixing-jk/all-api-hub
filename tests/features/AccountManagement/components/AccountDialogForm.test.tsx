@@ -1958,6 +1958,33 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
   })
 
+  it.each([
+    ["username", ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput],
+    ["userId", ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput],
+  ] as const)(
+    "opens the mobile authentication section to focus %s",
+    async (field, id) => {
+      mediaQueryState.isSmallScreen = true
+      const props = createProps()
+      const ref = createRef<AccountFormHandle>()
+      const user = userEvent.setup()
+      render(<AccountForm {...withSitePolicy(props)} ref={ref} />)
+      const auth = within(
+        await screen.findByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionAuth,
+        ),
+      )
+      await user.click(
+        auth.getByRole("button", {
+          name: "accountDialog:sections.accountAuth.title",
+        }),
+      )
+      expect(screen.queryByTestId(id)).not.toBeInTheDocument()
+      act(() => ref.current?.focusIssue(field))
+      expect(await screen.findByTestId(id)).toHaveFocus()
+    },
+  )
+
   it.each([false, true])(
     "propagates core field edits, exposes access-token controls, and surfaces validation states (continuous: %s)",
     async (continuous) => {
@@ -2137,11 +2164,13 @@ describe("AccountDialog AccountForm", () => {
 
       const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
-      expect(
-        await screen.findByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
-        ),
-      ).toBeInTheDocument()
+      const recommendation = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
+      )
+      expect(recommendation).toHaveRole("note")
+      expect(recommendation).toHaveTextContent(
+        "accountDialog:form.cookiePermissionNeeded",
+      )
       expect(
         screen.getByText(
           "accountDialog:form.cookiePermissionRecommendationDesc",
@@ -2151,11 +2180,13 @@ describe("AccountDialog AccountForm", () => {
         screen.queryByText("accountDialog:form.cookiePermissionManualFallback"),
       ).not.toBeInTheDocument()
 
-      await user.click(
-        screen.getByTestId(
-          ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
-        ),
+      const grantButton = screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
       )
+      expect(grantButton).toHaveTextContent(
+        "accountDialog:form.cookiePermissionEnableShort",
+      )
+      await user.click(grantButton)
 
       expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
 
@@ -2177,6 +2208,58 @@ describe("AccountDialog AccountForm", () => {
     },
   )
 
+  it("defaults to Browser session and lets the user select Independent session", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.SUB2API
+    const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
+    const browserSession = await screen.findByRole("radio", {
+      name: "accountDialog:form.sub2apiBrowserSession",
+    })
+    const independentSession = screen.getByRole("radio", {
+      name: "accountDialog:form.sub2apiIndependentSession",
+    })
+    expect(browserSession).toBeChecked()
+    expect(browserSession).toHaveAccessibleDescription(
+      "accountDialog:form.sub2apiBrowserSessionDescription",
+    )
+    expect(independentSession).not.toBeChecked()
+    expect(independentSession).toHaveAccessibleDescription(
+      "accountDialog:form.sub2apiIndependentSessionDescription",
+    )
+    expect(
+      screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiManualDisclosure),
+    ).not.toBeInTheDocument()
+    await userEvent.click(independentSession)
+    expect(props.onSub2apiUseRefreshTokenChange).toHaveBeenCalledWith(true)
+    props.draft.sub2apiUseRefreshToken = true
+    rerender(<AccountForm {...withSitePolicy(props)} />)
+    expect(independentSession).toBeChecked()
+  })
+
+  it("keeps the manual disclosure open when clicking the selected Independent session", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.sub2apiUseRefreshToken = true
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const selectedMode = await screen.findByRole("radio", {
+      name: "accountDialog:form.sub2apiIndependentSession",
+    })
+    expect(selectedMode).toBeChecked()
+    const manual = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiManualDisclosure,
+    )
+    await user.click(manual)
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiIndependentSessionOption,
+      ),
+    )
+    expect(props.onSub2apiUseRefreshTokenChange).not.toHaveBeenCalled()
+    expect(manual).toHaveAttribute("aria-expanded", "true")
+  })
+
   it.each([false, true])(
     "renders Sub2API refresh-token controls, visibility toggles, and expiry metadata (continuous: %s)",
     async (continuous) => {
@@ -2192,12 +2275,10 @@ describe("AccountDialog AccountForm", () => {
       const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
       expect(
-        await screen.findByText(
-          "accountDialog:form.sub2apiRefreshTokenWarningTitle",
-        ),
+        await screen.findByText("accountDialog:form.sub2apiSessionConfigured"),
       ).toBeInTheDocument()
       expect(
-        screen.getByText("accountDialog:form.checkInStatusPending"),
+        screen.getByText("accountDialog:form.checkInSelectionAutomaticPending"),
       ).toBeInTheDocument()
       expect(
         screen.queryByText("accountDialog:form.checkInStatusDesc"),
@@ -2207,7 +2288,15 @@ describe("AccountDialog AccountForm", () => {
           name: "accountDialog:form.checkInStatus",
         }),
       ).not.toBeInTheDocument()
-      expect(screen.getByDisplayValue("formatted-expiry")).toBeDisabled()
+      expect(
+        screen.getByText("formatted-expiry", { exact: false }),
+      ).toBeVisible()
+      const disclosure = screen.getByRole("button", {
+        name: "accountDialog:form.sub2apiManualEdit",
+      })
+      expect(disclosure).toHaveAttribute("aria-expanded", "false")
+      expect(screen.queryByDisplayValue("refresh-secret")).toBeNull()
+      await user.click(disclosure)
 
       const refreshTokenInput = screen.getByDisplayValue("refresh-secret")
       expect(refreshTokenInput).toHaveAttribute("type", "password")
@@ -2225,19 +2314,14 @@ describe("AccountDialog AccountForm", () => {
       fireEvent.change(screen.getByDisplayValue("refresh-secret"), {
         target: { value: "refresh-secret-next" },
       })
-      await user.click(
-        screen.getByRole("switch", {
-          name: "accountDialog:form.sub2apiRefreshTokenMode",
-        }),
-      )
 
       expect(props.onSub2apiRefreshTokenChange).toHaveBeenLastCalledWith(
         "refresh-secret-next",
       )
-      expect(props.onSub2apiUseRefreshTokenChange).toHaveBeenCalledWith(false)
+
       expect(props.onImportSub2apiSession).not.toHaveBeenCalled()
       const importingButton = screen.getByRole("button", {
-        name: "common:status.importing",
+        name: "accountDialog:form.sub2apiImporting",
       })
       expect(importingButton).toBeDisabled()
       expect(importingButton).toHaveAttribute("aria-busy", "true")
@@ -2251,6 +2335,369 @@ describe("AccountDialog AccountForm", () => {
         }),
       )
       expect(props.onImportSub2apiSession).toHaveBeenCalledTimes(1)
+      await user.click(
+        screen.getByRole("radio", {
+          name: "accountDialog:form.sub2apiBrowserSession",
+        }),
+      )
+      expect(props.onSub2apiUseRefreshTokenChange).toHaveBeenCalledWith(false)
+      expect(disclosure).toHaveAttribute("aria-expanded", "false")
+    },
+  )
+
+  it("focuses the visible session action after validation and the input when manual options are open", async () => {
+    const props = createProps()
+    props.siteUrl = "https://confirmed.example"
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.sub2apiUseRefreshToken = true
+    props.draft.login = {
+      methodId: "password",
+      credentials: { username: "member", password: "secret" },
+    }
+    props.draft.userId = "17"
+    props.isWebsiteSessionBound = true
+    props.onAcquireSub2apiSession = vi.fn()
+    props.validationIssues = [{ field: "refreshToken", kind: "missing" }]
+    props.feedbackStage = "submitted"
+    const ref = createRef<AccountFormHandle>()
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <AccountForm {...withSitePolicy(props)} ref={ref} />,
+    )
+    const acquire = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiLoginSessionButton,
+    )
+    act(() => ref.current?.focusIssue("refreshToken"))
+    expect(acquire).toHaveFocus()
+    expect(acquire).not.toHaveAttribute("aria-invalid")
+    expect(acquire).toHaveAccessibleDescription(/sub2apiValidationAcquire/)
+    const disclosure = screen.getByRole("button", {
+      name: "accountDialog:form.sub2apiManualImport",
+    })
+    await user.click(disclosure)
+    expect(
+      screen.getByText("accountDialog:form.sub2apiImportBoundHelp"),
+    ).toBeVisible()
+    expect(
+      screen.queryByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiImportSessionButton,
+      ),
+    ).toBeNull()
+    const token = screen.getByLabelText(
+      "accountDialog:form.sub2apiRefreshToken",
+    )
+    expect(token).toHaveAttribute("aria-invalid", "true")
+    expect(token).toHaveAccessibleDescription(
+      "accountDialog:form.sub2apiValidationPaste accountDialog:form.sub2apiImportBoundHelp",
+    )
+    const feedback = screen.getByText(
+      "accountDialog:form.sub2apiValidationPaste",
+    )
+    expect(token.closest('[data-slot="field"]')).toContainElement(feedback)
+    act(() => ref.current?.focusIssue("refreshToken"))
+    expect(token).toHaveFocus()
+    await user.click(disclosure)
+    props.draft.sub2apiRefreshToken = "issued"
+    rerender(<AccountForm {...withSitePolicy(props)} ref={ref} />)
+    expect(acquire).toHaveAccessibleName("accountDialog:form.sub2apiReacquire")
+    expect(
+      screen.queryByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenInput,
+      ),
+    ).toBeNull()
+  })
+
+  it("guides manual entry when the editor has no independent login action", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.sub2apiUseRefreshToken = true
+    props.validationIssues = [{ field: "refreshToken", kind: "missing" }]
+    props.feedbackStage = "submitted"
+    const user = userEvent.setup()
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const disclosure = await screen.findByRole("button", {
+      name: "accountDialog:form.sub2apiManualImport",
+    })
+    expect(disclosure).not.toHaveAttribute("aria-invalid")
+    expect(disclosure).toHaveAccessibleDescription(
+      "accountDialog:form.sub2apiValidationManual",
+    )
+    await user.click(disclosure)
+    expect(
+      screen.getByLabelText("accountDialog:form.sub2apiRefreshToken"),
+    ).toHaveAccessibleDescription("accountDialog:validation.requiredField")
+  })
+
+  it("focuses login setup without marking the button as an invalid field", async () => {
+    const props = createProps()
+    props.siteUrl = "https://ordinary.example"
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.sub2apiUseRefreshToken = true
+    props.draft.login = undefined
+    props.isWebsiteSessionBound = true
+    props.onAcquireSub2apiSession = vi.fn()
+    props.validationIssues = [{ field: "refreshToken", kind: "missing" }]
+    props.feedbackStage = "submitted"
+    const ref = createRef<AccountFormHandle>()
+    render(<AccountForm {...withSitePolicy(props)} ref={ref} />)
+    const setup = await screen.findByRole("button", {
+      name: "accountDialog:form.sub2apiLoginSetupAction",
+    })
+    act(() => ref.current?.focusIssue("refreshToken"))
+    expect(setup).toHaveFocus()
+    expect(setup).not.toHaveAttribute("aria-invalid")
+    expect(setup).toHaveAccessibleDescription(
+      "accountDialog:form.sub2apiValidationSetup",
+    )
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.sub2apiManualImport",
+      }),
+    )
+    expect(
+      screen.getByText("accountDialog:form.sub2apiImportBoundUnavailable"),
+    ).toBeVisible()
+    expect(
+      screen.getByLabelText("accountDialog:form.sub2apiRefreshToken"),
+    ).toHaveAccessibleDescription(
+      "accountDialog:form.sub2apiValidationPaste accountDialog:form.sub2apiImportBoundUnavailable",
+    )
+    expect(
+      screen.queryByText("accountDialog:form.sub2apiImportBoundHelp"),
+    ).toBeNull()
+  })
+
+  it("asks for the User ID after validation when Account Login is already configured", async () => {
+    const props = createProps()
+    props.siteUrl = "https://ordinary.example"
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.userId = ""
+    props.draft.sub2apiUseRefreshToken = true
+    props.draft.login = {
+      methodId: "password",
+      credentials: { username: "member@example.com", password: "secret" },
+    }
+    props.onAcquireSub2apiSession = vi.fn()
+    props.validationIssues = [{ field: "refreshToken", kind: "missing" }]
+    props.feedbackStage = "submitted"
+    const ref = createRef<AccountFormHandle>()
+    render(<AccountForm {...withSitePolicy(props)} ref={ref} />)
+
+    const disclosure = await screen.findByRole("button", {
+      name: "accountDialog:form.sub2apiManualImport",
+    })
+    expect(
+      screen.getByText("accountDialog:form.sub2apiValidationUserId"),
+    ).toBeVisible()
+    expect(disclosure).toHaveAccessibleDescription(
+      "accountDialog:form.sub2apiValidationUserId",
+    )
+    act(() => ref.current?.focusIssue("refreshToken"))
+    expect(disclosure).toHaveFocus()
+  })
+
+  it("explains a blocked Sub2API login handoff and allows preparation to be retried", async () => {
+    const props = createProps()
+    props.siteUrl = "https://ordinary.example"
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.userId = "17"
+    props.draft.sub2apiUseRefreshToken = true
+    props.draft.login = {
+      methodId: "password",
+      credentials: { username: "member@example.com", password: "secret" },
+    }
+    const retry = vi.fn()
+    props.onAcquireSub2apiSession = vi.fn()
+    props.sub2apiSessionContinuation = {
+      disabled: true,
+      isPending: false,
+      sidePanelSupported: true,
+      errorMessage: "Preparation failed",
+      onContinue: vi.fn(),
+      onRetry: retry,
+    }
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const error = await screen.findByRole("alert")
+    expect(error).toHaveTextContent("Preparation failed")
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiLoginSessionButton),
+    ).toBeDisabled()
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.sub2apiManualImport",
+      }),
+    )
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiImportSessionButton,
+      ),
+    )
+    expect(props.onImportSub2apiSession).toHaveBeenCalledOnce()
+    expect(props.sub2apiSessionContinuation.onContinue).not.toHaveBeenCalled()
+    await user.click(
+      within(error).getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(retry).toHaveBeenCalledOnce()
+  })
+
+  it("shows Sub2API login prerequisites and focuses Account Login from the refresh fields", async () => {
+    const props = createProps()
+    props.siteUrl = "https://ordinary.example"
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.userId = ""
+    props.draft.login = undefined
+    props.draft.sub2apiUseRefreshToken = true
+    props.onAcquireSub2apiSession = vi.fn()
+    render(<AccountForm {...withSitePolicy(props)} />)
+    expect(
+      await screen.findByText(
+        "accountDialog:form.sub2apiLoginNeedsUserIdAndSetup",
+      ),
+    ).toBeVisible()
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.sub2apiLoginSetupAction",
+      }),
+    )
+    expect(
+      screen.getByRole("combobox", { name: "accountDialog:login.method" }),
+    ).toHaveFocus()
+  })
+  it.each([
+    ["", true, "sub2apiLoginNeedsUserId"],
+    ["17", false, "sub2apiLoginNeedsSetup"],
+  ] as const)(
+    "offers only the missing login setup step for user %j (configured %s)",
+    async (userId, configured, message) => {
+      const props = createProps()
+      props.siteUrl = "https://ordinary.example"
+      props.draft.siteType = SITE_TYPES.SUB2API
+      props.draft.sub2apiUseRefreshToken = true
+      props.draft.userId = userId
+      props.draft.login = configured
+        ? {
+            methodId: "password",
+            credentials: { username: "member@example.com", password: "secret" },
+          }
+        : undefined
+      props.onAcquireSub2apiSession = vi.fn()
+      render(<AccountForm {...withSitePolicy(props)} />)
+      expect(
+        await screen.findByText(`accountDialog:form.${message}`),
+      ).toBeVisible()
+      expect(
+        screen.getAllByText("accountDialog:form.sub2apiIndependentSession"),
+      ).toHaveLength(1)
+      expect(
+        screen.queryByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiLoginSectionAcquireButton,
+        ),
+      ).not.toBeInTheDocument()
+      const setup = screen.queryByRole("button", {
+        name: "accountDialog:form.sub2apiLoginSetupAction",
+      })
+      if (configured) expect(setup).toBeNull()
+      else expect(setup).toBeVisible()
+    },
+  )
+
+  it.each(["editor", "sidePanel", "fullPage"] as const)(
+    "offers login acquisition with a separate manual disclosure in the %s",
+    async (context) => {
+      const props = createProps()
+      props.siteUrl = "https://ordinary.example"
+      props.draft.siteType = SITE_TYPES.SUB2API
+      props.draft.sub2apiUseRefreshToken = true
+      props.draft.userId = "17"
+      props.draft.login = {
+        methodId: "password",
+        credentials: { username: "member@example.com", password: "secret" },
+      }
+      props.onAcquireSub2apiSession = vi.fn()
+      const continueLogin = vi.fn()
+      if (context !== "editor") {
+        props.sub2apiSessionContinuation = {
+          isPending: false,
+          sidePanelSupported: context === "sidePanel",
+          onContinue: continueLogin,
+        }
+      }
+      const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
+      const disclosure = await screen.findByRole("button", {
+        name: "accountDialog:form.sub2apiManualImport",
+      })
+      expect(disclosure).toHaveAttribute("aria-expanded", "false")
+      expect(
+        screen.queryByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiImportSessionButton,
+        ),
+      ).toBeNull()
+      await userEvent.setup().click(disclosure)
+      const original = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiImportSessionButton,
+      )
+      expect(original).toHaveTextContent(
+        "accountDialog:form.sub2apiImportRefreshToken",
+      )
+      expect(original).toHaveAccessibleDescription(
+        "accountDialog:form.sub2apiImportSessionHelp",
+      )
+      const token = screen.getByLabelText(
+        "accountDialog:form.sub2apiRefreshToken",
+      )
+      expect(token.closest('[data-slot="field"]')).toContainElement(original)
+      const user = userEvent.setup()
+      await user.click(original)
+      expect(props.onImportSub2apiSession).toHaveBeenCalledOnce()
+      expect(props.onAcquireSub2apiSession).not.toHaveBeenCalled()
+      expect(continueLogin).not.toHaveBeenCalled()
+      const loginButton = screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiLoginSessionButton,
+      )
+      expect(loginButton).toHaveAccessibleName(
+        "accountDialog:form.sub2apiLoginForSession",
+      )
+      expect(
+        screen.getByText("accountDialog:form.sub2apiNoSession"),
+      ).toBeVisible()
+      expect(loginButton).toHaveAccessibleDescription(
+        context === "editor"
+          ? "accountDialog:form.sub2apiLoginSessionHelp"
+          : context === "sidePanel"
+            ? "accountDialog:form.sub2apiLoginSidePanelHelp"
+            : "accountDialog:form.sub2apiLoginFullPageHelp",
+      )
+      expect(loginButton.querySelector("svg.lucide-log-in")).toBeInTheDocument()
+      await user.click(loginButton)
+      if (context !== "editor") {
+        expect(
+          loginButton.querySelector("svg.lucide-arrow-up-right"),
+        ).toBeInTheDocument()
+        expect(continueLogin).toHaveBeenCalledExactlyOnceWith()
+        expect(props.onAcquireSub2apiSession).not.toHaveBeenCalled()
+      } else {
+        expect(props.onAcquireSub2apiSession).toHaveBeenCalledOnce()
+      }
+      const localButton = screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiLoginSectionAcquireButton,
+      )
+      expect(localButton).toHaveAccessibleName(
+        "accountDialog:form.sub2apiLoginForSession",
+      )
+      await user.click(localButton)
+      if (context === "editor") {
+        expect(props.onAcquireSub2apiSession).toHaveBeenCalledTimes(2)
+      } else {
+        expect(continueLogin).toHaveBeenCalledTimes(2)
+        expect(props.onAcquireSub2apiSession).not.toHaveBeenCalled()
+      }
+      props.draft.sub2apiRefreshToken = "issued"
+      rerender(<AccountForm {...withSitePolicy(props)} />)
+      expect(localButton).not.toBeInTheDocument()
+      expect(
+        screen.getByText("accountDialog:login.sub2apiSessionReady"),
+      ).toBeVisible()
     },
   )
 
@@ -2292,6 +2739,40 @@ describe("AccountDialog AccountForm", () => {
           ),
         },
       }),
+    )
+  })
+
+  it("edits a native page path independently and blocks invalid destinations", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn.customCheckIn = { url: "https://welfare.example/" }
+    render(
+      <form aria-label="Account editor">
+        <AccountForm {...withSitePolicy(props)} />
+      </form>,
+    )
+    const field = await screen.findByLabelText(
+      "accountDialog:form.checkInPagePath",
+    )
+    fireEvent.change(field, { target: { value: "//elsewhere.example/invite" } })
+    expect(field).toBeInvalid()
+    expect(field).toHaveValue("//elsewhere.example/invite")
+    expect(props.onCheckInChange).not.toHaveBeenCalled()
+    fireEvent.change(field, { target: { value: "/invite?tab=daily#/claim" } })
+    expect(field).toBeValid()
+    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        nativePagePath: "/invite?tab=daily#/claim",
+        customCheckIn: { url: "https://welfare.example/" },
+      }),
+    )
+    fireEvent.change(field, { target: { value: "" } })
+    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ nativePagePath: undefined }),
     )
   })
 
@@ -2819,7 +3300,88 @@ describe("AccountDialog AccountForm", () => {
     render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
-      await screen.findByText("accountDialog:form.checkInStatusUnknown"),
+      await screen.findByText("accountDialog:form.checkInSelectionUnconfirmed"),
+    ).toBeVisible()
+  })
+
+  it("keeps the manually selected method when detection of another method failed", async () => {
+    const props = createProps()
+    const selectedMethod = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    props.draft.siteType = SITE_TYPES.NEW_API
+    const checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn = {
+      ...checkIn,
+      selection: { mode: "manual", methodId: selectedMethod },
+      methodKnowledge: {
+        methods: {
+          ...checkIn.methodKnowledge.methods,
+          [AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn]: {
+            detection: {
+              outcome: "unknown",
+              reason: "timeout",
+              attemptedAt: 200,
+            },
+          },
+        },
+      },
+    }
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const selection = await screen.findByRole("combobox", {
+      name: "accountDialog:form.checkInMethod",
+    })
+    expect(selection).toHaveAccessibleDescription(
+      expect.stringContaining("accountDialog:form.checkInStatusUnknown"),
+    )
+    expect(selection).toHaveAccessibleDescription(
+      expect.stringContaining("accountDialog:form.checkInSelectionManual"),
+    )
+    expect(
+      screen.queryByText("accountDialog:form.checkInSelectionUnconfirmed"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not promise account refresh is read-only on the FreeGG allowance deployment", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.siteUrl = "https://freegg.app"
+    const methodId = AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance
+    props.draft.checkIn = mergeCheckInDiscoveryResults({
+      config: createCheckIn({ siteType: SITE_TYPES.NEW_API, supported: true }),
+      candidateMethodIds: [methodId],
+      detections: {
+        [methodId]: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 300 },
+        },
+      },
+      completedAt: 300,
+    })
+    render(<AccountForm {...withSitePolicy(props)} />)
+    expect(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:form.checkInMethod",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("accountDialog:form.checkInStatusDesc"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("autoCheckin:methods.freeGgAllowance.description"),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("textbox", {
+        name: "accountDialog:form.checkInRoutePath",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("textbox", {
+        name: "accountDialog:form.checkInRoutePathForMethod",
+      }),
     ).toBeVisible()
   })
 
@@ -2850,11 +3412,11 @@ describe("AccountDialog AccountForm", () => {
     const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
 
     expect(
-      await screen.findByText("accountDialog:form.checkInStatusUnknown"),
+      await screen.findByText("accountDialog:form.checkInSelectionUnconfirmed"),
     ).toBeVisible()
     expect(
-      screen.getByText("accountDialog:form.checkInSelectionUnconfirmed"),
-    ).toBeVisible()
+      screen.queryByText("accountDialog:form.checkInStatusUnknown"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("accountDialog:form.checkInStatusDesc"),
     ).not.toBeInTheDocument()
@@ -2913,7 +3475,7 @@ describe("AccountDialog AccountForm", () => {
     ).toBeChecked()
   })
 
-  it("shows the automatic result in the trigger and explains it below", async () => {
+  it("shows the automatic result in the trigger with a concise redetection hint", async () => {
     testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
     testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
     const props = createProps()
@@ -2934,7 +3496,7 @@ describe("AccountDialog AccountForm", () => {
       )
       expect(methodSelect).not.toHaveTextContent("New API")
       expect(methodSelect).toHaveAccessibleDescription(
-        "Automatically selected: Daily check-in. When automatic check-in is enabled, discovery runs again if this method becomes unsupported.",
+        "When auto check-in is on, unsupported methods trigger re-detection.",
       )
     } finally {
       testI18n.removeResourceBundle("en", "accountDialog")
@@ -2988,7 +3550,87 @@ describe("AccountDialog AccountForm", () => {
     }
   })
 
-  it("names the fixed method in the manual selection helper", async () => {
+  it.each([
+    { mode: "automatic", outcome: "matched", status: null },
+    {
+      mode: "automatic",
+      outcome: "unknown",
+      status:
+        "Site support for the selected method is unconfirmed. Select “Detect method” to verify.",
+    },
+    {
+      mode: "manual",
+      outcome: "unsupported",
+      status:
+        "Select “Detect method” to check whether this method is still available.",
+    },
+    { mode: "manual", outcome: "matched", status: null },
+  ] as const)(
+    "keeps the BizDecipher scope distinct when a $mode method is $outcome",
+    async ({ mode, outcome, status }) => {
+      testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
+      testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
+      const props = createProps()
+      const methodId = AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn
+      props.draft.siteType = SITE_TYPES.SUB2API
+      props.draft.checkIn = {
+        automaticExecutionEnabled: true,
+        selection: { mode, methodId },
+        methodKnowledge: {
+          methods: {
+            [methodId]: {
+              detection:
+                outcome === "unknown"
+                  ? { outcome, reason: "network", attemptedAt: 200 }
+                  : { outcome, evidence: { source: "probe", observedAt: 200 } },
+            },
+          },
+        },
+      }
+
+      try {
+        render(<AccountForm {...withSitePolicy(props)} />)
+        const method = await screen.findByRole("combobox", {
+          name: enAccountDialog.form.checkInMethod,
+        })
+        const section = within(
+          screen.getByTestId(
+            ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+          ),
+        )
+        const scope =
+          "Only claims the daily free gift. Draws that cost points or balance are available on the site."
+        const redetection =
+          "When auto check-in is on, unsupported methods trigger re-detection."
+
+        expect(method).toHaveTextContent("BizDecipher daily free gift")
+        if (status) {
+          expect(section.getByRole("status")).toHaveTextContent(status)
+          expect(method).toHaveAccessibleDescription(
+            `${status} Scope: ${scope}`,
+          )
+          expect(section.queryByText(redetection)).not.toBeInTheDocument()
+        } else {
+          expect(section.queryByRole("status")).not.toBeInTheDocument()
+          expect(method).toHaveAccessibleDescription(
+            mode === "automatic" ? `${redetection} ${scope}` : scope,
+          )
+        }
+        if (mode === "manual") {
+          expect(
+            section.getByRole("button", {
+              name: "Restore automatic selection",
+            }),
+          ).toBeVisible()
+        }
+      } finally {
+        testI18n.removeResourceBundle("en", "accountDialog")
+        testI18n.removeResourceBundle("en", "autoCheckin")
+      }
+    },
+  )
+
+  it("explains that a manual selection stays fixed", async () => {
     testI18n.addResourceBundle("en", "accountDialog", enAccountDialog)
     testI18n.addResourceBundle("en", "autoCheckin", enAutoCheckin)
     const props = createProps()
@@ -3014,7 +3656,7 @@ describe("AccountDialog AccountForm", () => {
       ).toHaveTextContent("Daily check-in")
       expect(
         screen.getByText(
-          "You manually selected Daily check-in. The system will not replace it automatically.",
+          "This method is fixed and will not switch automatically.",
         ),
       ).toBeVisible()
     } finally {
@@ -3150,7 +3792,7 @@ describe("AccountDialog AccountForm", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "accountDialog:form.redetectCheckInMethods",
+        name: "accountDialog:form.detectCheckInMethod",
       }),
     )
     expect(props.onRedetectCheckInMethods).toHaveBeenCalledOnce()
@@ -3184,7 +3826,7 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
     await user.click(
       screen.getByRole("button", {
-        name: "accountDialog:form.redetectCheckInMethods",
+        name: "accountDialog:form.detectCheckInMethod",
       }),
     )
     expect(props.onRedetectCheckInMethods).toHaveBeenCalledOnce()
@@ -3362,7 +4004,7 @@ describe("AccountDialog AccountForm", () => {
     }
   })
 
-  it("does not show built-in auto check-in controls for AIHubMix accounts", async () => {
+  it("offers support without a detector when an unsupported account retains a previous method", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.AIHUBMIX
     props.draft.checkIn = createCheckIn({
@@ -3370,6 +4012,10 @@ describe("AccountDialog AccountForm", () => {
       supported: false,
       automaticExecutionEnabled: true,
     })
+    props.draft.checkIn.selection = {
+      mode: "manual",
+      methodId: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    }
 
     render(<AccountForm {...withSitePolicy(props)} />)
 
@@ -3378,6 +4024,16 @@ describe("AccountDialog AccountForm", () => {
         exact: false,
       }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:checkInFeedback.request",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:form.detectCheckInMethod",
+      }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("accountDialog:form.checkInStatusDesc"),
     ).not.toBeInTheDocument()

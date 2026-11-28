@@ -22,6 +22,7 @@ The One API/New API/Hub values refer to ordinary `/api` traffic, not the separat
 | `new-api` | 108 | 8 | Verified defaults above |
 | `apiyi` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
 | `laozhang` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
+| `shell-api` | 30 | 4 | Conservative client fallback; generic deployments vary |
 | `ModelFlare` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
 | `anyrouter` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |
 | `Veloera` | 30 | 4 | Conservative client fallback; applicable account/management threshold not verified |

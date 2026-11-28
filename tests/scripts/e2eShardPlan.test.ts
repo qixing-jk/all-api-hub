@@ -24,43 +24,55 @@ const smokeWorkflow = readFileSync(
   ".github/workflows/e2e-smoke.yml",
   "utf8",
 ).replace(/\r/g, "")
-it("propagates planner failures and preserves successful empty-plan fallback", () => {
-  const step = smokeWorkflow
-    .split("      - name: Run E2E smoke")[1]
-    ?.split("      - name:")[0]
-  if (!step) throw new Error("Missing smoke step")
-  const script = step
-    .split("        run: |\n")[1]
-    ?.split("\n")
-    .map((line) => line.slice(10))
-    .join("\n")
-  expect(script).toBeDefined()
-  function run(mode: string) {
-    return execFileSync(
-      process.platform === "win32"
-        ? "C:/Program Files/Git/bin/bash.exe"
-        : "bash",
-      [
-        "-c",
-        `node() { if [ "$PLAN_MODE" = fail ]; then return 9; fi; if [ "$PLAN_MODE" = specs ]; then printf 'e2e/a.spec.ts\\ne2e/b.spec.ts\\n'; fi; }; pnpm() { printf '%s\\n' "$@"; };\n${script}`,
-      ],
-      {
-        env: {
-          ...process.env,
-          PLAN_MODE: mode,
-          AAH_E2E_SHARD_INDEX: "2",
-          AAH_E2E_SHARD_TOTAL: "6",
-          AAH_E2E_TYPE: "default",
+it.each([
+  ["e2e-smoke", "Run E2E smoke", "6"],
+  ["e2e-browser-compat", "Run browser compatibility E2E", "3"],
+])(
+  "%s propagates planner failures and preserves empty-plan fallback",
+  (name, stepName, total) => {
+    const workflow = readFileSync(
+      `.github/workflows/${name}.yml`,
+      "utf8",
+    ).replace(/\r/g, "")
+    const step = workflow
+      .split(`      - name: ${stepName}`)[1]
+      ?.split("      - name:")[0]
+    if (!step) throw new Error(`Missing ${stepName} step`)
+    const script = step
+      .split("        run: |\n")[1]
+      ?.split("\n")
+      .filter((line) => line.startsWith("          "))
+      .map((line) => line.slice(10))
+      .join("\n")
+    expect(script).toBeDefined()
+    function run(mode: string) {
+      return execFileSync(
+        process.platform === "win32"
+          ? "C:/Program Files/Git/bin/bash.exe"
+          : "bash",
+        [
+          "-c",
+          `node() { if [ "$PLAN_MODE" = fail ]; then return 9; fi; if [ "$PLAN_MODE" = specs ]; then printf 'e2e/a.spec.ts\\ne2e/b.spec.ts\\n'; fi; }; pnpm() { printf '%s\\n' "$@"; };\n${script}`,
+        ],
+        {
+          env: {
+            ...process.env,
+            PLAN_MODE: mode,
+            AAH_E2E_SHARD_INDEX: "2",
+            AAH_E2E_SHARD_TOTAL: total,
+            AAH_E2E_TYPE: "default",
+          },
+          encoding: "utf8",
         },
-        encoding: "utf8",
-      },
-    )
-  }
-  expect(() => run("fail")).toThrow()
-  expect(run("empty")).toContain("--shard=2/6")
-  expect(run("specs")).toContain("e2e/a.spec.ts")
-  expect(run("specs")).toContain("e2e/b.spec.ts")
-})
+      )
+    }
+    expect(() => run("fail")).toThrow()
+    expect(run("empty")).toContain(`--shard=2/${total}`)
+    expect(run("specs")).toContain("e2e/a.spec.ts")
+    expect(run("specs")).toContain("e2e/b.spec.ts")
+    expect(run("specs")).not.toContain("--shard=")
+  },
+)
 it("restores timings before planning and skips publishing absent reports", () => {
   expect(
     smokeWorkflow.indexOf("- name: Restore E2E spec durations"),

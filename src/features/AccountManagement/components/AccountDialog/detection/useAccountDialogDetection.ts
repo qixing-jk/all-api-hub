@@ -73,7 +73,9 @@ type DetectionInput = {
   autoDetection: Pick<ReturnType<typeof useAccountAutoDetection>, "run">
   sub2ApiSession: Pick<
     ReturnType<typeof useSub2ApiAccountSession>,
-    "hasUserChangedRefreshMode"
+    | "hasUserChangedRefreshMode"
+    | "rememberBoundSessionUrl"
+    | "clearBoundSessionUrl"
   >
   cookieSession: Pick<
     ReturnType<typeof useAccountCookieSession>,
@@ -182,6 +184,12 @@ export function useAccountDialogDetection({
     }
     if (!isCurrent()) return false
 
+    if (policy.allowSub2ApiRefreshTokenState) {
+      if (resultData.sub2apiWebsiteSessionBound === true)
+        sub2ApiSession.rememberBoundSessionUrl(url.trim())
+      else sub2ApiSession.clearBoundSessionUrl()
+    }
+
     // Keep the identity stable until its automatic Cookie import completes.
     setDraft((prev) => {
       return buildDraftFromAutoDetectResult({
@@ -221,6 +229,8 @@ export function useAccountDialogDetection({
     }
 
     if (!recoveryData) return
+    if (recoveryData.sub2apiWebsiteSessionBound === true)
+      sub2ApiSession.rememberBoundSessionUrl(url.trim())
     if (
       !credentialEvidence.read().hasAccessToken &&
       recoveryData.accessToken?.trim()

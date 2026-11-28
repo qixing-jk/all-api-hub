@@ -174,9 +174,17 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "Solo reclama el regalo diario gratis. Participa en el sitio en los sorteos que cuestan puntos o saldo.",
+      "name": "Regalo diario gratis de {{source}}"
+    },
     "daily": {
       "description": "Este método usa el protocolo de check-in de terceros de {{source}} y solo funciona en instalaciones compatibles.",
       "name": "Check-in diario de {{source}}"
+    },
+    "freeGgAllowance": {
+      "description": "Reclama el saldo diario, que se restablece a medianoche UTC+8. Visitar el sitio o actualizar la cuenta también puede reclamarlo. Primero se revisa el registro para evitar repetir la operación.",
+      "name": "Saldo diario de {{source}}"
     },
     "generic": {
       "name": "Check-in diario"
@@ -188,13 +196,17 @@
     "sources": {
       "agentRouter": "Agent Router",
       "aiRouter": "AI-ROUTER",
+      "apiKeyCasa": "ApiKey Casa",
       "baiApi": "Bai API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",
       "daigua": "DaiGua",
       "denxio": "Denxio",
       "freeApi": "Luna",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "Genius Programmer Relay",
       "hiyo": "Hiyo Free",
+      "linxi": "100xLabs",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

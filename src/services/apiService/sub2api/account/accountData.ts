@@ -50,6 +50,7 @@ import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { decodeSub2ApiResponseError } from "~/services/apiService/sub2api/responseError"
 import {
   SUB2API_AUTH_ME_ENDPOINT,
+  SUB2API_PANEL_KEY_ERRORS,
   SUB2API_USAGE_STATS_ENDPOINT,
   type Sub2ApiUsageStatsData,
 } from "~/services/apiService/sub2api/type"
@@ -124,9 +125,11 @@ const createAccountData = (
   checkIn,
 })
 
-const createLoginRequiredHealthStatus = () => ({
+const createLoginRequiredHealthStatus = (
+  message = t("messages:sub2api.loginRequired"),
+) => ({
   status: SiteHealthStatus.Warning,
-  message: t("messages:sub2api.loginRequired"),
+  message,
   code: ACCOUNT_AUTH_HEALTH_STATUS_CODES.AUTHENTICATION_REQUIRED,
 })
 
@@ -494,6 +497,25 @@ export async function refreshAccountData(
       return {
         success: false,
         healthStatus: createAuthPersistenceFailureHealthStatus(),
+      }
+    }
+    if (error instanceof ApiError) {
+      switch (error.upstreamCode) {
+        case SUB2API_PANEL_KEY_ERRORS.Mismatch:
+        case SUB2API_PANEL_KEY_ERRORS.WebsiteKeyMissing:
+          return {
+            success: false,
+            healthStatus: createLoginRequiredHealthStatus(
+              t("messages:errors.api.browserProofLoginRequired"),
+            ),
+          }
+        case SUB2API_PANEL_KEY_ERRORS.IndependentSessionRequired:
+          return {
+            success: false,
+            healthStatus: createLoginRequiredHealthStatus(
+              t("messages:sub2api.independentSessionRequired"),
+            ),
+          }
       }
     }
     if (isAuthenticationRequiredError(error)) {

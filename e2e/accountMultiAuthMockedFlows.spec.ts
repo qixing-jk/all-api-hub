@@ -12,6 +12,7 @@ import {
   saveManualAccountFromApp,
 } from "~~/e2e/scenarios/accountManualAdd"
 import {
+  createStoredAccount,
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedStoredAccounts,
@@ -27,6 +28,7 @@ import {
 import { openAccountManagementPage } from "~~/e2e/utils/realSite/accountAdd"
 
 const MOCKED_MULTI_ACCOUNT_SITE_URL = "https://multi-account.example.com"
+const PERMISSION_PROBE_TOKEN = "permission-probe-token"
 const MOCKED_ACCOUNT_BY_ACCESS_TOKEN = {
   "e2e-access-token-a": {
     id: "101",
@@ -38,7 +40,7 @@ const MOCKED_ACCOUNT_BY_ACCESS_TOKEN = {
     username: "token-user-b",
     quota: 22_000,
   },
-  "permission-probe-token": {
+  [PERMISSION_PROBE_TOKEN]: {
     id: "200",
     username: "permission-probe-user",
     quota: 1_000,
@@ -175,7 +177,17 @@ test("grants cookie-auth optional permissions and saves two cookie accounts on t
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
-  await seedStoredAccounts(serviceWorker, [])
+  await seedStoredAccounts(serviceWorker, [
+    createStoredAccount({
+      id: "permission-probe-account",
+      site_name: "Mocked Multi Account",
+      site_url: MOCKED_MULTI_ACCOUNT_SITE_URL,
+      account_info: {
+        ...MOCKED_ACCOUNT_BY_ACCESS_TOKEN[PERMISSION_PROBE_TOKEN],
+        access_token: PERMISSION_PROBE_TOKEN,
+      },
+    }),
+  ])
   await seedUserPreferences(serviceWorker, {
     tempWindowFallback: {
       enabled: true,
@@ -183,21 +195,7 @@ test("grants cookie-auth optional permissions and saves two cookie accounts on t
     warnOnDuplicateAccountAdd: false,
   })
 
-  await saveManualAccountFromApp({
-    page,
-    extensionId,
-    serviceWorker,
-    baseUrl: MOCKED_MULTI_ACCOUNT_SITE_URL,
-    siteType: SITE_TYPES.NEW_API,
-    account: {
-      authType: AuthTypeEnum.AccessToken,
-      siteName: "Mocked Multi Account",
-      username: "permission-probe-user",
-      userId: "200",
-      accessToken: "permission-probe-token",
-    },
-  })
-
+  await openAccountManagementPage({ page, extensionId })
   const optionalPermissions = await getManifestOptionalPermissions(page)
   const cookieAuthPermissions =
     getCookieAuthOptionalPermissions(optionalPermissions)

@@ -92,6 +92,26 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
   {
+    // Account setup loads session acquisition only after explicit token creation intent.
+    file: "src/features/AccountManagement/components/AccountDialog/newApiToken/NewApiTokenCreator.tsx",
+    imports: ["~/services/apiService/newApiFamily/accessTokens/client"],
+  },
+  {
+    // OAuth is an optional interaction; this boundary also separates its session helpers.
+    file: "src/services/apiService/newApiFamily/accessTokens/browser.ts",
+    imports: ["./oauthBrowser"],
+  },
+  {
+    // Load protection-page readiness checks only when a site tab navigates.
+    file: "src/services/browsingContext/siteTabRecovery.ts",
+    imports: ["./tempPage/browserAdapter"],
+  },
+  {
+    // Optional wire protocols load without the business adapter registry.
+    file: "src/services/apiAdapters/requestProtocol.ts",
+    imports: ["./sub2api/auth/requestProtocol"],
+  },
+  {
     // Verification defers provider SDKs and quality executors until a test runs.
     file: "src/services/verification/lazyRunners.ts",
     imports: [
@@ -129,7 +149,7 @@ const dynamicImportAllowlist = [
   },
   // Turnstile waits load content UI only when the user is asked to assist.
   {
-    file: "src/entrypoints/content/messageHandlers/handlers/turnstileGuard.ts",
+    file: "src/entrypoints/content/messageHandlers/utils/turnstileUserAssist.ts",
     imports: [
       "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts",
     ],
@@ -187,6 +207,8 @@ const dynamicImportAllowlist = [
   {
     file: "src/entrypoints/content/messageHandlers/index.ts",
     imports: [
+      // Load management-token session/WebAuthn actions only when requested.
+      "~/services/apiService/newApiFamily/accessTokens/content",
       "~/services/checkin/feedback/pageScan",
       // Mount the existing isolated toast host only when a page reminder arrives.
       "~/entrypoints/content/shared/uiRoot",
@@ -329,7 +351,10 @@ const siteTypeImportOwners = [
   "src/features/DevPanel/fixtureSiteBalances.ts", // Development-only default balance samples for named providers.
   "src/components/icons/ManagedSiteIcon.tsx", // Provider branding.
   "src/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide.tsx", // Provider authentication instructions.
-  "src/features/AccountManagement/components/AccountDialog/form/AccountForm.tsx", // OpenRouter management-key onboarding UI.
+  "src/features/AccountManagement/components/AccountDialog/form/AccountForm.tsx", // Provider-specific credential guides.
+  "src/features/AccountManagement/components/AccountDialog/form/AccountAccessTokenField.tsx", // Novita and NanoGPT credential field codecs.
+  "src/features/AccountManagement/components/AccountDialog/form/AccountIdentityFields.tsx", // Vercel team selection.
+  "src/features/AccountManagement/components/AccountDialog/form/AccountSiteSection.tsx", // Site type picker and its unknown fallback.
   "src/features/AccountManagement/components/AccountDialog/form/useOpenRouterAccountOnboarding.ts", // Provider-owned onboarding lifecycle.
   "src/features/BasicSettings/components/tabs/ManagedSite/search/CliProxyApi.search.ts", // CLIProxyAPI settings search.
   "src/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSite*.search.ts", // Search entries for provider-specific settings.

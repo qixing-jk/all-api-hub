@@ -26,6 +26,10 @@ import { setupStarPromotionContent } from "./starPromotion/observeRepoStarButton
 const logger = createLogger("ContentEntrypoint")
 const contentPreferencesStorage = new Storage({ area: "local" })
 
+declare global {
+  var __aahCleanupContentMessageHandlers: (() => void) | undefined
+}
+
 /**
  * Compare ordered string preference arrays used by content listeners.
  */
@@ -99,7 +103,17 @@ function mainLogic() {
     logger.warn("Content i18n initialization failed", error)
   })
 
-  const cleanupMessageHandlers = setupContentMessageHandlers()
+  globalThis.__aahCleanupContentMessageHandlers?.()
+  const removeMessageHandlers = setupContentMessageHandlers()
+  const cleanupMessageHandlers = () => {
+    if (
+      globalThis.__aahCleanupContentMessageHandlers !== cleanupMessageHandlers
+    )
+      return
+    globalThis.__aahCleanupContentMessageHandlers = undefined
+    removeMessageHandlers()
+  }
+  globalThis.__aahCleanupContentMessageHandlers = cleanupMessageHandlers
   const cleanupFeatureControllers = setupContentFeatureControllers()
   const cleanupStarPromotion = setupStarPromotionContent()
 

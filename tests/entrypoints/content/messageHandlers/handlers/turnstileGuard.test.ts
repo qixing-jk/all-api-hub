@@ -1,15 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  handleInspectCheckinPage,
   handleTriggerCheckinPageAction,
-  handleWaitForTurnstileToken,
-} from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
+} from "~/entrypoints/content/messageHandlers/handlers/checkinPage"
+import { handleWaitForTurnstileToken } from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
+import {
+  PAGE_VERIFICATION_STATUSES,
+  TURNSTILE_PRE_TRIGGER_KINDS,
+  TURNSTILE_TOKEN_WAIT_STATUSES,
+} from "~/types/turnstile"
 
 const {
   loggerMocks,
   triggerCheckinPageActionMock,
   waitForTurnstileTokenMock,
   waitForCheckinPageActionTargetMock,
+  inspectCheckinPageMock,
   sendRuntimeMessageMock,
   showTurnstileManualAssistToastMock,
 } = vi.hoisted(() => ({
@@ -22,6 +29,7 @@ const {
   triggerCheckinPageActionMock: vi.fn(),
   waitForTurnstileTokenMock: vi.fn(),
   waitForCheckinPageActionTargetMock: vi.fn(),
+  inspectCheckinPageMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
   showTurnstileManualAssistToastMock: vi.fn(),
 }))
@@ -32,7 +40,9 @@ vi.mock("~/utils/core/logger", () => ({
 
 vi.mock("~/services/checkin/pageVerification", () => ({
   capturePageVerificationWidgets: vi.fn(() => new Set()),
-  waitForPageVerification: vi.fn(async () => ({ status: "not_present" })),
+  waitForPageVerification: vi.fn(async () => ({
+    status: PAGE_VERIFICATION_STATUSES.NotPresent,
+  })),
 }))
 
 vi.mock("~/utils/browser/runtimeMessages", () => ({
@@ -47,15 +57,77 @@ vi.mock(
 )
 
 vi.mock("~/entrypoints/content/messageHandlers/utils/turnstileGuard", () => ({
-  triggerCheckinPageAction: triggerCheckinPageActionMock,
   waitForTurnstileToken: waitForTurnstileTokenMock,
-  waitForCheckinPageActionTarget: waitForCheckinPageActionTargetMock,
 }))
 
 describe("content turnstile guard handler", () => {
+  it.each([false, true])(
+    "waits for a hydrating default action before publishing page candidates (area: %s)",
+    async (hasCheckInArea) => {
+      vi.useFakeTimers()
+      try {
+        inspectCheckinPageMock
+          .mockReturnValueOnce({
+            success: true,
+            hasTarget: false,
+            hasCheckInArea,
+            candidates: ["/daily"],
+          })
+          .mockReturnValue({ success: true, hasTarget: true, candidates: [] })
+        const response = vi.fn()
+        handleInspectCheckinPage(
+          { trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton } },
+          response,
+        )
+        await vi.advanceTimersByTimeAsync(0)
+        expect(response).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(1500)
+        expect(response).toHaveBeenCalledWith({
+          success: true,
+          hasTarget: true,
+          candidates: [],
+        })
+        expect(triggerCheckinPageActionMock).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+  it("returns read-only page evidence without triggering check-in or verification", async () => {
+    inspectCheckinPageMock.mockReturnValue({
+      success: true,
+      hasTarget: false,
+      candidates: ["/invite"],
+    })
+    const response = await new Promise((resolve) =>
+      handleInspectCheckinPage(
+        { trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton } },
+        resolve,
+      ),
+    )
+    expect(response).toEqual({
+      success: true,
+      hasTarget: false,
+      candidates: ["/invite"],
+    })
+    expect(triggerCheckinPageActionMock).not.toHaveBeenCalled()
+  })
+  it("retains the explicit expectation for a delayed Turnstile widget", async () => {
+    waitForTurnstileTokenMock.mockResolvedValue({
+      status: TURNSTILE_TOKEN_WAIT_STATUSES.Timeout,
+      detection: { hasTurnstile: false, score: 0, reasons: [] },
+    })
+    const response = await new Promise((resolve) =>
+      handleWaitForTurnstileToken({ expectTurnstile: true }, resolve),
+    )
+    expect(response).toMatchObject({ success: true, status: "timeout" })
+    expect(waitForTurnstileTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({ expectTurnstile: true }),
+    )
+  })
   it("prepares a delayed native target without clicking", async () => {
     const trigger = {
-      kind: "clickSelector",
+      kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
       selector: "#check-in",
       targetWaitMs: 1000,
     } as const
@@ -85,7 +157,10 @@ describe("content turnstile guard handler", () => {
         score: 5,
       },
     }
-    const preTrigger = { kind: "clickSelector", selector: "#submit" } as const
+    const preTrigger = {
+      kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+      selector: "#submit",
+    } as const
 
     waitForTurnstileTokenMock.mockResolvedValue(result)
 
@@ -191,7 +266,7 @@ describe("content turnstile guard handler", () => {
   })
 
   it("handles native page action trigger requests", async () => {
-    const trigger = { kind: "checkinButton" } as const
+    const trigger = { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton } as const
     const triggerResult = {
       status: "clicked",
       clicked: true,
@@ -356,3 +431,9 @@ describe("content turnstile guard handler", () => {
     ).toBeNull()
   })
 })
+
+vi.mock("~/services/checkin/pageAction", () => ({
+  triggerCheckinPageAction: triggerCheckinPageActionMock,
+  waitForCheckinPageActionTarget: waitForCheckinPageActionTargetMock,
+  inspectCheckinPage: inspectCheckinPageMock,
+}))

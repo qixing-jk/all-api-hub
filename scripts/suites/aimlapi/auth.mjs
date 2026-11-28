@@ -264,10 +264,10 @@ export async function runAimlapiAuthMatrix(options) {
     await expect(form.primary).toHaveValue("")
     await expect(form.regular).toHaveValue("")
     await expect(form.dialog).toContainText("Use an AI/ML API management key")
-    await expect(form.save).toHaveCount(0)
+    await expect(form.save).toBeDisabled()
     if (options.apiKey) {
       await form.regular.fill(options.apiKey)
-      await expect(form.save).toHaveCount(0)
+      await expect(form.save).toBeDisabled()
     }
     results.push({ name: "missing-primary-is-blocked", status: "passed" })
   } finally {

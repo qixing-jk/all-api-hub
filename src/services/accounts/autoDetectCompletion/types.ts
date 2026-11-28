@@ -23,6 +23,7 @@ export interface DetectedAccountIdentity {
   siteType: AccountSiteType
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
+  sub2apiWebsiteSessionBound?: true
   sub2apiAuth?: Sub2ApiAuthConfig
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext
@@ -52,6 +53,7 @@ export interface AutoDetectCompletionData {
   login?: import("~/types/accountLogin").AccountLoginConfiguration
   checkIn: CheckInConfig
   siteType: AccountSiteType
+  sub2apiWebsiteSessionBound?: true
   sub2apiAuth?: Sub2ApiAuthConfig
   kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
   fetchContext?: ApiServiceFetchContext

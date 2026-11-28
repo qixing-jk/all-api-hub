@@ -12,6 +12,7 @@ import {
   performSidruneDailyCheckIn,
   SIDRUNE_CHECK_IN_ENDPOINT,
 } from "~/services/apiService/sub2api/checkin/sidruneCheckIn"
+import type { Sub2ApiCheckInStatusAuth } from "~/services/apiService/sub2api/checkin/statusAuthentication"
 import { accountAward } from "~/services/checkin/autoCheckin/awards"
 import type { SiteAccount } from "~/types"
 import {
@@ -19,12 +20,9 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
-import type {
-  AutoCheckinProvider,
-  AutoCheckinProviderReadContext,
-} from "./contracts"
-import { detectWithStatusReadback } from "./detection"
+import type { AutoCheckinProviderReadContext } from "./contracts"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "./shared"
+import { withSub2ApiCheckInExecution } from "./sub2apiExecution"
 import {
   createSub2ApiCheckInMutationRequest,
   createSub2ApiCheckInReadRequest,
@@ -34,20 +32,23 @@ import {
   toSub2ApiCheckInStatus,
 } from "./sub2apiShared"
 
-const readStatus = async (context: AutoCheckinProviderReadContext) =>
+const readStatus = async (
+  context: AutoCheckinProviderReadContext,
+  auth?: Sub2ApiCheckInStatusAuth,
+) =>
   toSub2ApiCheckInStatus(
     await fetchSidruneDailyCheckInStatus(
       createSub2ApiCheckInReadRequest(context),
+      auth,
     ),
     context.observedAt,
   )
 
-export const sidruneProvider: AutoCheckinProvider = {
+export const sidruneProvider = withSub2ApiCheckInExecution({
   requiresAuthoritativeStatusBeforeMutation: true,
   getReadiness: getSub2ApiCheckInReadiness,
-  detect: (context) => detectWithStatusReadback(context, readStatus),
   getStatus: readStatus,
-  async checkIn(account, context) {
+  async checkIn(account, context, attempt) {
     if (
       context.statusProof?.availability !==
         CHECK_IN_METHOD_AVAILABILITIES.Enabled ||
@@ -57,8 +58,12 @@ export const sidruneProvider: AutoCheckinProvider = {
     }
     try {
       const data = await performSidruneDailyCheckIn(
-        createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
-        { beforeRecoveredMutation: context.beforeRecoveredMutation },
+        attempt?.request ??
+          createSub2ApiCheckInMutationRequest(account as SiteAccount, context),
+        {
+          ...attempt?.recovery,
+          beforeRecoveredMutation: context.beforeRecoveredMutation,
+        },
       )
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
@@ -95,4 +100,4 @@ export const sidruneProvider: AutoCheckinProvider = {
       )
     }
   },
-}
+})

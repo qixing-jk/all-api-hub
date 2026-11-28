@@ -2,6 +2,7 @@ import { Globe2, Info } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { BrowserTabUrlInput } from "~/components/BrowserTabUrlInput"
 import {
   ActionGroup,
   Button,
@@ -27,6 +28,10 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { SiteBookmark } from "~/types"
+import {
+  BROWSER_TAB_SITE_URL_MODES,
+  type RecentBrowserTabSite,
+} from "~/utils/browser/recentTabSites"
 import { getActiveTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -176,6 +181,11 @@ export default function BookmarkDialog({
     }))
   }
 
+  const handleSelectTabSite = (site: RecentBrowserTabSite) => {
+    if (!name.trim()) setName(site.title ?? new URL(site.value).hostname)
+    setErrors({})
+  }
+
   const validate = () => {
     const nextErrors: { name?: string; url?: string } = {}
     if (!name.trim()) {
@@ -272,7 +282,7 @@ export default function BookmarkDialog({
         header={
           <div className="space-y-density-1">
             <div className="text-base font-semibold">{title}</div>
-            <div className="text-muted-foreground text-xs">
+            <div className="text-xs text-muted-foreground">
               {t("bookmark:dialog.description")}
             </div>
           </div>
@@ -308,10 +318,10 @@ export default function BookmarkDialog({
         }
       >
         {mode === "add" && (
-          <div className="bg-primary-soft text-primary-soft-foreground py-density-3 rounded-md px-3 text-xs">
-            <div className="gap-y-density-3 flex items-start justify-between gap-x-3">
+          <div className="rounded-md bg-primary-soft px-3 py-density-3 text-xs text-primary-soft-foreground">
+            <div className="flex items-start justify-between gap-x-3 gap-y-density-3">
               <div className="min-w-0 flex-1">
-                <div className="gap-y-density-1 flex items-center gap-x-1 font-medium">
+                <div className="flex items-center gap-x-1 gap-y-density-1 font-medium">
                   <Info className="h-4 w-4 shrink-0" />
                   <span>{t("bookmark:dialog.currentPageLabel")}</span>
                 </div>
@@ -360,12 +370,22 @@ export default function BookmarkDialog({
           label={t("bookmark:form.urlLabel")}
           required={true}
           error={errors.url}
+          disabled={isWorking}
         >
-          <Input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder={t("bookmark:form.urlPlaceholder")}
-          />
+          {(control) => (
+            <BrowserTabUrlInput
+              inputProps={{
+                ...control,
+                placeholder: t("bookmark:form.urlPlaceholder"),
+              }}
+              url={url}
+              onUrlChange={setUrl}
+              onSelectSite={handleSelectTabSite}
+              urlMode={BROWSER_TAB_SITE_URL_MODES.PAGE}
+              enableRecentTabs={isOpen}
+              recentTabsLabel={t("bookmark:form.recentTabSites")}
+            />
+          )}
         </FormField>
 
         <FormField label={t("bookmark:form.notesLabel")}>

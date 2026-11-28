@@ -166,9 +166,17 @@
     }
   },
   "methods": {
+    "bizDecipherFreeGift": {
+      "description": "Chỉ nhận quà miễn phí hằng ngày. Hãy vào trang web để tham gia lượt quay tốn điểm hoặc số dư.",
+      "name": "Quà miễn phí hằng ngày của {{source}}"
+    },
     "daily": {
       "description": "Phương thức này dùng giao thức điểm danh của bên thứ ba {{source}} và chỉ hoạt động trên các bản triển khai có hỗ trợ giao thức đó.",
       "name": "Điểm danh hằng ngày qua {{source}}"
+    },
+    "freeGgAllowance": {
+      "description": "Nhận hạn mức hằng ngày, đặt lại lúc nửa đêm UTC+8. Truy cập trang hoặc làm mới tài khoản cũng có thể kích hoạt việc nhận. Nhật ký được kiểm tra trước để tránh nhận lại.",
+      "name": "Hạn mức hằng ngày từ {{source}}"
     },
     "generic": {
       "name": "Điểm danh hằng ngày"
@@ -180,13 +188,17 @@
     "sources": {
       "agentRouter": "Agent Router",
       "aiRouter": "AI-ROUTER",
+      "apiKeyCasa": "ApiKey Casa",
       "baiApi": "Bai API",
+      "bizDecipher": "BizDecipher",
       "clawhud": "Clawhud",
       "daigua": "DaiGua",
       "denxio": "Denxio",
       "freeApi": "Luna",
+      "freeGg": "FreeGG",
       "geniusProgrammer": "Trạm chuyển tiếp Lập trình viên Thiên tài",
       "hiyo": "Hiyo Free",
+      "linxi": "100xLabs",
       "nexavlinks": "NexaVlinks",
       "sidrune": "Sidrune",
       "sub2apiPro": "Sub2API Pro",

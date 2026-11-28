@@ -90,6 +90,7 @@ function snapshotTempWindowFetchResponse(value: unknown): TempWindowFetch {
     success: response.success,
     status: response.status,
     code: response.code,
+    localError: response.localError,
     headers: response.headers,
     data: response.data,
     error: response.error,
@@ -595,6 +596,7 @@ async function fetchViaTempWindow<TResult>(
 
   const requestId = safeRandomUUID()
   const payload: TempWindowFetchParams = {
+    ...(context.siteType ? { siteType: context.siteType } : {}),
     originUrl: context.baseUrl,
     fetchUrl: context.url,
     fetchOptions,
@@ -692,9 +694,10 @@ async function fetchViaTempWindow<TResult>(
   if (!response.success) {
     throw new ApiError(
       response.error || "Temp window fetch failed",
-      response.status,
+      response.localError?.statusCode ?? response.status,
       context.endpoint,
       response.code,
+      response.localError?.upstreamCode,
     )
   }
 

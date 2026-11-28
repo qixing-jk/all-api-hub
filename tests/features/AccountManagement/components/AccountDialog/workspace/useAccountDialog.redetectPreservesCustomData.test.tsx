@@ -1987,7 +1987,7 @@ describe("useAccountDialog re-detect preservation", () => {
     [SITE_TYPES.NEW_API, "site type", "manual"],
     [SITE_TYPES.NEW_API, "auth type", "manual"],
   ] as const)(
-    "keeps %s manual token recovery until the %s changes (%s)",
+    "clears %s manual token recovery guidance when the %s changes (%s)",
     async (siteType, changedField, recoveryMode) => {
       const detailedError =
         recoveryMode === "manual"
@@ -2061,7 +2061,26 @@ describe("useAccountDialog re-detect preservation", () => {
         }
       })
       expect(result.current.state.detectionError).toBeNull()
-      expect(result.current.state.tokenRecoveryState).toBeNull()
+      const {
+        siteType: currentSiteType,
+        authType,
+        url,
+        tokenRecoveryState,
+      } = result.current.state
+      if (
+        currentSiteType === SITE_TYPES.NEW_API &&
+        authType === AuthTypeEnum.AccessToken
+      ) {
+        // A changed target clears the error. A fresh New API draft can still
+        // be handed off if a later token verification needs recovery.
+        expect(tokenRecoveryState).toMatchObject({
+          url,
+          draft: { siteType: SITE_TYPES.NEW_API },
+        })
+        expect(tokenRecoveryState).not.toHaveProperty("detectionError")
+      } else {
+        expect(tokenRecoveryState).toBeNull()
+      }
     },
   )
 
@@ -2260,9 +2279,8 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.isDetected).toBe(false)
     expect(result.current.state.isDetecting).toBe(false)
 
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: "session=manual-cookie",
@@ -2648,9 +2666,8 @@ describe("useAccountDialog re-detect preservation", () => {
   it.each(["url", "close", "cookie"] as const)(
     "ignores automatic cookie completion after changing %s",
     async (change) => {
-      const { sendRuntimeMessage } = await import(
-        "~/utils/browser/runtimeMessages"
-      )
+      const { sendRuntimeMessage } =
+        await import("~/utils/browser/runtimeMessages")
       let resolveCookie!: (response: { success: boolean; data: string }) => void
       vi.mocked(sendRuntimeMessage).mockReturnValueOnce(
         new Promise((resolve) => {
@@ -2714,9 +2731,8 @@ describe("useAccountDialog re-detect preservation", () => {
   )
 
   it("auto-imports cookie auth headers after a successful cookie-based auto-detect", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: " session=abc123 ",
@@ -2804,9 +2820,8 @@ describe("useAccountDialog re-detect preservation", () => {
   })
 
   it("shows backend cookie import errors and toggles manual form visibility", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       error: "blocked by browser",
@@ -2848,9 +2863,8 @@ describe("useAccountDialog re-detect preservation", () => {
   })
 
   it("switches AIHubMix auto-detect results to access-token mode and skips cookie import", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: true,
       message: "ok",
@@ -2897,9 +2911,8 @@ describe("useAccountDialog re-detect preservation", () => {
   })
 
   it("keeps detection successful but shows the permission warning when cookie auto-import is denied", async () => {
-    const { sendRuntimeMessage } = await import(
-      "~/utils/browser/runtimeMessages"
-    )
+    const { sendRuntimeMessage } =
+      await import("~/utils/browser/runtimeMessages")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       errorCode: COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied,

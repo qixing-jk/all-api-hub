@@ -73,6 +73,49 @@ For integration acceptance rules, use the project skill's [detection outcome acc
 
 For model catalogs, `readModelCatalog` in `scripts/flows/model-catalog.mjs` checks the current route's account source, page readiness and rendered names, returning the display locator and mounted names. `testModelCatalogFlow` adds navigation. Names count mounted rows in a virtualized list, not the full catalog. Prices are required by default; set `requirePrices: false` for explicit catalog-only or native-credit checks, retaining provider-specific unit and access assertions. A currency-shaped value establishes price rendering, not correct rates; retain native model/rate comparisons. The RelayFor parity E2E reuses this helper alongside allowance, access and routing assertions; Requesty semantics E2E checks monetary balance, monthly ceiling versus spend, and different create/edit controls.
 
+## Shell hosted-site CDP checks
+
+`pnpm e2e:cdp:shell` checks APIYI and LaoZhang using the current worktree's exact
+production extension path. Launch it with `pnpm browser:cdp -- --prod` first.
+Use `--site=apiyi` or `--site=laozhang` to select one site, `--isolate` for the
+matching isolated browser, or `--extension-path=.output/chrome-mv3-dev` for an
+already mounted development build.
+
+The runner uses the shared [local env loader](../docs/development/setup.md#local-tooling-environment-configuration),
+including `--env-file=<path>`. Put these Node-only credentials in the primary
+checkout's untracked `.env.local`; do not send passwords as command arguments:
+
+```dotenv
+APIYI_USERNAME=""
+APIYI_PASSWORD=""
+LAOZHANG_USERNAME=""
+LAOZHANG_PASSWORD=""
+```
+
+Existing native sessions are reused. Otherwise the runner fills the website's
+login form and submits once. CAPTCHA, MFA or rejected credentials remain a
+visible failed/blocked prerequisite. Optional `APIYI_USER_ID` / `LAOZHANG_USER_ID`
+assert the observed native identity. Optional `APIYI_BASE_URL` /
+`LAOZHANG_BASE_URL` must be official console origins for that provider.
+
+Detection always runs through the extension UI. The runner then uses an
+automatically acquired System Token, or explicitly selects the Cookie alternative.
+Optional `APIYI_ACCESS_TOKEN` / `LAOZHANG_ACCESS_TOKEN` fill the normal token field
+after identity detection and are labelled as existing credentials; they do not
+prove automatic token acquisition or replace native login. It does not rotate
+System Tokens. This new runner does not consume the legacy LaoZhang runner's
+`LAOZHANG_ACCESS_TOKEN_FILE` option.
+
+Separate report rows cover native login, detection, save/refresh/reopen, rendered
+models/prices, key inventory, invite copy feedback, and cleanup. A run creates and
+removes only its uniquely named local extension account. It does not modify
+provider keys or consume credit. A selected site is not a two-site result, and
+the report lists excluded cases such as key writes, native price parity, usage
+history, announcement parity and expired-session recovery. Screenshots and
+reports go into a unique ignored directory; missing credentials produce a nonzero
+exit and blocked rows instead of a success claim. `e2e:cdp:laozhang` remains the
+separate older protocol/native-editor diagnostic runner.
+
 ## Extension-led check-in acceptance
 
 ```bash

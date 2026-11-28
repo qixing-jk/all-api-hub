@@ -11,7 +11,11 @@ type FieldControlProps = Pick<
 
 export interface FormFieldProps {
   label?: React.ReactNode
+  /** Help or other secondary controls adjacent to, but outside, the input label. */
+  labelAccessory?: React.ReactNode
   labelAction?: React.ReactNode
+  /** Allow wide actions to move below the label on narrow layouts. */
+  wrapLabelAction?: boolean
   required?: boolean
   disabled?: boolean
   error?: string
@@ -30,7 +34,9 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
   (
     {
       label,
+      labelAccessory,
       labelAction,
+      wrapLabelAction = false,
       required,
       disabled,
       error,
@@ -81,7 +87,7 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
         data-invalid={invalid || undefined}
         data-orientation={orientation}
         className={cn(
-          "group/field grid gap-y-density-2",
+          "group/field grid content-start gap-y-density-2",
           orientation === "horizontal" &&
             "grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-x-4",
           orientation === "responsive" &&
@@ -91,24 +97,35 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
         {...props}
       >
         {(label || labelAction) && (
-          <div className="flex items-center justify-between gap-density-2">
+          <div
+            className={cn(
+              "flex items-center justify-between gap-x-density-2 gap-y-density-1",
+              wrapLabelAction && "flex-wrap",
+            )}
+          >
             {label && (
-              <Label
-                htmlFor={
-                  htmlFor ??
-                  (typeof children === "function" ? controlId : undefined)
-                }
-                required={required}
-                variant={invalid ? "error" : success ? "success" : "default"}
-                className={labelClassName}
-              >
-                {label}
-              </Label>
+              <div className="inline-flex min-w-0 items-center gap-x-1 gap-y-density-1">
+                <Label
+                  htmlFor={
+                    htmlFor ??
+                    (typeof children === "function" ? controlId : undefined)
+                  }
+                  required={required}
+                  variant={invalid ? "error" : success ? "success" : "default"}
+                  className={labelClassName}
+                >
+                  {label}
+                </Label>
+                {labelAccessory}
+              </div>
             )}
             {labelAction}
           </div>
         )}
-        <div data-slot="field-content" className="min-w-0 space-y-density-2">
+        <div
+          data-slot="field-content"
+          className="grid min-w-0 grid-cols-1 gap-y-density-2"
+        >
           {typeof children === "function" ? children(control) : children}
           {description && (
             <p

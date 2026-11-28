@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next"
 import {
   Button,
   FormField,
+  InlineMessage,
   Input,
   Label,
   Notice,
@@ -27,6 +28,7 @@ import {
   ACCOUNT_LOGIN_PROVIDERS,
 } from "~/constants/accountLogin"
 import {
+  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_ACCOUNT_LOGIN_MODES,
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
   CHECK_IN_METHOD_AVAILABILITIES,
@@ -46,6 +48,7 @@ import { AccountFormSection } from "~/features/AccountManagement/components/Acco
 import {
   ACCOUNT_FORM_MOBILE_DEFAULT_OPEN,
   ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+  ACCOUNT_FORM_SECTIONS,
 } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
@@ -56,17 +59,27 @@ import {
 } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
-import { getCheckInAccountLoginMode } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  getCheckInAccountLoginMode,
+  getCheckInMethodPresentationMetadata,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type { CheckInConfig } from "~/types"
 
+import { AccountCheckInPageField } from "./AccountCheckInPageField"
 import { AccountVerificationContinuation } from "./AccountVerificationContinuation"
+import type { NativePageDiscoveryIdentity } from "./useNativeCheckInPageDiscovery"
 
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
 const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
+const CHECK_IN_METHOD_ATTENTION_ID = "check-in-method-attention"
+const CHECK_IN_METHOD_STATUS_ID = "check-in-method-status"
+const CHECK_IN_METHOD_REDETECTION_HINT_ID = "check-in-method-redetection-hint"
 const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
+const CHECK_IN_ACTION_SIZE =
+  "min-h-(--density-control-sm) sm:min-h-(--density-control-xs)"
 
 const ACCOUNT_CHECK_IN_TARGET_IDS = {
-  section: ACCOUNT_FORM_SECTION_ELEMENT_IDS["check-in"],
+  section: ACCOUNT_FORM_SECTION_ELEMENT_IDS[ACCOUNT_FORM_SECTIONS.CHECK_IN],
   feedback: "account-check-in-feedback",
   method: "account-check-in-method",
   automaticExecution: "account-check-in-automatic-execution",
@@ -77,6 +90,7 @@ const ACCOUNT_CHECK_IN_TARGET_IDS = {
 } as const
 
 interface AccountCheckInSectionProps {
+  nativePageDiscoveryIdentity?: NativePageDiscoveryIdentity
   continuous?: boolean
   loginMethodId?: string
   loginConfigured?: boolean
@@ -107,6 +121,7 @@ export function AccountCheckInSection({
   onRedetectCheckInMethods,
   isRedetectingCheckInMethods,
   checkInRedetectionFeedback,
+  nativePageDiscoveryIdentity,
 }: AccountCheckInSectionProps) {
   const { t } = useTranslation(["accountDialog", "messages", "autoCheckin"])
   const { openFeedback, feedbackDialog } = useCheckInFeedback()
@@ -137,15 +152,13 @@ export function AccountCheckInSection({
             explanation: t("login.checkInExplanation"),
           }
   const hasCandidates = candidateMethodIds.length > 0
-  const shouldOfferRedetect =
-    hasCandidates ||
-    inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Stale ||
-    inspection.decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown
-  const selectionPresentation = getCheckInSelectionPresentation(
-    t,
-    inspection,
-    checkIn.selection,
-  )
+  const {
+    selectedMethodId,
+    triggerLabel,
+    redetectionHint,
+    attentionMessage,
+    description,
+  } = getCheckInSelectionPresentation(t, inspection, checkIn.selection)
   const hasSelectedMethod =
     hasCandidates &&
     inspection.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
@@ -168,6 +181,38 @@ export function AccountCheckInSection({
     )
   const isSelectedStatusUnavailable =
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
+  const requestSupport =
+    inspection.decision.outcome ===
+    CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
+  const methodStatusMessage = isSelectedMethodDisabled
+    ? t("form.checkInStatusDisabled")
+    : isSelectedStatusUnavailable
+      ? t("form.checkInStatusUnavailable")
+      : !attentionMessage && hasUnknownDetection
+        ? t("form.checkInStatusUnknown")
+        : !attentionMessage &&
+            hasCandidates &&
+            !hasSelectedMethod &&
+            !requestSupport
+          ? t("form.checkInStatusPending")
+          : null
+  const methodDescriptionIds = [
+    redetectionHint && CHECK_IN_METHOD_REDETECTION_HINT_ID,
+    methodStatusMessage && CHECK_IN_METHOD_STATUS_ID,
+    attentionMessage && CHECK_IN_METHOD_ATTENTION_ID,
+    description && CHECK_IN_METHOD_HELPER_ID,
+  ]
+    .filter(Boolean)
+    .join(" ")
+  const showRefreshHint =
+    hasSelectedMethod &&
+    !methodStatusMessage &&
+    !hasUnknownDetection &&
+    !(
+      selectedMethodId &&
+      getCheckInMethodPresentationMetadata(selectedMethodId)
+        .accountRefreshMayGrant
+    )
   // The deployment's own gate: the site asks for human verification when the
   // grant is claimed, so unattended execution cannot complete on its own.
   const selectedRequiresManualVerification =
@@ -185,74 +230,204 @@ export function AccountCheckInSection({
       }),
     )
   }
+  const detectButton = (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={onRedetectCheckInMethods}
+      loading={isRedetectingCheckInMethods}
+      id={ACCOUNT_CHECK_IN_TARGET_IDS.redetect}
+      leftIcon={<ScanSearch className="size-4" />}
+    >
+      {isRedetectingCheckInMethods
+        ? t("form.redetectingCheckInMethods")
+        : t("form.detectCheckInMethod")}
+    </Button>
+  )
+  const feedbackButton = (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      id={ACCOUNT_CHECK_IN_TARGET_IDS.feedback}
+      onClick={() =>
+        openFeedback(
+          feedbackSource ?? {
+            snapshot: { baseUrl: siteUrl ?? "", siteType, checkIn },
+          },
+        )
+      }
+      leftIcon={<MessageSquarePlus className="size-4" />}
+      className={
+        requestSupport
+          ? undefined
+          : "text-secondary-foreground shadow-none sm:border-transparent sm:bg-transparent sm:hover:bg-accent"
+      }
+    >
+      {requestSupport
+        ? t("checkInFeedback.request")
+        : t("checkInFeedback.feedback")}
+    </Button>
+  )
 
   return (
     <AccountFormSection
       continuous={continuous}
       title={t("sections.checkInConfig.title")}
-      defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
+      headerAction={requestSupport ? undefined : feedbackButton}
+      defaultOpen={
+        ACCOUNT_FORM_MOBILE_DEFAULT_OPEN[ACCOUNT_FORM_SECTIONS.CHECK_IN]
+      }
       testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}
       id={ACCOUNT_CHECK_IN_TARGET_IDS.section}
     >
-      <div className="grid grid-cols-1 items-center gap-x-2 gap-y-density-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <p className="text-sm font-medium text-secondary-foreground">
-          {t("form.checkInStatus")}
-        </p>
-        <p className="text-xs text-muted-foreground sm:col-span-2 sm:row-start-2">
-          {isSelectedMethodDisabled
-            ? t("form.checkInStatusDisabled")
-            : isSelectedStatusUnavailable
-              ? t("form.checkInStatusUnavailable")
-              : hasUnknownDetection
-                ? t("form.checkInStatusUnknown")
-                : hasSelectedMethod
-                  ? t("form.checkInStatusDesc")
-                  : hasCandidates &&
-                      inspection.decision.outcome !==
-                        CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
-                    ? t("form.checkInStatusPending")
-                    : t("form.checkInStatusUnsupported")}
-        </p>
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-density-1-5 sm:col-start-2 sm:row-start-1 sm:justify-end">
-          {shouldOfferRedetect && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onRedetectCheckInMethods}
-              loading={isRedetectingCheckInMethods}
-              id={ACCOUNT_CHECK_IN_TARGET_IDS.redetect}
-              leftIcon={<ScanSearch className="h-4 w-4" />}
-              className="text-xs sm:text-sm"
-            >
-              {isRedetectingCheckInMethods
-                ? t("form.redetectingCheckInMethods")
-                : t("form.redetectCheckInMethods")}
-            </Button>
+      {(requestSupport || !hasCandidates) && (
+        <div className="grid items-center gap-x-density-3 gap-y-density-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="space-y-density-1">
+            <p className="text-sm font-medium text-secondary-foreground">
+              {t("form.checkInStatus")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("form.checkInStatusUnsupported")}
+            </p>
+          </div>
+          {requestSupport && (
+            <div className="justify-self-start">{feedbackButton}</div>
           )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            id={ACCOUNT_CHECK_IN_TARGET_IDS.feedback}
-            onClick={() =>
-              openFeedback(
-                feedbackSource ?? {
-                  snapshot: { baseUrl: siteUrl ?? "", siteType, checkIn },
-                },
-              )
-            }
-            leftIcon={<MessageSquarePlus className="h-4 w-4" />}
-            className="text-xs sm:text-sm"
-          >
-            {inspection.decision.outcome ===
-            CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
-              ? t("checkInFeedback.request")
-              : t("checkInFeedback.feedback")}
-          </Button>
         </div>
-      </div>
-      {feedbackDialog}
+      )}
+      {showRefreshHint && !requestSupport && (
+        <InlineMessage role="note" size="sm">
+          {t("form.checkInStatusDesc")}
+        </InlineMessage>
+      )}
+
+      {hasCandidates && (
+        <div className="space-y-density-2">
+          <FormField>
+            <div className="grid gap-y-density-1">
+              <div className="flex flex-wrap items-center justify-between gap-x-density-2 gap-y-density-1">
+                <Label
+                  htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.method}
+                  className="shrink-0"
+                >
+                  {t("form.checkInMethod")}
+                </Label>
+                {checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Manual && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    className={`${CHECK_IN_ACTION_SIZE} text-muted-foreground`}
+                    leftIcon={
+                      <RotateCcw className="size-3.5" aria-hidden="true" />
+                    }
+                    onClick={setAutomaticSelection}
+                  >
+                    {t("form.restoreAutomaticCheckInSelection")}
+                  </Button>
+                )}
+              </div>
+              {redetectionHint && (
+                <p
+                  id={CHECK_IN_METHOD_REDETECTION_HINT_ID}
+                  className="text-xs text-muted-foreground"
+                >
+                  {redetectionHint}
+                </p>
+              )}
+            </div>
+            <div className="grid gap-density-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <Select
+                value={
+                  checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Automatic
+                    ? AUTOMATIC_CHECK_IN_SELECTION_VALUE
+                    : checkIn.selection.methodId
+                }
+                onValueChange={(methodId) => {
+                  if (methodId === AUTOMATIC_CHECK_IN_SELECTION_VALUE) {
+                    setAutomaticSelection()
+                    return
+                  }
+                  const candidateMethodId = candidateMethodIds.find(
+                    (candidate) => candidate === methodId,
+                  )
+                  if (!candidateMethodId) return
+                  onCheckInSelectionChange(
+                    setCheckInSelection({
+                      config: checkIn,
+                      siteType,
+                      siteUrl,
+                      mode: CHECK_IN_SELECTION_MODES.Manual,
+                      methodId: candidateMethodId,
+                    }),
+                  )
+                }}
+              >
+                <SelectTrigger
+                  className="w-full"
+                  id={ACCOUNT_CHECK_IN_TARGET_IDS.method}
+                  aria-label={t("form.checkInMethod")}
+                  aria-describedby={methodDescriptionIds || undefined}
+                  title={triggerLabel}
+                >
+                  <SelectValue placeholder={t("form.checkInMethodNotSelected")}>
+                    {triggerLabel}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={AUTOMATIC_CHECK_IN_SELECTION_VALUE}>
+                    {t("form.automaticCheckInSelection")}
+                  </SelectItem>
+                  {candidateMethodIds.map((methodId) => (
+                    <SelectItem key={methodId} value={methodId}>
+                      {getCheckInMethodPresentation(t, methodId).label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {detectButton}
+            </div>
+          </FormField>
+          {(methodStatusMessage || attentionMessage || description) && (
+            <div className="space-y-density-1">
+              {methodStatusMessage && (
+                <InlineMessage
+                  id={CHECK_IN_METHOD_STATUS_ID}
+                  role="note"
+                  size="sm"
+                  tone="warning"
+                >
+                  {methodStatusMessage}
+                </InlineMessage>
+              )}
+              {attentionMessage && (
+                <InlineMessage
+                  id={CHECK_IN_METHOD_ATTENTION_ID}
+                  role={
+                    selectedMethodId && !redetectionFeedbackPresentation
+                      ? "status"
+                      : "note"
+                  }
+                  size="sm"
+                  tone={selectedMethodId ? "warning" : "neutral"}
+                  className="text-secondary-foreground"
+                >
+                  {attentionMessage}
+                </InlineMessage>
+              )}
+              {description && (
+                <p
+                  id={CHECK_IN_METHOD_HELPER_ID}
+                  className="text-xs text-muted-foreground"
+                >
+                  {description}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {redetectionFeedbackPresentation && (
         <Notice
@@ -268,91 +443,6 @@ export function AccountCheckInSection({
               : "polite"
           }
         />
-      )}
-
-      {hasCandidates && (
-        <div className="space-y-density-2">
-          <FormField>
-            <div className="flex flex-wrap items-center justify-between gap-density-2">
-              <Label htmlFor={ACCOUNT_CHECK_IN_TARGET_IDS.method}>
-                {t("form.checkInMethod")}
-              </Label>
-              {checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Manual && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground"
-                  leftIcon={
-                    <RotateCcw className="size-3.5" aria-hidden="true" />
-                  }
-                  onClick={setAutomaticSelection}
-                >
-                  {t("form.restoreAutomaticCheckInSelection")}
-                </Button>
-              )}
-            </div>
-            <Select
-              value={
-                checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Automatic
-                  ? AUTOMATIC_CHECK_IN_SELECTION_VALUE
-                  : checkIn.selection.methodId
-              }
-              onValueChange={(methodId) => {
-                if (methodId === AUTOMATIC_CHECK_IN_SELECTION_VALUE) {
-                  setAutomaticSelection()
-                  return
-                }
-                const candidateMethodId = candidateMethodIds.find(
-                  (candidate) => candidate === methodId,
-                )
-                if (!candidateMethodId) return
-                onCheckInSelectionChange(
-                  setCheckInSelection({
-                    config: checkIn,
-                    siteType,
-                    siteUrl,
-                    mode: CHECK_IN_SELECTION_MODES.Manual,
-                    methodId: candidateMethodId,
-                  }),
-                )
-              }}
-            >
-              <SelectTrigger
-                className="w-full"
-                id={ACCOUNT_CHECK_IN_TARGET_IDS.method}
-                aria-label={t("form.checkInMethod")}
-                aria-describedby={CHECK_IN_METHOD_HELPER_ID}
-                title={selectionPresentation.triggerLabel}
-              >
-                <SelectValue placeholder={t("form.checkInMethodNotSelected")}>
-                  {selectionPresentation.triggerLabel}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={AUTOMATIC_CHECK_IN_SELECTION_VALUE}>
-                  {t("form.automaticCheckInSelection")}
-                </SelectItem>
-                {candidateMethodIds.map((methodId) => (
-                  <SelectItem key={methodId} value={methodId}>
-                    {getCheckInMethodPresentation(t, methodId).label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <p
-            id={CHECK_IN_METHOD_HELPER_ID}
-            className="text-xs text-muted-foreground"
-          >
-            <span>{selectionPresentation.helperText}</span>
-            {selectionPresentation.selectedMethodDisclosure && (
-              <span className="mt-density-1 block">
-                {selectionPresentation.selectedMethodDisclosure}
-              </span>
-            )}
-          </p>
-        </div>
       )}
 
       {onConfigureLogin && (
@@ -468,6 +558,16 @@ export function AccountCheckInSection({
         candidateMethodIds={candidateMethodIds}
         onCheckInChange={onCheckInChange}
       />
+      <AccountCheckInPageField
+        checkIn={checkIn}
+        onCheckInChange={onCheckInChange}
+        siteUrl={siteUrl}
+        siteType={siteType}
+        discoveryEnabled={candidateMethodIds.includes(
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+        )}
+        discoveryIdentity={nativePageDiscoveryIdentity}
+      />
       <FormField
         label={t("form.customCheckInUrl")}
         description={t("form.customCheckInDesc")}
@@ -537,6 +637,7 @@ export function AccountCheckInSection({
           leftIcon={<Ticket className="h-5 w-5" />}
         />
       </FormField>
+      {feedbackDialog}
     </AccountFormSection>
   )
 }

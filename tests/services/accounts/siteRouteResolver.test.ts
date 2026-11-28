@@ -33,6 +33,82 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 }))
 
 describe("siteRouteResolver", () => {
+  it("uses a registered deployment's check-in page before probing its theme", async () => {
+    const target = {
+      baseUrl: "https://ai.facai.cloudns.org/",
+      siteType: SITE_TYPES.NEW_API,
+    }
+    mockLoadBootstrapFacts.mockResolvedValue({ frontendTheme: "default" })
+    await expect(
+      resolveAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn),
+    ).resolves.toBe("https://ai.facai.cloudns.org/dashboard")
+    expect(getStaticAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn)).toBe(
+      "https://ai.facai.cloudns.org/dashboard",
+    )
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    "https://api.facai.cloudns.org",
+    "https://ai.facai.cloudns.org.example.test",
+    "https://ai.facai.cloudns.org:8443",
+    "http://ai.facai.cloudns.org",
+  ])("uses theme routing for an unregistered origin %s", async (baseUrl) => {
+    mockLoadBootstrapFacts.mockResolvedValue({ frontendTheme: "default" })
+    await expect(
+      resolveAccountSiteRouteUrl(
+        { baseUrl, siteType: SITE_TYPES.NEW_API },
+        SITE_ROUTE_KINDS.CheckIn,
+      ),
+    ).resolves.toBe(`${baseUrl}/profile`)
+  })
+
+  it("opens the newllma check-in profile without requiring a manual page path", async () => {
+    mockLoadBootstrapFacts.mockResolvedValue({ frontendTheme: "newllma" })
+    await expect(
+      resolveAccountSiteRouteUrl(
+        { baseUrl: "https://novaapi.ai", siteType: SITE_TYPES.NEW_API },
+        SITE_ROUTE_KINDS.CheckIn,
+      ),
+    ).resolves.toBe("https://novaapi.ai/profile")
+  })
+
+  it.each([
+    "https://flowbee.top",
+    "https://ai.facai.cloudns.org",
+    "https://unusual.example",
+  ])(
+    "uses the configured native page on %s without probing the theme",
+    async (baseUrl) => {
+      const target = {
+        baseUrl,
+        siteType: SITE_TYPES.NEW_API,
+        checkIn: { nativePagePath: "/invite?daily=1#/claim" },
+      }
+      mockLoadBootstrapFacts.mockResolvedValue({ frontendTheme: "default" })
+      expect(
+        getStaticAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn),
+      ).toBe(`${baseUrl}/invite?daily=1#/claim`)
+      await expect(
+        resolveAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn),
+      ).resolves.toBe(`${baseUrl}/invite?daily=1#/claim`)
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
+    },
+  )
+  it("restores the theme default when the page is cleared, including on Flowbee", async () => {
+    const target = {
+      baseUrl: "https://flowbee.top",
+      siteType: SITE_TYPES.NEW_API,
+      checkIn: { nativePagePath: undefined },
+    }
+    mockLoadBootstrapFacts.mockResolvedValue({ frontendTheme: "default" })
+    expect(getStaticAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn)).toBe(
+      "https://flowbee.top/console/personal",
+    )
+    await expect(
+      resolveAccountSiteRouteUrl(target, SITE_ROUTE_KINDS.CheckIn),
+    ).resolves.toBe("https://flowbee.top/profile")
+  })
   it("resolves account token acquisition separately from administrator credentials when pages differ", async () => {
     await expect(
       resolveAccountSiteRouteUrl(

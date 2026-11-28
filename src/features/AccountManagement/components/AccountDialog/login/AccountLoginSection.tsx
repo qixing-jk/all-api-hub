@@ -1,4 +1,10 @@
-import { useRef, useState, type Ref } from "react"
+import {
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+  type Ref,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -17,7 +23,10 @@ import {
   ACCOUNT_PASSWORD_IDENTITIES,
 } from "~/constants/accountLogin"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
-import { ACCOUNT_FORM_SECTION_ELEMENT_IDS } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
+import {
+  ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+  ACCOUNT_FORM_SECTIONS,
+} from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { IncognitoAccessNotice } from "~/features/Permissions/components/IncognitoAccessNotice"
 import { supportsAccountCredentialRecovery } from "~/services/accountCredentialRecovery/policy"
@@ -27,8 +36,14 @@ import type { AccountSiteType } from "~/services/accountSiteDefinitions"
 import type { AuthTypeEnum } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
 
+import { getAccountDialogSitePolicy } from "../form/sitePolicy"
+import {
+  Sub2ApiLoginSession,
+  type Sub2ApiLoginSessionState,
+} from "./Sub2ApiLoginSession"
+
 export const ACCOUNT_LOGIN_SECTION_ID =
-  ACCOUNT_FORM_SECTION_ELEMENT_IDS["account-login"]
+  ACCOUNT_FORM_SECTION_ELEMENT_IDS[ACCOUNT_FORM_SECTIONS.LOGIN]
 const UNSET_LOGIN_METHOD = "unset"
 
 /** Existing login configuration, owned by the account rather than its consumers. */
@@ -41,8 +56,11 @@ export function AccountLoginSection({
   claimedLoginProviders = [],
   onChange,
   methodRef,
+  validationProps,
+  feedback,
   open,
   onOpenChange,
+  sub2apiSession,
 }: {
   continuous?: boolean
   siteUrl?: string
@@ -54,6 +72,14 @@ export function AccountLoginSection({
   methodRef?: Ref<HTMLButtonElement>
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  validationProps?: Pick<
+    ComponentProps<typeof SelectTrigger>,
+    "aria-invalid" | "aria-describedby"
+  > & {
+    "data-account-validation-field"?: string
+  }
+  feedback?: ReactNode
+  sub2apiSession?: Sub2ApiLoginSessionState
 }) {
   const { t } = useTranslation(["accountDialog", "messages"])
   const passwordDraft = useRef(
@@ -84,7 +110,17 @@ export function AccountLoginSection({
     ACCOUNT_LOGIN_CONFIGURATION_KINDS.Password
       ? selectedMethod.configuration.identity
       : undefined
+  const offersIndependentSession =
+    siteType &&
+    getAccountDialogSitePolicy(siteType).allowSub2ApiRefreshTokenState
+  const recoveryLabel = offersIndependentSession
+    ? t("login.sub2apiAutomaticRecovery")
+    : t("login.automaticRecovery")
   const supportsRecovery = supportsAccountCredentialRecovery(target)
+  const invalidUsername = Boolean(
+    passwordIdentity && !credentials.username.trim(),
+  )
+  const invalidPassword = Boolean(passwordIdentity && !credentials.password)
   if (methods.length === 0) return null
   return (
     <AccountFormSection
@@ -99,9 +135,11 @@ export function AccountLoginSection({
       <FormField
         label={t("login.method")}
         description={
-          supportsRecovery
-            ? t("login.recoveryConfigurationDescription")
-            : t("login.description")
+          offersIndependentSession
+            ? t("login.sub2apiDescription")
+            : supportsRecovery
+              ? t("login.recoveryConfigurationDescription")
+              : t("login.description")
         }
       >
         <Select
@@ -124,7 +162,13 @@ export function AccountLoginSection({
               })
           }}
         >
-          <SelectTrigger ref={methodRef} aria-label={t("login.method")}>
+          <SelectTrigger
+            ref={methodRef}
+            aria-label={t("login.method")}
+            {...(!invalidUsername && !invalidPassword
+              ? validationProps
+              : undefined)}
+          >
             <SelectValue placeholder={t("login.notConfigured")} />
           </SelectTrigger>
           <SelectContent>
@@ -156,7 +200,7 @@ export function AccountLoginSection({
           </SelectContent>
         </Select>
         {claimedLoginProviders.length > 0 && (
-          <p className="text-muted-foreground mt-density-1 text-xs">
+          <p className="mt-density-1 text-xs text-muted-foreground">
             {t("messages:errors.validation.loginProviderInUse", {
               provider: claimedLoginProviders
                 .map((claim) => ACCOUNT_LOGIN_PROVIDER_LABELS[claim.provider])
@@ -167,16 +211,17 @@ export function AccountLoginSection({
             })}
           </p>
         )}
+        {feedback}
       </FormField>
       {supportsRecovery && (
         <FormField
-          label={t("login.automaticRecovery")}
+          label={recoveryLabel}
           htmlFor="account-login-automatic-recovery"
           description={t("login.automaticRecoveryDescription")}
           labelAction={
             <Switch
               id="account-login-automatic-recovery"
-              aria-label={t("login.automaticRecovery")}
+              aria-label={recoveryLabel}
               checked={login?.automaticRecovery === true}
               disabled={
                 !login ||
@@ -207,6 +252,7 @@ export function AccountLoginSection({
           >
             <Input
               id="account-login-username"
+              {...(invalidUsername ? validationProps : undefined)}
               autoComplete="username"
               value={credentials.username}
               onChange={(event) =>
@@ -227,6 +273,7 @@ export function AccountLoginSection({
           >
             <Input
               id="account-login-password"
+              {...(invalidPassword ? validationProps : undefined)}
               type="password"
               autoComplete="off"
               revealable
@@ -248,6 +295,9 @@ export function AccountLoginSection({
             />
           </FormField>
         </>
+      )}
+      {offersIndependentSession && sub2apiSession && (
+        <Sub2ApiLoginSession session={sub2apiSession} />
       )}
     </AccountFormSection>
   )

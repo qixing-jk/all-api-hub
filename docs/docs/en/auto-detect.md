@@ -53,7 +53,7 @@ AnyRouter's website may check in automatically during login, so credential recov
 
 ## Sub2API: login recovery and automatic token renewal
 
-Manual setup can start with a JWT Access Token alone; obtaining a Refresh Token first is unnecessary. In **Edit account → Account login**, choose a supported login method (email and password for password login), enable **Automatically recover login**, and save. Recovery is off by default and configured per account.
+Manual setup can start with a JWT Access Token alone; obtaining a Refresh Token first is unnecessary. In **Edit account → Account login**, choose a supported login method (email and password for password login), enable **Automatic login recovery**, and save. Recovery is off by default and configured per account.
 
 The extension first tries the saved Refresh Token and saves the rotated Access Token, Refresh Token, and expiry together. If no Refresh Token is available, or renewal is rejected and the browser session cannot restore access, a confirmed authentication failure can trigger the configured login. The extension independently verifies the new Access Token's account identity, then saves the tokens and renewal information returned by the site. Future requests can renew automatically without asking you to enter a Refresh Token.
 
@@ -76,7 +76,7 @@ This hint is shown only while the account still carries the Site Type recorded a
 When required fields are missing, the submit button is disabled or saving fails. Requirements vary by site, so confirm the site type first and check the corresponding fields:
 
 -   **New API and compatible sites**: Check the Site Name, Username, User ID, Access Token, and a Recharge Amount Ratio greater than 0. When using Cookie authentication, import or enter the Session Cookie (Header Value).
--   **Sub2API**: Check the Site Name, User ID, JWT Access Token, and Recharge Amount Ratio. Cookie authentication is not supported. When "Extension-managed session (multiple accounts)" is enabled, you must also import or enter a Refresh Token.
+-   **Sub2API** uses the Site Name, User ID, JWT Access Token, and Recharge Amount Ratio. It uses Access Token authentication. With **Independent session** selected, set up Account Login and choose **Get session** in that section. If you already have a renewal token, expand **Manual import or paste Refresh Token**.
 -   **OpenRouter**: Check the Site Name, OpenRouter Management Key, and Recharge Amount Ratio. A User ID is not required, and Cookie authentication is not supported.
 -   **Other sites**: Follow the required markers currently shown in the form and the corresponding site instructions in the [Manual Account Addition Guide](./add-account.md#manual-addition).
 

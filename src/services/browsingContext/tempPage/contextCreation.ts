@@ -1,5 +1,4 @@
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
-import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import { scheduleTempPageReclaimRetry } from "~/services/browsingContext/internalTabReclamation"
 import {
   INTERNAL_TAB_WINDOW_SCOPES,
@@ -20,10 +19,12 @@ import {
   removeInstalledDownloadBlockRules,
   showShieldBypassUiInTab,
   waitForTabComplete,
+  waitForTabDocumentReady,
 } from "./browserAdapter"
 import {
   TEMP_CONTEXT_TYPES,
   type TempContext,
+  type TempContextAcquireOptions,
   type TempContextOpenMode,
   type TempContextOpenResult,
 } from "./contracts"
@@ -39,9 +40,7 @@ export async function createTempContextInstance(
   requestId: string,
   requestedMode: TempContextOpenMode,
   suppressMinimize = false,
-  options: ApiTransportBrowserFetchContext & {
-    signal?: AbortSignal
-  } = {},
+  options: TempContextAcquireOptions = {},
 ): Promise<TempContext> {
   let opened: TempContextOpenResult | undefined
   let downloadBlockRuleId: number | null = null
@@ -108,13 +107,23 @@ export async function createTempContextInstance(
     })
 
     // Best-effort: annotate the temporary window/tab so users understand why it opened.
-    void showShieldBypassUiInTab({ tabId: opened.tabId, origin, requestId })
+    void showShieldBypassUiInTab({
+      tabId: opened.tabId,
+      origin: options.allowInteractive ? new URL(url).origin : origin,
+      requestId,
+    })
 
-    await waitForTabComplete(opened.tabId, {
+    const readiness = {
       requestId,
       origin,
       signal: options.signal,
-    })
+    }
+    await (options.allowInteractive
+      ? waitForTabDocumentReady(opened.tabId, url, {
+          ...readiness,
+          allowLoadedRedirect: true,
+        })
+      : waitForTabComplete(opened.tabId, readiness))
     const readyTab = await getTempContextTabSnapshot(opened.tabId)
 
     logTempWindow("createTempContextInstanceReady", {

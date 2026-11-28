@@ -26,12 +26,19 @@ const GENIUS_DTO = {
   today_checked_in: false,
   recent_records: [],
 }
+const BIZDECIPHER_DTO = {
+  date: "2026-11-24",
+  free_claimed: false,
+  balance: 8,
+  credit_balance: 40,
+}
 
 describe("sibling status DTO discriminators", () => {
   it("declares exactly the methods sharing the user checkin status family", () => {
     expect(
       SIBLING_STATUS_DTO_DISCRIMINATORS.map((entry) => entry.methodId).sort(),
     ).toEqual([
+      "bizdecipher:free-checkin",
       "clawhud:daily-checkin",
       "freeapi:daily-checkin",
       "genius-programmer:daily-checkin",
@@ -51,6 +58,31 @@ describe("sibling status DTO discriminators", () => {
   })
 
   it.each([
+    [
+      AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+      BIZDECIPHER_DTO,
+      SIBLING_DTO_VERDICTS.Own,
+    ],
+    [
+      AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
+      BIZDECIPHER_DTO,
+      SIBLING_DTO_VERDICTS.Foreign,
+    ],
+    [
+      AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
+      BIZDECIPHER_DTO,
+      SIBLING_DTO_VERDICTS.Foreign,
+    ],
+    [
+      AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+      CLAWHUD_DTO,
+      SIBLING_DTO_VERDICTS.Foreign,
+    ],
+    [
+      AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+      GENIUS_DTO,
+      SIBLING_DTO_VERDICTS.Foreign,
+    ],
     [
       AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
       FREE_API_DTO,
@@ -107,6 +139,14 @@ describe("sibling status DTO discriminators", () => {
   })
 
   it.each([
+    [
+      AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+      { ...BIZDECIPHER_DTO, date: "2026-02-30" },
+    ],
+    [
+      AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+      { ...BIZDECIPHER_DTO, credit_balance: Number.NaN },
+    ],
     [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn, { enabled: true }],
     [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn, { checked_in_today: false }],
     [

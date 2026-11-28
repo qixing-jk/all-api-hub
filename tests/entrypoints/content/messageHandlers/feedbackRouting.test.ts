@@ -8,6 +8,7 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 const mocks = vi.hoisted(() => ({
   register: vi.fn(),
   inspectCredential: vi.fn(),
+  inspectCheckinPage: vi.fn(),
   requesty: vi.fn(),
   newApiPasswordUi: vi.fn(),
   dashboardSession: vi.fn(),
@@ -47,6 +48,7 @@ vi.mock("~/utils/browser/runtimeMessages", () => ({
 }))
 vi.mock("~/entrypoints/content/messageHandlers/handlers", () => ({
   handleRequestyManagementKeyAction: mocks.requesty,
+  handleInspectCheckinPage: mocks.inspectCheckinPage,
 }))
 vi.mock("~/services/apiService/sub2api/oauth/content", () => ({
   handlePrepareSub2ApiOAuth: mocks.prepareSub2Api,
@@ -78,6 +80,33 @@ vi.mock(
   () => ({ handleInspectCredentialPage: mocks.inspectCredential }),
 )
 beforeEach(() => vi.resetAllMocks())
+
+it("reports the current document's readiness and identity to the background", () => {
+  setupContentMessageHandlers()
+  const listener = atIndex(mocks.register.mock.calls, 0)[0]
+  const reply = vi.fn()
+  expect(
+    listener({ action: RuntimeActionIds.ContentGetDocumentState }, {}, reply),
+  ).toBe(false)
+  expect(reply).toHaveBeenCalledExactlyOnceWith({
+    url: window.location.href,
+    readyState: document.readyState,
+    timeOrigin: performance.timeOrigin,
+  })
+})
+
+it("routes native page discovery to the read-only inspector", () => {
+  mocks.inspectCheckinPage.mockReturnValue(true)
+  setupContentMessageHandlers()
+  const listener = atIndex(mocks.register.mock.calls, 0)[0]
+  const reply = vi.fn()
+  const request = { action: RuntimeActionIds.ContentInspectCheckinPage }
+  expect(listener(request, {}, reply)).toBe(true)
+  expect(mocks.inspectCheckinPage).toHaveBeenCalledExactlyOnceWith(
+    request,
+    reply,
+  )
+})
 
 it("replies with document-scoped dashboard authentication for the requested origin", () => {
   setupContentMessageHandlers()

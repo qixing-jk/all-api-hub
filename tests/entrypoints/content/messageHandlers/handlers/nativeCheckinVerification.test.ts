@@ -1,14 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS } from "~/constants/turnstile"
-import { handleTriggerCheckinPageAction } from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
+import {
+  CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS,
+  TURNSTILE_MESSAGE_EVENTS,
+} from "~/constants/turnstile"
+import {
+  handleInspectCheckinPage,
+  handleTriggerCheckinPageAction,
+} from "~/entrypoints/content/messageHandlers/handlers/checkinPage"
 import { showTurnstileManualAssistToast } from "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
 import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import {
   onRuntimeMessage,
   sendRuntimeMessage,
 } from "~/utils/browser/runtimeMessages"
+import { emitTurnstileEvent } from "~~/tests/test-utils/turnstile"
 
 vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: vi.fn(async () => ({ presented: true })),
@@ -20,6 +27,312 @@ vi.mock(
 )
 
 describe("native check-in verification", () => {
+  it("gives the user two minutes to open a delivered reminder", async () => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<div class="cf-turnstile"></div>',
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "notice-reaction-time",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(14_000)
+    await vi.dynamicImportSettled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(110_000)
+    const endedBeforeTwoMinutes = response.mock.calls.length
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(endedBeforeTwoMinutes).toBe(0)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "required", provider: "turnstile" },
+      }),
+    )
+  })
+
+  it.each([0, 110_000])(
+    "switches to one full minute after opening a reminder %s ms later",
+    async (delay) => {
+      document.querySelector("button")!.addEventListener("click", () => {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          '<div class="cf-turnstile"></div>',
+        )
+      })
+      const response = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: "opened-operation-time",
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
+        },
+        response,
+      )
+      await vi.advanceTimersByTimeAsync(14_000)
+      await vi.dynamicImportSettled()
+      await vi.advanceTimersByTimeAsync(delay)
+      const listener = vi.mocked(onRuntimeMessage).mock.calls.at(-1)![0]
+      const opened = {
+        action: RuntimeActionIds.ContentVerificationAssistOpened,
+        requestId: "opened-operation-time",
+      }
+      listener(opened, {}, vi.fn())
+      await vi.advanceTimersByTimeAsync(30_000)
+      listener(opened, {}, vi.fn())
+      await vi.advanceTimersByTimeAsync(29_000)
+      const endedBeforeOneMinute = response.mock.calls.length
+      await vi.advanceTimersByTimeAsync(1_250)
+      expect(endedBeforeOneMinute).toBe(0)
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification: { status: "required", provider: "turnstile" },
+        }),
+      )
+    },
+  )
+
+  it.each([
+    TURNSTILE_MESSAGE_EVENTS.Init,
+    TURNSTILE_MESSAGE_EVENTS.InteractiveBegin,
+  ])("uses Turnstile %s state for native-page reminders", async (event) => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<iframe id="cf-chl-widget-native" src="https://challenges.cloudflare.com/turnstile/widget"></iframe>',
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "native-interaction",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(0)
+    emitTurnstileEvent(document.querySelector("iframe")!, event, "native")
+    await vi.advanceTimersByTimeAsync(
+      event === TURNSTILE_MESSAGE_EVENTS.Init ? 13_000 : 250,
+    )
+    expect(sendRuntimeMessage).toHaveBeenCalledTimes(
+      event === TURNSTILE_MESSAGE_EVENTS.Init ? 0 : 1,
+    )
+    expect(response).not.toHaveBeenCalled()
+    document.querySelector("iframe")!.remove()
+    await vi.advanceTimersByTimeAsync(250)
+  })
+
+  it("waits for a configured grant control during inspection without dispatching it", async () => {
+    document.body.innerHTML = "<main></main>"
+    const reply = vi.fn()
+    handleInspectCheckinPage(
+      {
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#grant",
+          targetWaitMs: 2_000,
+        },
+      },
+      reply,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    expect(reply).not.toHaveBeenCalled()
+
+    const button = document.createElement("button")
+    button.id = "grant"
+    const click = vi.fn()
+    button.addEventListener("click", click)
+    document.querySelector("main")!.append(button)
+    await vi.advanceTimersByTimeAsync(250)
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, hasTarget: true }),
+    )
+    expect(click).not.toHaveBeenCalled()
+  })
+
+  it("returns unusable evidence when the document cannot be inspected", () => {
+    const query = vi
+      .spyOn(document, "querySelectorAll")
+      .mockImplementation(() => {
+        throw new Error("Document was replaced")
+      })
+    const reply = vi.fn()
+    try {
+      handleInspectCheckinPage({}, reply)
+      expect(reply).toHaveBeenCalledWith({
+        success: false,
+        hasTarget: false,
+        candidates: [],
+      })
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  it.each(["disabled", "checked", "hidden"])(
+    "leaves a %s verification control to manual completion",
+    async (attribute) => {
+      const activate = vi.fn()
+      document.querySelector("button")!.addEventListener("click", () => {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          `<altcha-widget><div class="altcha" data-state="unverified"><input type="checkbox" ${attribute}></div></altcha-widget>`,
+        )
+        document.querySelector("input")!.addEventListener("click", activate)
+      })
+      const reply = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: "manual-control",
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
+        },
+        reply,
+      )
+      await vi.advanceTimersByTimeAsync(134_000)
+      expect(activate).not.toHaveBeenCalled()
+      expect(reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification: { status: "required", provider: "altcha" },
+        }),
+      )
+    },
+  )
+
+  it("requires manual assistance when a native action reveals multiple ALTCHA widgets", async () => {
+    const activate = vi.fn()
+    document.querySelector("button")!.addEventListener("click", () => {
+      for (let index = 0; index < 2; index++) {
+        const widget = document.createElement("altcha-widget")
+        widget.innerHTML =
+          '<div class="altcha" data-state="unverified"><input type="checkbox"></div>'
+        widget.querySelector("input")!.addEventListener("click", activate)
+        document.body.append(widget)
+      }
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "ambiguous-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(134_000)
+    expect(activate).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "required", provider: "altcha" },
+      }),
+    )
+  })
+  it("requires manual completion of ALTCHA widgets that appear during hydration", async () => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        "<altcha-widget></altcha-widget>",
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "delayed-ambiguous-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    const firstWidget = document.querySelector("altcha-widget")!
+    firstWidget.innerHTML =
+      '<div class="altcha" data-state="unverified"><input type="checkbox"></div>'
+    const secondWidget = firstWidget.cloneNode(true) as Element
+    document.body.append(secondWidget)
+    const activate = vi.fn()
+    for (const widget of [firstWidget, secondWidget]) {
+      widget.querySelector("input")!.addEventListener("click", activate)
+    }
+    await vi.advanceTimersByTimeAsync(13_000)
+    expect(activate).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    expect(response).not.toHaveBeenCalled()
+
+    firstWidget.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(250)
+    expect(response).not.toHaveBeenCalled()
+    secondWidget
+      .querySelector(".altcha")!
+      .setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(250)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+    expect(activate).not.toHaveBeenCalled()
+  })
+
+  it("does not automatically retry ALTCHA when the page replaces the activated widget", async () => {
+    const activate = vi.fn()
+    document.querySelector("button")!.addEventListener("click", () => {
+      const widget = document.createElement("altcha-widget")
+      widget.innerHTML =
+        '<div class="altcha" data-state="unverified"><input type="checkbox"></div>'
+      widget.querySelector("input")!.addEventListener("click", () => {
+        activate()
+        const replacement = widget.cloneNode(true) as Element
+        replacement.querySelector<HTMLInputElement>("input")!.checked = false
+        replacement.addEventListener("click", activate)
+        widget.replaceWith(replacement)
+      })
+      document.body.append(widget)
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "replaced-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(14_000)
+    expect(activate).toHaveBeenCalledOnce()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    expect(response).not.toHaveBeenCalled()
+    document.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(250)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+  })
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
@@ -27,6 +340,190 @@ describe("native check-in verification", () => {
     globalThis.__aahTurnstilePreTriggerState = undefined
   })
   afterEach(() => vi.useRealTimers())
+
+  it.each(["verifying", "error", "expired", "unverified"])(
+    "keeps ALTCHA %s pending without repeating activation or trusting an unrelated proof",
+    async (state) => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<altcha-widget><div class="altcha" data-state="verified"><input name="altcha" value="other-proof"></div></altcha-widget>',
+      )
+      const activate = vi.fn()
+      document.querySelector("button")!.addEventListener("click", () => {
+        const widget = document.createElement("altcha-widget")
+        widget.id = "active-altcha"
+        widget.innerHTML =
+          '<div class="altcha" data-state="unverified"><input type="checkbox"><input type="hidden" name="altcha"></div>'
+        widget.querySelector("input")!.addEventListener("click", () => {
+          activate()
+          widget.querySelector(".altcha")!.setAttribute("data-state", state)
+        })
+        document.body.append(widget)
+      })
+      const response = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: `pending-altcha-${state}`,
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
+        },
+        response,
+      )
+      await vi.advanceTimersByTimeAsync(134_000)
+      expect(activate).toHaveBeenCalledOnce()
+      expect(sendRuntimeMessage).toHaveBeenCalledTimes(
+        state === "verifying" ? 0 : 1,
+      )
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification: { status: "required", provider: "altcha" },
+        }),
+      )
+    },
+  )
+
+  it("keeps a delayed ALTCHA proof quiet until it completes automatically", async () => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        "<altcha-widget></altcha-widget>",
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "delayed-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    const widget = document.querySelector("altcha-widget")!
+    widget.innerHTML =
+      '<div class="altcha" data-state="verifying"><input type="checkbox" disabled></div>'
+    const activate = vi.fn()
+    widget.querySelector("input")!.addEventListener("click", activate)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(response).not.toHaveBeenCalled()
+    expect(activate).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    widget.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+  })
+
+  it.each([
+    '<script src="https://cdn.example/altcha.js"></script>',
+    '<section hidden><altcha-widget><div class="altcha" data-state="unverified"><input type="checkbox"></div></altcha-widget></section>',
+  ])("ignores inactive ALTCHA evidence: %s", async (html) => {
+    document
+      .querySelector("button")!
+      .addEventListener("click", () =>
+        document.body.insertAdjacentHTML("beforeend", html),
+      )
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "inactive-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(3_000)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ verification: { status: "not_present" } }),
+    )
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("handles ALTCHA in open shadow DOM without page-world methods", async () => {
+    let root: ShadowRoot
+    const activate = vi.fn(() => {
+      root.querySelector(".altcha")!.setAttribute("data-state", "verifying")
+    })
+    document.querySelector("button")!.addEventListener("click", () => {
+      const widget = document.createElement("altcha-widget")
+      root = widget.attachShadow({ mode: "open" })
+      root.innerHTML =
+        '<div class="altcha" data-state="unverified"><input type="checkbox"></div>'
+      root.querySelector("input")!.addEventListener("click", activate)
+      document.body.append(widget)
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "shadow-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(activate).toHaveBeenCalledOnce()
+    expect(response).not.toHaveBeenCalled()
+    root!.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+  })
+
+  it("starts native ALTCHA proof of work once and waits for its verified state", async () => {
+    const activate = vi.fn()
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<altcha-widget><div class="altcha" data-state="unverified"><input type="checkbox"><input type="hidden" name="altcha"></div></altcha-widget>',
+      )
+      document
+        .querySelector<HTMLInputElement>('input[type="checkbox"]')!
+        .addEventListener("click", () => {
+          activate()
+          document
+            .querySelector(".altcha")!
+            .setAttribute("data-state", "verifying")
+        })
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "native-altcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(activate).toHaveBeenCalledOnce()
+    expect(response).not.toHaveBeenCalled()
+    document.querySelector(".altcha")!.setAttribute("data-state", "verified")
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "altcha" },
+      }),
+    )
+    expect(activate).toHaveBeenCalledOnce()
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
 
   it("waits for the PM-API wallet button to render before dispatching one click", async () => {
     document.body.innerHTML = '<main id="wallet"></main>'
@@ -117,7 +614,7 @@ describe("native check-in verification", () => {
       )
     })
     document.querySelector("button")!.addEventListener("click", click)
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(click).toHaveBeenCalledOnce()
     expect(sendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.TurnstileRequestUserAssist,
@@ -158,7 +655,7 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       expect(response).not.toHaveBeenCalled()
       expect(sendRuntimeMessage).toHaveBeenCalledOnce()
       document.querySelector<HTMLInputElement>("#new-response")!.value =
@@ -195,7 +692,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({
         verification: { status: "required", provider: "turnstile" },
@@ -224,7 +721,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(sendRuntimeMessage).toHaveBeenCalledOnce()
     document.querySelector(".cf-turnstile")!.setAttribute("hidden", "")
     await vi.advanceTimersByTimeAsync(500)
@@ -251,7 +748,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({ verification: { status: "not_present" } }),
     )
@@ -283,7 +780,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     document.querySelector("#new-widget")!.remove()
     await vi.advanceTimersByTimeAsync(500)
     expect(response).toHaveBeenCalledWith(
@@ -313,7 +810,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({ verification: { status: "not_present" } }),
     )
@@ -341,12 +838,15 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       await vi.dynamicImportSettled()
-      await vi.advanceTimersByTimeAsync(34_000)
+      await vi.advanceTimersByTimeAsync(110_000)
       const listener = vi.mocked(onRuntimeMessage).mock.calls.at(-1)![0]
       listener(
-        { action: "verificationAssistOpened", requestId: openedRequestId },
+        {
+          action: RuntimeActionIds.ContentVerificationAssistOpened,
+          requestId: openedRequestId,
+        },
         {},
         vi.fn(),
       )
@@ -360,11 +860,14 @@ describe("native check-in verification", () => {
       } else {
         expect(response).not.toHaveBeenCalled()
         listener(
-          { action: "verificationAssistOpened", requestId: openedRequestId },
+          {
+            action: RuntimeActionIds.ContentVerificationAssistOpened,
+            requestId: openedRequestId,
+          },
           {},
           vi.fn(),
         )
-        await vi.advanceTimersByTimeAsync(26_000)
+        await vi.advanceTimersByTimeAsync(41_000)
         expect(response).toHaveBeenCalledWith(
           expect.objectContaining({
             verification: { status: "required", provider: "turnstile" },
@@ -392,13 +895,16 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     await vi.dynamicImportSettled()
     await vi.advanceTimersByTimeAsync(34_000)
     const listener = vi.mocked(onRuntimeMessage).mock.calls.at(-1)?.[0]
     expect(listener).toBeDefined()
     listener!(
-      { action: "verificationAssistOpened", requestId: "late-open" },
+      {
+        action: RuntimeActionIds.ContentVerificationAssistOpened,
+        requestId: "late-open",
+      },
       {},
       vi.fn(),
     )
@@ -442,7 +948,7 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
       expect(response).not.toHaveBeenCalled()
       document.querySelector("section, [role=dialog], form")!.remove()
@@ -514,9 +1020,9 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
-      await vi.advanceTimersByTimeAsync(49_000)
+      await vi.advanceTimersByTimeAsync(120_000)
       expect(response).toHaveBeenCalledWith(
         expect.objectContaining({
           verification: { status: "required", provider: "interactive" },
@@ -543,7 +1049,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(sendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.TurnstileRequestUserAssist,
       requestId: "native-image",
@@ -580,7 +1086,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(sendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.TurnstileRequestUserAssist,
       requestId: "native-delayed",
@@ -593,6 +1099,44 @@ describe("native check-in verification", () => {
       expect.objectContaining({
         success: true,
         clicked: true,
+        verification: { status: "completed", provider: "turnstile" },
+      }),
+    )
+  })
+
+  it("waits for the default response field revealed by a new Turnstile dialog", async () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<form><input type="hidden" name="cf-turnstile-response" value="previous-response"></form><dialog hidden><div id="widget-host"></div><input type="hidden" name="cf-turnstile-response"></dialog>',
+    )
+    const dialog = document.querySelector("dialog")!
+    dialog
+      .querySelector("#widget-host")!
+      .attachShadow({ mode: "closed" }).innerHTML =
+      '<iframe src="https://challenges.cloudflare.com/widget"></iframe>'
+    document.querySelector("button")!.addEventListener("click", () => {
+      dialog.hidden = false
+      dialog.setAttribute("open", "")
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "native-turnstile-dialog",
+        trigger: { kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(14_000)
+    expect(response).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<dialog open><input type="hidden" name="cf-turnstile-response"></dialog>',
+    )
+    dialog.querySelector("input")!.value = "completed-native-response"
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
         verification: { status: "completed", provider: "turnstile" },
       }),
     )
@@ -624,9 +1168,9 @@ describe("native check-in verification", () => {
         },
         response,
       )
-      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.advanceTimersByTimeAsync(14_000)
       await vi.dynamicImportSettled()
-      await vi.advanceTimersByTimeAsync(49_000)
+      await vi.advanceTimersByTimeAsync(120_000)
       expect(response).toHaveBeenCalledWith(
         expect.objectContaining({
           verification: { status: "required", provider },
@@ -742,7 +1286,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.advanceTimersByTimeAsync(14_000)
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({
         verification: { status: "required", provider: "turnstile" },
@@ -768,7 +1312,7 @@ describe("native check-in verification", () => {
       },
       response,
     )
-    await vi.advanceTimersByTimeAsync(3_750)
+    await vi.advanceTimersByTimeAsync(11_750)
     vi.setSystemTime(Date.now() + 1_000)
     await vi.advanceTimersByTimeAsync(500)
     expect(sendRuntimeMessage).toHaveBeenCalledWith({

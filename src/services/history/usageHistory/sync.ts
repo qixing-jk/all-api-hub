@@ -1,10 +1,8 @@
-import {
-  ACCOUNT_SITE_ADAPTER_FAMILIES,
-  type SiteType,
-} from "~/constants/siteType"
+import type { SiteType } from "~/constants/siteType"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountBalanceScope } from "~/services/accounts/balanceSnapshot"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import { isCompatibleAccountFamily } from "~/services/accountSiteDefinitions/contracts"
 import { EVIDENCE_KINDS } from "~/services/amounts/financialConstants"
 import { recordedLogCharge } from "~/services/amounts/usage"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -22,6 +20,7 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   USAGE_HISTORY_SCHEDULE_MODE,
+  USAGE_HISTORY_SYNC_STATES,
   type UsageHistoryPreferences,
 } from "~/types/usageHistory"
 import { getErrorMessage } from "~/utils/core/error"
@@ -39,14 +38,39 @@ export const USAGE_HISTORY_SYNC_TRIGGERS = {
 export type UsageHistorySyncTrigger =
   (typeof USAGE_HISTORY_SYNC_TRIGGERS)[keyof typeof USAGE_HISTORY_SYNC_TRIGGERS]
 
+const USAGE_HISTORY_SYNC_RESULTS = {
+  Success: USAGE_HISTORY_SYNC_STATES.Success,
+  Skipped: "skipped",
+  Error: USAGE_HISTORY_SYNC_STATES.Error,
+  Unsupported: USAGE_HISTORY_SYNC_STATES.Unsupported,
+} as const
+
 interface UsageHistoryAccountSyncSummary {
   accountId: string
-  status: "success" | "skipped" | "error" | "unsupported"
+  status: (typeof USAGE_HISTORY_SYNC_RESULTS)[keyof typeof USAGE_HISTORY_SYNC_RESULTS]
   ingestedCount: number
   pagesFetched: number
   itemsFetched: number
   partial: boolean
   error?: string
+}
+
+/** Skipped and failed attempts report no committed history. */
+function emptySyncSummary(
+  accountId: string,
+  status: Exclude<
+    UsageHistoryAccountSyncSummary["status"],
+    typeof USAGE_HISTORY_SYNC_RESULTS.Success
+  >,
+): UsageHistoryAccountSyncSummary {
+  return {
+    accountId,
+    status,
+    ingestedCount: 0,
+    pagesFetched: 0,
+    itemsFetched: 0,
+    partial: false,
+  }
 }
 
 /**
@@ -83,13 +107,11 @@ async function fetchConsumeLogPage(params: {
   page: number
   startTimestamp: number
   endTimestamp: number
-  siteType?: SiteType
+  siteType: SiteType
 }): Promise<LogResponseData> {
-  const { request, page, startTimestamp, endTimestamp } = params
-  const capabilities = params.siteType
-    ? getSiteTypeCapabilities(params.siteType)
-    : undefined
-  const nativeHistory = capabilities?.account?.usageHistory
+  const { request, page, startTimestamp, endTimestamp, siteType } = params
+  const capabilities = getSiteTypeCapabilities(siteType)
+  const nativeHistory = capabilities.account?.usageHistory
   if (nativeHistory)
     return nativeHistory.fetchPage(request, {
       page,
@@ -112,12 +134,25 @@ async function fetchConsumeLogPage(params: {
   const data = await newApiFamilyRequests.data<LogResponseData>(request, {
     endpoint: `/api/log/self?${searchParams.toString()}`,
   })
-  if (!Array.isArray(data.items)) return data
+  // This fallback needs an explicit total to visit older pages before moving
+  // the cursor. Bare arrays need a provider-owned paging contract, not an
+  // implicit successful empty collection or a guessed single page.
+  if (
+    !data ||
+    !Array.isArray(data.items) ||
+    !Number.isSafeInteger(data.total) ||
+    data.total < data.items.length
+  ) {
+    throw new ApiError(
+      t("messages:errors.api.invalidResponseFormat"),
+      undefined,
+      "/api/log/self",
+    )
+  }
 
-  const siteType =
-    capabilities?.family === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
-      ? params.siteType
-      : null
+  const compatibleSiteType = isCompatibleAccountFamily(capabilities.family)
+    ? siteType
+    : null
   const scope = accountBalanceScope(request)
   return {
     ...data,
@@ -127,7 +162,7 @@ async function fetchConsumeLogPage(params: {
       const charge = newApiFinancialAmount(
         item.quota,
         request.baseUrl,
-        siteType,
+        compatibleSiteType,
       )
       return {
         ...item,
@@ -197,14 +232,7 @@ export async function syncUsageHistoryForAccount(params: {
 
   // Check if sync should be skipped based on preferences and trigger.
   if (!config.enabled && !force) {
-    return {
-      accountId,
-      status: "skipped",
-      ingestedCount: 0,
-      pagesFetched: 0,
-      itemsFetched: 0,
-      partial: false,
-    }
+    return emptySyncSummary(accountId, USAGE_HISTORY_SYNC_RESULTS.Skipped)
   }
 
   // Schedule mode checks.
@@ -213,28 +241,14 @@ export async function syncUsageHistoryForAccount(params: {
       trigger === USAGE_HISTORY_SYNC_TRIGGERS.AfterRefresh &&
       config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH
     ) {
-      return {
-        accountId,
-        status: "skipped",
-        ingestedCount: 0,
-        pagesFetched: 0,
-        itemsFetched: 0,
-        partial: false,
-      }
+      return emptySyncSummary(accountId, USAGE_HISTORY_SYNC_RESULTS.Skipped)
     }
 
     if (
       trigger === USAGE_HISTORY_SYNC_TRIGGERS.Alarm &&
       config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.ALARM
     ) {
-      return {
-        accountId,
-        status: "skipped",
-        ingestedCount: 0,
-        pagesFetched: 0,
-        itemsFetched: 0,
-        partial: false,
-      }
+      return emptySyncSummary(accountId, USAGE_HISTORY_SYNC_RESULTS.Skipped)
     }
   }
 
@@ -242,12 +256,7 @@ export async function syncUsageHistoryForAccount(params: {
   const account = await accountQueries.getAccountById(accountId)
   if (!account) {
     return {
-      accountId,
-      status: "error",
-      ingestedCount: 0,
-      pagesFetched: 0,
-      itemsFetched: 0,
-      partial: false,
+      ...emptySyncSummary(accountId, USAGE_HISTORY_SYNC_RESULTS.Error),
       error: t("messages:storage.accountNotFound", { id: accountId }),
     }
   }
@@ -272,14 +281,7 @@ export async function syncUsageHistoryForAccount(params: {
       typeof accountStore.status.unsupportedUntil === "number" &&
       accountStore.status.unsupportedUntil > nowMs
     ) {
-      return {
-        accountId,
-        status: "skipped",
-        ingestedCount: 0,
-        pagesFetched: 0,
-        itemsFetched: 0,
-        partial: false,
-      }
+      return emptySyncSummary(accountId, USAGE_HISTORY_SYNC_RESULTS.Skipped)
     }
 
     // Due check: sync interval.
@@ -295,14 +297,7 @@ export async function syncUsageHistoryForAccount(params: {
       typeof accountStore.status.lastSyncAt === "number" &&
       nowMs - accountStore.status.lastSyncAt < intervalMs
     ) {
-      return {
-        accountId,
-        status: "skipped",
-        ingestedCount: 0,
-        pagesFetched: 0,
-        itemsFetched: 0,
-        partial: false,
-      }
+      return emptySyncSummary(accountId, USAGE_HISTORY_SYNC_RESULTS.Skipped)
     }
 
     // Determine fetch range based on cursor and retention.
@@ -381,7 +376,7 @@ export async function syncUsageHistoryForAccount(params: {
 
     return {
       accountId,
-      status: "success",
+      status: USAGE_HISTORY_SYNC_RESULTS.Success,
       ingestedCount,
       pagesFetched,
       itemsFetched,
@@ -403,12 +398,12 @@ export async function syncUsageHistoryForAccount(params: {
     }
 
     return {
-      accountId,
-      status: isUnsupported ? "unsupported" : "error",
-      ingestedCount: 0,
-      pagesFetched: 0,
-      itemsFetched: 0,
-      partial: false,
+      ...emptySyncSummary(
+        accountId,
+        isUnsupported
+          ? USAGE_HISTORY_SYNC_RESULTS.Unsupported
+          : USAGE_HISTORY_SYNC_RESULTS.Error,
+      ),
       error: message,
     }
   }

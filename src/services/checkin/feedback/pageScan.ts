@@ -1,6 +1,9 @@
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
+import { collectNativeCheckInPageCandidates } from "~/services/checkin/discovery/evidence/navigationCandidates"
+import { collectCheckInEvidence } from "~/services/checkin/discovery/evidence/scan"
+import { CHECK_IN_EVIDENCE_SCAN_ERRORS } from "~/services/checkin/discovery/evidence/scanTypes"
 import {
   isTempContextTask,
   TEMP_CONTEXT_TASK_KINDS,
@@ -10,7 +13,6 @@ import {
   EXTENSION_HEADER_VALUE,
 } from "~/utils/browser/cookieHelper"
 
-import { collectCheckInFeedbackClues } from "./scan"
 import { createFeedbackScanRegistry } from "./scanRegistry"
 
 const scans = createFeedbackScanRegistry()
@@ -58,15 +60,14 @@ export function handlePageFeedbackScan(
   )
   const scanFetch: typeof fetch = async (url, init) => {
     if (controller.signal.aborted || location.origin !== originUrl)
-      throw new Error("scan_cancelled")
+      throw new Error(CHECK_IN_EVIDENCE_SCAN_ERRORS.Cancelled)
     const parsed = new URL(String(url))
     if (parsed.href === originUrl + "/")
       return new Response(document.documentElement.outerHTML, {
         headers: { "content-type": "text/html" },
       })
     const statusOptions = request.statusOptions?.[parsed.pathname] as
-      | RequestInit
-      | undefined
+      RequestInit | undefined
     // API-origin exceptions apply only to registered status paths with isolation
     // prepared by the background. Resources remain browser-origin only.
     if (
@@ -75,7 +76,7 @@ export function handlePageFeedbackScan(
         !statusPaths.has(parsed.pathname) ||
         !statusOptions)
     )
-      throw new Error("scan_origin")
+      throw new Error(CHECK_IN_EVIDENCE_SCAN_ERRORS.Origin)
     if (init?.headers && !statusOptions)
       throw new Error("scan_auth_unavailable")
     const headers = new Headers(init?.headers)
@@ -89,14 +90,15 @@ export function handlePageFeedbackScan(
       // Status reads use background-prepared WAF-only cookie isolation. Public
       // assets use the browser session that just completed the challenge.
       credentials: statusOptions
-        ? statusOptions.credentials ?? "omit"
+        ? (statusOptions.credentials ?? "omit")
         : "include",
       cache: statusOptions ? "no-store" : "default",
     })
   }
-  void collectCheckInFeedbackClues(input, controller.signal, {
+  void collectCheckInEvidence(input, controller.signal, {
     fetch: scanFetch,
     pageUrl: location.href,
+    navigation: collectNativeCheckInPageCandidates(document),
     loadedAssets: performance
       .getEntriesByType("resource")
       .map((entry) => entry.name),

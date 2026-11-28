@@ -140,7 +140,6 @@ export interface BrowserLoginSession extends AccountAuthenticatedSession {
     details?:
       Record<string, unknown> | (() => Promise<Record<string, unknown>>),
   ): Promise<T>
-  navigate(url: string): Promise<unknown>
   /** Reads native post-submission evidence without blocking on page protection. */
   observeSubmittedAction<T = unknown>(
     action: string,
@@ -438,6 +437,22 @@ async function authenticateBrowserLogin<Evidence>(
         ),
       )
     }
+    let interactivePageUrl: string | undefined
+    const waitForSiteProtection = (document?: {
+      url: string
+      allowLoadedRedirect?: boolean
+      timeoutMs?: number
+    }) =>
+      waitForBrowserLoginPageProtection({
+        tabId: opened.tabId,
+        origin: input.origin,
+        requestId: input.requestId,
+        signal,
+        document,
+        assertOrigin: () => active(() => assertTabOrigin(opened, input.origin)),
+        interactionDeadline: () => interactionDeadline,
+      })
+
     const session: BrowserLoginSession = {
       tabId: opened.tabId,
       abortSignal: signal,
@@ -447,15 +462,11 @@ async function authenticateBrowserLogin<Evidence>(
         details?:
           Record<string, unknown> | (() => Promise<Record<string, unknown>>),
       ) {
-        await waitForBrowserLoginPageProtection({
-          tabId: opened.tabId,
-          origin: input.origin,
-          requestId: input.requestId,
-          signal,
-          assertOrigin: () =>
-            active(() => assertTabOrigin(opened, input.origin)),
-          interactionDeadline: () => interactionDeadline,
-        })
+        await waitForSiteProtection(
+          interactivePageUrl
+            ? { url: interactivePageUrl, allowLoadedRedirect: true }
+            : undefined,
+        )
         // Ownership and document-bound observation must use the page that
         // survived clearance, which can navigate or take manual interaction.
         const preparedDetails =
@@ -481,16 +492,25 @@ async function authenticateBrowserLogin<Evidence>(
           ),
         )
       },
-      navigate: (url) =>
-        active(() => updateTab(opened.tabId, { url, active: true })),
+      navigate: (url, options) =>
+        active(async () => {
+          interactivePageUrl = undefined
+          if (options?.reuseCurrentPage) {
+            const tab: browser.tabs.Tab & { pendingUrl?: string } =
+              await getTab(opened.tabId)
+            if (tab.url === new URL(url).href && !tab.pendingUrl) return tab
+          }
+          return updateTab(opened.tabId, { url, active: true })
+        }),
       async waitForReadyPage(url) {
         const target = new URL(url)
         if (target.origin !== input.origin)
           throw new Error("Invalid account page origin")
-        await waitForTab(
+        const tab = await waitForTab(
           opened,
           (tab) => {
-            if (tab.status !== "complete" || !tab.url) return false
+            if (!tab.url || ("pendingUrl" in tab && tab.pendingUrl))
+              return false
             const current = new URL(tab.url)
             return (
               current.origin === target.origin &&
@@ -501,6 +521,13 @@ async function authenticateBrowserLogin<Evidence>(
           undefined,
           signal,
         )
+        if (tab.status !== "complete") {
+          await waitForSiteProtection({
+            url,
+            timeoutMs: BROWSER_LOGIN_PAGE_TIMEOUT_MS,
+          })
+        }
+        interactivePageUrl = url
       },
       setVerificationReason(reason) {
         signal?.throwIfAborted()

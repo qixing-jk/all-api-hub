@@ -12,6 +12,7 @@ import { NATIVE_RESOURCE_MUTATION_CERTAINTIES } from "~/services/apiAdapters/con
 import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/auth/browserAuth"
 import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
 import { performAiRouterDailyCheckIn } from "~/services/apiService/sub2api/checkin/aiRouterCheckIn"
+import { performApiKeyCasaDailyCheckIn } from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckIn"
 import { performBaiApiCheckIn } from "~/services/apiService/sub2api/checkin/baiApiCheckIn"
 import { performClawhudDailyCheckIn } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
 import { performDaiguaDailyCheckIn } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
@@ -27,6 +28,7 @@ import {
   Sub2ApiCheckInRecoveryBlockedError,
 } from "~/services/apiService/sub2api/checkin/unauthorizedRecovery"
 import { performXiaobaiCodeDailyCheckIn } from "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import type {
@@ -52,6 +54,8 @@ import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
+
+import { expiredCheckInJwt } from "./jwtFixture"
 
 vi.mock(
   "~/services/apiService/sub2api/auth/browserAuth",
@@ -95,7 +99,8 @@ const response = (
   ok: status === 200,
   status,
   headers: {},
-  body: { code: 0, message: "success", data },
+  body:
+    status === 401 ? expiredCheckInJwt : { code: 0, message: "success", data },
 })
 const cases = [
   {
@@ -228,7 +233,15 @@ describe.each(cases)(
       const result = response(data, status)
       if ("text" in format)
         result.body = JSON.stringify(
-          "xiaobai" in format ? { ok: true, data } : result.body,
+          "xiaobai" in format
+            ? status === 401
+              ? {
+                  ok: false,
+                  code: "LOGIN_REQUIRED",
+                  message: "请先登录后再签到",
+                }
+              : { ok: true, data }
+            : result.body,
         )
       return result
     }
@@ -354,6 +367,71 @@ describe.each(cases)(
         },
       },
     })
+    it("does not start another credential recovery on a POST after successful admission", async () => {
+      const execution = context()
+      const operation = provider.forExecution!(execution)
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(reply(status(false)))
+        .mockResolvedValueOnce(reply(null, 401))
+        .mockResolvedValueOnce(reply(status(false)))
+        .mockResolvedValueOnce(reply(award))
+
+      const proof = await operation.getAuthenticatedStatus({
+        account,
+        observedAt: Date.now(),
+      })
+      expect(proof).toMatchObject({
+        today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      })
+      const result = await operation.checkIn(account, {
+        ...execution,
+        statusProof:
+          proof?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+            ? proof
+            : undefined,
+      })
+      expect(result.status).toBe("failed")
+      expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+      expect(
+        vi
+          .mocked(fetchApiResponse)
+          .mock.calls.map(([, fetch]) => fetch.options?.method),
+      ).toEqual(["GET", "POST"])
+    })
+
+    it("keeps the outcome uncertain without replaying an unrecognized HTTP 401 object", async () => {
+      const lifecycle = {
+        dispatched: false,
+        responseReceived: false,
+        onDispatch() {
+          this.dispatched = true
+        },
+        onResponse() {
+          this.responseReceived = true
+        },
+        onPreHandlerUnauthorized: vi.fn(),
+      }
+      vi.mocked(fetchApiResponse)
+        .mockImplementationOnce(async (pending) => {
+          pending.observer?.onDispatch()
+          pending.observer?.onResponse()
+          return { ...reply(null, 401), body: "text" in format ? "{}" : {} }
+        })
+        .mockResolvedValueOnce(reply(status(false)))
+        .mockResolvedValueOnce(reply(award))
+      await expect(
+        provider.checkIn(account, {
+          ...context(),
+          mutationLifecycle: lifecycle,
+        }),
+      ).resolves.toMatchObject({
+        status: "uncertain",
+        reasonCode: "status_unavailable",
+      })
+      expect(fetchApiResponse).toHaveBeenCalledOnce()
+      expect(lifecycle.onPreHandlerUnauthorized).not.toHaveBeenCalled()
+      expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+    })
     it("reports already checked without an invented reward after recovery", async () => {
       vi.mocked(fetchApiResponse)
         .mockResolvedValueOnce(reply(null, 401))
@@ -449,6 +527,73 @@ describe.each(cases)(
       )
       expect(fetchApiResponse).toHaveBeenCalledTimes(2)
     })
+  },
+)
+
+describe("FreeAPI mutation with unverified authentication rejection", () => {
+  it.each([
+    null,
+    "unauthorized",
+    [],
+    { code: 0, message: "success", data: { amount: 1 } },
+    { code: 401, message: "error" },
+    { code: "CHECKIN_FAILED", message: "error", reason: "TOKEN_EXPIRED" },
+    { code: "TOKEN_EXPIRED" },
+    { ...expiredCheckInJwt, data: { amount: 1 } },
+    { ...expiredCheckInJwt, success: true },
+    { ...expiredCheckInJwt, ok: true },
+    { ...expiredCheckInJwt, reason: "ALREADY_CHECKED" },
+    { ...expiredCheckInJwt, reward_amount: 1 },
+    { code: "SESSION_BINDING_MISMATCH", reward_amount: 1 },
+    new ApiError("HTTP 401", 401, undefined, API_ERROR_CODES.HTTP_401),
+  ])("leaves the POST dispatched for reconciliation for %j", async (body) => {
+    const onPreHandlerUnauthorized = vi.fn()
+    vi.mocked(recoverSub2ApiBrowserAuth).mockClear()
+    const transport = vi.mocked(fetchApiResponse).mockReset()
+    if (body instanceof ApiError) transport.mockRejectedValueOnce(body)
+    else transport.mockResolvedValueOnce({ ...response(null, 401), body })
+
+    await expect(
+      performFreeApiDailyCheckIn({
+        ...request,
+        observer: {
+          onDispatch: vi.fn(),
+          onResponse: vi.fn(),
+          onPreHandlerUnauthorized,
+        },
+      }),
+    ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+    expect(transport).toHaveBeenCalledOnce()
+    expect(onPreHandlerUnauthorized).not.toHaveBeenCalled()
+    expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+  })
+})
+
+it.each([
+  ["Casa", performApiKeyCasaDailyCheckIn],
+  ["Sub2API Pro", performSub2ApiProDailyCheckIn],
+  ["Denxio begin", performDenxioDailyCheckIn],
+] as const)(
+  "keeps a %s POST dispatched after an unrecognized HTTP 401",
+  async (_, perform) => {
+    const onPreHandlerUnauthorized = vi.fn()
+    vi.mocked(recoverSub2ApiBrowserAuth).mockClear()
+    vi.mocked(fetchApiResponse)
+      .mockReset()
+      .mockResolvedValueOnce({ ...response(null, 401), body: {} })
+    await expect(
+      perform({
+        ...request,
+        observer: {
+          onDispatch: vi.fn(),
+          onResponse: vi.fn(),
+          onPreHandlerUnauthorized,
+        },
+      }),
+    ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+    expect(fetchApiResponse).toHaveBeenCalledOnce()
+    expect(onPreHandlerUnauthorized).not.toHaveBeenCalled()
+    expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
   },
 )
 

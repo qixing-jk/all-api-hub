@@ -10,7 +10,7 @@ import {
   resolveLoginProviderOwners,
 } from "~/services/accountLogin/providerClaims"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { isCheckInMethodStatusCurrent } from "~/services/checkin/autoCheckin/domain"
 import { inspectSelectedCheckInCompatibility } from "~/services/checkin/autoCheckin/methods"
 import { toAutoCheckinSkipReason } from "~/services/checkin/autoCheckin/skipReasons"
 import type { SiteAccount } from "~/types"
@@ -39,11 +39,9 @@ export function buildAutoCheckinAccountSnapshot(
   const detectionEnabled =
     selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
   const autoCheckinEnabled = account.checkIn.automaticExecutionEnabled
-  const selectedStatus = getSelectedCheckInStatus({
-    config: account.checkIn,
-    siteType: account.site_type,
-    siteUrl: account.site_url,
-  })
+  const selectedStatus = detectionEnabled
+    ? account.checkIn.methodKnowledge.methods[selectionState.methodId]?.status
+    : undefined
 
   const executionEligibility = compatibility.state.executionEligibility
   let skipReason: AutoCheckinSkipReason | undefined =
@@ -68,7 +66,10 @@ export function buildAutoCheckinAccountSnapshot(
     providerAvailable,
     // Display-only field: DO NOT use this for eligibility decisions (provider outcomes are the source of truth).
     isCheckedInToday:
-      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+      detectionEnabled &&
+      selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+      selectedStatus.today !== undefined &&
+      isCheckInMethodStatusCurrent(selectionState.methodId, selectedStatus)
         ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
         : undefined,
     lastCheckInDate:

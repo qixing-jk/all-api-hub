@@ -43,6 +43,9 @@ export const RuntimeMessageTypes = {
  * Values are part of the on-the-wire contract between extension contexts and MUST remain stable.
  */
 export const RuntimeActionIds = {
+  ContentPrepareNewApiTokenSession: "prepareNewApiTokenSession",
+  ContentNewApiTokenPasskey: "newApiTokenPasskey",
+  ContentCancelNewApiTokenPasskey: "cancelNewApiTokenPasskey",
   ContentSyncDahlKeyNames: "contentSyncDahlKeyNames",
   ContentPrepareNewApiOAuth: "prepareNewApiOAuth",
   ContentNewApiPasswordUi: "newApiPasswordUi",
@@ -104,6 +107,7 @@ export const RuntimeActionIds = {
   GetInternalTabIds: "getInternalTabIds",
   GetSenderPageContext: "getSenderPageContext",
   CancelCheckinFeedbackScan: "cancelCheckinFeedbackScan",
+  CancelCheckinPageDiscovery: "cancelCheckinPageDiscovery",
   ContentCheckinFeedbackScan: "contentCheckinFeedbackScan",
   ContentCancelCheckinFeedbackScan: "contentCancelCheckinFeedbackScan",
   TempWindowCancelOpenRouterManagementKeyAction:
@@ -199,6 +203,7 @@ export const RuntimeActionIds = {
   ContentGetUserFromLocalStorage: "getUserFromLocalStorage",
   // Content-side protection guard checks used by temp-window fallback readiness gating.
   ContentCheckCapGuard: "checkCapGuard",
+  ContentGetDocumentState: "getDocumentState",
   ContentCheckCloudflareGuard: "checkCloudflareGuard",
   ContentCheckAliyunGuard: "checkAliyunGuard",
   ContentWaitForTurnstileToken: "waitForTurnstileToken",
@@ -208,11 +213,13 @@ export const RuntimeActionIds = {
   TurnstileAssistOpen: "turnstileAssistOpen",
   ContentVerificationAssistOpened: "verificationAssistOpened",
   ContentTriggerCheckinPageAction: "triggerCheckinPageAction",
+  ContentInspectCheckinPage: "inspectCheckinPage",
   ContentOpenRouterManagementKeyAction: "openRouterManagementKeyAction",
   ContentRequestyManagementKeyAction: "requestyManagementKeyAction",
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",
   ContentPerformTempWindowFetch: "performTempWindowFetch",
   ContentInspectCredentialPage: "inspectCredentialPage",
+  ContentHighlightAccessTokenSection: "highlightAccessTokenSection",
   ContentGetRenderedTitle: "getRenderedTitle",
   ContentShowShieldBypassUi: "showShieldBypassUi",
   ContentStarPromotionReport: "starPromotionReport",

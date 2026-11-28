@@ -4,12 +4,17 @@ import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button, FormField, IconButton, Input } from "~/components/ui"
-import type { AccessTokenContinuationAction } from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
+import type { AccountRecoveryContinuation } from "~/features/AccountManagement/components/AccountDialog/recovery/useAccountDialogRecoveryHandoff"
 import {
   encodeNovitaCredentials,
   parseNovitaCredentials,
 } from "~/services/apiService/novita/constants"
 import { createTab } from "~/utils/browser/tabs"
+
+import {
+  ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES,
+  type AccountCredentialVerificationStatus,
+} from "../models"
 
 export interface NovitaCredentialActions {
   onAcquireConsole: () => void
@@ -17,11 +22,11 @@ export interface NovitaCredentialActions {
   isVerifying: boolean
   operation?: "console" | "api-key" | "account"
   verification?: {
-    status: "success" | "error"
+    status: AccountCredentialVerificationStatus
     message?: string
     accountLabel?: string
   }
-  continuation?: AccessTokenContinuationAction
+  continuation?: AccountRecoveryContinuation
 }
 
 /** Plain credential fields preserve one another as the user edits them. */
@@ -48,10 +53,12 @@ export function NovitaCredentialGuide({
   const isAcquiring = actions.isVerifying && isConsoleOperation
   const verification = isConsoleOperation ? actions.verification : undefined
   const consoleError =
-    verification?.status === "error" ? verification.message : undefined
+    verification?.status === ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Error
+      ? verification.message
+      : undefined
   const consoleFeedback =
     consoleError ||
-    (verification?.status === "success"
+    (verification?.status === ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success
       ? t("novitaCredentials.consoleVerified", {
           account: verification.accountLabel,
         })
@@ -66,7 +73,7 @@ export function NovitaCredentialGuide({
     }
   }
   return (
-    <div className="space-y-density-4 col-span-full">
+    <div className="col-span-full space-y-density-4">
       <FormField
         label={t("novitaCredentials.console")}
         htmlFor={consoleInputId}
@@ -109,7 +116,8 @@ export function NovitaCredentialGuide({
           variant={
             consoleError
               ? "error"
-              : verification?.status === "success"
+              : verification?.status ===
+                  ACCOUNT_CREDENTIAL_VERIFICATION_STATUSES.Success
                 ? "success"
                 : undefined
           }
@@ -122,14 +130,14 @@ export function NovitaCredentialGuide({
             role="status"
             className={
               consoleError
-                ? "text-destructive-text text-xs"
-                : "text-success-text text-xs"
+                ? "text-xs text-destructive-text"
+                : "text-xs text-success-text"
             }
           >
             {consoleFeedback}
           </p>
         )}
-        <p id={consoleHintId} className="text-muted-foreground text-xs">
+        <p id={consoleHintId} className="text-xs text-muted-foreground">
           {t("novitaCredentials.consoleScope")}
         </p>
       </FormField>
@@ -139,7 +147,7 @@ export function NovitaCredentialGuide({
             type="button"
             variant="link"
             size="sm"
-            className="text-muted-foreground hover:text-foreground min-h-0 shrink-0 gap-1 p-0 text-xs font-normal has-[>svg]:px-0"
+            className="min-h-0 shrink-0 gap-1 p-0 text-xs font-normal text-muted-foreground hover:text-foreground has-[>svg]:px-0"
             aria-label={t("novitaCredentials.openKeys")}
             onClick={() => void openKeys()}
           >
@@ -147,17 +155,17 @@ export function NovitaCredentialGuide({
             <WorkflowTransitionIcon className="size-3" aria-hidden="true" />
           </Button>,
         )}
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           {t("novitaCredentials.apiKeyScope")}
         </p>
       </div>
       {actions.continuation && (
-        <div className="gap-density-2 flex flex-wrap">
+        <div className="flex flex-wrap gap-density-2">
           <Button
             type="button"
             variant="link"
             size="sm"
-            onClick={actions.continuation.onContinue}
+            onClick={() => actions.continuation?.onContinue()}
             disabled={
               actions.continuation.disabled || actions.continuation.isPending
             }

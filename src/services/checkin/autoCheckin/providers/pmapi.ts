@@ -124,7 +124,11 @@ async function resolveVerificationRequired(
   }
 
   const checkInUrl = await resolveAccountSiteRouteUrl(
-    { baseUrl: account.site_url, siteType: account.site_type },
+    {
+      baseUrl: account.site_url,
+      siteType: account.site_type,
+      checkIn: account.checkIn,
+    },
     SITE_ROUTE_KINDS.CheckIn,
   )
   return {

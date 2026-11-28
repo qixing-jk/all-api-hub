@@ -3,20 +3,10 @@ import { ACCOUNT_SITE_ADAPTER_FAMILIES } from "~/services/accountSiteDefinitions
 import type { AccountSiteTypeForAdapterFamily } from "~/services/accountSiteDefinitions/definitions"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 
-import type { InviteLinkCapability } from "../contracts/inviteLink"
-import type { ModelPricingCapability } from "../contracts/modelPricing"
-import type { SiteNoticeCapability } from "../contracts/siteNotice"
-import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
-import type { AccountBootstrapMetadataImplementation } from "./variantOperations/bootstrap"
-import type { CredentialImplementation } from "./variantOperations/credentials"
-import type { AccountDataVariantOverride } from "./variantOperations/data"
-import type { NewApiKeyVariantOverride } from "./variantOperations/key"
-import type { DynamicAccountRouteResolver } from "./variantOperations/routes"
+import type { CompatibleAccountVariant } from "../compatibleAccountVariantContract"
 import { anyrouterVariant } from "./variants/anyrouter"
-import { apiyiVariant } from "./variants/apiyi"
 import { compatibleVariant } from "./variants/compatible"
 import { doneHubVariant } from "./variants/doneHub"
-import { laozhangVariant } from "./variants/laozhang"
 import { modelflareVariant } from "./variants/modelflare"
 import { newApiVariant } from "./variants/newApi"
 import { oneApiVariant } from "./variants/oneApi"
@@ -26,23 +16,9 @@ import { vApiVariant } from "./variants/vApi"
 import { veloeraVariant } from "./variants/veloera"
 import { wongGongyiVariant } from "./variants/wongGongyi"
 
-/** A site owns its capability composition; each operation retains its own implementation. */
-export type NewApiVariantRegistration = {
-  credentials?: Partial<CredentialImplementation>
-  data?: AccountDataVariantOverride
-  key?: NewApiKeyVariantOverride
-  pricing?: ModelPricingCapability["fetchPricing"]
-  resolveRoutePath?: DynamicAccountRouteResolver
-  bootstrap?: Partial<AccountBootstrapMetadataImplementation>
-  inviteLink?: InviteLinkCapability
-  notice?: SiteNoticeCapability
-  announcements?: NonNullable<SiteTypeCapabilities["account"]>["announcements"]
-}
 export const newApiVariantRegistrations = {
-  [SITE_TYPES.APIYI]: apiyiVariant,
   [SITE_TYPES.ANYROUTER]: anyrouterVariant,
   [SITE_TYPES.MODELFLARE]: modelflareVariant,
-  [SITE_TYPES.LAOZHANG]: laozhangVariant,
   [SITE_TYPES.ONE_API]: oneApiVariant,
   [SITE_TYPES.VELOERA]: veloeraVariant,
   [SITE_TYPES.ONE_HUB]: oneHubVariant,
@@ -59,13 +35,13 @@ export const newApiVariantRegistrations = {
   AccountSiteTypeForAdapterFamily<
     typeof ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
   >,
-  NewApiVariantRegistration
+  CompatibleAccountVariant
 >
-const defaultRegistration: NewApiVariantRegistration = {}
+const defaultRegistration: CompatibleAccountVariant = {}
 /** Resolves only registered differences; family defaults stay owned by capability modules. */
 export function getNewApiVariantRegistration(
   siteType?: AccountSiteType,
-): NewApiVariantRegistration {
+): CompatibleAccountVariant {
   if (!siteType) return defaultRegistration
   if (Object.hasOwn(newApiVariantRegistrations, siteType))
     return newApiVariantRegistrations[

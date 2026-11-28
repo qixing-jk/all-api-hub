@@ -74,7 +74,7 @@ describe("OpenRouter credential copy", () => {
       expect(accountDialog.siteInfo.authMethodSelectedForSite).toContain(
         "{{siteType}}",
       )
-      expect(accountDialog.siteInfo).toHaveProperty("sub2apiHint")
+      expect(accountDialog.siteInfo).not.toHaveProperty("sub2apiHint")
       expect(
         accountDialog.form.openrouterManagementKeyGuidanceTitle,
       ).toBeTruthy()

@@ -105,6 +105,11 @@
   },
   "errors": {
     "api": {
+      "browserBackgroundVerificationFailed": "無法在背景完成站點驗證。請重試，仍失敗時可回報此站點的相容性問題。",
+      "browserLoginCleanupUnconfirmed": "無法確認新登入工作階段已清理。重試前請在站點檢查活動工作階段。",
+      "browserProofLoginRequired": "此憑證屬於網站登入工作階段。請在網站登入同一帳號後重試，也可設定帳號登入以取得獨立工作階段。",
+      "browserProofRejected": "網站拒絕了請求簽章。請重試；若仍失敗，可回報該網站的相容性問題。",
+      "browserProofSecondFactorRequired": "此帳號需要二次驗證，擴充功能暫未適配此站點的二次驗證登入。",
       "invalidResponseFormat": "響應資料格式錯誤",
       "missingRecoveryPolicy": "擴充功能無法準備此請求，請更新擴充功能或回報此問題。",
       "nonJsonContent": "回傳了 {{contentType}} 而不是 JSON（HTTP {{status}}）",
@@ -214,8 +219,9 @@
   "sub2api": {
     "authPersistenceFailed": "無法將重新整理的 Sub2API 登入資訊安全地儲存到此帳號。請重新整理或重新匯入該帳號，然後再試一次。",
     "configMissing": "請先在基礎設定中配置 Sub2API 基礎 URL 和管理員 API Key。",
-    "loginRequired": "請先登入 Sub2API 控制台（外掛會讀取 auth_token/auth_user 用於匯入會話）後再重試。",
-    "refreshTokenInvalid": "Sub2API refresh_token 已失效/已輪轉。請從控制台重新匯入會話（推薦無痕/隱私視窗），或貼上新的 refresh_token 後重試。"
+    "independentSessionRequired": "此獨立 Sub2API 工作階段的簽署金鑰無法使用。請在帳號編輯器選擇「重新登入」或「登入取得」來替換工作階段。",
+    "loginRequired": "請登入 Sub2API 網站後重試，或設定帳號登入以取得獨立工作階段。",
+    "refreshTokenInvalid": "此 Sub2API 更新權杖已無法續期。請設定帳號登入並使用「重新登入」或「登入取得」，或在網站允許時重新匯入或貼上有效的更新權杖。"
   },
   "toast": {
     "error": {

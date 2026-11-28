@@ -816,26 +816,31 @@ test("keeps multi-asset net inflow separate from confirmed income across account
       await expect(reportingWindow).toHaveCount(1)
       await expect(reportingWindow).toHaveText(/^Through \d{2}:\d{2}$/)
       await expect(reportingWindow).not.toContainText(clock.timeZone)
-      const amountBox = (await consumptionDetails
-        .getByText("1 XNO", {
-          exact: true,
-        })
-        .boundingBox())!
-      const windowBox = (await reportingWindow.boundingBox())!
-      expect(Math.abs(amountBox.y - windowBox.y)).toBeLessThan(8)
-      expect(windowBox.x).toBeGreaterThan(amountBox.x + amountBox.width)
+      // Popover placement can still settle after its text becomes visible.
+      await expect(async () => {
+        const amountBox = (await consumptionDetails
+          .getByText("1 XNO", {
+            exact: true,
+          })
+          .boundingBox())!
+        const windowBox = (await reportingWindow.boundingBox())!
+        expect(Math.abs(amountBox.y - windowBox.y)).toBeLessThan(8)
+        expect(windowBox.x).toBeGreaterThan(amountBox.x + amountBox.width)
+      }).toPass({ timeout: 10_000 })
       const tokenDetails = details.getByRole("region", { name: "Tokens today" })
       await expect(tokenDetails).toContainText("1,500")
       await expect(tokenDetails).toContainText(/Prompt\s*1,200/)
       await expect(tokenDetails).toContainText(/Completion\s*300/)
-      const tokenTitle = (await tokenDetails
-        .getByRole("heading")
-        .boundingBox())!
-      const tokenTotal = (await tokenDetails
-        .getByText("1,500", { exact: true })
-        .boundingBox())!
-      expect(Math.abs(tokenTitle.y - tokenTotal.y)).toBeLessThan(8)
-      expect(tokenTotal.x).toBeGreaterThan(tokenTitle.x + tokenTitle.width)
+      await expect(async () => {
+        const tokenTitle = (await tokenDetails
+          .getByRole("heading")
+          .boundingBox())!
+        const tokenTotal = (await tokenDetails
+          .getByText("1,500", { exact: true })
+          .boundingBox())!
+        expect(Math.abs(tokenTitle.y - tokenTotal.y)).toBeLessThan(8)
+        expect(tokenTotal.x).toBeGreaterThan(tokenTitle.x + tokenTitle.width)
+      }).toPass({ timeout: 10_000 })
       const consumptionExclusions = consumptionDetails.getByRole("button", {
         name: "Accounts not included (1)",
         exact: true,

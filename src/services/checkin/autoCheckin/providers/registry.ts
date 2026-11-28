@@ -12,11 +12,19 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
 import {
+  FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+  FREEGG_DAILY_ALLOWANCE_ORIGINS,
+} from "~/services/apiService/newApiFamily/variants/freeggDailyAllowanceConfig"
+import {
   XINGYA_CHECK_IN_ORIGINS,
   XINGYA_CHECK_IN_STATUS_ENDPOINT,
 } from "~/services/apiService/newApiFamily/variants/xingyaCheckInProtocol"
 import { PMAPI_ENDPOINTS } from "~/services/apiService/pmapi/constants"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
+import {
+  API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
+  createApiKeyCasaDailyCheckInStatusEndpoint,
+} from "~/services/apiService/sub2api/checkin/apiKeyCasaCheckInProtocol"
 import {
   createBaiApiCheckInStatusEndpoint,
   resolveBaiApiCheckInTimezone,
@@ -33,6 +41,10 @@ import {
   createHiyoCheckInStatusEndpoint,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
+import {
+  LINXI_DEFAULT_RESET_TIME_ZONE,
+  linxiStatusRoute,
+} from "~/services/apiService/sub2api/checkin/linxiCheckInProtocol"
 import {
   createNexaVlinksCheckInStatusEndpoint,
   resolveNexaVlinksCheckInTimezone,
@@ -102,9 +114,16 @@ type FeedbackStatusRoutes = readonly [
 ]
 
 type CheckInMethodLabelKey =
-  "methods.generic.name" | "methods.daily.name" | "methods.login.name"
+  | "methods.generic.name"
+  | "methods.daily.name"
+  | "methods.login.name"
+  | "methods.bizDecipherFreeGift.name"
+  | "methods.freeGgAllowance.name"
 type CheckInMethodDisclosureKey =
-  "methods.daily.description" | "methods.login.description"
+  | "methods.daily.description"
+  | "methods.login.description"
+  | "methods.bizDecipherFreeGift.description"
+  | "methods.freeGgAllowance.description"
 type CheckInMethodSourceNameKey = `methods.sources.${
   | "geniusProgrammer"
   | "denxio"
@@ -112,18 +131,24 @@ type CheckInMethodSourceNameKey = `methods.sources.${
   | "clawhud"
   | "freeApi"
   | "xingchi"
+  | "freeGg"
   | "baiApi"
   | "sub2apiPro"
   | "toolcode"
   | "hiyo"
+  | "bizDecipher"
   | "aiRouter"
   | "daigua"
   | "sidrune"
   | "nexavlinks"
   | "xingya"
+  | "linxi"
+  | "apiKeyCasa"
   | "agentRouter"}`
 
 export type CheckInMethodPresentationMetadata = {
+  /** Account balance reads can also claim this method on the deployment. */
+  readonly accountRefreshMayGrant?: boolean
   readonly kind: "daily" | "login"
   readonly labelKey: CheckInMethodLabelKey
   readonly disclosureKey?: CheckInMethodDisclosureKey
@@ -132,10 +157,16 @@ export type CheckInMethodPresentationMetadata = {
 }
 
 interface AutoCheckinMethodDefinitionBase {
+  /** Calendar used by the site to reset its daily check-in. Defaults to the device calendar. */
+  readonly resetTimeZone?: string
+  /** The method can verify a deployment-specific reset timezone in its protocol. */
+  readonly reportsResetTimeZone?: boolean
   readonly presentation?: Partial<
-    Pick<CheckInMethodPresentationMetadata, "kind" | "sourceNameKey">
+    Omit<CheckInMethodPresentationMetadata, "sourceName">
   >
   readonly discoveryPriority?: number
+  /** Lower the rank of an inconclusive probe while keeping positive protocol matches as peers. */
+  readonly unknownDiscoveryPriority?: number
   /** Public-domain hints for the last tie-break; never an origin authorization. */
   readonly discoveryOrigins?: readonly string[]
   /** How account login participates in execution, independent of API credentials. */
@@ -153,15 +184,19 @@ interface AutoCheckinMethodDefinitionBase {
   readonly supportsRouteOverride?: boolean
 }
 
-/** Hiyo can award again; DaiGua/Sidrune/FreeAPI/Xingchi/Xingya duplicate guarantees are unverified. Never queue replays. */
+/** These methods can award again or lack a verified duplicate guarantee. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
+    AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingchiDailyCheckIn,
+    // Linxi deployments may require a manual security step; never queue a retry.
+    AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.XingyaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
   ])
 
 /**
@@ -358,6 +393,27 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: true,
     newAccountCompatibility: true,
   },
+  [AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance]: {
+    id: AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
+    discoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Specific,
+    siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.UNKNOWN],
+    origins: FREEGG_DAILY_ALLOWANCE_ORIGINS,
+    presentation: {
+      sourceNameKey: "methods.sources.freeGg",
+      labelKey: "methods.freeGgAllowance.name",
+      accountRefreshMayGrant: true,
+      disclosureKey: "methods.freeGgAllowance.description",
+    },
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "FreeGG",
+    },
+    supportsStatusReadback: true,
+    resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+    feedbackStatusRoutes: [{ path: "/api/status", public: true }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
     siteTypes: [SITE_TYPES.VELOERA],
@@ -416,6 +472,30 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: "/api/v1/redeem/checkin/status" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn]: {
+    resetTimeZone: LINXI_DEFAULT_RESET_TIME_ZONE,
+    reportsResetTimeZone: true,
+    // Public frontends for the K40 hosts and 100xLabs use this protocol.
+    discoveryOrigins: [
+      "https://sub.100xlabs.space",
+      "https://k40.shengqainbang.cn",
+    ],
+    // An inconclusive probe on a different deployment must not block a verified method.
+    unknownDiscoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Generic,
+    presentation: { sourceNameKey: "methods.sources.linxi" },
+    id: AUTO_CHECKIN_METHOD_IDS.LinxiDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Linxi / 100xLabs",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: linxiStatusRoute() },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -497,6 +577,26 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     supportsStatusReadback: true,
     feedbackStatusRoutes: (): FeedbackStatusRoutes => [
       { path: createHiyoCheckInStatusEndpoint(resolveHiyoCheckInTimezone()) },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn]: {
+    presentation: {
+      labelKey: "methods.bizDecipherFreeGift.name",
+      disclosureKey: "methods.bizDecipherFreeGift.description",
+      sourceNameKey: "methods.sources.bizDecipher",
+    },
+    discoveryOrigins: ["https://bizdecipher.com"],
+    id: AUTO_CHECKIN_METHOD_IDS.BizDecipherFreeCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "BizDecipher",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createUserCheckInStatusEndpoint(resolveUserCheckInTimezone()) },
     ],
     legacy: false,
     newAccountCompatibility: false,
@@ -688,6 +788,27 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn]: {
+    resetTimeZone: API_KEY_CASA_CHECK_IN_RESET_TIME_ZONE,
+    // Public dashboard contract observed at https://apikey.casa/redeem.
+    discoveryOrigins: ["https://apikey.casa"],
+    // Also probe other Sub2API installations, where this deployment's route
+    // may respond inconclusively while an existing protocol is fully verified.
+    unknownDiscoveryPriority: CHECK_IN_DISCOVERY_PRIORITIES.Generic,
+    presentation: { sourceNameKey: "methods.sources.apiKeyCasa" },
+    id: AUTO_CHECKIN_METHOD_IDS.ApiKeyCasaDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "ApiKey Casa",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createApiKeyCasaDailyCheckInStatusEndpoint() },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn,
     siteTypes: [SITE_TYPES.EMRANK],
@@ -733,6 +854,39 @@ export function getCheckInDiscoveryPriority(methodId: CheckInMethodId): number {
   const definition: AutoCheckinMethodDefinition =
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
   return definition.discoveryPriority ?? CHECK_IN_DISCOVERY_PRIORITIES.Specific
+}
+
+/** Inconclusive probes normally retain their protocol's rank. */
+export function getUnknownCheckInDiscoveryPriority(
+  methodId: CheckInMethodId,
+): number {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return (
+    definition.unknownDiscoveryPriority ?? getCheckInDiscoveryPriority(methodId)
+  )
+}
+
+/** Only methods with a timezone-bearing protocol can override their default calendar. */
+export function getCheckInResetTimeZone(
+  methodId: CheckInMethodId,
+  observedTimeZone?: string,
+): string | undefined {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return (
+    (definition.reportsResetTimeZone ? observedTimeZone : undefined) ??
+    definition.resetTimeZone
+  )
+}
+
+/** Whether persisted observations of this method may carry a site-reported zone. */
+export function reportsCheckInResetTimeZone(
+  methodId: CheckInMethodId,
+): boolean {
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.reportsResetTimeZone === true
 }
 
 /** Returns whether the selected method can verify today without posting. */

@@ -147,7 +147,7 @@ const getRetainedKnownStatusFacts = (
     CheckInMethodStatus,
     { outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Known }
   >,
-  "availability" | "requiresManualVerification"
+  "availability" | "requiresManualVerification" | "resetTimeZone"
 > => {
   if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) return {}
   return {
@@ -155,6 +155,7 @@ const getRetainedKnownStatusFacts = (
     ...(status.requiresManualVerification
       ? { requiresManualVerification: status.requiresManualVerification }
       : {}),
+    ...(status.resetTimeZone ? { resetTimeZone: status.resetTimeZone } : {}),
   }
 }
 
@@ -163,6 +164,7 @@ export function markCheckInMethodExecuted(input: {
   config: CheckInConfig
   methodId: CheckInMethodId
   observedAt: number
+  resetTimeZone?: string
 }): CheckInConfig {
   const retainedFacts = getRetainedKnownStatusFacts(
     input.config.methodKnowledge.methods[input.methodId]?.status,
@@ -173,6 +175,7 @@ export function markCheckInMethodExecuted(input: {
     status: {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
       ...retainedFacts,
+      ...(input.resetTimeZone ? { resetTimeZone: input.resetTimeZone } : {}),
       today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
       evidence: {
         source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution,
@@ -228,6 +231,11 @@ export function mergeUserOwnedCheckInDraft(input: {
       ? input.draft.selection
       : input.latest.selection,
     routeOverrides,
+    nativePagePath: input.draft.nativePagePath,
+    nativePageHint:
+      input.draft.nativePagePath === input.latest.nativePagePath
+        ? input.latest.nativePageHint
+        : undefined,
     ...(customCheckIn ? { customCheckIn } : { customCheckIn: undefined }),
   }
 }
@@ -279,6 +287,8 @@ export function invalidateCheckInDiscovery(
   return {
     ...config,
     // Manual paths belong to the deployment; learned paths require fresh evidence.
+    nativePagePath: options.siteUrlChanged ? undefined : config.nativePagePath,
+    nativePageHint: undefined,
     routeOverrides:
       !options.siteUrlChanged && Object.keys(manualRoutes).length
         ? manualRoutes

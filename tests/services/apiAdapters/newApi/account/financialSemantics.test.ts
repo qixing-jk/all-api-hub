@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { describe, expect, it, vi } from "vitest"
+import { assert, describe, expect, it, vi } from "vitest"
 
 import { CURRENCIES } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -16,13 +16,25 @@ import {
 } from "~/services/amounts/financialConstants"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/account/accountData"
 import { newApiVariantRegistrations } from "~/services/apiAdapters/newApi/variantRegistration"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_DIRECT_REQUEST_REASONS } from "~/services/apiTransport/type"
 import { estimateNetInflow } from "~/services/history/dailyBalanceHistory/netInflow"
 import { buildFinancialHistorySeries } from "~/services/history/dailyBalanceHistory/selectors"
+import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import { AuthTypeEnum } from "~/types"
 import { formatAssetAmount } from "~/utils/core/money"
 import { server } from "~~/tests/msw/server"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+
+const compatibleFinancialSites = [
+  ...(Object.keys(
+    newApiVariantRegistrations,
+  ) as (keyof typeof newApiVariantRegistrations)[]),
+  SITE_TYPES.SHELL_API,
+  SITE_TYPES.APIYI,
+  SITE_TYPES.LAOZHANG,
+]
 
 const origin = "https://quota.example.invalid"
 const request = {
@@ -42,7 +54,7 @@ describe("New API family financial contract", () => {
   it("includes reported account balances in the available total without inventing cash eligibility", async () => {
     server.use(
       http.get(`${origin}/api/user/self`, () =>
-        HttpResponse.json({ success: true, data: { quota: 5000000 } }),
+        HttpResponse.json({ success: true, data: { id: 1, quota: 5000000 } }),
       ),
     )
     const result = await createNewApiAccountData(SITE_TYPES.NEW_API).fetchData(
@@ -59,13 +71,74 @@ describe("New API family financial contract", () => {
       aggregateBalances([result.balance!], BALANCE_PURPOSES.Prepaid).amounts,
     ).toEqual([])
     expect(
-      getDisplayBalancePortfolio([{ balanceSnapshot: result.balance }] as never)
-        .amounts,
+      getDisplayBalancePortfolio([
+        buildDisplaySiteData({ balanceSnapshot: result.balance }),
+      ]).amounts,
     ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "10" }])
     expect(
       projectBalance(result.balance!, BALANCE_PURPOSES.Available).amounts,
     ).toEqual([{ asset: { kind: "currency", code: "USD" }, value: "10" }])
   })
+  it.each([SITE_TYPES.SHELL_API, SITE_TYPES.APIYI, SITE_TYPES.LAOZHANG])(
+    "keeps %s settled consumption and reward quota tied to its account source",
+    async (siteType) => {
+      server.use(
+        http.get(origin + "/api/user/self", () =>
+          HttpResponse.json({ success: true, data: { id: 1, quota: 1500000 } }),
+        ),
+        http.get(origin + "/api/log/self/stat", () =>
+          HttpResponse.json({ success: true, data: { quota: 125000 } }),
+        ),
+        http.get(origin + "/api/log/self", ({ request }) => {
+          const params = new URL(request.url).searchParams
+          const isNative = siteType !== SITE_TYPES.APIYI
+          const firstPage = isNative ? "0" : "1"
+          const items =
+            params.get("type") === String(LogType.System) &&
+            params.get("p") === firstPage
+              ? [{ quota: 250000 }]
+              : []
+          return HttpResponse.json({
+            success: true,
+            data: isNative ? items : { items, total: items.length },
+          })
+        }),
+      )
+      const result = await getSiteTypeCapabilities(
+        siteType,
+      ).account!.data!.fetchData({
+        ...request,
+        includeTodayCashflow: true,
+      })
+      const asset = { kind: "currency", code: "USD" }
+      const scope = { authority: origin, walletId: "user:1" }
+      expect(result.settledConsumption?.[0]).toMatchObject({
+        asset,
+        scope,
+        amount: {
+          value: "0.25",
+          source: {
+            adapter: siteType,
+            contractVersion: "standard-usd/v1",
+            amountInputs: { quota: "125000" },
+          },
+        },
+      })
+      expect(result.reportedIncome?.[0]).toMatchObject({
+        asset,
+        classification: "unclassified",
+        scope,
+        amount: {
+          value: "0.5",
+          source: {
+            adapter: siteType,
+            contractVersion: "standard-usd/v1",
+            amountInputs: { quota: "250000" },
+          },
+        },
+      })
+    },
+  )
   it("displays the official default USD balance while preserving atomic quota", async () => {
     server.use(
       http.get(`${origin}/api/status`, () =>
@@ -93,38 +166,42 @@ describe("New API family financial contract", () => {
       value: "10",
       source: { amountInputs: { quota: "5000000" } },
     })
+    assert(
+      position.asset.kind !== ASSET_KINDS.Unknown,
+      "Expected a known balance asset",
+    )
     expect(
-      formatAssetAmount(
-        { asset: position.asset as never, value: "10" },
-        "en-US",
-      ),
+      formatAssetAmount({ asset: position.asset, value: "10" }, "en-US"),
     ).toContain("10")
   })
-  it.each(
-    Object.keys(
-      newApiVariantRegistrations,
-    ) as (keyof typeof newApiVariantRegistrations)[],
-  )("displays %s using its common monetary contract", async (siteType) => {
-    server.use(
-      http.get(`${origin}/api/user/self`, () =>
-        HttpResponse.json({ success: true, data: { quota: 5000000 } }),
-      ),
-    )
-    const result = await createNewApiAccountData(siteType).fetchData(request)
-    const position = result.balance!.positions[0]!
-    const value = siteType === SITE_TYPES.UNKNOWN ? "5000000" : "10"
-    expect(position.amount).toMatchObject({ value })
-    expect(
-      formatAssetAmount({ asset: position.asset as never, value }, "en-US"),
-    ).toBe(siteType === SITE_TYPES.UNKNOWN ? "5,000,000 quota" : "USD 10")
-    expect(result.balanceRefreshParts?.[0]?.positions[0]?.asset).toEqual(
-      position.asset,
-    )
-  })
+  it.each(compatibleFinancialSites)(
+    "displays %s using its common monetary contract",
+    async (siteType) => {
+      server.use(
+        http.get(`${origin}/api/user/self`, () =>
+          HttpResponse.json({ success: true, data: { id: 1, quota: 5000000 } }),
+        ),
+      )
+      const result = await createNewApiAccountData(siteType).fetchData(request)
+      const position = result.balance!.positions[0]!
+      const value = siteType === SITE_TYPES.UNKNOWN ? "5000000" : "10"
+      expect(position.amount).toMatchObject({ value })
+      assert(
+        position.asset.kind !== ASSET_KINDS.Unknown,
+        "Expected a known balance asset",
+      )
+      expect(formatAssetAmount({ asset: position.asset, value }, "en-US")).toBe(
+        siteType === SITE_TYPES.UNKNOWN ? "5,000,000 quota" : "USD 10",
+      )
+      expect(result.balanceRefreshParts?.[0]?.positions[0]?.asset).toEqual(
+        position.asset,
+      )
+    },
+  )
   it("uses the same standard monetary unit for balance, consumption and credited income", async () => {
     server.use(
       http.get(`${origin}/api/user/self`, () =>
-        HttpResponse.json({ success: true, data: { quota: 5000000 } }),
+        HttpResponse.json({ success: true, data: { id: 1, quota: 5000000 } }),
       ),
       http.get(`${origin}/api/log/self/stat`, () =>
         HttpResponse.json({ success: true, data: { quota: 500000 } }),
@@ -349,30 +426,29 @@ describe("New API family financial contract", () => {
     ])
     expect(result.balanceRefreshParts?.[0]?.enumeration).toBe("complete")
   })
-  it.each(
-    Object.keys(
-      newApiVariantRegistrations,
-    ) as (keyof typeof newApiVariantRegistrations)[],
-  )("preserves signed %s balances in its standard unit", async (siteType) => {
-    server.use(
-      http.get(`${origin}/api/user/self`, () =>
-        HttpResponse.json({ success: true, data: { quota: -17 } }),
-      ),
-    )
-    const result = await createNewApiAccountData(siteType).fetchData(request)
-    expect(result).not.toHaveProperty("quota")
-    expect(result.balance?.positions[0]).toMatchObject({
-      asset:
-        siteType === SITE_TYPES.UNKNOWN
-          ? { kind: "quota", label: "quota" }
-          : { kind: "currency", code: "USD" },
-      amount: {
-        status: "known",
-        value: siteType === SITE_TYPES.UNKNOWN ? "-17" : "-0.000034",
-        source: { adapter: siteType },
-      },
-    })
-  })
+  it.each(compatibleFinancialSites)(
+    "preserves signed %s balances in its standard unit",
+    async (siteType) => {
+      server.use(
+        http.get(`${origin}/api/user/self`, () =>
+          HttpResponse.json({ success: true, data: { id: 1, quota: -17 } }),
+        ),
+      )
+      const result = await createNewApiAccountData(siteType).fetchData(request)
+      expect(result).not.toHaveProperty("quota")
+      expect(result.balance?.positions[0]).toMatchObject({
+        asset:
+          siteType === SITE_TYPES.UNKNOWN
+            ? { kind: "quota", label: "quota" }
+            : { kind: "currency", code: "USD" },
+        amount: {
+          status: "known",
+          value: siteType === SITE_TYPES.UNKNOWN ? "-17" : "-0.000034",
+          source: { adapter: siteType },
+        },
+      })
+    },
+  )
   it.each([undefined, null, "not-an-amount", Number.MAX_SAFE_INTEGER + 1])(
     "keeps unavailable native quota %s distinct from known zero",
     async (quota) => {

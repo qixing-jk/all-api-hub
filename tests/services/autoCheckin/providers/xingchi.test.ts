@@ -296,7 +296,7 @@ describe("Xingchi check-in integration", () => {
         ...context,
         directRequestReason: undefined,
       }),
-      { allowAuthenticationRecovery: true },
+      expect.objectContaining({ allowAuthenticationRecovery: true }),
     )
   })
 
@@ -362,8 +362,12 @@ describe("Xingchi check-in integration", () => {
     "reconciles a lost response without replay (checked=%s)",
     async (checkedInToday) => {
       vi.mocked(fetchXingchiDailyCheckInStatus)
-        .mockResolvedValueOnce({ enabled: true, checkedInToday: false })
-        .mockResolvedValue({ enabled: true, checkedInToday })
+        .mockResolvedValueOnce({
+          enabled: true,
+          checkedInToday: false,
+          day: "2026-11-28",
+        })
+        .mockResolvedValue({ enabled: true, checkedInToday, day: "2026-11-28" })
       vi.mocked(performXingchiDailyCheckIn).mockImplementation(
         async (request) => {
           request.observer?.onDispatch()
@@ -406,4 +410,147 @@ describe("Xingchi check-in integration", () => {
       })
     },
   )
+  it.each([true, false])(
+    "keeps a lost claim uncertain when the server day changes (checked=%s)",
+    async (checkedInToday) => {
+      vi.mocked(fetchXingchiDailyCheckInStatus)
+        .mockResolvedValueOnce({
+          enabled: true,
+          checkedInToday: false,
+          day: "2026-11-28",
+        })
+        .mockResolvedValue({ enabled: true, checkedInToday, day: "2026-11-29" })
+      vi.mocked(performXingchiDailyCheckIn).mockImplementation(
+        async (request) => {
+          request.observer?.onDispatch()
+          throw new TypeError("Lost response")
+        },
+      )
+      const result = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      })
+      expect(result).toMatchObject({
+        kind: "executed",
+        retryable: false,
+        result: { status: "uncertain" },
+      })
+      expect(performXingchiDailyCheckIn).toHaveBeenCalledOnce()
+      expect(fetchXingchiDailyCheckInStatus).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it.each([undefined, "2026-11-29"])(
+    "does not confirm a lost claim without matching admission day %s",
+    async (day) => {
+      vi.mocked(fetchXingchiDailyCheckInStatus)
+        .mockResolvedValueOnce({ enabled: true, checkedInToday: false, day })
+        .mockResolvedValue({ enabled: true, checkedInToday: true })
+      vi.mocked(performXingchiDailyCheckIn).mockImplementation(
+        async (request) => {
+          request.observer?.onDispatch()
+          throw new TypeError("Lost response")
+        },
+      )
+      const result = await executeSelectedCheckIn({
+        account: createAccount(),
+        globalAutomaticExecutionEnabled: true,
+        context: executionContext(),
+      })
+      expect(result).toMatchObject({
+        kind: "executed",
+        result: { status: "uncertain" },
+      })
+      expect(fetchXingchiDailyCheckInStatus).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it.each(["next-day", "unavailable"])(
+    "preserves a confirmed award with %s readback",
+    async (mode) => {
+      vi.mocked(fetchXingchiDailyCheckInStatus).mockResolvedValueOnce({
+        enabled: true,
+        checkedInToday: false,
+        day: "2026-11-28",
+      })
+      if (mode === "unavailable")
+        vi.mocked(fetchXingchiDailyCheckInStatus).mockRejectedValue(
+          new Error("offline"),
+        )
+      else
+        vi.mocked(fetchXingchiDailyCheckInStatus).mockResolvedValue({
+          enabled: true,
+          checkedInToday: false,
+          day: "2026-11-29",
+        })
+      const account = createAccount()
+      const context = executionContext()
+      const execution = xingchiProvider.forExecution(context)
+      const proof = await execution.getAuthenticatedStatus({
+        account,
+        observedAt: Date.now(),
+      })
+      if (proof?.outcome !== "known") throw new Error("Expected admission")
+      const result = await execution.checkIn(account, {
+        ...context,
+        statusProof: proof,
+      })
+      expect(result).toMatchObject({
+        status: "success",
+        awards: [
+          expect.objectContaining({
+            amount: expect.objectContaining({ value: "12.5" }),
+          }),
+        ],
+        confirmation:
+          mode === "unavailable"
+            ? { kind: "unavailable" }
+            : { kind: "observed", status: { today: "not_checked" } },
+      })
+    },
+  )
+
+  it("isolates native admission dates across concurrent execution sessions", async () => {
+    const account = createAccount()
+    const context = executionContext()
+    const first = xingchiProvider.forExecution(context)
+    const second = xingchiProvider.forExecution(context)
+    const read = vi.mocked(fetchXingchiDailyCheckInStatus)
+    read.mockResolvedValueOnce({
+      enabled: true,
+      checkedInToday: false,
+      day: "2026-11-28",
+    })
+    const firstProof = await first.getAuthenticatedStatus({
+      account,
+      observedAt: Date.now(),
+    })
+    read.mockResolvedValueOnce({
+      enabled: true,
+      checkedInToday: false,
+      day: "2026-11-29",
+    })
+    await second.getAuthenticatedStatus({ account, observedAt: Date.now() })
+    read.mockResolvedValue({
+      enabled: true,
+      checkedInToday: true,
+      day: "2026-11-28",
+    })
+    const lifecycle = createAutoCheckinMutationLifecycle()
+    lifecycle.onDispatch()
+    vi.mocked(performXingchiDailyCheckIn).mockRejectedValue(
+      new Error("Lost receipt"),
+    )
+    if (firstProof?.outcome !== "known") throw new Error("Expected admission")
+    const result = await first.checkIn(account, {
+      ...context,
+      statusProof: firstProof,
+      mutationLifecycle: lifecycle,
+    })
+    expect(result).toMatchObject({
+      status: "uncertain",
+      confirmation: { kind: "observed", status: { today: "checked" } },
+    })
+  })
 })

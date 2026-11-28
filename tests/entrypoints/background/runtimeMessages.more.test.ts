@@ -66,6 +66,7 @@ const mocks = vi.hoisted(() => ({
   executeProtectionBypassTask: vi.fn(),
   handleOwnedSessionRequest: vi.fn(),
   cancelTempCheckinFeedbackScan: vi.fn(),
+  cancelTempCheckinPageDiscovery: vi.fn(),
   recordGitHubStarState: vi.fn(),
   openStarPromotionRepository: vi.fn(),
   trackStarPromotionAction: vi.fn(),
@@ -77,6 +78,10 @@ vi.mock("~/services/starPromotion/openRepository", () => ({
 
 vi.mock("~/services/browsingContext/tempPage/checkinFeedbackScan", () => ({
   cancelTempCheckinFeedbackScan: mocks.cancelTempCheckinFeedbackScan,
+}))
+
+vi.mock("~/services/browsingContext/tempPage/checkinPageDiscovery", () => ({
+  cancelTempCheckinPageDiscovery: mocks.cancelTempCheckinPageDiscovery,
 }))
 
 vi.mock("~/services/managedSites/newApiOwnedSession/background", () => ({
@@ -852,24 +857,26 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     },
   )
 
-  it.each(["feedback-request", null, 123])(
-    "routes feedback cancellation with a normalized request ID: %s",
-    async (requestId) => {
-      const listener = await loadListener()
+  it.each([
+    [
+      RuntimeActionIds.CancelCheckinFeedbackScan,
+      mocks.cancelTempCheckinFeedbackScan,
+    ],
+    [
+      RuntimeActionIds.CancelCheckinPageDiscovery,
+      mocks.cancelTempCheckinPageDiscovery,
+    ],
+  ])("routes %s with a normalized request ID", async (action, cancel) => {
+    const listener = await loadListener()
+    for (const requestId of ["scan-request", null, 123]) {
       const sendResponse = vi.fn()
-      expect(
-        listener(
-          { action: RuntimeActionIds.CancelCheckinFeedbackScan, requestId },
-          {},
-          sendResponse,
-        ),
-      ).toBe(true)
-      expect(mocks.cancelTempCheckinFeedbackScan).toHaveBeenCalledWith(
+      expect(listener({ action, requestId }, {}, sendResponse)).toBe(true)
+      expect(cancel).toHaveBeenLastCalledWith(
         typeof requestId === "string" ? requestId : "",
       )
       expect(sendResponse).toHaveBeenCalledWith({ success: true })
-    },
-  )
+    }
+  })
 
   it("routes OpenRouter cancellation and dispatch markers by request ID", async () => {
     const listener = await loadListener()
