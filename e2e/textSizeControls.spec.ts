@@ -14,6 +14,7 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 test.use({ actionTimeout: 10_000 })
 
@@ -191,7 +192,8 @@ for (const width of [390, 320]) {
     context,
     page,
     extensionId,
-  }, testInfo) => {
+    extensionDir,
+  }) => {
     await forceExtensionLanguage(page, "en")
     await page.setViewportSize({ width, height: 900 })
     await stubLlmMetadataIndex(context)
@@ -268,8 +270,12 @@ for (const width of [390, 320]) {
     const calendar = page.locator('[data-slot="calendar"]')
     await expect(calendar).toBeVisible()
     await expectSurfaceToFit(menu, width)
-    await menu.screenshot({
-      path: testInfo.outputPath(`calendar-extra-large-${width}.png`),
+    await captureVisualViews({
+      page,
+      ready: menu,
+      captureTarget: menu,
+      id: `calendar-extra-large-${width}`,
+      extensionDir,
     })
     await calendar
       .locator("button[data-day]")
@@ -278,8 +284,12 @@ for (const width of [390, 320]) {
       .click()
     await expect(calendar).toBeHidden()
     await expectSurfaceToFit(dialog, width)
-    await dialog.screenshot({
-      path: testInfo.outputPath(`form-extra-large-${width}.png`),
+    await captureVisualViews({
+      page,
+      ready: dialog,
+      captureTarget: dialog,
+      id: `form-extra-large-${width}`,
+      extensionDir,
     })
     await page.keyboard.press("Escape")
     await expect(dialog).toBeHidden()

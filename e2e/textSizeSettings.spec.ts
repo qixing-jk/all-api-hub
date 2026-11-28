@@ -27,9 +27,14 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { showVerificationSettings } from "~~/e2e/utils/verificationWorkspace"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 test.use({ actionTimeout: 10_000 })
+// Each viewport/host-root scenario owns its browser and preference storage.
+test.describe.configure({
+  mode: process.env.AAH_E2E_USER_DATA_DIR ? "default" : "parallel",
+})
 
 /** Fixed input heights must fit their line box; wrapping actions must fit all lines. */
 async function expectControlsToFit(scope: Locator) {
@@ -86,7 +91,8 @@ for (const hostRootSize of [10, 16, 20]) {
       context,
       page,
       extensionId,
-    }, testInfo) => {
+      extensionDir,
+    }) => {
       await forceExtensionLanguage(page, "en")
       await page.setViewportSize({ width, height: 900 })
       const worker = await getServiceWorker(context)
@@ -193,8 +199,11 @@ for (const hostRootSize of [10, 16, 20]) {
       const bounds = await modal.boundingBox()
       expect(bounds!.x).toBeGreaterThanOrEqual(0)
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
-      await page.screenshot({
-        path: testInfo.outputPath(`content-extra-large-${width}.png`),
+      await captureVisualViews({
+        page,
+        ready: modal,
+        id: `content-extra-large-${width}-host-${hostRootSize}`,
+        extensionDir,
       })
       await options
         .locator(`#${SETTINGS_ANCHORS.APPEARANCE_TEXT_SIZE}`)
@@ -224,7 +233,8 @@ for (const width of [1280, 390, 320]) {
     context,
     page,
     extensionId,
-  }, testInfo) => {
+    extensionDir,
+  }) => {
     test.setTimeout(180_000)
     await forceExtensionLanguage(page, "en")
     await page.setViewportSize({ width, height: 900 })
@@ -343,17 +353,25 @@ for (const width of [1280, 390, 320]) {
     await expect
       .poll(async () => (await controlSample.boundingBox())!.height)
       .toBeGreaterThan(32)
-    await page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_PRESET}`).screenshot({
-      path: testInfo.outputPath(`compact-extra-large-choices-${width}.png`),
-    })
-    await textSize.screenshot({
-      path: testInfo.outputPath(`text-size-reset-${width}.png`),
-    })
-    await page
-      .locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}`)
-      .screenshot({
-        path: testInfo.outputPath(`theme-mode-reset-${width}.png`),
+    for (const [id, target] of [
+      [
+        "compact-extra-large-choices",
+        page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_PRESET}`),
+      ],
+      ["text-size-reset", textSize],
+      [
+        "theme-mode-reset",
+        page.locator(`#${SETTINGS_ANCHORS.APPEARANCE_THEME_MODE}`),
+      ],
+    ] as const) {
+      await captureVisualViews({
+        page,
+        ready: target,
+        captureTarget: target,
+        id: `${id}-${width}`,
+        extensionDir,
       })
+    }
     await page.reload()
     await expect(
       textSize.getByRole("radio", { name: "Extra large", exact: true }),
@@ -443,10 +461,13 @@ for (const width of [1280, 390, 320]) {
           }),
       ).toHaveCSS("font-size", "16px")
       await expectPageToFit(view)
-      await view.screenshot({
-        path: testInfo.outputPath(
-          `compact-extra-large-${view === page ? "options" : view === popup ? "popup" : "sidepanel"}-${width}.png`,
+      await captureVisualViews({
+        page: view,
+        ready: view.getByTestId(
+          getAccountManagementListItemTestId("text-size-account"),
         ),
+        id: `compact-extra-large-${view === page ? "options" : view === popup ? "popup" : "sidepanel"}-${width}`,
+        extensionDir,
       })
     }
     await page.bringToFront()
@@ -463,10 +484,11 @@ for (const width of [1280, 390, 320]) {
         : page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeKeyRow).first()
       await expect(row).toBeVisible()
       await expectPageToFit(page)
-      await page.screenshot({
-        path: testInfo.outputPath(
-          `compact-extra-large-${route.startsWith("models") ? "models" : "keys"}-${width}.png`,
-        ),
+      await captureVisualViews({
+        page,
+        ready: row,
+        id: `compact-extra-large-${route.startsWith("models") ? "models" : "keys"}-${width}`,
+        extensionDir,
       })
     }
 

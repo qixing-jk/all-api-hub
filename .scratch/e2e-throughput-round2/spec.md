@@ -121,6 +121,49 @@ comparison. The separate CLI inventory establishes the expected collection.
 
 ## Next measured opportunity
 
+### Expanded optimization requested after the first handoff
+
+Iteration baseline: `1c5eb3f293` (same implementation as tested `192846ec99`).
+Fetched `origin/main` again before dependent work; branch is 2 ahead, 0 behind.
+Keep using the existing agreed CLI/browser test seams. New evidence lives under
+`artifacts/further/`, with original sources retained for exact comparisons.
+
+Ranked hypotheses: (1) independent text-size cases leave workers idle at the
+end of a shard; (2) native check-in scenarios can overlap their deliberate waits
+because browser profiles, scheduler state and loopback ports are per-test;
+(3) review-only screenshots in text-size and verification tests consume work
+without assertions reading them. Compare each variable separately before the
+combined run; do not change the 13s CAPTCHA contract or any test deadline.
+
+Preliminary local measurements, Chromium, four workers and zero test retries:
+
+| Experiment | Baseline | Candidate | Qualification |
+| --- | --- | --- | --- |
+| 18 text-size cases, capture only | 94.57s, 40 screenshots | 109.57s then 97.05s, no screenshots | First candidate had a 25s fixture launch timeout/retry. Clean repeat has no demonstrated wall-time gain. Keep screenshot policy distinct from speed claims. |
+| 80 native-check-in/web verification/account verification cases, native parallel mode only | 213.45s | 163.24s | All pass, no retries. Native file span 208.97 to 62.59s; native cumulative work 208.79 to 207.66s. |
+| Text-size parallel mode after capture migration | 97.05s | 48.91s | Initial candidate has one Windows fixture launch retry. Three repetitions pass all 54 cases in 118.52s, with no retries. A final matched single run passes 18/18 in 43.89s, no retries (-53.6% vs original 94.57s). Text-file work rises 89.47 to 102.91s while its span falls 89.56 to 40.86s. |
+| 100 additional review screenshot guards | 163.24s | 169.75s | Final 80/80 pass, no retries, 167 to 4 retained PNGs. No separate wall-time gain demonstrated; combined retained scheduling/capture change remains faster than the original 213.45s baseline. |
+
+The screenshot migration preserves automatic failure captures and all behavior,
+layout, request and persistence assertions. The two verification files retain
+original screenshot expressions/paths behind the existing capture flag; the
+text-size suites use `captureVisualViews`, with unique host-root/viewport IDs.
+`check-equivalence.cjs` compares 961 assertion call expressions with the original
+source and verifies that normalizing capture guards makes both verification
+files identical. This supplements actual test execution, not a replacement.
+
+Predeclared text capture IDs: `artifacts/further/expected-text-captures.json`
+(30 settings, 6 locales, 4 controls). All 40 passed capture and SHA-256 verification; narrow account, injected modal,
+German choices and calendar images were inspected. Capture directories are
+`../visual-captures/run-lTG6qO/`, `run-MaIvv7/` and `run-jlYN8w/`. The drawing
+workflow also passed all three declared checkpoints in `run-CY7RsD/`, including
+both original PNG attachments. The webpage needle workflow passed its seven
+checkpoints in `run-vQBhW2/`; an earlier capture command listed one checkpoint
+from an adjacent test and was corrected (its actual test had passed).
+Final acceptance still requires the combined
+affected suite and a complete hosted run with test identity and retry audit. Existing uncertainty about Windows startup timeouts
+must remain visible; green tests after a fixture retry are not clean samples.
+
 The new longest shard still has a serial tail: its workers finish at
 648.5/653.1/720.7/766.7s from the first case. `textSizeSettings.spec.ts` finishes
 last in both the baseline's slowest shard and the candidate's slowest shard.

@@ -51,6 +51,8 @@ import {
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { buildNewApiToken } from "~~/tests/test-utils/newApiToken"
 
+const captureReviewScreenshots = Boolean(process.env.AAH_VISUAL_CAPTURE_DIR)
+
 // Each case owns its extension context and dynamic-port server. Keep this large
 // suite from occupying one worker after the other specs in its shard finish.
 test.describe.configure({
@@ -110,11 +112,13 @@ for (const source of ["profile", "account"] as const) {
       .getByRole("button", { name: "工具/函数调用", exact: true })
       .click()
     await expect(testsSheet).toBeHidden()
-    // Capture the original layout even when the subsequent regression assertion fails.
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("mobile-tools.png"),
-      animations: "disabled",
-    })
+    // Retain this pre-assertion layout when review capture is requested.
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("mobile-tools.png"),
+        animations: "disabled",
+      })
+    }
     for (const width of [320, 380, 420]) {
       await page.setViewportSize({ width, height: 960 })
       await expectVerificationMobileHeaderAligned(workspace)
@@ -149,23 +153,27 @@ for (const source of ["profile", "account"] as const) {
         .locator("[data-verification-workspace-bar]")
         .boundingBox(),
     ).toEqual(toolbarBefore)
-    await page
-      .getByRole("dialog")
-      .filter({ has: workspace })
-      .screenshot({
-        path: test.info().outputPath("mobile-list-open.png"),
-        animations: "disabled",
-      })
+    if (captureReviewScreenshots) {
+      await page
+        .getByRole("dialog")
+        .filter({ has: workspace })
+        .screenshot({
+          path: test.info().outputPath("mobile-list-open.png"),
+          animations: "disabled",
+        })
+    }
     await switcher.click()
     await expect(testsSheet).toBeHidden()
     const rail = workspace.locator("[data-verification-list]").filter({
       has: page.locator("[data-verification-summary-collapsed]"),
     })
     await expect(rail).toBeVisible()
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("mobile-rail-ready.png"),
-      animations: "allow",
-    })
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("mobile-rail-ready.png"),
+        animations: "allow",
+      })
+    }
     const railMotion = await rail.evaluate((element) => {
       const animation = element.getAnimations()[0]
       if (!animation?.effect) return null
@@ -184,11 +192,13 @@ for (const source of ["profile", "account"] as const) {
     ).not.toBeNull()
     expect(railMotion!.opacity).toBeGreaterThan(0)
     expect(railMotion!.opacity).toBeLessThan(1)
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("mobile-rail-mid-transition.png"),
-      animations: "allow",
-    })
-    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("mobile-rail-mid-transition.png"),
+        animations: "allow",
+      })
+    }
+    if (captureReviewScreenshots) {
       for (let frame = 0; frame <= 6; frame++) {
         await rail.evaluate((element, fraction) => {
           const animation = element.getAnimations()[0]!
@@ -268,10 +278,12 @@ for (const source of ["profile", "account"] as const) {
     await composer.getByRole("textbox").blur()
     await page.mouse.move(0, 0)
     await expect(page.getByRole("tooltip")).toBeHidden()
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("mobile-composer.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("mobile-composer.png"),
+        animations: "disabled",
+      })
+    }
     const pane = (await detail.boundingBox())!
     const inputBounds = (await input.boundingBox())!
     expect(
@@ -804,24 +816,26 @@ for (const source of ["profile", "account"] as const) {
       const hintBounds = (await metricsHelp.boundingBox())!
       const left = Math.min(statisticsBounds.x, hintBounds.x)
       const top = Math.min(statisticsBounds.y, hintBounds.y)
-      await page.screenshot({
-        path: test.info().outputPath(`metrics-help-${source}.png`),
-        animations: "disabled",
-        clip: {
-          x: left,
-          y: top,
-          width:
-            Math.max(
-              statisticsBounds.x + statisticsBounds.width,
-              hintBounds.x + hintBounds.width,
-            ) - left,
-          height:
-            Math.max(
-              statisticsBounds.y + statisticsBounds.height,
-              hintBounds.y + hintBounds.height,
-            ) - top,
-        },
-      })
+      if (captureReviewScreenshots) {
+        await page.screenshot({
+          path: test.info().outputPath(`metrics-help-${source}.png`),
+          animations: "disabled",
+          clip: {
+            x: left,
+            y: top,
+            width:
+              Math.max(
+                statisticsBounds.x + statisticsBounds.width,
+                hintBounds.x + hintBounds.width,
+              ) - left,
+            height:
+              Math.max(
+                statisticsBounds.y + statisticsBounds.height,
+                hintBounds.y + hintBounds.height,
+              ) - top,
+          },
+        })
+      }
       await page.keyboard.press("Escape")
       await expect(metricsHelp).toBeHidden()
       await expect(statistics).toBeVisible()
@@ -933,10 +947,12 @@ for (const source of ["profile", "account"] as const) {
         exact: true,
       })
       await expect(questionInput).toBeVisible()
-      await page.locator('[data-slot="modal-panel"]').screenshot({
-        path: test.info().outputPath("qa-idle-composer-order.png"),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("qa-idle-composer-order.png"),
+          animations: "disabled",
+        })
+      }
       await expectVerificationComposerBelowIntroduction(
         panel,
         enVerification.verifyDialog.tools.questionAnswer.description,
@@ -974,10 +990,12 @@ for (const source of ["profile", "account"] as const) {
             exact: true,
           })
           .boundingBox()
-        await page.locator('[data-slot="modal-panel"]').screenshot({
-          path: test.info().outputPath("drawing-settings-reference.png"),
-          animations: "disabled",
-        })
+        if (captureReviewScreenshots) {
+          await page.locator('[data-slot="modal-panel"]').screenshot({
+            path: test.info().outputPath("drawing-settings-reference.png"),
+            animations: "disabled",
+          })
+        }
         await panel
           .getByRole("button", { name: "Q&A test", exact: true })
           .click()
@@ -1006,10 +1024,12 @@ for (const source of ["profile", "account"] as const) {
             2,
           ),
         )
-        await page.locator('[data-slot="modal-panel"]').screenshot({
-          path: test.info().outputPath("qa-profile-idle.png"),
-          animations: "disabled",
-        })
+        if (captureReviewScreenshots) {
+          await page.locator('[data-slot="modal-panel"]').screenshot({
+            path: test.info().outputPath("qa-profile-idle.png"),
+            animations: "disabled",
+          })
+        }
       }
       await expect(
         page.getByRole("textbox", { name: "Question", exact: true }),
@@ -1129,10 +1149,12 @@ for (const source of ["profile", "account"] as const) {
       await process
         .getByRole("button", { name: "Reasoning", exact: true })
         .click()
-      await page.locator('[data-slot="modal-panel"]').screenshot({
-        path: test.info().outputPath(`qa-${source}-streaming.png`),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath(`qa-${source}-streaming.png`),
+          animations: "disabled",
+        })
+      }
       await captureVisualViews({
         page,
         ready: process.getByRole("button", { name: "Reasoning", exact: true }),
@@ -1200,17 +1222,21 @@ for (const source of ["profile", "account"] as const) {
           .getByText("Not tested", { exact: true }),
       ).toHaveCount(0)
       if (source === "profile") {
-        await page.locator('[data-slot="modal-panel"]').screenshot({
-          path: test.info().outputPath("qa-profile-result.png"),
-          animations: "disabled",
-        })
+        if (captureReviewScreenshots) {
+          await page.locator('[data-slot="modal-panel"]').screenshot({
+            path: test.info().outputPath("qa-profile-result.png"),
+            animations: "disabled",
+          })
+        }
         await page.evaluate(() =>
           document.documentElement.classList.add("dark"),
         )
-        await page.locator('[data-slot="modal-panel"]').screenshot({
-          path: test.info().outputPath("qa-profile-dark.png"),
-          animations: "disabled",
-        })
+        if (captureReviewScreenshots) {
+          await page.locator('[data-slot="modal-panel"]').screenshot({
+            path: test.info().outputPath("qa-profile-dark.png"),
+            animations: "disabled",
+          })
+        }
         await page.evaluate(() =>
           document.documentElement.classList.remove("dark"),
         )
@@ -1222,10 +1248,12 @@ for (const source of ["profile", "account"] as const) {
             (element) => element.scrollWidth <= element.clientWidth,
           ),
         ).toBe(true)
-        await page.locator('[data-slot="modal-panel"]').screenshot({
-          path: test.info().outputPath("qa-profile-comparison-narrow.png"),
-          animations: "disabled",
-        })
+        if (captureReviewScreenshots) {
+          await page.locator('[data-slot="modal-panel"]').screenshot({
+            path: test.info().outputPath("qa-profile-comparison-narrow.png"),
+            animations: "disabled",
+          })
+        }
         await page.setViewportSize({ width: 1280, height: 960 })
         await showVerificationSettings(page)
         await page
@@ -1295,10 +1323,12 @@ for (const source of ["profile", "account"] as const) {
             (element) => element.scrollWidth <= element.clientWidth,
           ),
         ).toBe(true)
-        await page.locator('[data-slot="modal-panel"]').screenshot({
-          path: test.info().outputPath("qa-profile-narrow.png"),
-          animations: "disabled",
-        })
+        if (captureReviewScreenshots) {
+          await page.locator('[data-slot="modal-panel"]').screenshot({
+            path: test.info().outputPath("qa-profile-narrow.png"),
+            animations: "disabled",
+          })
+        }
         await showVerificationSettings(page)
         await expect(
           page
@@ -1417,10 +1447,12 @@ test("routine and needle parallelism persists, refills slots and cancels active 
     await expect(textProbe.getByText("Partial", { exact: false })).toBeVisible()
     await expect(runOptions).toHaveCount(0)
     await expect(concurrency).toHaveCount(0)
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("routine-parallel-streaming.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("routine-parallel-streaming.png"),
+        animations: "disabled",
+      })
+    }
     release[0]!()
     await expect.poll(() => release.length).toBe(3)
     await page.getByRole("button", { name: "Stop", exact: true }).click()
@@ -1462,10 +1494,12 @@ test("routine and needle parallelism persists, refills slots and cancels active 
         .getByTestId("verification-generation-output")
         .getByText("Partial", { exact: false }),
     ).toBeVisible()
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("needle-parallel-streaming.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("needle-parallel-streaming.png"),
+        animations: "disabled",
+      })
+    }
     await page
       .locator("[data-verification-active-test]")
       .getByRole("button", { name: "Stop", exact: true })
@@ -1577,16 +1611,20 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
     ).toBeVisible()
     await expect(panel.getByRole("list", { name: "测试步骤" })).toHaveCount(0)
     await expect(panel.getByRole("combobox")).toHaveCount(0)
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("qa-zh-idle.png"),
-      animations: "disabled",
-    })
-    await page
-      .getByRole("group", { name: "当前测试 · 问答测试", exact: true })
-      .screenshot({
-        path: test.info().outputPath("qa-zh-settings.png"),
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("qa-zh-idle.png"),
         animations: "disabled",
       })
+    }
+    if (captureReviewScreenshots) {
+      await page
+        .getByRole("group", { name: "当前测试 · 问答测试", exact: true })
+        .screenshot({
+          path: test.info().outputPath("qa-zh-settings.png"),
+          animations: "disabled",
+        })
+    }
     for (const width of [1280, 420]) {
       await page.setViewportSize({ width, height: 1000 })
       await showVerificationSettings(page)
@@ -1614,10 +1652,12 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
         }),
       ).toBeVisible()
       await settings.scrollIntoViewIfNeeded()
-      await settings.screenshot({
-        path: test.info().outputPath(`qa-zh-rules-${width}.png`),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await settings.screenshot({
+          path: test.info().outputPath(`qa-zh-rules-${width}.png`),
+          animations: "disabled",
+        })
+      }
       expect(
         await settings.evaluate(
           (element) => element.scrollWidth <= element.clientWidth,
@@ -1626,10 +1666,12 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
       await rules.click()
       if (width === 420) {
         await settings.scrollIntoViewIfNeeded()
-        await settings.screenshot({
-          path: test.info().outputPath("qa-zh-settings-narrow.png"),
-          animations: "disabled",
-        })
+        if (captureReviewScreenshots) {
+          await settings.screenshot({
+            path: test.info().outputPath("qa-zh-settings-narrow.png"),
+            animations: "disabled",
+          })
+        }
       }
     }
     await page.setViewportSize({ width: 1280, height: 1000 })
@@ -1642,10 +1684,12 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
     await expect(
       page.getByRole("button", { name: "重置题目与参考答案", exact: true }),
     ).toBeVisible()
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("qa-zh-edit.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("qa-zh-edit.png"),
+        animations: "disabled",
+      })
+    }
     await page
       .getByRole("button", { name: "运行问答测试", exact: true })
       .first()
@@ -1656,10 +1700,12 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
         .getByText("与参考答案一致", { exact: true }),
     ).toBeVisible()
     expect(fixture.requests).toHaveLength(1)
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("qa-zh-result.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("qa-zh-result.png"),
+        animations: "disabled",
+      })
+    }
     const result = panel.getByRole("region", { name: "执行结果", exact: true })
     const response = result
       .getByRole("region", { name: "模型回答", exact: true })
@@ -1708,10 +1754,12 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
         )
       }
       typography.push({ font, response: styles[0], question: styles[1] })
-      await result.screenshot({
-        path: test.info().outputPath(`qa-zh-typography-${font}.png`),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await result.screenshot({
+          path: test.info().outputPath(`qa-zh-typography-${font}.png`),
+          animations: "disabled",
+        })
+      }
     }
     await writeFile(
       test.info().outputPath("qa-typography.json"),
@@ -1748,10 +1796,12 @@ test("Q&A edits and hints follow the shared prompt flow in Chinese", async ({
     await expect(
       page.getByRole("group", { name: "答案对照" }).getByRole("definition"),
     ).toHaveText(["81", "81"])
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("qa-zh-stale-and-empty.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("qa-zh-stale-and-empty.png"),
+        animations: "disabled",
+      })
+    }
   } finally {
     fixture.server.closeAllConnections()
     await new Promise<void>((resolve) => fixture.server.close(() => resolve()))
@@ -2027,10 +2077,12 @@ test("verification tests run concurrently and cancel independently", async ({
       drawing.getByRole("button", { name: "Stop", exact: true }),
     ).toBeEnabled()
     await drawing.scrollIntoViewIfNeeded()
-    await page.locator('[data-slot="modal-panel"]').screenshot({
-      path: test.info().outputPath("concurrent-verification.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await page.locator('[data-slot="modal-panel"]').screenshot({
+        path: test.info().outputPath("concurrent-verification.png"),
+        animations: "disabled",
+      })
+    }
     releaseDrawing()
     await expect(page.getByTestId("pelican-svg-preview")).toBeHidden()
     await expect(
@@ -2225,15 +2277,19 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
           .getByRole("button", { name: "Settings", exact: true }),
       ).toHaveAttribute("aria-expanded", "true")
       await agentSwitch.scrollIntoViewIfNeeded()
-      await page.locator('[data-slot="modal-panel"]').screenshot({
-        path: test.info().outputPath("agent-summary.png"),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("agent-summary.png"),
+          animations: "disabled",
+        })
+      }
       await preview.scrollIntoViewIfNeeded()
-      await page.locator('[data-slot="modal-panel"]').screenshot({
-        path: test.info().outputPath("drawing-result.png"),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("drawing-result.png"),
+          animations: "disabled",
+        })
+      }
       expect(fixture.requests).toHaveLength(2)
       expect(
         fixture.requests.every(
@@ -2282,10 +2338,12 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         page.getByRole("button", { name: "pelican.svg", exact: true }),
       ).toBeVisible()
       await result.scrollIntoViewIfNeeded()
-      await page.locator('[data-slot="modal-panel"]').screenshot({
-        path: test.info().outputPath("agent-tools.png"),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("agent-tools.png"),
+          animations: "disabled",
+        })
+      }
       await page.reload()
       await waitForExtensionRoot(page)
       await page.getByTestId(IDS.verifyButton).click()
@@ -2305,10 +2363,12 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         .getByRole("button", { name: "Drawing test", exact: true })
         .click()
       await drawingHistory.scrollIntoViewIfNeeded()
-      await page.locator('[data-slot="modal-panel"]').screenshot({
-        path: test.info().outputPath("drawing-history-restored.png"),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("drawing-history-restored.png"),
+          animations: "disabled",
+        })
+      }
       await captureVisualViews({
         page,
         ready: drawingHistory,
@@ -2331,10 +2391,12 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
         .filter({ hasText: "History does not retain the drawing" })
       await expect(historyHint).toBeVisible()
       await expect(historyHint).toHaveCSS("opacity", "0.9")
-      await page.locator('[data-slot="modal-panel"]').screenshot({
-        path: test.info().outputPath("drawing-history-tooltip.png"),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await page.locator('[data-slot="modal-panel"]').screenshot({
+          path: test.info().outputPath("drawing-history-tooltip.png"),
+          animations: "disabled",
+        })
+      }
       await page.keyboard.press("Escape")
       await expect(historyHint).toBeHidden()
       await historyBadge.focus()
@@ -2366,10 +2428,12 @@ for (const mode of ["Streaming", "Non-streaming"] as const) {
           "aria-label",
           "Drawing test",
         )
-        await page.locator('[data-slot="modal-panel"]').screenshot({
-          path: test.info().outputPath("drawing-history-tooltip-narrow.png"),
-          animations: "disabled",
-        })
+        if (captureReviewScreenshots) {
+          await page.locator('[data-slot="modal-panel"]').screenshot({
+            path: test.info().outputPath("drawing-history-tooltip-narrow.png"),
+            animations: "disabled",
+          })
+        }
         await page.keyboard.press("Escape")
         await expect(historyHint).toBeHidden()
       } finally {
@@ -2487,10 +2551,12 @@ test("the shared verification tools run an on-demand drawing test", async ({
       id: "drawing-settings-collapsed",
       extensionDir,
     })
-    await drawingPanel.screenshot({
-      path: test.info().outputPath("drawing-settings-collapsed-panel.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await drawingPanel.screenshot({
+        path: test.info().outputPath("drawing-settings-collapsed-panel.png"),
+        animations: "disabled",
+      })
+    }
     await expect(drawingPrompt).toBeVisible()
     await captureVisualViews({
       page,
@@ -2498,10 +2564,12 @@ test("the shared verification tools run an on-demand drawing test", async ({
       id: "drawing-settings-expanded",
       extensionDir,
     })
-    await drawingPanel.screenshot({
-      path: test.info().outputPath("drawing-settings-expanded-panel.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await drawingPanel.screenshot({
+        path: test.info().outputPath("drawing-settings-expanded-panel.png"),
+        animations: "disabled",
+      })
+    }
     await page
       .getByRole("button", { name: "Run drawing test", exact: true })
       .click()
@@ -2559,21 +2627,25 @@ test("the shared verification tools run an on-demand drawing test", async ({
     // when the panel itself is clipped by the dialog viewport.
     const panel = page.getByTestId("verification-tools")
     await panel.scrollIntoViewIfNeeded()
-    await panel.screenshot({
-      path: test.info().outputPath("verification-tools-full.png"),
-    })
-    await test.info().attach("verification-tools-full", {
-      path: test.info().outputPath("verification-tools-full.png"),
-      contentType: "image/png",
-    })
+    if (captureReviewScreenshots) {
+      await panel.screenshot({
+        path: test.info().outputPath("verification-tools-full.png"),
+      })
+      await test.info().attach("verification-tools-full", {
+        path: test.info().outputPath("verification-tools-full.png"),
+        contentType: "image/png",
+      })
+    }
 
-    await page.getByTestId("verification-tools-panel").screenshot({
-      path: test.info().outputPath("verification-tools.png"),
-    })
-    await test.info().attach("verification-tools", {
-      path: test.info().outputPath("verification-tools.png"),
-      contentType: "image/png",
-    })
+    if (captureReviewScreenshots) {
+      await page.getByTestId("verification-tools-panel").screenshot({
+        path: test.info().outputPath("verification-tools.png"),
+      })
+      await test.info().attach("verification-tools", {
+        path: test.info().outputPath("verification-tools.png"),
+        contentType: "image/png",
+      })
+    }
 
     const chinesePage = await context.newPage()
     await forceExtensionLanguage(chinesePage, "zh-CN")
@@ -2588,10 +2660,12 @@ test("the shared verification tools run an on-demand drawing test", async ({
     await expect(chinesePage.getByTestId(IDS.verifyModelId)).toContainText(
       "gpt-quality",
     )
-    await chinesePage.getByRole("dialog").screenshot({
-      path: test.info().outputPath("verification-config-boundary-zh-CN.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await chinesePage.getByRole("dialog").screenshot({
+        path: test.info().outputPath("verification-config-boundary-zh-CN.png"),
+        animations: "disabled",
+      })
+    }
     const chineseDrawing = chinesePage.getByTestId("verification-tools")
     await chineseDrawing
       .getByRole("button", { name: "绘图测试", exact: true })
@@ -2602,14 +2676,18 @@ test("the shared verification tools run an on-demand drawing test", async ({
         exact: true,
       }),
     ).toBeVisible()
-    await chineseDrawing.screenshot({
-      path: test.info().outputPath("drawing-settings-expanded-zh-CN.png"),
-      animations: "disabled",
-    })
-    await chinesePage.getByRole("dialog").screenshot({
-      path: test.info().outputPath("verification-dialog-zh-CN.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await chineseDrawing.screenshot({
+        path: test.info().outputPath("drawing-settings-expanded-zh-CN.png"),
+        animations: "disabled",
+      })
+    }
+    if (captureReviewScreenshots) {
+      await chinesePage.getByRole("dialog").screenshot({
+        path: test.info().outputPath("verification-dialog-zh-CN.png"),
+        animations: "disabled",
+      })
+    }
     await chinesePage.setViewportSize({ width: 480, height: 1140 })
     const chineseSettingsToggle = chinesePage
       .getByTestId("verification-workspace")
@@ -2818,14 +2896,18 @@ test("an edited probe prompt persists and is used by the next run", async ({
     await settings.evaluate((element) => {
       element.scrollTop = 0
     })
-    await textProbe.locator("[data-verification-detail]").screenshot({
-      path: test.info().outputPath("conversation-detail.png"),
-      animations: "disabled",
-    })
-    await dialog.screenshot({
-      path: test.info().outputPath("three-column-profile-result.png"),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await textProbe.locator("[data-verification-detail]").screenshot({
+        path: test.info().outputPath("conversation-detail.png"),
+        animations: "disabled",
+      })
+    }
+    if (captureReviewScreenshots) {
+      await dialog.screenshot({
+        path: test.info().outputPath("three-column-profile-result.png"),
+        animations: "disabled",
+      })
+    }
     await captureVisualViews({
       page,
       ready: result,
@@ -2949,10 +3031,12 @@ test("account verification configuration aligns fields without empty grid cells"
   await expect(page.getByText("正在加载密钥...", { exact: true })).toHaveCount(
     1,
   )
-  await page.locator('[data-slot="modal-panel"]').screenshot({
-    path: test.info().outputPath("account-key-loading.png"),
-    animations: "disabled",
-  })
+  if (captureReviewScreenshots) {
+    await page.locator('[data-slot="modal-panel"]').screenshot({
+      path: test.info().outputPath("account-key-loading.png"),
+      animations: "disabled",
+    })
+  }
   await captureVisualViews({
     page,
     ready: config,
@@ -3008,14 +3092,18 @@ test("account verification configuration aligns fields without empty grid cells"
         (runBounds!.y + runBounds!.height / 2),
     ),
   ).toBeLessThanOrEqual(2)
-  await config.screenshot({
-    path: test.info().outputPath("account-config-desktop.png"),
-    animations: "disabled",
-  })
-  await page.locator('[data-slot="modal-panel"]').screenshot({
-    path: test.info().outputPath("account-dialog-desktop.png"),
-    animations: "disabled",
-  })
+  if (captureReviewScreenshots) {
+    await config.screenshot({
+      path: test.info().outputPath("account-config-desktop.png"),
+      animations: "disabled",
+    })
+  }
+  if (captureReviewScreenshots) {
+    await page.locator('[data-slot="modal-panel"]').screenshot({
+      path: test.info().outputPath("account-dialog-desktop.png"),
+      animations: "disabled",
+    })
+  }
   await page.setViewportSize({ width: 1280, height: 1280 })
   await page.getByRole("button", { name: "文本生成", exact: true }).click()
   const inlineRun = page
@@ -3192,10 +3280,12 @@ test("account verification configuration aligns fields without empty grid cells"
   const helpBounds = (await helpPanel.boundingBox())!
   expect(helpBounds.x).toBeGreaterThanOrEqual(0)
   expect(helpBounds.x + helpBounds.width).toBeLessThanOrEqual(420)
-  await page.screenshot({
-    path: test.info().outputPath("test-help-narrow.png"),
-    animations: "disabled",
-  })
+  if (captureReviewScreenshots) {
+    await page.screenshot({
+      path: test.info().outputPath("test-help-narrow.png"),
+      animations: "disabled",
+    })
+  }
   await captureVisualViews({
     page,
     ready: helpPanel,
@@ -3222,10 +3312,12 @@ test("account verification configuration aligns fields without empty grid cells"
   expect(await config.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
     true,
   )
-  await config.screenshot({
-    path: test.info().outputPath("account-config-mobile.png"),
-    animations: "disabled",
-  })
+  if (captureReviewScreenshots) {
+    await config.screenshot({
+      path: test.info().outputPath("account-config-mobile.png"),
+      animations: "disabled",
+    })
+  }
   const shortcutHint = page.getByText(
     "已选择 Claude Code，你可以直接运行测试，或切换其他客户端。",
     { exact: true },
@@ -3328,10 +3420,12 @@ for (const outcome of ["timeout", "empty"] as const) {
           .locator('[data-verification-summary] [data-slot="badge"]')
           .filter({ hasText: "通过" }),
       ).toBeVisible()
-      await textProbe.screenshot({
-        path: test.info().outputPath("passed-badge.png"),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await textProbe.screenshot({
+          path: test.info().outputPath("passed-badge.png"),
+          animations: "disabled",
+        })
+      }
       const panel = page.getByRole("region", {
         name: "上下文容量测试",
         exact: true,
@@ -3364,10 +3458,12 @@ for (const outcome of ["timeout", "empty"] as const) {
       await expect(panel.getByRole("region", { name: "测试详情" })).toHaveCount(
         0,
       )
-      await panel.screenshot({
-        path: test.info().outputPath(`context-${outcome}.png`),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await panel.screenshot({
+          path: test.info().outputPath(`context-${outcome}.png`),
+          animations: "disabled",
+        })
+      }
       await captureVisualViews({
         page,
         ready: contextResult,
@@ -3385,10 +3481,12 @@ for (const outcome of ["timeout", "empty"] as const) {
       ).toContainText("已发送 1 次请求")
       expect(fixture.requests).toHaveLength(2)
       await page.setViewportSize({ width: 420, height: 840 })
-      await panel.screenshot({
-        path: test.info().outputPath(`context-${outcome}-narrow.png`),
-        animations: "disabled",
-      })
+      if (captureReviewScreenshots) {
+        await panel.screenshot({
+          path: test.info().outputPath(`context-${outcome}-narrow.png`),
+          animations: "disabled",
+        })
+      }
     } finally {
       fixture.server.closeAllConnections()
       await new Promise<void>((resolve) =>
@@ -3519,11 +3617,13 @@ test("restores masked account context history without another key reveal", async
         (element) => element.scrollWidth <= element.clientWidth,
       ),
     ).toBe(true)
-    await panel.screenshot({
-      path: test
-        .info()
-        .outputPath(`masked-account-context-history-${width}.png`),
-      animations: "disabled",
-    })
+    if (captureReviewScreenshots) {
+      await panel.screenshot({
+        path: test
+          .info()
+          .outputPath(`masked-account-context-history-${width}.png`),
+        animations: "disabled",
+      })
+    }
   }
 })

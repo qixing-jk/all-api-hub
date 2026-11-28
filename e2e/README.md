@@ -28,6 +28,22 @@ pnpm visual:capture --spec e2e/densityCoverage.spec.ts --grep "secondary surface
 
 See [local screenshot comparison](../docs/development/visual-evidence.md#local-screenshot-comparison) for filtering, metadata and baseline comparison.
 
+Use `captureVisualViews` for new review-only screenshots and keep behavior and
+geometry assertions active in ordinary runs. The text-size suites also expose
+opt-in checkpoints, with viewport and host-root size in their IDs:
+
+```bash
+pnpm visual:capture --spec e2e/textSizeSettings.spec.ts --grep "independent text sizes fit compact layouts and sync across 320px views$" --fixture text-size-settings-v1 --expect-checkpoint compact-extra-large-options-320 --expect-checkpoint compact-extra-large-popup-320 --expect-checkpoint compact-extra-large-sidepanel-320
+```
+
+`contentWebAiApiCheck.spec.ts` and `verificationTools.spec.ts` retain additional
+review screenshots at their original Playwright output paths when
+`AAH_VISUAL_CAPTURE_DIR` is set. `visual:capture` sets that flag and retains these
+images in its `playwright/` directory alongside registered checkpoints. Use a
+narrow test title with registered checkpoints for that command; for another case,
+set the flag when running the ordinary Playwright CLI. Automatic failure
+screenshots and screenshot comparison assertions keep their normal behavior.
+
 ## Firefox extension smoke tests
 
 Run `pnpm e2e:firefox` for desktop Firefox extension UI and browser API checks. The Playwright suite builds `.output/firefox-mv2-test` and installs it in a temporary Firefox profile. Selenium and geckodriver control native browser UI, and the shared Firefox RDP adapter inspects extension documents. Pass a spec path or `--grep` to focus on one workflow.

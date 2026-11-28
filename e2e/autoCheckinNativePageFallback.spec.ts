@@ -41,6 +41,12 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { sendTypedRuntimeMessageFromPage } from "~~/e2e/utils/runtimeMessaging"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
+// Every case owns its browser, scheduler state and ephemeral-port HTTP fixture.
+// A reused browser profile must still have a single owner.
+test.describe.configure({
+  mode: process.env.AAH_E2E_USER_DATA_DIR ? "default" : "parallel",
+})
+
 const AUTO_CHECKIN_STATUS_STORAGE_KEY = "autoCheckin_status"
 const AUTO_CHECKIN_DAILY_ALARM_NAME = "autoCheckinDaily"
 const NATIVE_ACCOUNT_ID = "native-page-fallback-account"

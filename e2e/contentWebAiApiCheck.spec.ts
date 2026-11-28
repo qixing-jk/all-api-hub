@@ -115,12 +115,14 @@ test("web context test keeps Stop accessible with the mobile list collapsed", as
     .getByTestId("verification-active-test")
     .getByRole("button", { name: "Stop", exact: true })
   await expect(stop).toBeInViewport()
-  await modal
-    .getByRole("dialog", { name: "API Testing", exact: true })
-    .screenshot({
-      path: test.info().outputPath("web-mobile-context-stop.png"),
-      animations: "disabled",
-    })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test.info().outputPath("web-mobile-context-stop.png"),
+        animations: "disabled",
+      })
+  }
   await stop.click()
   await expect(workspace.getByTestId("verification-active-test")).toContainText(
     "Stopped",
@@ -484,10 +486,12 @@ test("webpage Q&A runs in background and can be stopped independently", async ({
     await expect(
       panel.getByRole("region", { name: "Question used for this run" }),
     ).toHaveText("Compute 7 × 3.")
-    await modal.screenshot({
-      path: test.info().outputPath("qa-web-result.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal.screenshot({
+        path: test.info().outputPath("qa-web-result.png"),
+        animations: "disabled",
+      })
+    }
     hold = true
     await panel
       .getByRole("button", { name: "Run Q&A test", exact: true })
@@ -499,10 +503,12 @@ test("webpage Q&A runs in background and can be stopped independently", async ({
     await expect(
       panel.getByText("Matches reference", { exact: true }),
     ).toHaveCount(0)
-    await modal.screenshot({
-      path: test.info().outputPath("qa-web-streaming.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal.screenshot({
+        path: test.info().outputPath("qa-web-streaming.png"),
+        animations: "disabled",
+      })
+    }
     await modal
       .getByRole("button", { name: "Stop", exact: true })
       .first()
@@ -517,10 +523,12 @@ test("webpage Q&A runs in background and can be stopped independently", async ({
       panel.getByRole("button", { name: "Run Q&A test", exact: true }),
     ).toBeEnabled()
     release()
-    await modal.screenshot({
-      path: test.info().outputPath("qa-web-stopped.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal.screenshot({
+        path: test.info().outputPath("qa-web-stopped.png"),
+        animations: "disabled",
+      })
+    }
     gate = new Promise<void>((resolve) => {
       release = resolve
     })
@@ -555,10 +563,12 @@ test("webpage Q&A runs in background and can be stopped independently", async ({
     await expect(
       textProbe.getByTestId("verification-generation-output"),
     ).toContainText("FINAL_ANSWER: 21")
-    await modal.screenshot({
-      path: test.info().outputPath("web-routine-parallel.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal.screenshot({
+        path: test.info().outputPath("web-routine-parallel.png"),
+        animations: "disabled",
+      })
+    }
     await modal.getByRole("button", { name: "Stop test", exact: true }).click()
     await runPreferences.click()
     await expect(concurrency).toBeEnabled()
@@ -686,10 +696,12 @@ test("web context probe shows progress, measured bounds and cancellation", async
           (element) => element.scrollWidth <= element.clientWidth,
         ),
       ).toBe(true)
-      await modal.screenshot({
-        path: test.info().outputPath(`web-context-idle-${width}.png`),
-        animations: "disabled",
-      })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        await modal.screenshot({
+          path: test.info().outputPath(`web-context-idle-${width}.png`),
+          animations: "disabled",
+        })
+      }
     }
     await page.setViewportSize({ width: 1280, height: 720 })
     await panel
@@ -714,10 +726,12 @@ test("web context probe shows progress, measured bounds and cancellation", async
     ).toContainText("Context capacity:", { timeout: 30000 })
     await expect(panel).not.toContainText("Result saved")
     await expect(panel).not.toContainText("Tokenizer:")
-    await panel.screenshot({
-      path: test.info().outputPath("web-context-summary.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await panel.screenshot({
+        path: test.info().outputPath("web-context-summary.png"),
+        animations: "disabled",
+      })
+    }
     const compactContextWidth = (await panel.boundingBox())!.width
     await panel
       .getByRole("button", { name: "Test details", exact: true })
@@ -755,10 +769,12 @@ test("web context probe shows progress, measured bounds and cancellation", async
       ),
     ).toBe(true)
     await panel.scrollIntoViewIfNeeded()
-    await panel.screenshot({
-      path: test.info().outputPath("web-context-capacity.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await panel.screenshot({
+        path: test.info().outputPath("web-context-capacity.png"),
+        animations: "disabled",
+      })
+    }
     hold = true
     held = new Promise<void>((resolve) => {
       release = resolve
@@ -799,10 +815,12 @@ test("web context probe shows progress, measured bounds and cancellation", async
       name: "Context capacity test",
     })
     await restoredPanel.scrollIntoViewIfNeeded()
-    await restoredPanel.screenshot({
-      path: test.info().outputPath("web-context-history-row.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await restoredPanel.screenshot({
+        path: test.info().outputPath("web-context-history-row.png"),
+        animations: "disabled",
+      })
+    }
     // Restored status badges must leave the title visible and clickable.
     expect(
       (await restoredPanel
@@ -819,10 +837,12 @@ test("web context probe shows progress, measured bounds and cancellation", async
         .getByRole("status", { name: "Context capacity result" }),
     ).toContainText("Context capacity:")
     expect(requests.length).toBe(sentBeforeReopen)
-    await restoredPanel.screenshot({
-      path: test.info().outputPath("web-context-history.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await restoredPanel.screenshot({
+        path: test.info().outputPath("web-context-history.png"),
+        animations: "disabled",
+      })
+    }
   } finally {
     release()
     server.closeAllConnections()
@@ -952,10 +972,12 @@ test("web needle test plans automatically, follows a context probe and restores 
       .getByRole("tooltip")
       .filter({ hasText: "How are lengths chosen?" })
     await expect(lengthHelp).toContainText("No usable model limits")
-    await page.screenshot({
-      path: test.info().outputPath("length-help.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await page.screenshot({
+        path: test.info().outputPath("length-help.png"),
+        animations: "disabled",
+      })
+    }
     await page.keyboard.press("Escape")
     await expect(lengthHelp).toBeHidden()
     for (const [width, height] of [
@@ -995,10 +1017,12 @@ test("web needle test plans automatically, follows a context probe and restores 
           exact: true,
         })
         .scrollIntoViewIfNeeded()
-      await page.screenshot({
-        path: test.info().outputPath(`length-help-${width}-${height}.png`),
-        animations: "disabled",
-      })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        await page.screenshot({
+          path: test.info().outputPath(`length-help-${width}-${height}.png`),
+          animations: "disabled",
+        })
+      }
       await page.keyboard.press("Escape")
       await expect(lengthHelp).toBeHidden()
     }
@@ -1118,10 +1142,12 @@ test("web needle test plans automatically, follows a context probe and restores 
         name: /^Previously:/,
       })
     await historyBadge.scrollIntoViewIfNeeded()
-    await reopened.panel.screenshot({
-      path: test.info().outputPath("web-history-before-hover.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await reopened.panel.screenshot({
+        path: test.info().outputPath("web-history-before-hover.png"),
+        animations: "disabled",
+      })
+    }
     const historyHint = page
       .getByRole("tooltip")
       .filter({ hasText: "History keeps measurements" })
@@ -1134,10 +1160,12 @@ test("web needle test plans automatically, follows a context probe and restores 
         (element) => element.getRootNode() instanceof ShadowRoot,
       ),
     ).toBe(true)
-    await page.screenshot({
-      path: test.info().outputPath("web-history-tooltip.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await page.screenshot({
+        path: test.info().outputPath("web-history-tooltip.png"),
+        animations: "disabled",
+      })
+    }
     await page.keyboard.press("Escape")
     await expect(historyHint).toBeHidden()
     await page.mouse.move(0, 0)
@@ -1185,10 +1213,12 @@ test("web needle test plans automatically, follows a context probe and restores 
       const hintBounds = (await historyHint.boundingBox())!
       expect(hintBounds.x).toBeGreaterThanOrEqual(0)
       expect(hintBounds.x + hintBounds.width).toBeLessThanOrEqual(380)
-      await page.screenshot({
-        path: test.info().outputPath("web-history-touch.png"),
-        animations: "disabled",
-      })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        await page.screenshot({
+          path: test.info().outputPath("web-history-touch.png"),
+          animations: "disabled",
+        })
+      }
       await page.keyboard.press("Escape")
       await expect(historyHint).toBeHidden()
     } finally {
@@ -1696,12 +1726,14 @@ test("keeps settings beside the conversation and preserves drafts when the respo
   expect((await workspaceBar.boundingBox())!.y).toBeGreaterThan(barBefore.y)
   const rightAfter = (await settings.boundingBox())!
   expect(rightAfter.y + rightAfter.height).toBeCloseTo(rightBottomBefore, 0)
-  await modal
-    .getByRole("dialog", { name: "API Testing", exact: true })
-    .screenshot({
-      path: test.info().outputPath("three-column-wide.png"),
-      animations: "disabled",
-    })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test.info().outputPath("three-column-wide.png"),
+        animations: "disabled",
+      })
+  }
   await page.setViewportSize({ width: 1000, height: 800 })
   await expect(settings).toBeHidden()
   const toggle = modal
@@ -1741,12 +1773,14 @@ test("keeps settings beside the conversation and preserves drafts when the respo
       (element) => element.scrollWidth <= element.clientWidth,
     ),
   ).toBe(true)
-  await modal
-    .getByRole("dialog", { name: "API Testing", exact: true })
-    .screenshot({
-      path: test.info().outputPath("three-column-narrow-settings.png"),
-      animations: "disabled",
-    })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test.info().outputPath("three-column-narrow-settings.png"),
+        animations: "disabled",
+      })
+  }
   await settings
     .getByRole("button", { name: "Save options (optional)", exact: true })
     .click()
@@ -1771,10 +1805,12 @@ test("keeps settings beside the conversation and preserves drafts when the respo
   expect(calendarBounds.x + calendarBounds.width).toBeLessThanOrEqual(380)
   expect(calendarBounds.y).toBeGreaterThanOrEqual(0)
   expect(calendarBounds.y + calendarBounds.height).toBeLessThanOrEqual(800)
-  await modal.screenshot({
-    path: test.info().outputPath("web-save-options-calendar-narrow.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal.screenshot({
+      path: test.info().outputPath("web-save-options-calendar-narrow.png"),
+      animations: "disabled",
+    })
+  }
   await calendar.getByRole("grid").press("Escape")
   await expect(calendar).toBeHidden()
   await expect(settings).toBeVisible()
@@ -1902,12 +1938,14 @@ test("keeps page verification actions visible while scrolling at desktop and nar
   await expect(profileHint).toBeVisible()
   await expect(profileHint).toContainText("Selecting a client")
   await expectTooltipUnobstructed(profileHint)
-  await modal
-    .getByRole("dialog", { name: "API Testing", exact: true })
-    .screenshot({
-      path: test.info().outputPath("profile-help-open.png"),
-      animations: "disabled",
-    })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test.info().outputPath("profile-help-open.png"),
+        animations: "disabled",
+      })
+  }
   await expectVerificationWorkspaceFlush(
     modal.getByTestId("verification-workspace"),
   )
@@ -1939,12 +1977,14 @@ test("keeps page verification actions visible while scrolling at desktop and nar
   await sourceEditor.fill(
     Array.from({ length: 6 }, (_, i) => `Source note ${i}`).join("\n"),
   )
-  await modal
-    .getByRole("dialog", { name: "API Testing", exact: true })
-    .screenshot({
-      path: test.info().outputPath("source-text-six-lines.png"),
-      animations: "disabled",
-    })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test.info().outputPath("source-text-six-lines.png"),
+        animations: "disabled",
+      })
+  }
   expect((await sourceEditor.boundingBox())!.height).toBeGreaterThan(
     initialHeight,
   )
@@ -1967,12 +2007,14 @@ test("keeps page verification actions visible while scrolling at desktop and nar
         if (child.scrollTop) child.scrollTop = 0
       }
     })
-    await modal
-      .getByRole("dialog", { name: "API Testing", exact: true })
-      .screenshot({
-        path: test.info().outputPath(`layout-${width}.png`),
-        animations: "disabled",
-      })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal
+        .getByRole("dialog", { name: "API Testing", exact: true })
+        .screenshot({
+          path: test.info().outputPath(`layout-${width}.png`),
+          animations: "disabled",
+        })
+    }
     const config = await modal.getByTestId("verification-config").boundingBox()
     if (width < 1280)
       await modal
@@ -2071,12 +2113,14 @@ test("keeps page verification actions visible while scrolling at desktop and nar
         ),
       ).toBeLessThanOrEqual(1)
     }
-    await modal
-      .getByRole("dialog", { name: "API Testing", exact: true })
-      .screenshot({
-        path: test.info().outputPath(`layout-${width}-drawing.png`),
-        animations: "disabled",
-      })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal
+        .getByRole("dialog", { name: "API Testing", exact: true })
+        .screenshot({
+          path: test.info().outputPath(`layout-${width}-drawing.png`),
+          animations: "disabled",
+        })
+    }
     const save = modal.getByTestId(
       WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton,
     )
@@ -2106,10 +2150,12 @@ test("keeps page verification actions visible while scrolling at desktop and nar
       const hintBounds = (await profileHint.boundingBox())!
       expect(hintBounds.x).toBeGreaterThanOrEqual(0)
       expect(hintBounds.x + hintBounds.width).toBeLessThanOrEqual(width)
-      await page.screenshot({
-        path: test.info().outputPath("profile-help-narrow.png"),
-        animations: "disabled",
-      })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        await page.screenshot({
+          path: test.info().outputPath("profile-help-narrow.png"),
+          animations: "disabled",
+        })
+      }
       const withHelp = (await profileSelector.boundingBox())!
       expect(Math.abs(withHelp.y - beforeHelp.y)).toBeLessThanOrEqual(2)
       await profileSelector.click({ trial: true })
@@ -2158,10 +2204,12 @@ test.describe("verification help on touch screens", () => {
       .getByRole("tooltip")
       .filter({ hasText: "Selecting a client" })
     await expect(tooltip).toBeVisible()
-    await page.screenshot({
-      path: test.info().outputPath("client-help-touch.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await page.screenshot({
+        path: test.info().outputPath("client-help-touch.png"),
+        animations: "disabled",
+      })
+    }
     await page.keyboard.press("Escape")
     await expect(tooltip).toBeHidden()
     await expect(modal).toBeVisible()
@@ -2178,10 +2226,12 @@ test.describe("verification help on touch screens", () => {
     await expect(modal.getByRole("tooltip")).toContainText(
       enVerification.verifyDialog.warning,
     )
-    await page.screenshot({
-      path: test.info().outputPath("test-help-touch.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await page.screenshot({
+        path: test.info().outputPath("test-help-touch.png"),
+        animations: "disabled",
+      })
+    }
     await page.keyboard.press("Escape")
     await expect(modal.getByRole("tooltip")).toBeHidden()
     await expect(modal).toBeVisible()
@@ -2203,10 +2253,12 @@ test.describe("verification help on touch screens", () => {
       .filter({ hasText: "How are lengths chosen?" })
     await expectTooltipUnobstructed(planTooltip)
     await expect(planTooltip).toContainText("Exact lengths:")
-    await page.screenshot({
-      path: test.info().outputPath("length-help-touch.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await page.screenshot({
+        path: test.info().outputPath("length-help-touch.png"),
+        animations: "disabled",
+      })
+    }
     await page.keyboard.press("Escape")
     await expect(planTooltip).toBeHidden()
     await expect(planHelp).toBeFocused()
@@ -2271,10 +2323,12 @@ test("keeps empty model recovery compact and allows a manual model", async ({
       searchBounds!.x + searchBounds!.width,
     )
   }).toPass({ timeout: 10_000 })
-  await dropdown.screenshot({
-    path: test.info().outputPath("empty-model-picker.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await dropdown.screenshot({
+      path: test.info().outputPath("empty-model-picker.png"),
+      animations: "disabled",
+    })
+  }
   expect((await dropdown.boundingBox())!.height).toBeLessThanOrEqual(120)
   await expect(dropdown).not.toContainText("Type to create one")
   const search = dropdown.getByPlaceholder("Search...")
@@ -2287,10 +2341,12 @@ test("keeps empty model recovery compact and allows a manual model", async ({
   await refresh.click()
   await expect(dropdown.getByRole("alert")).toContainText("Access denied")
   await expect(selector.getByLabel("Failed to fetch the list.")).toBeVisible()
-  await dropdown.screenshot({
-    path: test.info().outputPath("failed-model-picker.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await dropdown.screenshot({
+      path: test.info().outputPath("failed-model-picker.png"),
+      animations: "disabled",
+    })
+  }
   await search.fill("custom-empty-model")
   await dropdown
     .getByRole("option", { name: 'Use "custom-empty-model"', exact: true })
@@ -2361,10 +2417,12 @@ test("refreshes models inside the dropdown without changing the selection", asyn
     contentHost.locator('[data-slot="popover-content"]').getByRole("status"),
   ).toContainText("Fetched 2 models.")
   await expect(selector).toContainText("gpt-4o-mini")
-  await page.screenshot({
-    path: test.info().outputPath("model-select-actions.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await page.screenshot({
+      path: test.info().outputPath("model-select-actions.png"),
+      animations: "disabled",
+    })
+  }
   await contentHost
     .getByRole("option", { name: "new-model", exact: true })
     .click()
@@ -2443,10 +2501,12 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   await enhanced.click()
   await expect(enhanced).toBeChecked()
   await selector.scrollIntoViewIfNeeded()
-  await modal.screenshot({
-    path: test.info().outputPath("page-verification-header.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal.screenshot({
+      path: test.info().outputPath("page-verification-header.png"),
+      animations: "disabled",
+    })
+  }
   await captureVisualViews({
     page,
     ready: selector,
@@ -2471,12 +2531,14 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   await expect(
     modelsProbe.getByRole("region", { name: "Execution result", exact: true }),
   ).toBeVisible()
-  await modal
-    .getByRole("dialog", { name: "API Testing", exact: true })
-    .screenshot({
-      path: test.info().outputPath("page-models-expanded-grid.png"),
-      animations: "disabled",
-    })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal
+      .getByRole("dialog", { name: "API Testing", exact: true })
+      .screenshot({
+        path: test.info().outputPath("page-models-expanded-grid.png"),
+        animations: "disabled",
+      })
+  }
   expect((await modelsProbe.boundingBox())!.width).toBeCloseTo(listWidth, 0)
   const modelsSummary = modelsProbe.locator("[data-verification-summary]")
   const duration = modelsSummary.getByText(/^\d+(?:\.\d+)?(?:ms|s)$/)
@@ -2486,10 +2548,12 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
       .locator('[data-slot="badge"]')
       .getByText(/^\d+(?:\.\d+)?(?:ms|s)$/),
   ).toHaveCount(1)
-  await modelsProbe.screenshot({
-    path: test.info().outputPath("page-models-result.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modelsProbe.screenshot({
+      path: test.info().outputPath("page-models-result.png"),
+      animations: "disabled",
+    })
+  }
 
   await context.route(`${API_BASE_URL}/v1/chat/completions`, (route) => {
     const request = route.request().postDataJSON()
@@ -2580,10 +2644,12 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
         exact: true,
       }),
     ).toBeVisible()
-    await textProbe.screenshot({
-      path: test.info().outputPath(`page-${mode.toLowerCase()}-result.png`),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await textProbe.screenshot({
+        path: test.info().outputPath(`page-${mode.toLowerCase()}-result.png`),
+        animations: "disabled",
+      })
+    }
   }
   await apiType.click()
   await contentHost
@@ -2614,10 +2680,12 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
       .locator("[data-verification-summary]")
       .getByText("Unsupported", { exact: true }),
   ).toBeVisible()
-  await searchProbe.screenshot({
-    path: test.info().outputPath("page-unsupported-result.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await searchProbe.screenshot({
+      path: test.info().outputPath("page-unsupported-result.png"),
+      animations: "disabled",
+    })
+  }
 })
 
 for (const includeLink of [true, false]) {
@@ -2684,9 +2752,11 @@ for (const includeLink of [true, false]) {
         ),
       ).toBeVisible()
       await expect(host).not.toContainText(API_KEY)
-      await host
-        .locator("section")
-        .screenshot({ path: testInfo.outputPath("key-only-toast.png") })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        await host
+          .locator("section")
+          .screenshot({ path: testInfo.outputPath("key-only-toast.png") })
+      }
     }
     await host.getByRole("button", { name: "Open", exact: true }).click()
     const modal = host.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
@@ -2734,10 +2804,12 @@ test("controls website participation from the webpage and autosaving settings", 
   await expect(
     siteSettings.getByText("api-console.example.test", { exact: true }),
   ).toBeVisible()
-  await siteSettings.screenshot({
-    path: testInfo.outputPath("website-settings-panel.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await siteSettings.screenshot({
+      path: testInfo.outputPath("website-settings-panel.png"),
+      animations: "disabled",
+    })
+  }
   await expect(siteSwitch).toBeChecked()
   await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
   await sendApiCheckContextMenuTrigger(serviceWorker, {
@@ -2761,10 +2833,12 @@ test("controls website participation from the webpage and autosaving settings", 
   await expect
     .poll(async () => (await readScope()).exclude)
     .toEqual([TEST_PAGE_ORIGIN])
-  await modal.screenshot({
-    path: testInfo.outputPath("website-control-disabled.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await modal.screenshot({
+      path: testInfo.outputPath("website-control-disabled.png"),
+      animations: "disabled",
+    })
+  }
   await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
   await page.reload()
   await sendApiCheckContextMenuTrigger(serviceWorker, {
@@ -2795,10 +2869,12 @@ test("controls website participation from the webpage and autosaving settings", 
       name: "Stop auto-detect on this website",
     }),
   ).toBeVisible()
-  await contentHost.locator("section").screenshot({
-    path: testInfo.outputPath("website-pause-toast.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await contentHost.locator("section").screenshot({
+      path: testInfo.outputPath("website-pause-toast.png"),
+      animations: "disabled",
+    })
+  }
   await contentHost
     .getByRole("button", { name: "Stop auto-detect on this website" })
     .click()
@@ -2866,10 +2942,12 @@ test("controls website participation from the webpage and autosaving settings", 
   await expect
     .poll(async () => (await readRules()).whitelist)
     .toEqual([{ syntax: "wildcard", pattern: "*://linux.do/*" }])
-  await settings.locator("#web-ai-api-check").screenshot({
-    path: testInfo.outputPath("website-scope-settings.png"),
-    animations: "disabled",
-  })
+  if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+    await settings.locator("#web-ai-api-check").screenshot({
+      path: testInfo.outputPath("website-scope-settings.png"),
+      animations: "disabled",
+    })
+  }
 })
 
 test("turns selected web API credentials into a verified profile and model catalog source", async ({
@@ -3164,10 +3242,12 @@ for (const state of [
       ).toBeVisible()
       await expect(selector).toBeHidden()
       release()
-      await modal.screenshot({
-        path: test.info().outputPath("model-selector-unrequested.png"),
-        animations: "disabled",
-      })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        await modal.screenshot({
+          path: test.info().outputPath("model-selector-unrequested.png"),
+          animations: "disabled",
+        })
+      }
       return
     } else if (state === "loading")
       await expect(selector).toHaveAttribute("aria-busy", "true")
@@ -3231,29 +3311,37 @@ for (const state of [
       await expect(selector).toContainText("manual-unlisted-model")
       await selector.click()
     }
-    await modal.screenshot({
-      path: test.info().outputPath(`${state}__expanded.png`),
-      animations: "disabled",
-    })
-    await dropdown.screenshot({
-      path: test.info().outputPath(`${state}__dropdown.png`),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal.screenshot({
+        path: test.info().outputPath(`${state}__expanded.png`),
+        animations: "disabled",
+      })
+    }
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await dropdown.screenshot({
+        path: test.info().outputPath(`${state}__dropdown.png`),
+        animations: "disabled",
+      })
+    }
     if (state === "long-failure") {
       const details = dropdown.locator("details")
       await expect(details).toHaveCount(1)
       await details.locator("summary").click()
-      await dropdown.screenshot({
-        path: test.info().outputPath(`${state}__details.png`),
-        animations: "disabled",
-      })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        await dropdown.screenshot({
+          path: test.info().outputPath(`${state}__details.png`),
+          animations: "disabled",
+        })
+      }
     }
     await dropdown.getByPlaceholder("Search...").press("Escape")
     await expect(dropdown).not.toBeVisible()
-    await modal.screenshot({
-      path: test.info().outputPath(`${state}__closed.png`),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal.screenshot({
+        path: test.info().outputPath(`${state}__closed.png`),
+        animations: "disabled",
+      })
+    }
     release()
   })
 }
@@ -3314,14 +3402,18 @@ test("runs webpage context and needle requests concurrently with independent can
       .click()
     const runNeedle = needle.getByRole("button", { name: "Run needle test" })
     await runNeedle.waitFor({ state: "visible" })
-    await needle.screenshot({
-      path: test.info().outputPath("needle-during-context.png"),
-      animations: "disabled",
-    })
-    await modal.screenshot({
-      path: test.info().outputPath("needle-workspace-during-context.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await needle.screenshot({
+        path: test.info().outputPath("needle-during-context.png"),
+        animations: "disabled",
+      })
+    }
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal.screenshot({
+        path: test.info().outputPath("needle-workspace-during-context.png"),
+        animations: "disabled",
+      })
+    }
     await expect(runNeedle).toBeEnabled()
     await runNeedle.click()
     await expect.poll(() => requests.length).toBeGreaterThanOrEqual(2)
@@ -3451,10 +3543,12 @@ test("recovers an interrupted webpage context request after its worker stops wit
           (element) => element.scrollWidth <= element.clientWidth,
         ),
       ).toBe(true)
-      await panel.screenshot({
-        path: test.info().outputPath(`web-context-discard-${width}.png`),
-        animations: "disabled",
-      })
+      if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+        await panel.screenshot({
+          path: test.info().outputPath(`web-context-discard-${width}.png`),
+          animations: "disabled",
+        })
+      }
     }
     await showVerificationTest(page, "Context capacity test")
     await page
@@ -3503,10 +3597,12 @@ test("recovers an interrupted webpage context request after its worker stops wit
         .getByRole("status", { name: "Context capacity result" }),
     ).toHaveAttribute("title", /charge status is unknown/, { timeout: 30000 })
     expect(requests).toBe(1)
-    await panel.screenshot({
-      path: test.info().outputPath("web-context-worker-interrupted.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await panel.screenshot({
+        path: test.info().outputPath("web-context-worker-interrupted.png"),
+        animations: "disabled",
+      })
+    }
     await page.setViewportSize({ width: 380, height: 800 })
     await showVerificationTest(page, "Context capacity test")
     const currentDetail = page.locator(
@@ -3518,14 +3614,16 @@ test("recovers an interrupted webpage context request after its worker stops wit
         (element) => element.scrollWidth <= element.clientWidth,
       ),
     ).toBe(true)
-    await modal
-      .getByRole("dialog", { name: "API Testing", exact: true })
-      .screenshot({
-        path: test
-          .info()
-          .outputPath("web-context-worker-interrupted-narrow.png"),
-        animations: "disabled",
-      })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await modal
+        .getByRole("dialog", { name: "API Testing", exact: true })
+        .screenshot({
+          path: test
+            .info()
+            .outputPath("web-context-worker-interrupted-narrow.png"),
+          animations: "disabled",
+        })
+    }
   } finally {
     await cdp.detach()
     server.closeAllConnections()
@@ -3625,10 +3723,12 @@ test("recovers an interrupted webpage needle request after its worker stops with
       timeout: 30000,
     })
     expect(requests).toBe(1)
-    await panel.screenshot({
-      path: test.info().outputPath("web-needle-worker-interrupted.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await panel.screenshot({
+        path: test.info().outputPath("web-needle-worker-interrupted.png"),
+        animations: "disabled",
+      })
+    }
     await page.setViewportSize({ width: 380, height: 800 })
     await panel.scrollIntoViewIfNeeded()
     expect(
@@ -3636,10 +3736,14 @@ test("recovers an interrupted webpage needle request after its worker stops with
         (element) => element.scrollWidth <= element.clientWidth,
       ),
     ).toBe(true)
-    await panel.screenshot({
-      path: test.info().outputPath("web-needle-worker-interrupted-narrow.png"),
-      animations: "disabled",
-    })
+    if (process.env.AAH_VISUAL_CAPTURE_DIR) {
+      await panel.screenshot({
+        path: test
+          .info()
+          .outputPath("web-needle-worker-interrupted-narrow.png"),
+        animations: "disabled",
+      })
+    }
   } finally {
     await cdp.detach()
     server.closeAllConnections()

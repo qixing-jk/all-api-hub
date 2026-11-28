@@ -13,6 +13,7 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 test.use({ actionTimeout: 10_000 })
 
@@ -26,7 +27,8 @@ for (const width of [390, 320]) {
       context,
       page,
       extensionId,
-    }, testInfo) => {
+      extensionDir,
+    }) => {
       await forceExtensionLanguage(page, language)
       await page.setViewportSize({ width, height: 900 })
       await seedUserPreferences(await getServiceWorker(context), {
@@ -92,8 +94,12 @@ for (const width of [390, 320]) {
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true)
-      await textSize.screenshot({
-        path: testInfo.outputPath(`${language}-text-size-${width}.png`),
+      await captureVisualViews({
+        page,
+        ready: textSize,
+        captureTarget: textSize,
+        id: `${language}-text-size-${width}`,
+        extensionDir,
       })
       await closeExtensionViews(context, page)
     })
