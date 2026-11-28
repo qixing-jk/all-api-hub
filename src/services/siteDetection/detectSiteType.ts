@@ -6,6 +6,7 @@ import {
 } from "~/services/accountSiteOnboarding/registry"
 import { readPublicSiteStatus } from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
+import { detectsPmplan } from "~/services/apiService/pmplan/detection"
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { ApiError } from "~/services/apiTransport/errors"
 import { bindApiTransportRequest } from "~/services/apiTransport/recovery"
@@ -443,11 +444,21 @@ export const getAccountSiteType = async (
     url,
     protectionBypassExecution,
   )
+  const pmplanRead = detectsPmplan(url)
   const voApiV2SiteType = await detectVoApiV2FromProtectedEndpoint(url)
   const protectedSiteType =
     voApiV2SiteType !== SITE_TYPES.UNKNOWN
       ? voApiV2SiteType
       : await detectSub2ApiFromAuthEndpoint(url)
+
+  if (await pmplanRead) {
+    const status = await statusRead
+    return protectedSiteType !== SITE_TYPES.UNKNOWN ||
+      status.identifiesShellApi ||
+      status.identifiesRixApi
+      ? SITE_TYPES.UNKNOWN
+      : SITE_TYPES.PMPLAN
+  }
 
   if (protectedSiteType !== SITE_TYPES.UNKNOWN) {
     return (await statusRead).identifiesShellApi

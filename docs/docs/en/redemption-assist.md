@@ -19,6 +19,14 @@ You can also select a redemption code and choose **"Redeem selected codes"** fro
 2. **Redemption Code Actually Exists on the Page**:
    - Common forms include "Today's Redemption Code", "Gift Pack Code", "Check-in Code", etc., usually a 32-character combination.
 
+### Code types and compatible accounts
+
+Accounts with a known incompatible code type or disabled accounts are hidden. Matching accounts that support automatic redemption are selectable; those not yet supported appear below them, disabled with an explanation. A manual link is offered only when a redemption page is known. Unsupported accounts also offer “Request support”, which opens a GitHub form prefilled with the site origin, type, extension version and missing capability for you to review and submit. It does not include redemption codes, account names or login credentials. If no account matches, add one; if matching accounts exist but none support automation, the list stays visible with guidance to use the original site. Type and execution support are checked again before submission. Ordinary codes use a generic format bucket; appearing in the list does not prove code validity or its issuing site. Mixed batches keep separate account selections for different code types.
+
+PM-Plan reset cards use `PMRC-XXXX-XXXX-XXXX-XXXX`. Detection is case-insensitive and independent of the relaxed character setting for ordinary 32-character codes. PMRC codes only offer PM-Plan accounts; ordinary codes exclude them. The prefix identifies the card type, not its issuing site or validity. Confirm the account on the issuing site even when only one account is available. The assistant never tries a card across sites.
+
+Successful redemption claims the card without using it or resetting your allowance. Use the card on the original site. If a submitted claim has an uncertain outcome, check your cards on the selected site first; the assistant does not offer an immediate retry button.
+
 ---
 
 ## Usage Tutorial
@@ -58,7 +66,7 @@ In **Basic Settings → Check-in & Redeem → Redemption Assist**, turn on **Ena
 
 4. **Confirm and initiate auto-redemption**
    - Click "Auto Redeem" on the card.
-   - The plugin will automatically select the most suitable account based on the current page URL to initiate the redemption request.
+   - The plugin matches the page URL within compatible accounts and opens a selector when needed. PM-Plan reset cards always require target-account confirmation.
 
 5. **View result prompt**
    - On success:
@@ -100,7 +108,7 @@ Possible reasons:
 
 - Redemption Assist is not enabled in the settings;
 - You did not perform selection or copy operations on the redemption code, so the plugin had no opportunity to read the text;
-- The redemption code is not a standard 32-character string, or it contains spaces or special characters, making it unrecognizable;
+- The code does not match an ordinary 32-character code or PM-Plan reset-card format, or contains embedded spaces;
 - The browser or other plugins restrict script execution or clipboard access (e.g., extreme incognito mode, certain security plugin blocks).
 
 Suggested troubleshooting steps:

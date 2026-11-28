@@ -12,6 +12,7 @@ import {
   EVIDENCE_KINDS,
 } from "~/services/amounts/financialConstants"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { RedemptionOutcomeUncertainError } from "~/services/redemption/errors"
 import {
   redeemService,
   REDEMPTION_RESULT_CODES,
@@ -65,6 +66,60 @@ describe("redeemService.redeemCodeForAccount", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
+
+  it("preserves an uncertain claim as unconfirmed without inviting retry", async () => {
+    vi.mocked(accountStorage.getAccountById).mockResolvedValueOnce(
+      buildSiteAccount({ id: "target", site_type: SITE_TYPES.PMPLAN }),
+    )
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      account: {
+        redemption: {
+          redeem: vi
+            .fn()
+            .mockRejectedValue(
+              new RedemptionOutcomeUncertainError("Check native cards"),
+            ),
+        },
+      },
+    } as any)
+    expect(
+      await redeemService.redeemCodeForAccount(
+        "target",
+        "PMRC-ABCD-EFGH-JKMN-PQRS",
+      ),
+    ).toMatchObject({
+      success: false,
+      code: "OUTCOME_UNCERTAIN",
+      message: "Check native cards",
+      retryable: false,
+    })
+  })
+
+  it.each([
+    {
+      siteType: SITE_TYPES.NEW_API,
+      code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+    },
+    {
+      siteType: SITE_TYPES.PMPLAN,
+      code: "a".repeat(32),
+    },
+  ])(
+    "rejects incompatible codes before dispatch to $siteType",
+    async ({ siteType, code }) => {
+      vi.mocked(accountStorage.getAccountById).mockResolvedValueOnce(
+        buildSiteAccount({ id: "target", site_type: siteType }),
+      )
+      const redeem = vi.fn()
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+        account: { redemption: { redeem } },
+      } as any)
+      expect(
+        await redeemService.redeemCodeForAccount("target", code),
+      ).toMatchObject({ success: false, code: "INCOMPATIBLE_CODE_KIND" })
+      expect(redeem).not.toHaveBeenCalled()
+    },
+  )
 
   it("keeps confirmed awards when the post-redemption display read fails", async () => {
     const account = buildSiteAccount({ id: "account-1", site_type: "new-api" })
@@ -313,6 +368,56 @@ describe("redeemService.redeemCodeForAccount", () => {
       message: "backend exploded",
     })
   })
+
+  it.each([
+    {
+      description: "numeric message",
+      error: { message: 429 },
+      expected: { message: "429" },
+    },
+    {
+      description: "object message",
+      error: { message: { detail: "Redemption rejected" } },
+      expected: { message: "[object Object]" },
+    },
+    {
+      description: "whitespace-only message",
+      error: { message: " \t\n " },
+      expected: { message: "redemptionAssist:messages.redeemFailed" },
+    },
+    {
+      description: "whitespace-only Error",
+      error: new Error(" \t\n "),
+      expected: { message: "redemptionAssist:messages.redeemFailed" },
+    },
+    {
+      description: "uncertain outcome with a whitespace-only message",
+      error: new RedemptionOutcomeUncertainError(" \t\n "),
+      expected: {
+        message: "redemptionAssist:messages.redeemFailed",
+        retryable: false,
+        code: REDEMPTION_RESULT_CODES.OutcomeUncertain,
+      },
+    },
+  ])(
+    "returns displayable failure text for $description",
+    async ({ error, expected }) => {
+      vi.mocked(accountStorage.getAccountById).mockResolvedValueOnce(
+        buildSiteAccount({
+          id: "normalization",
+          site_type: SITE_TYPES.NEW_API,
+        }),
+      )
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+        siteType: SITE_TYPES.NEW_API,
+        account: { redemption: { redeem: vi.fn().mockRejectedValue(error) } },
+      })
+
+      expect(
+        await redeemService.redeemCodeForAccount("normalization", "CODE"),
+      ).toEqual({ success: false, ...expected })
+    },
+  )
 
   it("falls back to the localized failure message when the thrown error message is blank", async () => {
     const account = {

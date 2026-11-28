@@ -34,6 +34,10 @@ import {
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
 import { createPmApiKeyEditor } from "~/services/apiAdapters/pmapi/keyEditor"
+import {
+  createPmplanKeyEditor,
+  editPmplanKeyEditor,
+} from "~/services/apiAdapters/pmplan/keyEditor"
 import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keys/keyResourceEditor"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
@@ -43,6 +47,42 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const field = OPENROUTER_KEY_FIELD_IDS
+
+it("opens PM-Plan model editing without immutable expiry fields", () => {
+  const definition = editPmplanKeyEditor(
+    {
+      id: 7,
+      key_prefix: "sk-pm-test",
+      status: "active",
+      all_models: false,
+      models: ["model-a"],
+      expires_at: null,
+    },
+    ["model-a", "model-b"],
+  )
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.PMPLAN,
+        mode: editorModes.Edit,
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values: definition.initialValues,
+      }}
+      onClose={vi.fn()}
+      onSubmit={vi.fn()}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  expect(
+    screen.getByRole("combobox", {
+      name: "keyManagement:dialog.availableModels",
+    }),
+  ).toBeVisible()
+  expect(screen.queryByLabelText("keyManagement:dialog.expiration")).toBeNull()
+})
 
 it.each([null, "2026-12-01T00:00:00Z"])(
   "shows immutable AI/ML API expiration as a fact rather than an input: %s",
@@ -212,6 +252,51 @@ it("shows the account-group choice for a PM-API token without an explicit group"
   expect(
     screen.getByRole("combobox", { name: "keyManagement:dialog.groupLabel" }),
   ).toHaveTextContent("keyManagement:keyDetails.followsAccountGroup")
+})
+
+it("presents PM-Plan expiry and model access as basic choices with a distinct custom time", () => {
+  const definition = createPmplanKeyEditor(["agnes-2.5-flash"])
+  const view = (values = definition.initialValues) => (
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.PMPLAN,
+        mode: editorModes.Create,
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values,
+      }}
+      onClose={vi.fn()}
+      onSubmit={vi.fn()}
+      onValuesChange={vi.fn()}
+    />
+  )
+  const { rerender } = render(view(), {
+    withUserPreferencesProvider: false,
+    withThemeProvider: false,
+  })
+  const basic = screen.getByRole("group", {
+    name: "keyManagement:dialog.basicInfo",
+  })
+  expect(basic).toContainElement(
+    screen.getByRole("combobox", { name: "keyManagement:dialog.expiration" }),
+  )
+  expect(basic).toContainElement(
+    screen.getByRole("combobox", {
+      name: "keyManagement:dialog.availableModels",
+    }),
+  )
+  expect(
+    screen.queryByRole("group", {
+      name: "keyManagement:dialog.advancedSettings",
+    }),
+  ).not.toBeInTheDocument()
+  rerender(view({ ...definition.initialValues, expiry: "custom" }))
+  expect(
+    screen.getByLabelText(
+      "keyManagement:native.editor.emrank.expirationOptions.custom",
+    ),
+  ).toHaveAttribute("type", "datetime-local")
 })
 
 it("shows Daya routing context and Fast preference while keeping advanced drafts", async () => {

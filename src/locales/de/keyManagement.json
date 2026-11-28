@@ -649,6 +649,10 @@
         "rpm": "Anfragen pro Minute",
         "rpmHelp": "Maximale Anfragen pro Minute für dieses Token; 0 bedeutet unbegrenzt."
       },
+      "pmplan": {
+        "customExpiryHelp": "Geben Sie ein zukünftiges Ablaufdatum mit Uhrzeit in Ihrer lokalen Zeitzone ein.",
+        "modelsHelp": "Leer lassen, um alle aktuell und künftig für das Konto verfügbaren Modelle zu erlauben. Schlüssel teilen die rollierenden Nutzungslimits des Kontos."
+      },
       "quotaCredits": "Verbleibende Credits",
       "quotaCreditsHelp": "Sobald diese Credits aufgebraucht sind, funktioniert der Schlüssel nicht mehr.",
       "quotaUsd": "Kontingent (USD)",

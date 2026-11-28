@@ -5,15 +5,21 @@ import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/ut
 import type { ConfirmedAward } from "~/services/amounts/awards"
 import { isKnownOrStaleObservation } from "~/services/amounts/balance"
 import { ASSET_KINDS } from "~/services/amounts/financialConstants"
-import { resolveAutomaticRedemptionAvailability } from "~/services/redemption/accountSupport"
+import {
+  acceptsRedemptionCode,
+  resolveAutomaticRedemptionAvailability,
+} from "~/services/redemption/accountSupport"
+import {
+  REDEMPTION_ACCOUNT_SUPPORT_STATUSES,
+  REDEMPTION_RESULT_CODES,
+} from "~/services/redemption/contracts"
+import { RedemptionOutcomeUncertainError } from "~/services/redemption/errors"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatAssetAmount, getAssetLabel } from "~/utils/core/money"
 import { t } from "~/utils/i18n/core"
 
-export const REDEMPTION_RESULT_CODES = {
-  UnsupportedSiteType: "UNSUPPORTED_SITE_TYPE",
-} as const
+export { REDEMPTION_RESULT_CODES } from "./contracts"
 
 interface RedeemResult {
   success: boolean
@@ -21,6 +27,7 @@ interface RedeemResult {
   code?: (typeof REDEMPTION_RESULT_CODES)[keyof typeof REDEMPTION_RESULT_CODES]
   awards?: ConfirmedAward[]
   account?: DisplaySiteData
+  retryable?: boolean
 }
 
 /**
@@ -57,11 +64,22 @@ class RedeemService {
       const redemptionAvailability = resolveAutomaticRedemptionAvailability({
         siteType: account.site_type,
       })
-      if (redemptionAvailability.status === "unsupported") {
+      if (
+        redemptionAvailability.status ===
+        REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported
+      ) {
         return {
           success: false,
           code: REDEMPTION_RESULT_CODES.UnsupportedSiteType,
           message: t("redemptionAssist:messages.unsupportedSiteType"),
+        }
+      }
+
+      if (!acceptsRedemptionCode({ siteType: account.site_type }, code)) {
+        return {
+          success: false,
+          code: REDEMPTION_RESULT_CODES.IncompatibleCodeKind,
+          message: t("redemptionAssist:messages.incompatibleCodeKind"),
         }
       }
 
@@ -101,13 +119,14 @@ class RedeemService {
       }
     } catch (error) {
       const message =
-        (error as any)?.message ||
-        getErrorMessage(error) ||
-        t("redemptionAssist:messages.redeemFailed")
+        getErrorMessage(error) || t("redemptionAssist:messages.redeemFailed")
 
       return {
         success: false,
         message,
+        ...(error instanceof RedemptionOutcomeUncertainError
+          ? { retryable: false, code: REDEMPTION_RESULT_CODES.OutcomeUncertain }
+          : {}),
       }
     }
   }

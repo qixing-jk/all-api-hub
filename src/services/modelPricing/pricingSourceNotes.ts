@@ -1,9 +1,16 @@
 import { z } from "zod"
 
-import { PRICING_SOURCE_NOTE_KINDS as kinds } from "./pricingConstants"
+import {
+  PRICING_SOURCE_NOTE_KINDS as kinds,
+  PRICING_SOURCE_KINDS,
+} from "./pricingConstants"
 
 /** Product-owned explanations are data; upstream prose stays in pricingDescription. */
 export const pricingSourceNoteSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal(kinds.CHANNEL_MINIMUM),
+    scope: z.enum([PRICING_SOURCE_KINDS.ACCOUNT, PRICING_SOURCE_KINDS.CATALOG]),
+  }),
   z.strictObject({
     kind: z.enum([
       kinds.RULES_UNAVAILABLE,

@@ -193,6 +193,9 @@ export function buildDevSiteFinancialScenarios(
         | typeof BUDGET_WINDOW_KINDS.Lifetime
       )[],
       asset: BalancePosition["asset"] = USD,
+      windowKind:
+        | typeof BUDGET_WINDOW_KINDS.Periodic
+        | typeof BUDGET_WINDOW_KINDS.Rolling = BUDGET_WINDOW_KINDS.Periodic,
     ) =>
       accountAllowanceObservation(
         scope,
@@ -220,7 +223,7 @@ export function buildDevSiteFinancialScenarios(
                 window:
                   period === BUDGET_WINDOW_KINDS.Lifetime
                     ? { kind: BUDGET_WINDOW_KINDS.Lifetime }
-                    : { kind: BUDGET_WINDOW_KINDS.Periodic, period },
+                    : { kind: windowKind, period },
               }),
             })),
           },
@@ -443,6 +446,18 @@ export function buildDevSiteFinancialScenarios(
             }),
           ]
           allowances = plans([BUDGET_PERIODS.FiveHours, BUDGET_PERIODS.Week])
+          break
+        case SITE_TYPES.PMPLAN:
+          positions = []
+          allowances = plans(
+            [
+              BUDGET_PERIODS.FiveHours,
+              BUDGET_PERIODS.Week,
+              BUDGET_PERIODS.Month,
+            ],
+            USD,
+            BUDGET_WINDOW_KINDS.Rolling,
+          )
           break
         case SITE_TYPES.FOXCODE:
           positions = []

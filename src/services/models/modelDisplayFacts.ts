@@ -93,13 +93,19 @@ export interface ModelDisplayPrice {
   unit: ModelDisplayPriceUnit
 }
 
+/** Discriminants shared by display facts, admission and formatting. */
+export const MODEL_DISPLAY_PRICE_CONDITION_TYPES = {
+  MinimumPromptTokens: "minimum-prompt-tokens",
+  UtcWindow: "utc-window",
+} as const
+
 export type ModelDisplayPriceCondition =
   | {
-      type: "minimum-prompt-tokens"
+      type: typeof MODEL_DISPLAY_PRICE_CONDITION_TYPES.MinimumPromptTokens
       value: number
     }
   | {
-      type: "utc-window"
+      type: typeof MODEL_DISPLAY_PRICE_CONDITION_TYPES.UtcWindow
       start: number
       end: number
     }
@@ -133,6 +139,8 @@ export type ModelDisplayFact =
       type: typeof MODEL_DISPLAY_FACT_TYPES.StringList
       label: ModelDisplayLabel
       values: string[]
+      /** Highlight a selected/current value without changing list order or membership. */
+      currentValue?: string
     }
   | {
       type: typeof MODEL_DISPLAY_FACT_TYPES.Boolean
@@ -177,8 +185,12 @@ export interface ModelDisplaySection {
   facts: ModelDisplayFact[]
 }
 
+export const MODEL_PRESENTATION_SUMMARY_LAYOUTS = { Inline: "inline" } as const
+
 /** Provider-neutral model presentation data exposed to shared React code. */
 export interface ModelPresentation {
+  /** Compact labelled facts spanning the model row, instead of a specification grid. */
+  summaryLayout?: (typeof MODEL_PRESENTATION_SUMMARY_LAYOUTS)[keyof typeof MODEL_PRESENTATION_SUMMARY_LAYOUTS]
   summaryFacts?: ModelDisplayFact[]
   sections?: ModelDisplaySection[]
 }

@@ -2,12 +2,16 @@
   "accountSelect": {
     "confirm": "Confirmar canje",
     "noResults": "No se encontraron cuentas coincidentes",
-    "noSupportedAccounts": "Ninguna de tus cuentas guardadas admite el canje automático. Canjea el código manualmente en el sitio correspondiente.",
+    "noSupportedAccounts": "Las cuentas mostradas coinciden con el tipo de código, pero el asistente aún no admite el canje automático para ellas. Usa una página de canje conocida abajo o consulta el sitio emisor.",
     "openSiteManual": "Abrir el sitio para canjear manualmente",
+    "requestSupport": "Solicitar soporte",
+    "supportRequestMessage": "El canje automático aún no está disponible para el tipo de sitio {{siteType}}. Solicito soporte para el canje.",
     "title": "Selecciona una cuenta para usar en el canje",
     "titleFallback": "Ninguna cuenta coincidió con este sitio; selecciona una manualmente",
     "titleMultiple": "Hay varias cuentas disponibles; selecciona una para el canje",
-    "unsupported": "Este tipo de sitio no admite el canje automático"
+    "titleNoAutomatic": "Estas cuentas aún no admiten el canje automático",
+    "titlePmplan": "Selecciona una cuenta de PM-Plan para recibir la tarjeta",
+    "unsupported": "El canje automático aún no está disponible para esta cuenta"
   },
   "actions": {
     "autoRedeem": "Canjear automáticamente"
@@ -27,12 +31,21 @@
   },
   "messages": {
     "batchResultSummary": "Total {{total}}. Correctos {{success}}. Fallidos {{failed}}.",
+    "batchResultSummaryUnconfirmed": "Total {{total}}. Exitosos {{success}}. Fallidos {{failed}}. Sin confirmar {{unconfirmed}}.",
     "batchResultTitle": "Resultados del canje",
     "benefitsRedeemed": "Canjeado: {{details}}",
     "cancelled": "Cancelado",
+    "claimUnconfirmed": "Sin confirmar",
     "extensionDays": "Extendida {{days}} días",
     "fallbackBenefit": "Beneficio alternativo utilizado",
+    "incompatibleCodeKind": "Esta cuenta no puede canjear este tipo de código. Elige una cuenta compatible.",
+    "invalidResetCode": "Código de tarjeta de restablecimiento de PM-Plan inválido. Revisa el código PMRC completo.",
     "noAccountForUrl": "No se encontró ninguna cuenta coincidente para este sitio. Agrega el sitio como cuenta en All API Hub y vuelve a intentarlo.",
+    "noCompatibleAccounts": "Ninguna cuenta habilitada coincide con este tipo de código. Agrega una cuenta correspondiente o canjéalo en el sitio emisor.",
+    "pmplanCardClaimed": "Tarjeta de restablecimiento recibida. Aún no se ha usado.",
+    "pmplanClaimUncertain": "El resultado no está confirmado. Revisa tus tarjetas en el sitio seleccionado antes de volver a intentarlo.",
+    "pmplanPromptConfirm": "Se detectó la tarjeta de restablecimiento de PM-Plan {{code}}. ¿Recibirla en una cuenta? Esto no usará la tarjeta ni restablecerá tu cuota.",
+    "pmplanSelectAccount": "Elige una cuenta del sitio que emitió la tarjeta. El prefijo PMRC no identifica el sitio. Recibir la tarjeta no la usa.",
     "promptConfirm": "Se detectó un posible código de canje {{code}} en esta página. ¿Intentar canje automático para este sitio?",
     "promptConfirmBatch_one": "Se detectó {{count}} posible código de canje en esta página. Selecciona códigos para canjear automáticamente en este sitio.",
     "promptConfirmBatch_many": "Se detectaron {{count}} posibles códigos de canje en esta página. Selecciona códigos para canjear automáticamente en este sitio.",
@@ -42,6 +55,7 @@
     "redeemFailed": "El canje falló. Inténtalo de nuevo más tarde.",
     "redeemLoading": "Intentando canjear...",
     "redeemSuccess": "Canje realizado correctamente. Monto acreditado: {{amount}}",
+    "redemptionUncertain": "El resultado del canje es incierto. Revisa el sitio seleccionado antes de volver a intentarlo.",
     "selectAll": "Seleccionar todo",
     "success": {
       "settingsSaved": "La configuración del asistente de canje se guardó"

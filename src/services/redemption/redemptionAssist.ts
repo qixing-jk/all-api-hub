@@ -12,8 +12,17 @@ import {
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
 } from "~/services/protectionBypass/contracts"
+import { acceptsRedemptionCode } from "~/services/redemption/accountSupport"
+import {
+  REDEMPTION_ACCOUNT_SUPPORT_STATUSES,
+  REDEMPTION_ASSIST_RESULT_CODES,
+} from "~/services/redemption/contracts"
 import { redeemService } from "~/services/redemption/redeemService"
-import { isPossibleRedemptionCode } from "~/services/redemption/utils/redemptionCode"
+import {
+  getRedemptionCodeKind,
+  isPossibleRedemptionCode,
+  REDEMPTION_CODE_KINDS,
+} from "~/services/redemption/utils/redemptionCode"
 import { searchAccounts } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -39,9 +48,8 @@ const logger = createLogger("RedemptionAssist")
 
 /** Loads picker-only support metadata outside the background startup path. */
 async function toRedemptionAccountCandidates(accounts: DisplaySiteData[]) {
-  const { toRedemptionAccountCandidate } = await import(
-    "~/services/redemption/accountCandidate"
-  )
+  const { toRedemptionAccountCandidate } =
+    await import("~/services/redemption/accountCandidate")
   return accounts.map(toRedemptionAccountCandidate)
 }
 
@@ -101,8 +109,7 @@ export type RedemptionAssistShouldPromptResponse =
     }
 
 export type RedemptionAssistMutationResponse =
-  | { success: true }
-  | { success: false; error: string }
+  { success: true } | { success: false; error: string }
 
 export type RedemptionAssistAutoRedeemRequest = {
   accountId: string
@@ -232,13 +239,6 @@ class RedemptionAssistService {
     return displayAccounts.filter((account) => account.disabled !== true)
   }
 
-  /**
-   * Extracts the URL origin (protocol + host) from a URL string.
-   */
-  private getOrigin(url: string): string | null {
-    return tryParseOrigin(url)
-  }
-
   private getRuntimeWhitelist() {
     const whitelist = this.settings.urlWhitelist
     if (!whitelist) {
@@ -295,7 +295,7 @@ class RedemptionAssistService {
 
     if (options.includeCheckInAndRedeemUrls) {
       for (const account of accounts) {
-        const origin = this.getOrigin(account.baseUrl)
+        const origin = tryParseOrigin(account.baseUrl)
         if (!origin) continue
 
         const resolvedCheckInUrl =
@@ -392,12 +392,11 @@ class RedemptionAssistService {
 
     const checks = await Promise.all(
       params.codes.map(async (code) => {
-        const result = await this.evaluatePromptability({
+        const shouldPrompt = await this.evaluatePromptability({
           url: params.url,
           code,
-          tabId: params.tabId,
         })
-        return result.shouldPrompt ? code : null
+        return shouldPrompt ? code : null
       }),
     )
 
@@ -410,10 +409,9 @@ class RedemptionAssistService {
   private async evaluatePromptability(params: {
     url: string
     code: string
-    tabId?: number
-  }): Promise<{ shouldPrompt: boolean; reason?: string }> {
+  }): Promise<boolean> {
     if (!this.settings.enabled) {
-      return { shouldPrompt: false, reason: "disabled" }
+      return false
     }
 
     const { code } = params
@@ -423,15 +421,10 @@ class RedemptionAssistService {
     })
 
     if (!possible) {
-      return { shouldPrompt: false, reason: "invalid_code" }
+      return false
     }
 
-    const urlAllowed = await this.isUrlAllowedByWhitelist(params.url)
-    if (!urlAllowed) {
-      return { shouldPrompt: false, reason: "url_not_allowed" }
-    }
-
-    return { shouldPrompt: true }
+    return this.isUrlAllowedByWhitelist(params.url)
   }
 
   /**
@@ -470,12 +463,44 @@ class RedemptionAssistService {
     if (!hostname) {
       return {
         success: false,
-        code: "INVALID_URL",
+        code: REDEMPTION_ASSIST_RESULT_CODES.InvalidUrl,
         message: t("redemptionAssist:messages.noAccountForUrl"),
       }
     }
 
-    const displayAccounts = await this.getDisplayAccounts()
+    const displayAccounts = (await this.getDisplayAccounts()).filter(
+      (account) => acceptsRedemptionCode(account, code),
+    )
+    if (displayAccounts.length === 0) {
+      return {
+        success: false,
+        code: REDEMPTION_ASSIST_RESULT_CODES.NoCompatibleAccounts,
+        message: t("redemptionAssist:messages.noCompatibleAccounts"),
+      }
+    }
+    const candidates = await toRedemptionAccountCandidates(displayAccounts)
+    if (
+      candidates.every(
+        (account) =>
+          account.automaticRedemptionSupport.status ===
+          REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
+      )
+    ) {
+      return {
+        success: false,
+        code: REDEMPTION_ASSIST_RESULT_CODES.NoAutomaticRedemption,
+        candidates,
+      }
+    }
+    // The prefix identifies a card kind, never its deployment. Always confirm the target.
+    if (getRedemptionCodeKind(code) === REDEMPTION_CODE_KINDS.PmplanResetCard) {
+      return {
+        success: false,
+        code: REDEMPTION_ASSIST_RESULT_CODES.SelectAccount,
+        candidates,
+        message: t("redemptionAssist:messages.pmplanSelectAccount"),
+      }
+    }
 
     // First, use accountSearch to get candidates related to this hostname
     const searchResults = searchAccounts(displayAccounts, hostname)
@@ -490,17 +515,16 @@ class RedemptionAssistService {
         return accountHost === hostname
       })
 
-    const [account] = sameDomainCandidates
-    if (sameDomainCandidates.length === 1 && account) {
+    const supportedMatches = sameDomainCandidates.filter(
+      (account) =>
+        candidates.find((candidate) => candidate.id === account.id)
+          ?.automaticRedemptionSupport.status ===
+        REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Supported,
+    )
+    const [account] = supportedMatches
+    if (supportedMatches.length === 1 && account) {
       // Single clear match – auto redeem
-      const redeemResult = await redeemService.redeemCodeForAccount(
-        account.id,
-        code,
-      )
-
-      if (redeemResult.success) {
-        await bestEffortRefreshAccountAfterSuccessfulRedeem(account.id)
-      }
+      const redeemResult = await this.autoRedeem(account.id, code)
 
       // Flatten the result so it matches the RedeemResult shape used elsewhere
       return {
@@ -509,11 +533,11 @@ class RedemptionAssistService {
       }
     }
 
-    if (sameDomainCandidates.length > 1) {
+    if (supportedMatches.length > 1) {
       // Multiple matches – let the content script show a selector
       return {
         success: false,
-        code: "MULTIPLE_ACCOUNTS",
+        code: REDEMPTION_ASSIST_RESULT_CODES.MultipleAccounts,
         candidates: await toRedemptionAccountCandidates(sameDomainCandidates),
       }
     }
@@ -521,9 +545,9 @@ class RedemptionAssistService {
     // No valid match by hostname + customCheckInUrl – return all accounts for manual search
     return {
       success: false,
-      code: "NO_ACCOUNTS",
+      code: REDEMPTION_ASSIST_RESULT_CODES.NoAccounts,
       candidates: [],
-      allAccounts: await toRedemptionAccountCandidates(displayAccounts),
+      allAccounts: candidates,
       message: t("redemptionAssist:messages.noAccountForUrl"),
     }
   }

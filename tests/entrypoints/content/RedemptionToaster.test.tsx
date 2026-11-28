@@ -1,7 +1,7 @@
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RedemptionToaster } from "~/entrypoints/content/redemptionAssist/components/RedemptionToaster"
+import { RedemptionToaster } from "~/features/RedemptionAssist/components/RedemptionToaster"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 type ToastStackProps = {

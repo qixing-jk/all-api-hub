@@ -44,6 +44,7 @@ export const nativeBalanceExpectations: Record<
   [SITE_TYPES.AIHUBMIX]: ["$12.34"],
   [SITE_TYPES.DAYA]: ["$12.34"],
   [SITE_TYPES.PMAPI]: ["$12.34"],
+  [SITE_TYPES.PMPLAN]: ["$8.00", "5 hours"],
   [SITE_TYPES.AIMLAPI]: ["$12.34"],
   [SITE_TYPES.REQUESTY]: ["$12.34"],
   [SITE_TYPES.VERCEL_AI_GATEWAY]: ["$12.34"],

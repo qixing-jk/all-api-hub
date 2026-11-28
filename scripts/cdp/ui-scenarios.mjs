@@ -7,6 +7,33 @@ export const UI_SCENARIO_STATUSES = {
   NotRun: "not_run",
 }
 
+/** Project detailed coverage into the live-suite result without relabeling blocked checks as failures. */
+export function summarizeUiSuite(report) {
+  if (
+    report.scenarios.some(
+      ({ status }) => status === UI_SCENARIO_STATUSES.Failed,
+    )
+  )
+    return { ok: false }
+  const gaps = report.scenarios.filter(
+    ({ status }) =>
+      ![UI_SCENARIO_STATUSES.Passed, UI_SCENARIO_STATUSES.NotSelected].includes(
+        status,
+      ),
+  )
+  if (gaps.length)
+    return {
+      skipped: true,
+      reason: gaps
+        .map(
+          ({ id, reason }) =>
+            `${id}: ${reason || "Required coverage was not executed"}`,
+        )
+        .join("; "),
+    }
+  return { ok: true }
+}
+
 /** Reject invalid selection before browser navigation or other setup. */
 export function validateUiScenarios(scenarios, selected) {
   const ids = new Set()

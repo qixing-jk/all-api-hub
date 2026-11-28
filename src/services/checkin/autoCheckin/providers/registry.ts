@@ -354,6 +354,15 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.PmplanDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.PmplanDailyCheckIn,
+    siteTypes: [SITE_TYPES.PMPLAN],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/me" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn,
     siteTypes: [SITE_TYPES.PMAPI],

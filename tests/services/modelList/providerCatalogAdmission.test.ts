@@ -14,6 +14,7 @@ import {
   PRICING_GROUP_MULTIPLIERS,
   TOKENS_PER_MILLION,
 } from "~/services/modelPricing/pricingConstants"
+import { MODEL_DISPLAY_PRICE_CONDITION_TYPES } from "~/services/models/modelDisplayFacts"
 
 const completeActionPolicy = {
   supportsGroupFiltering: false,
@@ -179,7 +180,10 @@ describe("provider model-catalog admission", () => {
                     overrides: [
                       {
                         conditions: [
-                          { type: "minimum-prompt-tokens", value: 200_000 },
+                          {
+                            type: MODEL_DISPLAY_PRICE_CONDITION_TYPES.MinimumPromptTokens,
+                            value: 200_000,
+                          },
                         ],
                         prices: [price],
                       },
@@ -233,7 +237,13 @@ describe("provider model-catalog admission", () => {
         label: { fallback: "Conditional prices" },
         overrides: [
           {
-            conditions: [{ type: "utc-window", start: 1260, end: 30 }],
+            conditions: [
+              {
+                type: MODEL_DISPLAY_PRICE_CONDITION_TYPES.UtcWindow,
+                start: 1260,
+                end: 30,
+              },
+            ],
             prices: [
               {
                 label: { fallback: "Input price" },

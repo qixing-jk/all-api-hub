@@ -2,12 +2,16 @@
   "accountSelect": {
     "confirm": "Xác nhận đổi mã",
     "noResults": "Không tìm thấy tài khoản phù hợp, vui lòng điều chỉnh điều kiện tìm kiếm",
-    "noSupportedAccounts": "Không có tài khoản đã lưu nào hỗ trợ đổi mã tự động. Hãy đổi mã thủ công trên trang tương ứng.",
+    "noSupportedAccounts": "Các tài khoản hiển thị phù hợp với loại mã này, nhưng trợ lý chưa hỗ trợ đổi mã tự động cho chúng. Mở trang đổi mã đã biết bên dưới hoặc kiểm tra trang phát hành.",
     "openSiteManual": "Mở trang để đổi mã thủ công",
+    "requestSupport": "Yêu cầu hỗ trợ",
+    "supportRequestMessage": "Chưa hỗ trợ đổi mã tự động cho loại trang {{siteType}}. Vui lòng bổ sung hỗ trợ đổi mã.",
     "title": "Chọn tài khoản để đổi mã",
     "titleFallback": "Không tìm thấy tài khoản khớp với trang web hiện tại, vui lòng chọn thủ công một tài khoản",
     "titleMultiple": "Phát hiện nhiều tài khoản khả dụng, vui lòng chọn một tài khoản để đổi mã",
-    "unsupported": "Loại trang này không hỗ trợ đổi mã tự động"
+    "titleNoAutomatic": "Các tài khoản này chưa hỗ trợ đổi mã tự động",
+    "titlePmplan": "Chọn tài khoản PM-Plan để nhận thẻ",
+    "unsupported": "Tài khoản này chưa được hỗ trợ đổi mã tự động"
   },
   "actions": {
     "autoRedeem": "Tự động đổi mã"
@@ -27,12 +31,21 @@
   },
   "messages": {
     "batchResultSummary": "Tổng cộng {{total}}, thành công {{success}}, thất bại {{failed}}.",
+    "batchResultSummaryUnconfirmed": "Tổng {{total}}. Thành công {{success}}. Thất bại {{failed}}. Chưa xác nhận {{unconfirmed}}.",
     "batchResultTitle": "Kết quả đổi mã",
     "benefitsRedeemed": "Đã đổi: {{details}}",
     "cancelled": "Đã hủy",
+    "claimUnconfirmed": "Chưa xác nhận",
     "extensionDays": "Gia hạn {{days}} ngày",
     "fallbackBenefit": "Đã dùng quyền lợi thay thế",
+    "incompatibleCodeKind": "Tài khoản này không thể đổi loại mã này. Hãy chọn tài khoản tương thích.",
+    "invalidResetCode": "Mã thẻ đặt lại PM-Plan không hợp lệ. Hãy kiểm tra toàn bộ mã PMRC.",
     "noAccountForUrl": "Trang web hiện tại chưa được cấu hình tài khoản trong All API Hub, vui lòng thêm trang web này vào tiện ích mở rộng trước rồi thử lại.",
+    "noCompatibleAccounts": "Không có tài khoản đang bật phù hợp với loại mã này. Thêm tài khoản phù hợp hoặc đổi tại trang phát hành.",
+    "pmplanCardClaimed": "Đã nhận thẻ đặt lại. Thẻ chưa được sử dụng.",
+    "pmplanClaimUncertain": "Chưa xác định được kết quả nhận thẻ. Hãy kiểm tra thẻ trên trang đã chọn trước khi thử lại.",
+    "pmplanPromptConfirm": "Phát hiện thẻ đặt lại PM-Plan {{code}}. Nhận vào tài khoản? Thao tác này không sử dụng thẻ hoặc đặt lại hạn mức.",
+    "pmplanSelectAccount": "Chọn tài khoản trên trang đã phát hành thẻ. Tiền tố PMRC không xác định trang. Nhận thẻ không sử dụng thẻ.",
     "promptConfirm": "Phát hiện mã có thể là mã đổi thưởng {{code}}, bạn có muốn thử tự động đổi mã cho trang web hiện tại không?",
     "promptConfirmBatch_other": "Phát hiện {{count}} mã có thể là mã đổi thưởng. Vui lòng chọn mã bạn muốn thử tự động đổi cho trang hiện tại.",
     "promptSettingsLink": "Mở cài đặt Trợ lý đổi mã",
@@ -40,6 +53,7 @@
     "redeemFailed": "Đổi mã thất bại, vui lòng thử lại sau.",
     "redeemLoading": "Đang thử đổi mã, vui lòng đợi…",
     "redeemSuccess": "Đổi mã thành công, số dư nhận được: {{amount}}",
+    "redemptionUncertain": "Chưa xác nhận được kết quả đổi mã. Hãy kiểm tra trang đã chọn trước khi thử lại.",
     "selectAll": "Chọn tất cả",
     "success": {
       "settingsSaved": "Đã lưu cài đặt Trợ lý đổi mã"

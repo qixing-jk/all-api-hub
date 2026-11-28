@@ -192,6 +192,7 @@
     "compactionCharge": "Remote-Komprimierung",
     "consoleSettings": "Offizielle Einstellungen",
     "contextLimit": "Kontextlimit",
+    "currentValue": "{{value}} · Aktuell",
     "defaultDimensions": "Standarddimensionen",
     "inputModalities": "Eingabemodalitäten",
     "maximumOutputTokens": "Maximale Ausgabe-Token",
@@ -314,6 +315,7 @@
     "subscriptionMultiplier": "Abo-Faktor",
     "subscriptionPlan": "Abonnement",
     "supportedDimensions": "Unterstützte Dimensionen",
+    "supportedPlans": "Verfügbare Tarife",
     "supportsImages": "Bildunterstützung",
     "tokenCount_one": "{{formattedCount}} Token",
     "tokenCount_other": "{{formattedCount}} Token",
@@ -388,6 +390,7 @@
     "modelNamesCopied": "Modellnamen kopiert",
     "siteUrlCopied": "Website-URL kopiert"
   },
+  "minimumReferencePrice": "Niedrigster Kanalpreis",
   "modelCapabilityFilter": {
     "coverageHint_one": "{{count}} Modell in dieser Liste enthält noch keine Funktionsdetails und wird daher von Funktionsfiltern übersprungen.",
     "coverageHint_other": "{{count}} Modelle in dieser Liste enthalten noch keine Funktionsdetails und werden daher von Funktionsfiltern übersprungen.",
@@ -494,9 +497,11 @@
   "pricingDescription": "Die Preise stammen von der Website. Unterschiedliche Einheiten wie Millionen Tokens, Bilder, Sekunden und Anfragen werden getrennt verglichen. Beachten Sie die Einheit jedes Preises; die tatsächlichen Kosten bestimmt die Website.",
   "pricingNote": "Modellpreishinweis",
   "pricingNotes": {
+    "accountChannelMinimum": "Die Mindestpreise für Ein- und Ausgabe werden getrennt über die für Ihren Tarif verfügbaren Kanäle ermittelt und können aus verschiedenen Kanälen stammen. Die tatsächlichen Kosten hängen vom gewählten Kanal ab.",
     "allChannels": "Alle Kanäle",
     "ambiguousCharges": "Mehrere Gebühren verwenden dieselbe Mengeneinheit, ihre Mengen oder Abrechnungsphasen lassen sich jedoch nicht trennen. Andere bekannte Preise bleiben erhalten.",
     "ambiguousVariantCharges": "Die Quelle nennt Einzelgebühren und Variantenpreise, ohne zu erklären, ob sie addiert werden oder einander ersetzen.",
+    "catalogChannelMinimum": "Die Mindestpreise für Ein- und Ausgabe werden getrennt über alle Kanäle ermittelt, einschließlich der für Ihren Tarif nicht verfügbaren Kanäle. Nur als Richtwert.",
     "dedicatedPrices": "Sonderpreise einschließlich Multiplikatoren",
     "defaultRoute": "Standardroute",
     "endpointSourceConflict": "Offizielle Endpunkte nennen für dieses Modell widersprüchliche Abrechnungsregeln; der gültige Preis ist nicht bestimmbar.",

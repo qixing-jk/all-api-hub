@@ -45,6 +45,7 @@ import { createNewApiCapabilities } from "./newApi"
 import { novitaCapabilities } from "./novita"
 import { openRouterCapabilities } from "./openrouter"
 import { pmApiCapabilities } from "./pmapi"
+import { pmplanCapabilities } from "./pmplan"
 import { relayForCapabilities } from "./relayfor"
 import { requestyCapabilities } from "./requesty"
 import { rightCodeCapabilities } from "./rightcode"
@@ -108,6 +109,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Krill]: () => krillCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Daya]: () => dayaCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Pmapi]: () => pmApiCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Pmplan]: () => pmplanCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: () => cubenceCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: () => rightCodeCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RelayFor]: () => relayForCapabilities,

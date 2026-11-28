@@ -804,7 +804,9 @@ export async function stubNewApiSiteRoutes(
 
     if (
       method === "GET" &&
-      (url.pathname === "/api/user/info" || url.pathname === "/api/v1/auth/me")
+      (url.pathname === "/api/user/info" ||
+        url.pathname === "/api/v1/auth/me" ||
+        url.pathname === "/api/health")
     ) {
       await route.fulfill({
         status: 204,

@@ -1,143 +1,14 @@
 import { useId } from "react"
-import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
 import {
-  isModelDisplayTranslationKey,
   MODEL_DISPLAY_FACT_TYPES,
-  MODEL_DISPLAY_PRICE_UNITS,
+  MODEL_PRESENTATION_SUMMARY_LAYOUTS,
   type ModelDisplayFact,
-  type ModelDisplayLabel,
-  type ModelDisplayPrice,
-  type ModelDisplayPriceCondition,
-  type ModelDisplayPriceUnit,
   type ModelPresentation,
 } from "~/services/models/modelDisplayFacts"
 
-const PRICE_UNIT_TRANSLATION_KEYS: Record<ModelDisplayPriceUnit, string> = {
-  [MODEL_DISPLAY_PRICE_UNITS.MillionInputTokens]:
-    "displayFacts.priceUnits.millionInputTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionOutputTokens]:
-    "displayFacts.priceUnits.millionOutputTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionCachedInputTokens]:
-    "displayFacts.priceUnits.millionCachedInputTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteTokens]:
-    "displayFacts.priceUnits.millionCacheWriteTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteOneHourTokens]:
-    "displayFacts.priceUnits.millionCacheWriteOneHourTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionReasoningTokens]:
-    "displayFacts.priceUnits.millionReasoningTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionImageTokens]:
-    "displayFacts.priceUnits.millionImageTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionAudioInputTokens]:
-    "displayFacts.priceUnits.millionAudioInputTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionAudioOutputTokens]:
-    "displayFacts.priceUnits.millionAudioOutputTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionCachedAudioInputTokens]:
-    "displayFacts.priceUnits.millionCachedAudioInputTokens",
-  [MODEL_DISPLAY_PRICE_UNITS.Request]: "displayFacts.priceUnits.request",
-  [MODEL_DISPLAY_PRICE_UNITS.InputImage]: "displayFacts.priceUnits.inputImage",
-  [MODEL_DISPLAY_PRICE_UNITS.OutputImage]:
-    "displayFacts.priceUnits.outputImage",
-  [MODEL_DISPLAY_PRICE_UNITS.WebSearch]: "displayFacts.priceUnits.webSearch",
-}
-
-const PRICE_UNIT_FALLBACKS: Record<ModelDisplayPriceUnit, string> = {
-  [MODEL_DISPLAY_PRICE_UNITS.MillionInputTokens]: "1M input tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionOutputTokens]: "1M output tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionCachedInputTokens]:
-    "1M cached input tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteTokens]: "1M cache-write tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionCacheWriteOneHourTokens]:
-    "1M one-hour cache-write tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionReasoningTokens]: "1M reasoning tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionImageTokens]: "1M image tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionAudioInputTokens]: "1M audio input tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionAudioOutputTokens]:
-    "1M audio output tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.MillionCachedAudioInputTokens]:
-    "1M cached audio input tokens",
-  [MODEL_DISPLAY_PRICE_UNITS.Request]: "request",
-  [MODEL_DISPLAY_PRICE_UNITS.InputImage]: "input image",
-  [MODEL_DISPLAY_PRICE_UNITS.OutputImage]: "output image",
-  [MODEL_DISPLAY_PRICE_UNITS.WebSearch]: "web search",
-}
-
-/** Resolves localized labels and value formatting for model display facts. */
-function useModelDisplayFactText() {
-  const { t, i18n } = useTranslation("modelList")
-
-  const resolveLabel = (label: ModelDisplayLabel) =>
-    label.translationKey && isModelDisplayTranslationKey(label.translationKey)
-      ? t(label.translationKey, { defaultValue: label.fallback })
-      : label.fallback
-
-  const formatNumber = (value: number) =>
-    new Intl.NumberFormat(i18n.language, {
-      maximumFractionDigits: 8,
-    }).format(value)
-
-  const formatPercent = (value: number) =>
-    new Intl.NumberFormat(i18n.language, {
-      style: "percent",
-      maximumFractionDigits: 2,
-    }).format(value / 100)
-
-  const formatCurrency = (price: ModelDisplayPrice) =>
-    new Intl.NumberFormat(i18n.language, {
-      style: "currency",
-      currency: price.currency,
-      minimumFractionDigits: price.amount === 0 || price.amount >= 0.01 ? 2 : 0,
-      maximumFractionDigits: 8,
-    }).format(price.amount)
-
-  const formatPriceUnit = (unit: ModelDisplayPriceUnit) =>
-    t(PRICE_UNIT_TRANSLATION_KEYS[unit], {
-      defaultValue: PRICE_UNIT_FALLBACKS[unit],
-    })
-
-  const formatPrice = (price: ModelDisplayPrice) =>
-    `${formatCurrency(price)} / ${formatPriceUnit(price.unit)}`
-
-  const formatDate = (value: string) =>
-    new Intl.DateTimeFormat(i18n.language, {
-      dateStyle: "medium",
-      timeZone: "UTC",
-    }).format(new Date(`${value}T00:00:00Z`))
-
-  const formatClock = (value: number) => {
-    // OpenRouter encodes UTC pricing bounds as base-100 HHMM integers.
-    const padded = value.toString().padStart(4, "0")
-    return `${padded.slice(0, 2)}:${padded.slice(2)}`
-  }
-
-  const formatPriceCondition = (condition: ModelDisplayPriceCondition) => {
-    switch (condition.type) {
-      case "minimum-prompt-tokens":
-        return t("displayFacts.priceConditions.minimumPromptTokens", {
-          count: condition.value,
-          formattedCount: formatNumber(condition.value),
-          defaultValue: "More than {{formattedCount}} prompt tokens",
-        })
-      case "utc-window":
-        return t("displayFacts.priceConditions.utcWindow", {
-          start: formatClock(condition.start),
-          end: formatClock(condition.end),
-          defaultValue: "{{start}}–{{end}} UTC",
-        })
-    }
-  }
-
-  return {
-    formatDate,
-    formatNumber,
-    formatPercent,
-    formatPrice,
-    formatPriceCondition,
-    resolveLabel,
-    t,
-  }
-}
+import { useModelDisplayFactText } from "./useModelDisplayFactText"
 
 /** Renders one typed model display fact value. */
 function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
@@ -163,7 +34,7 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
     case MODEL_DISPLAY_FACT_TYPES.TokenQuantity:
       return (
         <span>
-          {t("displayFacts.tokenCount", {
+          {t("modelList:displayFacts.tokenCount", {
             count: fact.value,
             formattedCount: formatNumber(fact.value),
           })}
@@ -171,15 +42,17 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
       )
     case MODEL_DISPLAY_FACT_TYPES.StringList:
       return (
-        <ul className="gap-y-density-1 flex min-w-0 flex-wrap gap-x-1">
+        <ul className="flex min-w-0 flex-wrap gap-x-1 gap-y-density-1">
           {fact.values.map((value) => (
             <li key={value} className="max-w-full min-w-0">
               <Badge
-                variant="secondary"
+                variant={value === fact.currentValue ? "default" : "secondary"}
                 size="sm"
                 className="max-w-full break-all"
               >
-                {value}
+                {value === fact.currentValue
+                  ? t("modelList:displayFacts.currentValue", { value })
+                  : value}
               </Badge>
             </li>
           ))}
@@ -189,8 +62,8 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
       return (
         <span>
           {fact.value
-            ? t("displayFacts.boolean.yes", { defaultValue: "Yes" })
-            : t("displayFacts.boolean.no", { defaultValue: "No" })}
+            ? t("modelList:displayFacts.boolean.yes", { defaultValue: "Yes" })
+            : t("modelList:displayFacts.boolean.no", { defaultValue: "No" })}
         </span>
       )
     case MODEL_DISPLAY_FACT_TYPES.Number:
@@ -203,7 +76,7 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
           href={fact.href}
           target="_blank"
           rel="noreferrer noopener"
-          className="text-theme-600 dark:text-theme-400 break-all underline-offset-2 hover:underline"
+          className="break-all text-theme-600 underline-offset-2 hover:underline dark:text-theme-400"
         >
           {resolveLabel(fact.text)}
         </a>
@@ -216,9 +89,9 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
           {fact.overrides.map((override, index) => (
             <li
               key={`${override.conditions.map(formatPriceCondition).join(":")}:${index}`}
-              className="border-warning-border bg-warning-soft py-density-2 rounded-md border px-2"
+              className="rounded-md border border-warning-border bg-warning-soft px-2 py-density-2"
             >
-              <ul className="text-warning-text mb-density-1 list-disc space-y-0.5 pl-5 text-xs">
+              <ul className="mb-density-1 list-disc space-y-0.5 pl-5 text-xs text-warning-text">
                 {override.conditions.map((condition) => {
                   const conditionText = formatPriceCondition(condition)
                   return <li key={conditionText}>{conditionText}</li>
@@ -252,28 +125,28 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
           >
             <thead>
               <tr>
-                <th className="pb-density-1 pr-3">
-                  {t("displayFacts.benchmarkTable.arena", {
+                <th className="pr-3 pb-density-1">
+                  {t("modelList:displayFacts.benchmarkTable.arena", {
                     defaultValue: "Arena",
                   })}
                 </th>
-                <th className="pb-density-1 pr-3">
-                  {t("displayFacts.benchmarkTable.category", {
+                <th className="pr-3 pb-density-1">
+                  {t("modelList:displayFacts.benchmarkTable.category", {
                     defaultValue: "Category",
                   })}
                 </th>
-                <th className="pb-density-1 pr-3">
-                  {t("displayFacts.benchmarkTable.score", {
+                <th className="pr-3 pb-density-1">
+                  {t("modelList:displayFacts.benchmarkTable.score", {
                     defaultValue: "Score",
                   })}
                 </th>
-                <th className="pb-density-1 pr-3">
-                  {t("displayFacts.benchmarkTable.rank", {
+                <th className="pr-3 pb-density-1">
+                  {t("modelList:displayFacts.benchmarkTable.rank", {
                     defaultValue: "Rank",
                   })}
                 </th>
                 <th className="pb-density-1">
-                  {t("displayFacts.benchmarkTable.winRate", {
+                  {t("modelList:displayFacts.benchmarkTable.winRate", {
                     defaultValue: "Win rate",
                   })}
                 </th>
@@ -282,19 +155,19 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
             <tbody>
               {fact.entries.map((entry) => (
                 <tr key={`${entry.arena}:${entry.category}`}>
-                  <td className="py-density-1 border-t pr-3 break-all">
+                  <td className="border-t py-density-1 pr-3 break-all">
                     {entry.arena}
                   </td>
-                  <td className="py-density-1 border-t pr-3 break-all">
+                  <td className="border-t py-density-1 pr-3 break-all">
                     {entry.category}
                   </td>
-                  <td className="py-density-1 border-t pr-3">
+                  <td className="border-t py-density-1 pr-3">
                     {formatNumber(entry.score)}
                   </td>
-                  <td className="py-density-1 border-t pr-3">
+                  <td className="border-t py-density-1 pr-3">
                     {formatNumber(entry.rank)}
                   </td>
-                  <td className="py-density-1 border-t">
+                  <td className="border-t py-density-1">
                     {formatPercent(entry.winRatePercent)}
                   </td>
                 </tr>
@@ -307,15 +180,28 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
 }
 
 /** Renders one labelled model display fact. */
-function ModelDisplayFactItem({ fact }: { fact: ModelDisplayFact }) {
+function ModelDisplayFactItem({
+  fact,
+  inline = false,
+}: {
+  fact: ModelDisplayFact
+  inline?: boolean
+}) {
   const { resolveLabel } = useModelDisplayFactText()
 
   return (
-    <div data-testid="model-display-fact" className="space-y-density-1 min-w-0">
-      <dt className="text-muted-foreground text-xs font-medium">
+    <div
+      data-testid="model-display-fact"
+      className={
+        inline
+          ? "flex min-w-0 flex-wrap items-center gap-x-2 gap-y-density-1"
+          : "min-w-0 space-y-density-1"
+      }
+    >
+      <dt className="shrink-0 text-xs font-medium text-muted-foreground">
         {resolveLabel(fact.label)}
       </dt>
-      <dd className="text-secondary-foreground min-w-0 text-sm">
+      <dd className="min-w-0 text-sm text-secondary-foreground">
         <ModelDisplayFactValue fact={fact} />
       </dd>
     </div>
@@ -330,13 +216,22 @@ export function ModelPresentationSummary({
 }) {
   const facts = presentation?.summaryFacts ?? []
   if (facts.length === 0) return null
+  const inline =
+    presentation?.summaryLayout === MODEL_PRESENTATION_SUMMARY_LAYOUTS.Inline
 
   return (
-    <dl className="mt-density-2 gap-y-density-2 grid min-w-0 grid-cols-1 gap-x-2 sm:grid-cols-2 lg:grid-cols-3">
+    <dl
+      className={
+        inline
+          ? "mt-density-2 flex min-w-0 flex-wrap gap-x-4 gap-y-density-2"
+          : "mt-density-2 grid min-w-0 grid-cols-1 gap-x-2 gap-y-density-2 sm:grid-cols-2 lg:grid-cols-3"
+      }
+    >
       {facts.map((fact, index) => (
         <ModelDisplayFactItem
           key={`${fact.label.translationKey ?? fact.label.fallback}:${index}`}
           fact={fact}
+          inline={inline}
         />
       ))}
     </dl>
@@ -365,11 +260,11 @@ export function ModelPresentationDetails({
           <section key={section.id} aria-labelledby={headingId}>
             <h4
               id={headingId}
-              className="text-secondary-foreground mb-density-2 text-sm font-medium"
+              className="mb-density-2 text-sm font-medium text-secondary-foreground"
             >
               {resolveLabel(section.label)}
             </h4>
-            <dl className="gap-y-density-3 grid min-w-0 grid-cols-1 gap-x-3 md:grid-cols-2">
+            <dl className="grid min-w-0 grid-cols-1 gap-x-3 gap-y-density-3 md:grid-cols-2">
               {section.facts.map((fact, index) => (
                 <ModelDisplayFactItem
                   key={`${fact.label.translationKey ?? fact.label.fallback}:${index}`}

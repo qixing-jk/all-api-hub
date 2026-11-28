@@ -250,6 +250,59 @@ function renderListItem(
 }
 
 describe("ApiCredentialProfileListItem", () => {
+  it.each([
+    { baseUrl: "https://another.example.com" },
+    {
+      baseUrl: "https://plan.pmcat.top",
+      telemetryConfig: { mode: "disabled" as const },
+    },
+    {
+      baseUrl: "https://plan.pmcat.top",
+      telemetryConfig: { mode: "customReadOnlyEndpoint" as const },
+    },
+  ])(
+    "omits the PM-Plan automatic usage notice for $baseUrl with $telemetryConfig",
+    (overrides) => {
+      renderListItem(buildProfile(overrides))
+      expect(
+        screen.queryByText(
+          "apiCredentialProfiles:telemetry.pmplanAccountUsageHint",
+        ),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it("explains PM-Plan account-only usage while keeping model refresh available", async () => {
+    const user = userEvent.setup()
+    const profile = buildProfile({
+      baseUrl: "https://plan.pmcat.top",
+      telemetrySnapshot: {
+        schemaVersion: 2,
+        health: { status: SiteHealthStatus.Healthy },
+        lastSyncTime: 1,
+        attempts: [],
+        facts: { models: { count: 19, preview: ["gpt-4o"] } },
+      },
+    })
+    const onRefreshTelemetry = vi.fn()
+    renderListItem(profile, { onRefreshTelemetry })
+
+    expect(
+      screen.getByText(
+        "apiCredentialProfiles:telemetry.pmplanAccountUsageHint",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.actions.refresh",
+      }),
+    )
+    expect(onRefreshTelemetry).toHaveBeenCalledWith(profile)
+  })
+
   beforeAll(() => {
     testI18n.addResource(
       "en",

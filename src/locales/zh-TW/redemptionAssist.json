@@ -2,12 +2,16 @@
   "accountSelect": {
     "confirm": "確認兌換",
     "noResults": "未找到匹配的帳號，請調整搜尋條件",
-    "noSupportedAccounts": "已儲存的帳號都暫不支援自動兌換，請前往對應站點手動兌換。",
+    "noSupportedAccounts": "以下帳號符合目前兌換碼類型，但助手尚未接入自動兌換。可使用下方已知的兌換頁面，或前往發碼網站查看",
     "openSiteManual": "前往站點手動兌換",
+    "requestSupport": "申請支援",
+    "supportRequestMessage": "站點類型 {{siteType}} 尚未支援自動兌換，申請新增兌換支援。",
     "title": "選擇要用於兌換的帳號",
     "titleFallback": "未找到與當前站點匹配的帳號，請手動選擇一個帳號",
     "titleMultiple": "檢測到多個可用帳號，請選擇一個用於兌換",
-    "unsupported": "此站點類型暫不支援自動兌換"
+    "titleNoAutomatic": "這些帳號暫不支援自動兌換",
+    "titlePmplan": "選擇領取重置卡的 PM-Plan 帳號",
+    "unsupported": "此帳號暫不支援自動兌換"
   },
   "actions": {
     "autoRedeem": "自動兌換"
@@ -27,12 +31,21 @@
   },
   "messages": {
     "batchResultSummary": "共 {{total}} 個，成功 {{success}} 個，失敗 {{failed}} 個。",
+    "batchResultSummaryUnconfirmed": "共 {{total}} 個，成功 {{success}} 個，失敗 {{failed}} 個，未確認 {{unconfirmed}} 個",
     "batchResultTitle": "兌換結果",
     "benefitsRedeemed": "兌換成功：{{details}}",
     "cancelled": "已取消",
+    "claimUnconfirmed": "未確認",
     "extensionDays": "延長 {{days}} 天",
     "fallbackBenefit": "已使用備用福利",
+    "incompatibleCodeKind": "此帳號無法兌換這種類型的兌換碼，請選擇相容帳號",
+    "invalidResetCode": "PM-Plan 重置卡格式無效，請檢查完整的 PMRC 兌換碼",
     "noAccountForUrl": "當前站點未在 All API Hub 中配置帳號，請先在擴充套件中新增該站點後再試。",
+    "noCompatibleAccounts": "沒有已啟用的帳號符合這種兌換碼類型，請新增對應帳號或前往發碼網站兌換",
+    "pmplanCardClaimed": "已領取重置卡，尚未使用",
+    "pmplanClaimUncertain": "領取結果不確定，請先到所選網站查看卡包，再決定是否重試",
+    "pmplanPromptConfirm": "偵測到 PM-Plan 重置卡 {{code}}，是否領取至帳戶？領取不會使用卡片或重置額度",
+    "pmplanSelectAccount": "請選擇發卡網站的帳號。PMRC 前綴無法判斷所屬網站；領取不會使用卡片",
     "promptConfirm": "檢測到疑似兌換碼 {{code}}，是否為當前站點嘗試自動兌換？",
     "promptConfirmBatch_other": "檢測到 {{count}} 個疑似兌換碼，請選擇要為當前站點嘗試自動兌換的兌換碼。",
     "promptSettingsLink": "開啟兌換助手設定",
@@ -40,6 +53,7 @@
     "redeemFailed": "兌換失敗，請稍後重試。",
     "redeemLoading": "正在嘗試兌換，請稍候…",
     "redeemSuccess": "兌換成功，到帳額度：{{amount}}",
+    "redemptionUncertain": "兌換結果尚未確認，請先前往所選站點核實後再嘗試。",
     "selectAll": "全選",
     "success": {
       "settingsSaved": "兌換助手設定已儲存"

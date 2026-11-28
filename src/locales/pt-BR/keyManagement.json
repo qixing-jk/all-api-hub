@@ -659,6 +659,10 @@
         "rpm": "Requisições por minuto",
         "rpmHelp": "Máximo de requisições por minuto para este token; 0 significa ilimitado."
       },
+      "pmplan": {
+        "customExpiryHelp": "Informe uma data e hora de expiração futura no seu fuso horário local.",
+        "modelsHelp": "Deixe vazio para permitir todos os modelos disponíveis para a conta agora e no futuro. As chaves compartilham os limites de uso móveis da conta."
+      },
       "quotaCredits": "Créditos restantes",
       "quotaCreditsHelp": "A chave para de funcionar quando esses créditos acabam.",
       "quotaUsd": "Cota (USD)",

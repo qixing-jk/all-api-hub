@@ -11,7 +11,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { RedemptionAccountSelectToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionAccountSelectToast"
+import { RedemptionAccountSelectToast } from "~/features/RedemptionAssist/components/RedemptionAccountSelectToast"
 import { ACCOUNT_USER_FEATURE_UNAVAILABLE_REASONS } from "~/services/apiAdapters/accountCapabilitySupport"
 import {
   REDEMPTION_ACCOUNT_SUPPORT_STATUSES,
@@ -120,7 +120,7 @@ describe("RedemptionAccountSelectToast", () => {
     )
   })
 
-  it("uses the provided title/message, shows custom check-in urls, and handles confirm and cancel clicks", async () => {
+  it("uses the provided title/message, shows the receiving site, and handles confirm and cancel clicks", async () => {
     const accounts = [
       makeAccount({
         id: "acc-1",
@@ -147,9 +147,7 @@ describe("RedemptionAccountSelectToast", () => {
 
     expect(screen.getByText("Choose account")).toBeInTheDocument()
     expect(screen.getByText("Select a target account.")).toBeInTheDocument()
-    expect(
-      screen.getByText("https://custom.example.com/check-in"),
-    ).toBeInTheDocument()
+    expect(screen.getByText("https://base.example.com")).toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.cancel" }),
@@ -262,6 +260,7 @@ describe("RedemptionAccountSelectToast", () => {
       makeAccount({
         id: "unsupported-account",
         name: "Unsupported Account",
+        manualRedemptionUrl: "https://example.com/redeem",
         automaticRedemptionSupport: {
           status: REDEMPTION_ACCOUNT_SUPPORT_STATUSES.Unsupported,
           reason: ACCOUNT_USER_FEATURE_UNAVAILABLE_REASONS.CapabilityMissing,
@@ -292,7 +291,7 @@ describe("RedemptionAccountSelectToast", () => {
     const manualLink = screen.getByRole("link", {
       name: "redemptionAssist:accountSelect.openSiteManual",
     })
-    expect(manualLink).toHaveAttribute("href", "https://example.com")
+    expect(manualLink).toHaveAttribute("href", "https://example.com/redeem")
     fireEvent.keyDown(manualLink, { key: "Enter" })
     expect(onSelect).not.toHaveBeenCalled()
     await user.click(manualLink)

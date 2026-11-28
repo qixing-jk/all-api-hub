@@ -2,15 +2,16 @@ import { waitFor } from "@testing-library/react"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { RedemptionAccountSelectToastProps } from "~/entrypoints/content/redemptionAssist/components/RedemptionAccountSelectToast"
+import type { RedemptionAccountSelectToastProps } from "~/features/RedemptionAssist/components/RedemptionAccountSelectToast"
 import type {
   RedemptionBatchResultItem,
   RedemptionBatchResultToastProps,
-} from "~/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast"
+} from "~/features/RedemptionAssist/components/RedemptionBatchResultToast"
 import type {
   RedemptionPromptCodeItem,
   RedemptionPromptResult,
-} from "~/entrypoints/content/redemptionAssist/components/RedemptionPromptToast"
+} from "~/features/RedemptionAssist/components/RedemptionPromptToast"
+import { REDEMPTION_PROMPT_ACTIONS } from "~/features/RedemptionAssist/contracts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -67,7 +68,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 }))
 
 vi.mock(
-  "~/entrypoints/content/redemptionAssist/components/RedemptionAccountSelectToast",
+  "~/features/RedemptionAssist/components/RedemptionAccountSelectToast",
   () => ({
     RedemptionAccountSelectToast: (props: RedemptionAccountSelectToastProps) =>
       React.createElement("mock-account-select-toast", props as any),
@@ -75,7 +76,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast",
+  "~/features/RedemptionAssist/components/RedemptionBatchResultToast",
   () => ({
     RedemptionBatchResultToast: (props: RedemptionBatchResultToastProps) =>
       React.createElement("mock-batch-result-toast", props as any),
@@ -83,20 +84,17 @@ vi.mock(
 )
 
 vi.mock(
-  "~/entrypoints/content/redemptionAssist/components/RedemptionLoadingToast",
+  "~/features/RedemptionAssist/components/RedemptionLoadingToast",
   () => ({
     RedemptionLoadingToast: (props: LoadingToastProps) =>
       React.createElement("mock-loading-toast", props as any),
   }),
 )
 
-vi.mock(
-  "~/entrypoints/content/redemptionAssist/components/RedemptionPromptToast",
-  () => ({
-    RedemptionPromptToast: (props: PromptToastProps) =>
-      React.createElement("mock-prompt-toast", props as any),
-  }),
-)
+vi.mock("~/features/RedemptionAssist/components/RedemptionPromptToast", () => ({
+  RedemptionPromptToast: (props: PromptToastProps) =>
+    React.createElement("mock-prompt-toast", props as any),
+}))
 
 describe("redemptionToasts", () => {
   beforeEach(() => {
@@ -108,9 +106,8 @@ describe("redemptionToasts", () => {
   it("shows the loading toast through the shared UI root with an indefinite duration", async () => {
     toastCustomMock.mockReturnValue("loading-toast-id")
 
-    const { showRedeemLoadingToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { showRedeemLoadingToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     await expect(showRedeemLoadingToast("Redeeming now")).resolves.toBe(
       "loading-toast-id",
@@ -130,9 +127,8 @@ describe("redemptionToasts", () => {
   })
 
   it("passes toast ids through to dismissToast", async () => {
-    const { dismissToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { dismissToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     dismissToast("toast-123")
     dismissToast()
@@ -142,9 +138,8 @@ describe("redemptionToasts", () => {
   })
 
   it("skips blank result toasts and routes non-blank messages to success or error", async () => {
-    const { showRedeemResultToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { showRedeemResultToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     await showRedeemResultToast(true, "")
 
@@ -179,9 +174,8 @@ describe("redemptionToasts", () => {
       },
     )
 
-    const { showAccountSelectToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { showAccountSelectToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     const chosenAccount = { id: "account-a", siteName: "Alpha" } as any
     const ignoredAccount = { id: "account-b", siteName: "Beta" } as any
@@ -207,9 +201,8 @@ describe("redemptionToasts", () => {
   it("tracks account-select exposure with only account count insight", async () => {
     toastCustomMock.mockReturnValue("account-toast-return")
 
-    const { showAccountSelectToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { showAccountSelectToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     void showAccountSelectToast(
       [
@@ -247,9 +240,8 @@ describe("redemptionToasts", () => {
   it("resolves the redemption prompt exactly once and preserves the first action payload", async () => {
     toastCustomMock.mockReturnValue("prompt-toast-return")
 
-    const { showRedemptionPromptToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { showRedemptionPromptToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     const promptPromise = showRedemptionPromptToast("Prompt message", [
       { code: "code-a", preview: "AA**" },
@@ -265,7 +257,7 @@ describe("redemptionToasts", () => {
     ) => React.ReactElement<PromptToastProps>
     const promptElement = promptRenderer({ id: "prompt-toast-id" })
     const firstResult: RedemptionPromptResult = {
-      action: "auto",
+      action: REDEMPTION_PROMPT_ACTIONS.Auto,
       selectedCodes: ["code-a"],
     }
 
@@ -276,7 +268,7 @@ describe("redemptionToasts", () => {
     ])
     promptElement.props.onAction(firstResult)
     promptElement.props.onAction({
-      action: "cancel",
+      action: REDEMPTION_PROMPT_ACTIONS.Cancel,
       selectedCodes: [],
     })
 
@@ -288,9 +280,8 @@ describe("redemptionToasts", () => {
   it("tracks redemption prompt exposure with item count only", async () => {
     toastCustomMock.mockReturnValue("prompt-toast-return")
 
-    const { showRedemptionPromptToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { showRedemptionPromptToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     void showRedemptionPromptToast("Prompt message", [
       { code: "secret-code-a", preview: "AA**" },
@@ -320,9 +311,8 @@ describe("redemptionToasts", () => {
   it("renders the batch result toast with an indefinite duration and dismisses on close", async () => {
     toastCustomMock.mockReturnValue("batch-toast-return")
 
-    const { showRedeemBatchResultToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { showRedeemBatchResultToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     const results: RedemptionBatchResultItem[] = [
       {
@@ -363,9 +353,8 @@ describe("redemptionToasts", () => {
   it("tracks batch-result exposure with aggregate result counts only", async () => {
     toastCustomMock.mockReturnValue("batch-toast-return")
 
-    const { showRedeemBatchResultToast } = await import(
-      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
-    )
+    const { showRedeemBatchResultToast } =
+      await import("~/features/RedemptionAssist/redemptionToasts")
 
     await showRedeemBatchResultToast(
       [

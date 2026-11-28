@@ -2,12 +2,16 @@
   "accountSelect": {
     "confirm": "确认兑换",
     "noResults": "未找到匹配的账号，请调整搜索条件",
-    "noSupportedAccounts": "已保存的账号都暂不支持自动兑换，请前往对应站点手动兑换。",
+    "noSupportedAccounts": "以下账号符合当前兑换码类型，但助手尚未接入自动兑换。可使用下方已知的兑换页面，或前往发码站点查看",
     "openSiteManual": "前往站点手动兑换",
+    "requestSupport": "申请支持",
+    "supportRequestMessage": "站点类型 {{siteType}} 尚未接入自动兑换，申请增加兑换支持。",
     "title": "选择要用于兑换的账号",
     "titleFallback": "未找到与当前站点匹配的账号，请手动选择一个账号",
     "titleMultiple": "检测到多个可用账号，请选择一个用于兑换",
-    "unsupported": "此站点类型暂不支持自动兑换"
+    "titleNoAutomatic": "这些账号暂不支持自动兑换",
+    "titlePmplan": "选择领取重置卡的 PM-Plan 账号",
+    "unsupported": "此账号暂不支持自动兑换"
   },
   "actions": {
     "autoRedeem": "自动兑换"
@@ -27,12 +31,21 @@
   },
   "messages": {
     "batchResultSummary": "共 {{total}} 个，成功 {{success}} 个，失败 {{failed}} 个。",
+    "batchResultSummaryUnconfirmed": "共 {{total}} 个，成功 {{success}} 个，失败 {{failed}} 个，未确认 {{unconfirmed}} 个",
     "batchResultTitle": "兑换结果",
     "benefitsRedeemed": "兑换成功：{{details}}",
     "cancelled": "已取消",
+    "claimUnconfirmed": "未确认",
     "extensionDays": "延长 {{days}} 天",
     "fallbackBenefit": "已使用备用福利",
+    "incompatibleCodeKind": "此账号无法兑换这种类型的兑换码，请选择兼容账号",
+    "invalidResetCode": "PM-Plan 重置卡格式无效，请检查完整的 PMRC 兑换码",
     "noAccountForUrl": "当前站点未在 All API Hub 中配置账号，请先在扩展中添加该站点后再试。",
+    "noCompatibleAccounts": "没有已启用的账号符合这种兑换码类型，请添加对应账号或前往发码站点兑换",
+    "pmplanCardClaimed": "已领取重置卡，尚未使用",
+    "pmplanClaimUncertain": "领取结果不确定，请先到所选站点查看卡包，再决定是否重试",
+    "pmplanPromptConfirm": "检测到 PM-Plan 重置卡 {{code}}，是否领取到账户？领取不会使用卡片或重置额度",
+    "pmplanSelectAccount": "请选择发卡站点的账号。PMRC 前缀无法判断所属站点；领取不会使用卡片",
     "promptConfirm": "检测到疑似兑换码 {{code}}，是否为当前站点尝试自动兑换？",
     "promptConfirmBatch": "检测到 {{count}} 个疑似兑换码，请选择要为当前站点尝试自动兑换的兑换码。",
     "promptSettingsLink": "打开兑换助手设置",
@@ -40,6 +53,7 @@
     "redeemFailed": "兑换失败，请稍后重试。",
     "redeemLoading": "正在尝试兑换，请稍候…",
     "redeemSuccess": "兑换成功，到账额度：{{amount}}",
+    "redemptionUncertain": "兑换结果尚未确认，请先前往所选站点核实后再尝试。",
     "selectAll": "全选",
     "success": {
       "settingsSaved": "兑换助手设置已保存"

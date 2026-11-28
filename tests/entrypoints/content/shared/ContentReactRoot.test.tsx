@@ -68,12 +68,9 @@ vi.mock("~/features/WebAiApiCheck/content/modal/ApiCheckModalHost", () => ({
   ),
 }))
 
-vi.mock(
-  "~/entrypoints/content/redemptionAssist/components/RedemptionToaster",
-  () => ({
-    RedemptionToaster: () => <div data-testid="redemption-toaster" />,
-  }),
-)
+vi.mock("~/features/RedemptionAssist/components/RedemptionToaster", () => ({
+  RedemptionToaster: () => <div data-testid="redemption-toaster" />,
+}))
 
 describe("ContentReactRoot", () => {
   beforeEach(() => {
@@ -86,9 +83,8 @@ describe("ContentReactRoot", () => {
   it("waits for initial appearance before mounting interactive UI", async () => {
     const pending = createDeferred<Partial<UserPreferences>>()
     getPreferencesMock.mockReturnValue(pending.promise)
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
     const { container } = render(<ContentReactRoot />)
     expect(container.firstChild).not.toBeVisible()
     expect(screen.queryByTestId("api-check-modal-host")).not.toBeInTheDocument()
@@ -116,9 +112,8 @@ describe("ContentReactRoot", () => {
         textSize: "large",
       },
     })
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
     const originalHostTheme = document.documentElement.getAttribute(
       THEME_ATTRIBUTES.COLOR,
     )
@@ -189,9 +184,8 @@ describe("ContentReactRoot", () => {
       themeMode: THEME_MODE.DARK,
       appearance: { color: THEME_COLOR.GREEN },
     })
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
     const { container } = render(<ContentReactRoot />)
 
     act(() => {
@@ -238,9 +232,8 @@ describe("ContentReactRoot", () => {
     )
     const pending = createDeferred<Partial<UserPreferences>>()
     getPreferencesMock.mockReturnValueOnce(pending.promise)
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
     const { unmount } = render(<ContentReactRoot />)
     unmount()
     await act(async () => {
@@ -262,9 +255,8 @@ describe("ContentReactRoot", () => {
     )
     getPreferencesMock.mockResolvedValue({ themeMode: THEME_MODE.SYSTEM })
 
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
 
     const { container, unmount } = render(<ContentReactRoot />)
 
@@ -303,9 +295,8 @@ describe("ContentReactRoot", () => {
     )
     getPreferencesMock.mockResolvedValue({ themeMode: THEME_MODE.DARK })
 
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
 
     const { container } = render(<ContentReactRoot />)
 
@@ -335,9 +326,8 @@ describe("ContentReactRoot", () => {
     const error = new Error("prefs unavailable")
     getPreferencesMock.mockRejectedValue(error)
 
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
 
     const { container } = render(<ContentReactRoot />)
 
@@ -364,9 +354,8 @@ describe("ContentReactRoot", () => {
     window.addEventListener("keydown", hostPageKeyDown)
     window.addEventListener("keyup", hostPageKeyUp)
 
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
 
     render(<ContentReactRoot />)
 
@@ -388,9 +377,8 @@ describe("ContentReactRoot", () => {
   it("stays unmarked when the build carries no instance color", async () => {
     getPreferencesMock.mockResolvedValue({ themeMode: THEME_MODE.LIGHT })
 
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
 
     render(<ContentReactRoot />)
 
@@ -402,9 +390,8 @@ describe("ContentReactRoot", () => {
     getPreferencesMock.mockResolvedValue({ themeMode: THEME_MODE.LIGHT })
     getDevIdentityMock.mockReturnValue(buildDevIdentity())
 
-    const { ContentReactRoot } = await import(
-      "~/entrypoints/content/shared/ContentReactRoot"
-    )
+    const { ContentReactRoot } =
+      await import("~/entrypoints/content/shared/ContentReactRoot")
 
     render(<ContentReactRoot />)
 

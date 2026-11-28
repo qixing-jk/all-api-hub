@@ -3,6 +3,7 @@ import type {
   AccountPasswordIdentity,
 } from "~/constants/accountLogin"
 import type { AccountSiteProductProfileOverride } from "~/services/accounts/accountSiteProfile/contracts"
+import type { RedemptionCodeKind } from "~/services/redemption/utils/redemptionCode"
 
 import type { SiteType } from "./identifiers"
 import type { NewApiAccountLoginProtocolConfig } from "./loginProtocols/newApi"
@@ -51,6 +52,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Dahl: "dahl",
   FoxCode: "foxcode",
   Xiaoen: "xiaoen",
+  Pmplan: "pmplan",
   Emrank: "emrank",
   Krill: "krill",
   Daya: "daya",
@@ -220,6 +222,8 @@ export interface AccountSiteLoginConfig {
 
 export interface AccountSiteDefinition {
   siteType: SiteType
+  /** Code-type routing independent of automatic redemption; absent uses the generic format bucket. */
+  redemptionCodeKinds?: readonly RedemptionCodeKind[]
   /** Provider-owned wording for native monetary balance details. */
   balanceDetailsCopy?: "novita"
   /** Released account-token locators map to this native scope, independently of the current adapter family. */

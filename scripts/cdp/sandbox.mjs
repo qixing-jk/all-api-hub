@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto"
 import { expect } from "@playwright/test"
 
+import { runScenarioWithCleanup } from "../../e2e/utils/scenarioErrors.ts"
 import { STORAGE_LOCKS } from "../../src/services/core/storageKeys.ts"
 
 /** Capture an actual UI save and remove only the newly created, uniquely named account. */
@@ -20,41 +21,55 @@ export async function withUiCreatedAccount(
       (account) => !before.has(account.id) && account.site_name === name,
     )
   const confirmedIds = new Set()
-  try {
-    let creationError
-    try {
-      await create(name)
-    } catch (error) {
-      creationError = error
-    }
-    let found = []
-    try {
-      await expect
-        .poll(
-          async () => {
-            found = owned(await getAccounts(serviceWorker))
-            return found.length
-          },
-          { timeout: timeoutMs },
+  return runScenarioWithCleanup({
+    run: async () => {
+      let creationError
+      try {
+        await create(name)
+      } catch (error) {
+        creationError = error
+      }
+      let found = []
+      try {
+        await expect
+          .poll(
+            async () => {
+              found = owned(await getAccounts(serviceWorker))
+              return found.length
+            },
+            { timeout: timeoutMs },
+          )
+          .toBe(1)
+      } catch (error) {
+        throw new AggregateError(
+          [creationError, error].filter(Boolean),
+          "UI account save outcome is uncertain; do not replay the save",
+          { cause: error },
         )
-        .toBe(1)
-    } catch (error) {
-      throw new AggregateError(
-        [creationError, error].filter(Boolean),
-        "UI account save outcome is uncertain; do not replay the save",
-        { cause: error },
-      )
-    }
-    confirmedIds.add(found[0].id)
-    if (creationError) throw creationError
-    return await work(found[0])
-  } finally {
-    const accounts = await getAccounts(serviceWorker)
-    for (const account of accounts.filter(
-      (account) => confirmedIds.has(account.id) || owned([account]).length,
-    ))
-      await mutateFixture(serviceWorker, account, true)
-  }
+      }
+      confirmedIds.add(found[0].id)
+      if (creationError) throw creationError
+      return await work(found[0])
+    },
+    finalizers: [
+      async () => {
+        const accounts = await getAccounts(serviceWorker)
+        const errors = []
+        for (const account of accounts.filter(
+          (account) => confirmedIds.has(account.id) || owned([account]).length,
+        ))
+          try {
+            await mutateFixture(serviceWorker, account, true)
+          } catch (error) {
+            errors.push(error)
+          }
+        if (errors.length)
+          throw new AggregateError(errors, "UI account cleanup failed")
+      },
+    ],
+    cleanupMessage: "UI account cleanup failed",
+    failureMessage: "UI account scenario and cleanup failed",
+  })
 }
 
 /**

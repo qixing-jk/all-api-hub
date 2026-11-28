@@ -169,6 +169,7 @@ export async function hasCookiesForUrl(
 
 // 拦截器注册状态
 let isInterceptorRegistered = false
+let interceptedOrigins = new Set<string>()
 
 /**
  * Checks whether cookie interception should run (Firefox + permissions).
@@ -259,6 +260,9 @@ export async function getCookieHeaderForUrlResult(
 async function handleWebRequest(
   details: browser.webRequest._OnBeforeSendHeadersDetails,
 ) {
+  // Firefox match patterns cannot constrain ports. Keep the actual admission
+  // boundary at the complete origin before reading or attaching any Cookies.
+  if (!interceptedOrigins.has(new URL(details.url).origin)) return {}
   const headers = details.requestHeaders || []
 
   // 只处理带有扩展标识的请求
@@ -348,7 +352,7 @@ async function handleWebRequest(
 
 /**
  * 注册 WebRequest 拦截器
- * @param urlPatterns URL 白名单模式列表
+ * @param urlPatterns Exact origin allow-list patterns (origin/*), including ports.
  */
 export function registerWebRequestInterceptor(urlPatterns: string[]): void {
   if (!isProtectionBypassFirefoxEnv()) {
@@ -363,6 +367,7 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
       isInterceptorRegistered = false
       logger.debug("已注销旧拦截器")
     }
+    interceptedOrigins = new Set()
 
     // 如果没有 URL 模式，不注册
     if (!urlPatterns || urlPatterns.length === 0) {
@@ -370,10 +375,16 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
       return
     }
 
-    // 注册新的拦截器
+    const urls = urlPatterns.map((pattern) => new URL(pattern))
+    interceptedOrigins = new Set(urls.map((url) => url.origin))
+    // Firefox accepts a port in this filter but never matches its requests.
+    // https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Match_patterns#host
+    const browserPatterns = [
+      ...new Set(urls.map((url) => `${url.protocol}//${url.hostname}/*`)),
+    ]
     browser.webRequest.onBeforeSendHeaders.addListener(
       handleWebRequest,
-      { urls: urlPatterns },
+      { urls: browserPatterns },
       ["blocking", "requestHeaders"],
     )
 
@@ -385,6 +396,7 @@ export function registerWebRequestInterceptor(urlPatterns: string[]): void {
   } catch (error) {
     logger.error("拦截器注册失败", error)
     isInterceptorRegistered = false
+    interceptedOrigins = new Set()
   }
 }
 

@@ -171,6 +171,10 @@ export const RuntimeActionIds = {
     "started",
   ),
 
+  RedemptionAssistGetStatus: composeRuntimeAction(
+    RuntimeActionPrefixes.RedemptionAssist,
+    "getStatus",
+  ),
   RedemptionAssistContextMenuTrigger: composeRuntimeAction(
     RuntimeActionPrefixes.RedemptionAssist,
     "contextMenuTrigger",

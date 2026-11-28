@@ -4,10 +4,10 @@ import "~/styles/content.css"
 
 import { THEME_MODE } from "~/constants/theme"
 import { useContentAppearance } from "~/features/Appearance/useContentAppearance"
+import { RedemptionToaster } from "~/features/RedemptionAssist/components/RedemptionToaster"
 import { ApiCheckModalHost } from "~/features/WebAiApiCheck/content/modal/ApiCheckModalHost"
 import { getAppearanceScopeAttributes } from "~/utils/ui/themePreferences"
 
-import { RedemptionToaster } from "../redemptionAssist/components/RedemptionToaster"
 import { DevIdentityTag } from "./DevIdentityTag"
 
 const stopHostPageKeyboardShortcuts = (

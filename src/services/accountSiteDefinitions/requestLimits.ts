@@ -66,6 +66,7 @@ const budgets = {
   [SITE_TYPES.KIMI_GLOBAL]: fallback,
   [SITE_TYPES.DAYA]: fallback,
   [SITE_TYPES.PMAPI]: fallback,
+  [SITE_TYPES.PMPLAN]: fallback,
   [SITE_TYPES.AIMLAPI]: fallback,
   [SITE_TYPES.GRSAI]: fallback,
   [SITE_TYPES.VERCEL_AI_GATEWAY]: fallback,

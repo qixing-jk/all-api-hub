@@ -2,12 +2,16 @@
   "accountSelect": {
     "confirm": "Einlösung bestätigen",
     "noResults": "Keine passenden Konten gefunden",
-    "noSupportedAccounts": "Keines deiner gespeicherten Konten unterstützt die automatische Einlösung. Löse den Code manuell auf der entsprechenden Website ein.",
+    "noSupportedAccounts": "Die angezeigten Konten passen zur Codeart, werden aber noch nicht für automatisches Einlösen unterstützt. Öffne unten eine bekannte Einlöseseite oder prüfe die ausstellende Website.",
     "openSiteManual": "Website öffnen und manuell einlösen",
+    "requestSupport": "Unterstützung anfragen",
+    "supportRequestMessage": "Die automatische Einlösung wird für den Seitentyp {{siteType}} noch nicht unterstützt. Bitte fügen Sie die Einlösung hinzu.",
     "title": "Wählen Sie ein Konto aus, das für die Einlösung verwendet werden soll",
     "titleFallback": "Kein Konto stimmt mit dieser Website überein, bitte wählen Sie manuell eines aus",
     "titleMultiple": "Mehrere Konten verfügbar, bitte wählen Sie eines zur Einlösung aus",
-    "unsupported": "Die automatische Einlösung wird für diesen Website-Typ nicht unterstützt"
+    "titleNoAutomatic": "Automatisches Einlösen ist für diese Konten nicht verfügbar",
+    "titlePmplan": "PM-Plan-Konto für den Erhalt der Karte wählen",
+    "unsupported": "Automatisches Einlösen wird für dieses Konto noch nicht unterstützt"
   },
   "actions": {
     "autoRedeem": "Automatisch einlösen"
@@ -27,12 +31,21 @@
   },
   "messages": {
     "batchResultSummary": "Gesamt {{total}}. Erfolgreich {{success}}. Fehlgeschlagen {{failed}}.",
+    "batchResultSummaryUnconfirmed": "Gesamt {{total}}. Erfolgreich {{success}}. Fehlgeschlagen {{failed}}. Unbestätigt {{unconfirmed}}.",
     "batchResultTitle": "Einlösungsergebnisse",
     "benefitsRedeemed": "Eingelöst: {{details}}",
     "cancelled": "Abgebrochen",
+    "claimUnconfirmed": "Unbestätigt",
     "extensionDays": "Um {{days}} Tage verlängert",
     "fallbackBenefit": "Ersatzvorteil verwendet",
+    "incompatibleCodeKind": "Dieses Konto kann diese Codeart nicht einlösen. Wähle ein kompatibles Konto.",
+    "invalidResetCode": "Ungültiger PM-Plan-Code für eine Reset-Karte. Prüfe den vollständigen PMRC-Code.",
     "noAccountForUrl": "Für diese Website wurde kein passendes Konto gefunden. Bitte fügen Sie die Website als Konto in All API Hub hinzu und versuchen Sie es dann erneut.",
+    "noCompatibleAccounts": "Kein aktiviertes Konto passt zu dieser Codeart. Füge ein passendes Konto hinzu oder löse den Code auf der ausstellenden Website ein.",
+    "pmplanCardClaimed": "Reset-Karte erhalten. Sie wurde noch nicht verwendet.",
+    "pmplanClaimUncertain": "Das Ergebnis ist unklar. Prüfe deine Karten auf der gewählten Website, bevor du es erneut versuchst.",
+    "pmplanPromptConfirm": "PM-Plan-Reset-Karte {{code}} erkannt. Dem Konto hinzufügen? Dabei wird die Karte nicht verwendet und kein Kontingent zurückgesetzt.",
+    "pmplanSelectAccount": "Wähle ein Konto auf der Website, die diese Karte ausgestellt hat. Das PMRC-Präfix identifiziert die Website nicht. Beim Erhalt wird die Karte nicht verwendet.",
     "promptConfirm": "Auf dieser Seite wurde ein möglicher Einlösungscode {{code}} entdeckt. Versuchen Sie die automatische Einlösung für diese Website?",
     "promptConfirmBatch_one": "{{count}} möglicher Einlösungscode wurde auf dieser Seite erkannt. Wählen Sie die Codes aus, die für diese Website automatisch eingelöst werden sollen.",
     "promptConfirmBatch_other": "{{count}} mögliche Einlösungscodes wurden auf dieser Seite erkannt. Wählen Sie die Codes aus, die für diese Website automatisch eingelöst werden sollen.",
@@ -41,6 +54,7 @@
     "redeemFailed": "Einlösung fehlgeschlagen. Bitte versuchen Sie es später noch einmal.",
     "redeemLoading": "Versuche einzulösen…",
     "redeemSuccess": "Erfolgreich eingelöst. Gutgeschriebener Betrag: {{amount}}",
+    "redemptionUncertain": "Das Einlöseergebnis ist ungewiss. Prüfen Sie die ausgewählte Website, bevor Sie es erneut versuchen.",
     "selectAll": "Alles auswählen",
     "success": {
       "settingsSaved": "Die Einstellungen für die Einlösungshilfe wurden gespeichert"

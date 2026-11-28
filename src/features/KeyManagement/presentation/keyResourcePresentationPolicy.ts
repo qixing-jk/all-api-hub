@@ -28,6 +28,7 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   Krill: "krill",
   Daya: "daya",
   Pmapi: "pmapi",
+  Pmplan: "pmplan",
   Dahl: "dahl",
   FoxCode: "foxcode",
   Emrank: "emrank",
@@ -130,6 +131,7 @@ const policies = {
     editor: KEY_RESOURCE_EDITOR_KINDS.NanoGpt,
     factLabels: nanoGptKeyFieldLabels,
   },
+  [families.Pmplan]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Pmplan },
   [families.OpenRouter]: {
     ...generic,
     editor: KEY_RESOURCE_EDITOR_KINDS.OpenRouter,

@@ -32,7 +32,7 @@ export const RedemptionToaster: React.FC = () => {
       onMouseEnter={startPause}
       onMouseLeave={endPause}
     >
-      <div className="gap-y-density-3 flex max-h-[calc(100vh-3rem)] max-w-full flex-col gap-x-3 overflow-y-auto px-3 sm:px-4">
+      <div className="flex max-h-[calc(100vh-3rem)] max-w-full flex-col gap-x-3 gap-y-density-3 overflow-y-auto px-3 sm:px-4">
         {visibleToasts.map((toast) => {
           // 自定义 toast（toast.custom）：统一由这里控制外层宽度/布局，内部组件只关心内容样式
           if (toast.type === "custom") {

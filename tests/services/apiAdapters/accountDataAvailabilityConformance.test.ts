@@ -164,6 +164,37 @@ const compatibleQuotaFixture = {
 } satisfies ProducerFixture
 
 const producerFixturesByFamily = {
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Pmplan]: {
+    baseUrl: "https://plan.pmcat.top",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.WrongPeriod),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://plan.pmcat.top/api/me", () =>
+        HttpResponse.json({
+          user: { id: 1, username: "sample" },
+          checkin: { today: "2026-11-03" },
+          daily_usage: [{ day: "11-03", requests: 3, cost_micro: 125000 }],
+          plan: { name: "Lite" },
+          usage: {
+            h5_used: 0,
+            h5_limit: 1000000,
+            weekly_used: 0,
+            weekly_limit: 2000000,
+            monthly_used: 0,
+            monthly_limit: 5000000,
+            requests_30d: 0,
+            tokens_30d: 0,
+          },
+        }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen]: {
     baseUrl: "https://free.supxh.xin",
     authType: AuthTypeEnum.Cookie,
@@ -1057,9 +1088,11 @@ const createRequest = (siteType: AccountSiteType) => {
                 ? "615"
                 : siteType === SITE_TYPES.PMAPI
                   ? "10171"
-                  : siteType === SITE_TYPES.NANOGPT
-                    ? NANOGPT_CONFORMANCE_DEPOSIT_ADDRESS
-                    : "user-1",
+                  : siteType === SITE_TYPES.PMPLAN
+                    ? "1"
+                    : siteType === SITE_TYPES.NANOGPT
+                      ? NANOGPT_CONFORMANCE_DEPOSIT_ADDRESS
+                      : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),
@@ -1343,6 +1376,9 @@ describe("AccountData availability producer conformance", () => {
     "classifies both registered producer paths for %s",
     async (siteType) => {
       const capabilities = getSiteTypeCapabilities(siteType)
+      if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Pmplan) {
+        installCookieTransport("pmplan_session", "plan.pmcat.top")
+      }
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen) {
         const boundary = installCookieTransport()
         const cookie = (await browser.cookies.getAll({}))[0]!

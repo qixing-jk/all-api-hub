@@ -1,6 +1,38 @@
 import { expect, it, vi } from "vitest"
 
-import { runUiScenarios } from "~~/scripts/cdp/ui-scenarios.mjs"
+import {
+  runUiScenarios,
+  summarizeUiSuite,
+} from "~~/scripts/cdp/ui-scenarios.mjs"
+
+it.each([false, true])(
+  "keeps blocked coverage separate from assertion failure: %s",
+  async (failed) => {
+    const result = await runUiScenarios({
+      selected: ["missing", "assertion"],
+      scenarios: [
+        {
+          id: "missing",
+          covers: [],
+          prerequisite: () => "No write authorization",
+          run: async () => {},
+        },
+        {
+          id: "assertion",
+          covers: [],
+          run: async () => {
+            if (failed) throw new Error("assertion failed")
+          },
+        },
+      ],
+    })
+    expect(summarizeUiSuite(result)).toEqual(
+      failed
+        ? { ok: false }
+        : { skipped: true, reason: "missing: No write authorization" },
+    )
+  },
+)
 
 it("does not hide a real assertion failure behind other skipped checks", async () => {
   const report = await runUiScenarios({

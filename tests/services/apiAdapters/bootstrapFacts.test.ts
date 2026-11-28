@@ -110,7 +110,16 @@ describe("provider-neutral bootstrap facts", () => {
                 userId: "xiaoen-fixture-user",
               },
             }
-          : request
+          : siteType === SITE_TYPES.PMPLAN
+            ? {
+                ...request,
+                auth: {
+                  authType: AuthTypeEnum.Cookie,
+                  cookie: "pmplan_session=bootstrap-fixture",
+                  userId: "42",
+                },
+              }
+            : request
       if (siteType === SITE_TYPES.XIAOEN) {
         fetchApi.mockResolvedValue({
           success: true,
@@ -133,6 +142,17 @@ describe("provider-neutral bootstrap facts", () => {
           },
         })
       }
+      if (siteType === SITE_TYPES.PMPLAN) {
+        fetchApi.mockResolvedValue({
+          user: { id: 42, username: "owner", private_field: "ignored" },
+          checkin: {
+            checked_in_today: false,
+            can_checkin: true,
+            today: "2026-11-28",
+            streak: 0,
+          },
+        })
+      }
       const bootstrap = getSiteTypeCapabilities(siteType).account!.bootstrap!
       const facts = await bootstrap.loadBootstrapFacts(bootstrapRequest)
       if (siteType === SITE_TYPES.XIAOEN) {
@@ -148,6 +168,22 @@ describe("provider-neutral bootstrap facts", () => {
             }),
           }),
           expect.objectContaining({ endpoint: "/api/auth/me" }),
+          false,
+        )
+      }
+      if (siteType === SITE_TYPES.PMPLAN) {
+        expect(facts).toEqual({
+          displayName: "PM-Plan",
+          checkInSupported: true,
+        })
+        expect(fetchApi).toHaveBeenCalledWith(
+          expect.objectContaining({
+            baseUrl: bootstrapRequest.baseUrl,
+            cookieSession: expect.objectContaining({
+              cookieHeader: "pmplan_session=bootstrap-fixture",
+            }),
+          }),
+          expect.objectContaining({ endpoint: "/api/me" }),
           false,
         )
       }

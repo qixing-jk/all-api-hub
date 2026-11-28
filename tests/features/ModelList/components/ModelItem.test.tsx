@@ -72,9 +72,10 @@ vi.mock("react-i18next", async (importOriginal) => {
     ...actual,
     useTranslation: () => ({
       t: (
-        key: string,
+        translationKey: string,
         options?: { group?: string; name?: string; remainingCount?: number },
       ) => {
+        const key = translationKey.replace(/^modelList:/u, "")
         if (options?.group) {
           return options.remainingCount
             ? `${key}:${options.group}+${options.remainingCount}`

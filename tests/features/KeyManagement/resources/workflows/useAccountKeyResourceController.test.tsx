@@ -27,6 +27,7 @@ import {
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
+import { createPmplanKeyEditor } from "~/services/apiAdapters/pmplan/keyEditor"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
@@ -425,6 +426,14 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editor?.feedback).toMatchObject({
       code: "unexpected",
     })
+    act(() =>
+      result.current.setEditorValues(result.current.editor!.editorId, {
+        name: "Changed",
+      }),
+    )
+    expect(result.current.editor?.feedback).toMatchObject({
+      code: "unexpected",
+    })
     expect(toastWarningMock).not.toHaveBeenCalled()
   })
 
@@ -513,6 +522,56 @@ describe("useAccountKeyResourceController", () => {
       feedback: { code: "validation_failed", fieldIssues: issues },
     })
     expect(submit).not.toHaveBeenCalled()
+  })
+
+  it("clears corrected native field errors while preserving untouched validation errors", async () => {
+    const definition = createPmplanKeyEditor(["model-a"])
+    const invalid = {
+      expiry: "custom",
+      expiresAt: "2001-01-01T00:00",
+      models: ["invalid"],
+    }
+    const submit = vi.fn().mockResolvedValue({
+      facts: createFacts(recoveryScope.scopeKey, "key-created"),
+    })
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCreateEditor: vi.fn().mockResolvedValue({
+          ...definition,
+          initialValues: invalid,
+          resolveDestinationScopeKey: () => recoveryScope.scopeKey,
+          submit,
+        }),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
+    await act(async () => result.current.submitEditor(editorId, invalid))
+    expect(result.current.editor?.feedback?.fieldIssues).toEqual([
+      { fieldId: "expiresAt", code: "invalid_value" },
+      { fieldId: "models", code: "unsupported_option" },
+    ])
+    const corrected = {
+      ...invalid,
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    }
+    act(() => result.current.setEditorValues(editorId - 1, corrected))
+    expect(result.current.editor?.values).toEqual(invalid)
+    expect(result.current.editor?.feedback?.fieldIssues).toHaveLength(2)
+    act(() => result.current.setEditorValues(editorId, corrected))
+    expect(result.current.editor?.feedback?.fieldIssues).toEqual([
+      { fieldId: "models", code: "unsupported_option" },
+    ])
+    act(() =>
+      result.current.setEditorValues(editorId, { ...corrected, models: [] }),
+    )
+    expect(result.current.editor?.feedback).toBeNull()
+    expect(submit).not.toHaveBeenCalled()
+    await act(async () =>
+      result.current.submitEditor(editorId, { ...corrected, models: [] }),
+    )
+    expect(submit).toHaveBeenCalledOnce()
   })
 
   it.each(["partial", "rejected"])(
@@ -1337,8 +1396,7 @@ describe("useAccountKeyResourceController", () => {
     )
     await waitFor(() => expect(open).toHaveBeenCalledTimes(1))
     const firstSignal = open.mock.calls[0]?.[1]?.signal as
-      | AbortSignal
-      | undefined
+      AbortSignal | undefined
 
     rerender({ account: secondAccount })
 
@@ -1550,8 +1608,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(firstCollection.list).toHaveBeenCalledTimes(1))
     const firstSignal = (
       firstCollection.list.mock.calls[0]?.[1] as
-        | { signal?: AbortSignal }
-        | undefined
+        { signal?: AbortSignal } | undefined
     )?.signal
     rerender({ workspace: "second" })
     await waitFor(() => expect(secondCollection.list).toHaveBeenCalledTimes(1))
@@ -1681,8 +1738,7 @@ describe("useAccountKeyResourceController", () => {
     )
     const firstSignal = (
       firstEditor.loadOptions.mock.calls[0] as unknown as
-        | [unknown, unknown, { signal?: AbortSignal }]
-        | undefined
+        [unknown, unknown, { signal?: AbortSignal }] | undefined
     )?.[2]?.signal
     expect(result.current.selectScope(scopes[1]!.scopeKey)).toBe(true)
     expect(replaceRoute).toHaveBeenCalledWith({
@@ -2690,8 +2746,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(firstEditor.loadOptions).toHaveBeenCalledOnce())
     const staleSignal = (
       firstEditor.loadOptions.mock.calls[0] as unknown as
-        | [unknown, unknown, { signal?: AbortSignal }]
-        | undefined
+        [unknown, unknown, { signal?: AbortSignal }] | undefined
     )?.[2]?.signal
 
     await act(async () => result.current.openCreate())
@@ -2933,8 +2988,7 @@ describe("useAccountKeyResourceController", () => {
     const signal = (
       (
         loadOptions.mock.calls[0] as unknown as
-          | [unknown, unknown, { signal?: AbortSignal }]
-          | undefined
+          [unknown, unknown, { signal?: AbortSignal }] | undefined
       )?.[2] as { signal?: AbortSignal } | undefined
     )?.signal
 
@@ -6078,8 +6132,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(editor.submit).toHaveBeenCalledTimes(1))
     const signal = (
       editor.submit.mock.calls[0] as unknown as
-        | [unknown, { signal?: AbortSignal }]
-        | undefined
+        [unknown, { signal?: AbortSignal }] | undefined
     )?.[1]?.signal
     unmount()
     expect(signal?.aborted).toBe(true)

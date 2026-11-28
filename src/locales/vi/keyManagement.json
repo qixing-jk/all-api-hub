@@ -639,6 +639,10 @@
         "rpm": "Yêu cầu mỗi phút",
         "rpmHelp": "Số yêu cầu tối đa mỗi phút của token này; 0 nghĩa là không giới hạn."
       },
+      "pmplan": {
+        "customExpiryHelp": "Nhập ngày giờ hết hạn trong tương lai theo múi giờ của thiết bị.",
+        "modelsHelp": "Để trống để cho phép mọi mô hình hiện tại và tương lai mà tài khoản có thể dùng. Các khóa dùng chung hạn mức theo cửa sổ trượt của tài khoản."
+      },
       "quotaCredits": "Tín dụng còn lại",
       "quotaCreditsHelp": "Khóa sẽ ngừng hoạt động khi số tín dụng này hết.",
       "quotaUsd": "Hạn mức (USD)",

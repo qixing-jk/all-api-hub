@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RedemptionBatchResultToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast"
+import { RedemptionBatchResultToast } from "~/features/RedemptionAssist/components/RedemptionBatchResultToast"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -35,6 +35,70 @@ const createDeferred = <T,>() => {
 }
 
 describe("RedemptionBatchResultToast", () => {
+  it("does not offer another retry after a claim reply is lost", async () => {
+    const user = userEvent.setup()
+    const onRetry = vi.fn().mockRejectedValue(new Error("port closed"))
+    render(
+      <RedemptionBatchResultToast
+        results={[
+          {
+            code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+            preview: "PMRC****PQRS",
+            success: false,
+            message: "Previously rejected",
+          },
+        ]}
+        onRetry={onRetry}
+        onClose={vi.fn()}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("redemptionAssist:messages.pmplanClaimUncertain"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("redemptionAssist:messages.claimUnconfirmed"),
+    ).toBeInTheDocument()
+    expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+  it("shows uncertain claim recovery without offering an immediate retry", () => {
+    render(
+      <RedemptionBatchResultToast
+        results={[
+          {
+            code: "PMRC-ABCD-EFGH-JKMN-PQRS",
+            preview: "PMRC****PQRS",
+            success: false,
+            message: "Check native cards before trying again",
+            retryable: false,
+            outcomeUncertain: true,
+          },
+        ]}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(
+      screen.getByText("Check native cards before trying again"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("common:status.failed")).not.toBeInTheDocument()
+    expect(
+      screen.getByText("redemptionAssist:messages.claimUnconfirmed"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "redemptionAssist:messages.batchResultSummaryUnconfirmed",
+      ),
+    ).toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     startActionMock.mockReturnValue({

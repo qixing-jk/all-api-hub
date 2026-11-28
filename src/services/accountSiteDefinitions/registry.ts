@@ -141,6 +141,9 @@ function cloneDefinition(
   return {
     ...definition,
     scopes: [...definition.scopes],
+    ...(definition.redemptionCodeKinds && {
+      redemptionCodeKinds: [...definition.redemptionCodeKinds],
+    }),
     tokenKey: definition.tokenKey ? { ...definition.tokenKey } : undefined,
     accountLogin: definition.accountLogin
       ? structuredClone(definition.accountLogin)

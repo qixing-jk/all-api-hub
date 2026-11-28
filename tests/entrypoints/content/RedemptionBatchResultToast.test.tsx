@@ -14,7 +14,7 @@ import {
 import {
   RedemptionBatchResultToast,
   type RedemptionBatchResultItem,
-} from "~/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast"
+} from "~/features/RedemptionAssist/components/RedemptionBatchResultToast"
 import enRedemptionAssist from "~/locales/en/redemptionAssist.json"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -261,7 +261,7 @@ describe("RedemptionBatchResultToast", () => {
     )
   })
 
-  it("keeps the row failed and records the retry error message when a retry throws", async () => {
+  it("marks a rejected retry reply uncertain and prevents another attempt", async () => {
     const retryError = "Temporary outage"
     const onRetry = vi.fn().mockRejectedValue(retryError)
 
@@ -285,20 +285,28 @@ describe("RedemptionBatchResultToast", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("Temporary outage")).toBeInTheDocument()
+      expect(
+        screen.getByText("redemptionAssist:messages.redemptionUncertain"),
+      ).toBeInTheDocument()
     })
 
     expect(loggerErrorMock).toHaveBeenCalledWith("Retry failed", retryError)
     expect(
       screen.getByText(
-        testI18n.t("redemptionAssist:messages.batchResultSummary", {
+        testI18n.t("redemptionAssist:messages.batchResultSummaryUnconfirmed", {
           total: 1,
           success: 0,
-          failed: 1,
+          failed: 0,
+          unconfirmed: 1,
         }),
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText("common:status.failed")).toBeInTheDocument()
+    expect(
+      screen.getByText("redemptionAssist:messages.claimUnconfirmed"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "common:actions.retry" }),
+    ).not.toBeInTheDocument()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
       retryAnalyticsContext,
     )
@@ -308,7 +316,7 @@ describe("RedemptionBatchResultToast", () => {
     )
   })
 
-  it("surfaces Error retry failures with the error message", async () => {
+  it("treats Error retry failures as unconfirmed outcomes", async () => {
     const retryError = new Error("Backend unavailable")
     const onRetry = vi.fn().mockRejectedValue(retryError)
 
@@ -332,22 +340,25 @@ describe("RedemptionBatchResultToast", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("Backend unavailable")).toBeInTheDocument()
+      expect(
+        screen.getByText("redemptionAssist:messages.redemptionUncertain"),
+      ).toBeInTheDocument()
     })
 
     expect(loggerErrorMock).toHaveBeenCalledWith("Retry failed", retryError)
     expect(
       screen.getByText(
-        testI18n.t("redemptionAssist:messages.batchResultSummary", {
+        testI18n.t("redemptionAssist:messages.batchResultSummaryUnconfirmed", {
           total: 1,
           success: 0,
-          failed: 1,
+          failed: 0,
+          unconfirmed: 1,
         }),
       ),
     ).toBeInTheDocument()
   })
 
-  it("retranslates a generic retry error without retrying redemption again", async () => {
+  it("retranslates an unconfirmed retry without retrying redemption again", async () => {
     const onRetry = vi.fn().mockRejectedValue({ transient: true })
 
     renderToast(
@@ -370,23 +381,31 @@ describe("RedemptionBatchResultToast", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("common:status.error")).toBeInTheDocument()
+      expect(
+        screen.getByText("redemptionAssist:messages.redemptionUncertain"),
+      ).toBeInTheDocument()
     })
 
     expect(loggerErrorMock).toHaveBeenCalledWith("Retry failed", {
       transient: true,
     })
-    expect(screen.getByText("common:status.failed")).toBeInTheDocument()
+    expect(
+      screen.getByText("redemptionAssist:messages.claimUnconfirmed"),
+    ).toBeInTheDocument()
     testI18n.addResourceBundle(
       "zh-CN",
-      "common",
-      (await import("~/locales/zh-CN/common.json")).default,
+      "redemptionAssist",
+      (await import("~/locales/zh-CN/redemptionAssist.json")).default,
     )
     try {
       await act(async () => {
         await testI18n.changeLanguage("zh-CN")
       })
-      expect(screen.getByText(testI18n.t("common:status.error"))).toBeVisible()
+      expect(
+        screen.getByText(
+          testI18n.t("redemptionAssist:messages.redemptionUncertain"),
+        ),
+      ).toBeVisible()
       expect(screen.getByText("ERR***4")).toBeVisible()
       expect(onRetry).toHaveBeenCalledTimes(1)
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledTimes(1)
@@ -394,7 +413,7 @@ describe("RedemptionBatchResultToast", () => {
       await act(async () => {
         await testI18n.changeLanguage("en")
       })
-      testI18n.removeResourceBundle("zh-CN", "common")
+      testI18n.removeResourceBundle("zh-CN", "redemptionAssist")
     }
   })
 })

@@ -170,6 +170,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.KRILL
   | typeof SITE_TYPES.DAYA
   | typeof SITE_TYPES.PMAPI
+  | typeof SITE_TYPES.PMPLAN
   | typeof SITE_TYPES.CUBENCE
   | typeof SITE_TYPES.RIGHT_CODE
   | typeof SITE_TYPES.OPENROUTER
@@ -552,6 +553,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.KRILL,
       SITE_TYPES.DAYA,
       SITE_TYPES.PMAPI,
+      SITE_TYPES.PMPLAN,
       SITE_TYPES.CUBENCE,
       SITE_TYPES.RIGHT_CODE,
       SITE_TYPES.RELAYFOR,

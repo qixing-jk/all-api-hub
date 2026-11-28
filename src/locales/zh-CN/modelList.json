@@ -185,6 +185,7 @@
     "compactionCharge": "远程压缩费用",
     "consoleSettings": "前往官网设置",
     "contextLimit": "上下文上限",
+    "currentValue": "{{value}} · 当前",
     "defaultDimensions": "默认维度",
     "inputModalities": "输入模态",
     "maximumOutputTokens": "最大输出 Token 数",
@@ -305,6 +306,7 @@
     "subscriptionMultiplier": "套餐倍率",
     "subscriptionPlan": "适用套餐",
     "supportedDimensions": "支持维度",
+    "supportedPlans": "开放档位",
     "supportsImages": "图片支持",
     "tokenCount": "{{formattedCount}} Token",
     "trainingChannels": "含数据训练渠道",
@@ -378,6 +380,7 @@
     "modelNamesCopied": "模型名称已复制",
     "siteUrlCopied": "站点 URL 已复制"
   },
+  "minimumReferencePrice": "渠道最低价",
   "modelCapabilityFilter": {
     "coverageHint": "当前列表中有 {{count}} 个模型暂无能力说明，选择能力筛选时会先跳过。",
     "descriptions": {
@@ -483,9 +486,11 @@
   "pricingDescription": "价格来自站点。不同计费单位（如百万 Token、张、秒、次）分别比较，请留意每条报价的单位。实际扣费以站点为准。",
   "pricingNote": "模型定价说明",
   "pricingNotes": {
+    "accountChannelMinimum": "当前套餐可用渠道的输入、输出最低价分别计算，可能来自不同渠道；实际费用取决于请求所用渠道。",
     "allChannels": "全部渠道",
     "ambiguousCharges": "多项费用对应同一种用量，但当前无法区分各自的数量或计费阶段，已保留其余已知费率。",
     "ambiguousVariantCharges": "官方同时公布了不同单位的费用和参数档位，尚未明确两者是叠加费用还是替代费率，暂不能合计报价。",
+    "catalogChannelMinimum": "全站渠道的输入、输出最低价分别计算，可能包含当前套餐不可用的渠道；仅供参考。",
     "dedicatedPrices": "专属价格，已含倍率",
     "defaultRoute": "默认线路",
     "endpointSourceConflict": "同一模型在官方不同接口记录中的计费规则不一致，暂不能确定适用价格。",
