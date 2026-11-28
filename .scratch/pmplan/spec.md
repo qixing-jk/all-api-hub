@@ -41,6 +41,7 @@ Hosted live runners require exactly one saved PM-Plan account matching console o
 
 | Task | Adaptation and limits |
 | --- | --- |
+| Inventory | `GET /api/keys` returns the complete user-owned inventory, including revoked entries, without pagination. The pinned upstream [list_keys handler](https://github.com/gh7mk2l2/pm-plan/blob/1217291345fb154c6424d9338434c256a03f6292/src/api.rs#L423-L465) uses a user-filtered SQL query without LIMIT/OFFSET and `fetch_all`; the paginated `/api/keys` contract in the integration guide belongs to FoxCode. |
 | Create | Expiry and model restrictions share basic settings. Default to never expiring, following the extension convention; retain timed presets and custom date. No invented name or spend-limit fields. |
 | Model scope | Empty selection dynamically follows all account-available models, including later additions. An empty available-model list still permits unrestricted creation. |
 | One-time secret | Only the create response exposes plaintext. Inventory preserves the native prefix and missing-secret state. Acknowledgement, copy/export and caller-appropriate import use existing owners. Never infer a secret from its prefix. |

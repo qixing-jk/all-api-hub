@@ -17,7 +17,9 @@ import {
   vi,
 } from "vitest"
 
+import * as nativeKeyEditor from "~~/scripts/flows/native-key-editor.mjs"
 import { submitPmplanKeyCreation } from "~~/scripts/suites/pmplan/keyCreation.mjs"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const origin = "https://plan.pmcat.top"
 const input = { expires_at: null, models: ["test-model"] }
@@ -59,6 +61,7 @@ beforeEach(async () => {
   }, input)
 })
 afterEach(async () => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
   await context.close()
   for (const file of await fs.readdir(directory))
@@ -196,30 +199,41 @@ it("accepts validation feedback without a request or cleanup ownership", async (
 })
 
 it("keeps capture available while the editor and submit action become ready", async () => {
-  await page.evaluate(() => {
-    const editor = document.querySelector("section")!
-    const submit = document.querySelector("button")!
-    editor.hidden = true
-    submit.disabled = true
-    setTimeout(() => {
-      editor.hidden = false
-    }, 350)
-    setTimeout(() => {
-      submit.disabled = false
-    }, 700)
-  })
+  const enteredReadiness = createDeferred<void>()
+  const ready = createDeferred<void>()
+  const submit = nativeKeyEditor.submitNativeKeyEditor
+  vi.spyOn(nativeKeyEditor, "submitNativeKeyEditor").mockImplementation(
+    async (...args) => {
+      enteredReadiness.resolve()
+      await ready.promise
+      await submit(...args)
+    },
+  )
   const confirmedIds = new Set<number>()
-  await expect(
-    submitPmplanKeyCreation({
-      page,
-      input,
-      write: true,
-      confirmedIds,
-      existingIds: new Set(),
-      evidenceDir: directory,
-      timeoutMs: 500,
-    }),
-  ).resolves.toEqual({ id: 17, key: "sk-pm-owned" })
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+  const creation = submitPmplanKeyCreation({
+    page,
+    input,
+    write: true,
+    confirmedIds,
+    existingIds: new Set(),
+    evidenceDir: directory,
+  })
+  // Retain an immediate rejection handler while readiness is deliberately held.
+  const assertion = expect(creation).resolves.toEqual({
+    id: 17,
+    key: "sk-pm-owned",
+  })
+  void assertion.catch(() => {})
+  try {
+    await enteredReadiness.promise
+    // Waiting for the UI must not consume the default 60-second capture budget.
+    await vi.advanceTimersByTimeAsync(120000)
+  } finally {
+    vi.useRealTimers()
+    ready.resolve()
+  }
+  await assertion
   expect([...confirmedIds]).toEqual([17])
 })
 
