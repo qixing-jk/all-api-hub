@@ -5,16 +5,15 @@ import { chromium } from "@playwright/test"
 import { expect, it, vi } from "vitest"
 
 // @ts-expect-error Node-only live suite does not have declarations.
-import {
-  assertPmplanModelPrices,
-  runPmplanPricing,
-} from "~~/scripts/suites/pmplan/pricing.mjs"
+import * as pmplanPricing from "~~/scripts/suites/pmplan/pricing.mjs"
 // @ts-expect-error Node-only live suite does not have declarations.
 import { runPmplanProbe } from "~~/scripts/suites/pmplan/probe.mjs"
 // @ts-expect-error Node-only live suite does not have declarations.
 import { runPmplanUi } from "~~/scripts/suites/pmplan/ui.mjs"
 // @ts-expect-error Node-only live suite does not have declarations.
 import { runPmplanUpstream } from "~~/scripts/suites/pmplan/upstream.mjs"
+
+const { assertPmplanModelPrices, runPmplanPricing } = pmplanPricing
 
 it("checks each native price field within its exact model card", async () => {
   const browser = await chromium.launch({ headless: true })
