@@ -260,3 +260,85 @@ Final evidence: `artifacts/hosted-final/`, `hosted-final-e2e-summary.json`,
 evidence above remains applicable: this follow-up changes only one browser-test
 fixture and the evidence document. Any subsequent commit containing only this
 report does not alter the tested implementation.
+
+## Second round: optional capture and measured worker tails
+
+Iteration baseline: `f9df3f95001e0020dbe51efbe847fa0ec54e85dd`; the original
+branch baseline above is unchanged. The retained implementation changes only
+three browser specs. Density screenshots now use the existing opt-in
+`captureVisualViews` helper. All layout, hit-area, persistence and cross-view
+assertions still run normally; only screenshot hygiene (scrolling, moving the
+pointer, waiting for tooltip/toast dismissal) runs inside `beforeCapture`.
+Playwright's existing failure screenshots and retry traces remain enabled.
+The 16 independent password-login scenarios may use the existing four workers;
+reused user-data profiles keep their sequential mode. Production deadlines,
+including the deliberately slow WAF and uncaptured-login scenarios, are unchanged.
+
+| Second-round outcome | Evidence | Result |
+| --- | --- | --- |
+| Remove unconditional review screenshots | Same five density cases, before/after then after/before order | 52.87s to 49.45s; 55.17s to 54.70s. Cumulative case time 182.42s to 141.97s and 193.39s to 157.59s. Whole-group gain is small; primary benefit is less work. |
+| Preserve optional visual evidence | `density-capture-expected.json` written before capture; both original density files with `AAH_VISUAL_CAPTURE_DIR` | Five passes; all 114 PNG/JSON pairs have matching IDs, expected viewports and SHA-256 hashes. Narrow account rows, narrow calendar and desktop search inspected. |
+| Reduce serial password-login tail | Same 49 cases including the financial workload; inventories compared | Password file span 240.36s before, 101.96s and 102.94s with parallel mode. The whole experiment is qualified by startup retries below. |
+| Retain password workflow behavior | `password-parallel.json`: 16 original cases repeated three times, four workers | 48 passes, no test-level retries; fixture-level launch retries are recorded separately, not hidden by the pass count. |
+| Fix newly observed Chromium launch timeout | Original workloads, minimal startup case, browser and protocol diagnostics | Not resolved. No evidence yet supports changing launcher behavior or increasing its deadline. |
+
+Commands use the existing build and `--project=chromium --workers=4 --reporter
+list,json`, with each measurement running alone among this task's local commands.
+`compare-local-opportunities.py` compares original test identities, statuses,
+attempts, file spans and cumulative case duration. `repeat-density.py` runs the
+reverse-order comparison and restores source bytes in `finally`. Logs, JSON,
+timings and outputs are retained as `density-{before,after}*`,
+`density-capture*`, `tail-{before,after}*`, and `password-parallel*` in `artifacts/`.
+The first repeat script used Windows backslashes as Playwright test regexes and
+matched no tests; `density-after-repeat.log` is excluded from measurements.
+
+For optional capture, set `AAH_VISUAL_CAPTURE_DIR` to a fresh output directory
+and run `e2e/densitySettings.spec.ts e2e/densityCoverage.spec.ts`. Fixed checkpoint
+IDs include route, density and width. Use the existing `pnpm visual:capture`
+entrypoint for metadata reports/comparison. The screenshot helper's animation
+and font readiness applies only when capture is enabled. No new screenshot
+framework, workflow, runner or worker count was introduced.
+
+### Rejected experiments and unresolved startup evidence
+
+Financial scenarios also showed a hosted worker tail, but enabling parallel mode
+in both financial and password files produced two runs of 49 passes at 170.00s
+and 178.57s versus the serial 244.03s baseline. Each candidate had one 25-second
+Chromium launch timeout and fixture retry in a financial case. Total case work
+rose from 452.30s to 562.19s and 593.57s. Financial parallel mode was reverted;
+the experiments do not establish a favorable stability/cost tradeoff.
+
+Parallelizing the two density-coverage viewports also failed the cost/benefit
+check: 59.37s and 98.72s Playwright durations versus 48.9s and 54.1s without this
+extra parallelism. It was reverted. Smaller scenarios cannot always improve
+packing: the fifth case still starts after an occupied worker becomes free.
+
+The user requested further diagnosis rather than treating launch timeouts as
+unavoidable. The original Chromium failure occurs in `launchPersistentContext`,
+before the extension service-worker probe fixed earlier in this branch. Its log
+reports a launched PID, followed by the unchanged 25-second deadline. During
+the first failure the browser retained its profile lock after the fixture had
+retried; it exited when its Playwright worker ended. No task-owned browser
+process accumulated across completed commands. Automatic approval rejected
+cleanup of that unused temporary profile, so it remains on disk.
+
+The original financial workload with protocol logging passed all 33 cases;
+browser-only diagnostics passed 99 cases; a minimal original startup regression
+passed 40 repetitions with four workers. These are negative reproduction results,
+not a fix. Subsequent uninstrumented density and password runs also exhibited
+launch retries. Host observation during those runs found 97% CPU load and about
+3 GB free physical memory out of 32 GB, with concurrent non-task Node,
+TypeScript and Python workloads. Thus the local parallel comparison has host
+contention as a confounder; it cannot identify an application or Chromium defect.
+No speculative process killer, browser sharing/reset layer, timeout increase,
+or extra retry was added. Retain `financial-startup-{protocol,browser}*`,
+`startup-protocol*` and `password-parallel-startup-retries.json` locally for a
+future isolated reproduction. The protocol logs contain synthetic fixture data
+and remain ignored rather than being published.
+
+The fresh hosted main baseline is
+[E2E 46123361818](https://github.com/qixing-jk/all-api-hub/actions/runs/46123361818)
+at the original baseline SHA. It completed successfully, including Firefox,
+DNR, bookmarks and isolated performance checks. Its six default JSON reports
+show no test or fixture-startup retries. The second-round candidate's full
+hosted result will be recorded below after completion.
