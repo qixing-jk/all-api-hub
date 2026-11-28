@@ -886,23 +886,28 @@ test("dev native observation states persist for every type and distinguish missi
   await panel
     .getByRole("button", { name: "Dev: View account list", exact: true })
     .click()
-  const show = async (name: string) => {
+  const search = page.getByRole("textbox", {
+    name: "Enter site information or account information to search",
+  })
+  const stateRow = (name: string) => {
     const account = fixtures.find((a) => a.site_name === `Dev Balance: ${name}`)
     if (!account) throw new Error(`Missing state ${name}`)
-    await page
-      .getByRole("textbox", {
-        name: "Enter site information or account information to search",
-      })
-      .fill(account.site_name)
-    const row = page.getByTestId(getAccountManagementListItemTestId(account.id))
+    return page.getByTestId(getAccountManagementListItemTestId(account.id))
+  }
+  const show = async (name: string) => {
+    await search.fill(`Dev Balance: ${name}`)
+    const row = stateRow(name)
     await expect(row).toBeVisible()
     return row
   }
   for (const type of ACCOUNT_SITE_TYPE_VALUES) {
+    // All three states fit together; one real search avoids repeating its debounce.
+    await search.fill(`Dev Balance: ${type} ·`)
     const allowanceOnly =
       fixtures.find((a) => a.site_name === `Dev Balance: ${type} · missing`)!
         .account_info.balance!.positions.length === 0
-    const zero = await show(`${type} · zero`)
+    const zero = stateRow(`${type} · zero`)
+    await expect(zero).toBeVisible()
     await expect(zero).not.toContainText("Unavailable")
     const zeroAccount = fixtures.find(
       (account) => account.site_name === `Dev Balance: ${type} · zero`,
@@ -924,11 +929,13 @@ test("dev native observation states persist for every type and distinguish missi
     await expect(
       zero.getByText(expectedZero, { exact: true }).first(),
     ).toBeVisible()
-    const missing = await show(`${type} · missing`)
+    const missing = stateRow(`${type} · missing`)
+    await expect(missing).toBeVisible()
     await expect(
       missing.getByRole("button").filter({ has: page.getByRole("group") }),
     ).toContainText(allowanceOnly ? "N/A" : "Unavailable")
-    const stale = await show(`${type} · stale`)
+    const stale = stateRow(`${type} · stale`)
+    await expect(stale).toBeVisible()
     await expect(
       stale.getByRole("button").filter({ has: page.getByRole("group") }),
     ).toContainText("Last known")

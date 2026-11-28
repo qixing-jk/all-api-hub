@@ -308,10 +308,19 @@ jobs:
           retention-days: 1
           overwrite: true
 
-      # Keep timing and virtualization assertions free of competing contexts,
-      # as in the browser compatibility workflow. Run the complete file once.
+      # The short permission suite finishes well before the default shards.
+      # Reuse its runner for isolated measurements instead of extending a shard's tail.
+      - name: Download default extension for performance E2E
+        if: ${{ !cancelled() && matrix.e2e_type == 'bookmarks-required' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: e2e-extension-default
+          path: .output/chrome-mv3-test
+
+      # Keep timing and virtualization assertions free of competing contexts.
+      # Run the complete file once with the default permission manifest.
       - name: Run isolated performance E2E
-        if: ${{ !cancelled() && matrix.e2e_type == 'default' && matrix.shard == 2 }}
+        if: ${{ !cancelled() && matrix.e2e_type == 'bookmarks-required' }}
         timeout-minutes: 8
         env:
           AAH_E2E_BUILD_VARIANT: default
@@ -322,7 +331,7 @@ jobs:
         run: pnpm exec playwright test e2e/multiAccountPerformance.spec.ts --project=chromium --output=test-results/performance --reporter=list,github,html
 
       - name: Upload performance measurements
-        if: ${{ !cancelled() && matrix.e2e_type == 'default' && matrix.shard == 2 }}
+        if: ${{ !cancelled() && matrix.e2e_type == 'bookmarks-required' }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-performance-${{ matrix.name }}-${{ github.run_attempt }}

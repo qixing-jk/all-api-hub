@@ -65,7 +65,7 @@ it.each([
   },
 )
 
-it("runs smoke performance cases once in isolation, including after functional failures", () => {
+it("runs smoke performance cases after the short permission suite, including after functional failures", () => {
   const workflow = readFileSync(".github/workflows/e2e-smoke.yml", "utf8")
   const functional = workflow
     .split("      - name: Run E2E smoke")[1]
@@ -96,10 +96,25 @@ it("runs smoke performance cases once in isolation, including after functional f
             matrix: { e2e_type, shard },
             cancelled: () => cancelled,
           }),
-        ).toBe(!cancelled && e2e_type === "default" && shard === 2)
+        ).toBe(!cancelled && e2e_type === "bookmarks-required")
       }
     }
   }
+  const download = workflow
+    .split("      - name: Download default extension for performance E2E")[1]
+    ?.split("      - name:")[0]
+  expect(download).toContain("name: e2e-extension-default")
+  expect(download).toContain("path: .output/chrome-mv3-test")
+  expect(download?.match(/^ {8}if: (.+)$/m)?.[1]).toBe(
+    performance?.match(/^ {8}if: (.+)$/m)?.[1],
+  )
+  expect(performance).toContain("AAH_E2E_BUILD_VARIANT: default")
+  const upload = workflow
+    .split("      - name: Upload performance measurements")[1]
+    ?.split("      - name:")[0]
+  expect(upload?.match(/^ {8}if: (.+)$/m)?.[1]).toBe(
+    performance?.match(/^ {8}if: (.+)$/m)?.[1],
+  )
 })
 
 it("runs release-diff regression checks once when ordinary preflight jobs are skipped", () => {
@@ -548,7 +563,7 @@ it("builds PR previews only when a maintainer asks for one", () => {
   expect(existsSync(".github/workflows/pr-build-comment.yml")).toBe(false)
 })
 
-it("leaves setup and artifact headroom beyond both shard-two test deadlines", () => {
+it("leaves setup and artifact headroom for each runner's test deadlines", () => {
   const source = readFileSync(".github/workflows/e2e-smoke.yml", "utf8")
   const job = source
     .split(/^ {2}e2e-smoke:\r?$/m)[1]
@@ -560,10 +575,13 @@ it("leaves setup and artifact headroom beyond both shard-two test deadlines", ()
     ?.split("- name: Run isolated performance E2E")[1]
     ?.split("- name:")[0]
   const smokeDeadline = Number(smoke?.match(/&& (\d+) \|\|/)?.[1])
+  const permissionDeadline = Number(smoke?.match(/\|\| (\d+)/)?.[1])
   const performanceDeadline = Number(
     performance?.match(/timeout-minutes: (\d+)/)?.[1],
   )
-  expect(timeout).toBeGreaterThan(smokeDeadline + performanceDeadline)
+  expect(timeout).toBeGreaterThan(
+    Math.max(smokeDeadline, permissionDeadline + performanceDeadline),
+  )
 })
 
 it("waits for a computed merge SHA and rejects conflicts or exhausted lookups", async () => {
