@@ -788,6 +788,138 @@ describe("FreeGG daily allowance", () => {
     })
     expect(envelope).toHaveBeenCalledTimes(1)
   })
+  it("claims today's allowance when the shared checked proof belongs to yesterday", async () => {
+    const observedAt = Date.parse("2026-11-23T15:59:59Z")
+    mockExecution([], [grant()])
+
+    expect(
+      await freeggProvider.checkIn(account(), {
+        ...context,
+        statusProof: {
+          outcome: "known",
+          today: "checked",
+          resetTimeZone: "Asia/Shanghai",
+          evidence: { source: "probe", observedAt },
+        },
+      }),
+    ).toMatchObject({ status: "success" })
+    expect(envelope.mock.calls.map(([, options]) => options.endpoint)).toEqual([
+      "/api/log/self?p=1&page_size=100&type=1",
+      "/api/user/self",
+      "/api/log/self?p=1&page_size=100&type=1",
+    ])
+  })
+  it("preserves the observation time of a same-day checked proof", async () => {
+    const observedAt = now - 1000
+    expect(
+      await freeggProvider.checkIn(account(), {
+        ...context,
+        statusProof: {
+          outcome: "known",
+          today: "checked",
+          resetTimeZone: "Asia/Shanghai",
+          evidence: { source: "probe", observedAt },
+        },
+      }),
+    ).toMatchObject({
+      status: "already_checked",
+      confirmation: {
+        kind: "observed",
+        observedAt,
+        status: { evidence: { observedAt } },
+      },
+    })
+    expect(envelope).not.toHaveBeenCalled()
+  })
+  it.each([
+    ["checked", "already_checked"],
+    ["not_checked", "success"],
+    ["unknown", "uncertain"],
+  ])(
+    "reconciles a previous-day preflight with today's %s ledger through the shared executor",
+    async (today, expectedStatus) => {
+      const midnight = Date.parse("2026-11-24T16:00:00Z")
+      vi.setSystemTime(midnight - 1000)
+      const site = account()
+      site.checkIn = {
+        automaticExecutionEnabled: true,
+        selection: {
+          mode: "manual",
+          methodId: AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance,
+        },
+        methodKnowledge: {
+          methods: {
+            [AUTO_CHECKIN_METHOD_IDS.FreeGgDailyAllowance]: {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: midnight - 1000 },
+              },
+            },
+          },
+        },
+      }
+      const todaysGrant = log({ created_at: midnight / 1000 + 1 })
+      envelope.mockResolvedValueOnce(logs([log()]))
+      if (today === "not_checked") mockExecution([], [todaysGrant])
+      else
+        envelope.mockResolvedValue(
+          logs(today === "checked" ? [todaysGrant] : [log({ type: 2 })]),
+        )
+
+      const execution = await executeSelectedCheckIn({
+        account: site,
+        globalAutomaticExecutionEnabled: true,
+        context,
+        revalidateAccount: async (checkIn) => {
+          vi.setSystemTime(midnight + 1000)
+          return { ...site, checkIn: checkIn ?? site.checkIn }
+        },
+      })
+
+      expect(execution).toMatchObject({
+        kind: "executed",
+        result: { status: expectedStatus },
+      })
+      expect(
+        envelope.mock.calls.filter(
+          ([, options]) => options.endpoint === "/api/user/self",
+        ),
+      ).toHaveLength(today === "not_checked" ? 1 : 0)
+      if (today === "checked")
+        expect(execution).toMatchObject({
+          confirmation: { kind: "observed", observedAt: midnight + 1000 },
+        })
+    },
+  )
+  it("keeps a known proof without today's status uncertain without claiming", async () => {
+    expect(
+      await freeggProvider.checkIn(account(), {
+        ...context,
+        statusProof: {
+          outcome: "known",
+          evidence: { source: "probe", observedAt: now },
+        },
+      }),
+    ).toMatchObject({ status: "uncertain" })
+    expect(envelope).not.toHaveBeenCalled()
+  })
+  it("refreshes a legacy proof without an observation timestamp", async () => {
+    envelope.mockResolvedValueOnce(logs([log()]))
+    expect(
+      await freeggProvider.checkIn(account(), {
+        ...context,
+        statusProof: {
+          outcome: "known",
+          today: "checked",
+          evidence: { source: "legacy_migration" },
+        },
+      }),
+    ).toMatchObject({
+      status: "already_checked",
+      confirmation: { kind: "observed", observedAt: now },
+    })
+    expect(envelope).toHaveBeenCalledTimes(1)
+  })
   it("confirms a new grant even when the server renumbers the newest log to the same list ID", async () => {
     mockExecution(
       [log({ id: 1, created_at: now / 1000 - 86400 })],

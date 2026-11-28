@@ -53,7 +53,7 @@ import {
 } from "./shared"
 
 /** Report the current-day ledger status without attributing a new award. */
-function alreadyClaimed(account: SiteAccount) {
+function alreadyClaimed(account: SiteAccount, status: CheckInMethodStatus) {
   return withCheckInConfirmation(
     account,
     {
@@ -63,15 +63,7 @@ function alreadyClaimed(account: SiteAccount) {
     },
     {
       kind: "observed",
-      status: {
-        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-        today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
-        resetTimeZone: FREEGG_ALLOWANCE_RESET_TIME_ZONE,
-        evidence: {
-          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
-          observedAt: Date.now(),
-        },
-      },
+      status,
     },
   )
 }
@@ -252,16 +244,24 @@ export const freeggProvider: AutoCheckinProvider = {
       }
       // The shared executor supplies its preflight status. Direct callers use
       // the same read-only status path instead of another admission policy.
-      const before =
-        context.statusProof ??
-        (await freeggProvider.getStatus?.({
+      let before: CheckInMethodStatus | undefined = context.statusProof
+      if (
+        !before ||
+        !("observedAt" in before.evidence) ||
+        !isCheckInObservationCurrent(
+          before.evidence.observedAt,
+          FREEGG_ALLOWANCE_RESET_TIME_ZONE,
+        )
+      ) {
+        before = await freeggProvider.getStatus?.({
           account,
           observedAt: Date.now(),
-        }))
+        })
+      }
       if (before?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known)
         return createUnconfirmedCheckInResult(account)
       if (before.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked)
-        return alreadyClaimed(account)
+        return alreadyClaimed(account, before)
       if (before.today !== CHECK_IN_METHOD_TODAY_STATUSES.NotChecked)
         return createUnconfirmedCheckInResult(account)
       if (
